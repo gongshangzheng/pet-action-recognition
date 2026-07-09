@@ -7,7 +7,7 @@ build/
 .venv/
 venv/
 
-# Data & Cache (generated / runtime)
+# Data & Cache
 papers/data/
 papers/cache/
 *.db
@@ -16,9 +16,6 @@ papers/cache/
 
 # Evaluation results
 evaluation/results/
-
-# Temp logs
-/tmp/*.log
 
 # IDE
 .vscode/
@@ -30,13 +27,3 @@ evaluation/results/
 # Environment
 .env
 .env.local
-
-# Node / Web
-web/node_modules/
-web/dist/
-
-# Python virtual env (server)
-server/__pycache__/
-server/**/__pycache__/
-server/.venv/
-*.egg-info/
