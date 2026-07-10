@@ -62,7 +62,7 @@
 
       <n-spin :show="loading">
         <div v-if="papers.length" class="papers-grid">
-          <div v-for="p in filteredPapers" :key="p.id" class="paper-card" :class="{ pinned: p.pinned }" @click="openDetail(p.id)">
+          <div v-for="p in paginatedPapers" :key="p.id" class="paper-card" :class="{ pinned: p.pinned }" @click="openDetail(p.id)">
             <!-- 缩略图 -->
             <div class="paper-thumb">
               <img
@@ -108,12 +108,11 @@
       </n-spin>
 
       <!-- 分页 -->
-      <div v-if="total > pageSize" class="pagination-wrap">
+      <div v-if="filteredPapers.length > pageSize" class="pagination-wrap">
         <n-pagination
           v-model:page="currentPage"
-          :page-count="Math.ceil(total / pageSize)"
+          :page-count="Math.ceil(filteredPapers.length / pageSize)"
           :page-size="pageSize"
-          @update:page="loadPapers"
         />
       </div>
     </n-card>
@@ -322,6 +321,11 @@ const filteredPapers = computed(() => {
   })
 })
 
+const paginatedPapers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredPapers.value.slice(start, start + pageSize)
+})
+
 function thumbnailUrl(arxivId) {
   return getThumbnailUrl(arxivId)
 }
@@ -355,15 +359,18 @@ function categoryColor(cat) {
 
 function debouncedSearch() {
   if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => { currentPage.value = 1; loadPapers() }, 300)
+  searchTimer = setTimeout(() => { currentPage.value = 1 }, 300)
 }
 
-watch(() => filters.value.category, () => { currentPage.value = 1; loadPapers() })
+watch(() => filters.value.category, () => { currentPage.value = 1 })
+watch(() => starredOnly.value, () => { currentPage.value = 1 })
+watch(() => dateRange.value, () => { currentPage.value = 1 })
 
 async function loadPapers() {
   loading.value = true
   try {
-    const params = { limit: pageSize, offset: (currentPage.value - 1) * pageSize }
+    // 全量加载（140篇不多，客户端分页+筛选）
+    const params = { limit: 500, offset: 0 }
     if (filters.value.category) params.category = filters.value.category
     const data = await getPaperList(params)
     papers.value = data.papers || []
