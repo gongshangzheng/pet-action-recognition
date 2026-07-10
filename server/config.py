@@ -8,11 +8,11 @@ MANAGEMENT_DIR = os.path.join(BASE_DIR, "management")
 PAPERS_DIR = os.path.join(BASE_DIR, "papers")
 EVALUATION_DIR = os.path.join(BASE_DIR, "evaluation")
 
+# 论文数据库路径（本地独立数据库）
+PAPERS_DB = os.path.join(BASE_DIR, "data", "papers.db")
+
 # CORS 配置
 CORS_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
-
-# SeekVerse API（论文搜集后端）
-SEEKVERSE_BASE = "http://localhost:8000"

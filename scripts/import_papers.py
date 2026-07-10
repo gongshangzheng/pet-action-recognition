@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""从博客提取的论文列表导入到 SeekVerse 数据库。
+"""从博客提取的论文列表导入到本地论文数据库。
 
 1. 清空现有论文
 2. 从 arXiv API 批量获取论文元数据
-3. 写入 SeekVerse SQLite 数据库
+3. 写入本地 SQLite 数据库（data/papers.db）
 """
 import json
 import sqlite3
+import sys
 import time
 import urllib.request
 import urllib.parse
@@ -14,7 +15,11 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path.home() / "seekverse" / "data" / "seekverse.db"
+# 确保能 import server 模块
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from server.db import init_db
+
+DB_PATH = Path(__file__).parent.parent / "data" / "papers.db"
 PAPERS_JSON = Path(__file__).parent.parent / "data" / "extracted_papers.json"
 ARXIV_API = "http://export.arxiv.org/api/query"
 
@@ -101,7 +106,7 @@ def fetch_arxiv_batch(arxiv_ids: list[str]) -> dict:
 
 
 def generate_paper_id(arxiv_id: str) -> str:
-    """生成论文 ID（与 SeekVerse 格式一致）。"""
+    """生成论文 ID。"""
     return f"arxiv-{arxiv_id}"
 
 
@@ -112,7 +117,7 @@ def insert_paper(conn, paper_data: dict, extracted: dict):
 
     title = paper_data.get("title", extracted["title"])
     abstract = paper_data.get("abstract", "")
-    # authors 必须是 JSON 数组格式（SeekVerse _row_to_paper 用 json.loads 解析）
+    # authors 必须是 JSON 数组格式（db.py row_to_dict 用 json.loads 解析）
     authors_raw = paper_data.get("authors", "")
     if authors_raw and isinstance(authors_raw, str) and authors_raw.startswith("["):
         authors = authors_raw  # 已经是 JSON 数组字符串
@@ -244,7 +249,8 @@ def main():
         for aid in missing:
             print(f"    - {aid}")
 
-    # 3. 连接数据库
+    # 3. 初始化并连接数据库
+    init_db()  # 创建表结构（如果不存在）
     print(f"\nConnecting to {DB_PATH}...")
     conn = sqlite3.connect(str(DB_PATH))
 
