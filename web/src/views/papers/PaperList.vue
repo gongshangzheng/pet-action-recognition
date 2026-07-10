@@ -66,7 +66,7 @@
             <!-- 缩略图 -->
             <div class="paper-thumb">
               <img
-                v-if="p.external_ids?.arxiv && !failedThumbs.has(p.external_ids.arxiv)"
+                v-if="p.external_ids?.arxiv && !failedThumbs.has(p.external_ids.arxiv) && thumbnailUrl(p.external_ids.arxiv)"
                 :src="thumbnailUrl(p.external_ids.arxiv)"
                 :alt="p.title"
                 @error="onThumbError(p.external_ids.arxiv)"
