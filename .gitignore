@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Data & Cache (generated / runtime)
+papers/data/
+papers/cache/
+*.db
+*.db-shm
+*.db-wal
+
+# Evaluation results
+evaluation/results/
+
+# Temp logs
+/tmp/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Node / Web
+web/node_modules/
+web/dist/
+
+# Python virtual env (server)
+server/__pycache__/
+server/**/__pycache__/
+server/.venv/
+*.egg-info/
