@@ -7,12 +7,15 @@ build/
 .venv/
 venv/
 
-# Data & Cache
+# Data & Cache (generated / runtime)
 papers/data/
 papers/cache/
 *.db
 *.db-shm
 *.db-wal
+
+# Temp logs
+/tmp/*.log
 
 # Evaluation results
 evaluation/results/
@@ -27,3 +30,13 @@ evaluation/results/
 # Environment
 .env
 .env.local
+
+# Node / Web
+web/node_modules/
+web/dist/
+
+# Python virtual env (server)
+server/__pycache__/
+server/**/__pycache__/
+server/.venv/
+*.egg-info/
