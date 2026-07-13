@@ -15,7 +15,13 @@ const routes = [
       // 项目管理
       {
         path: 'management',
-        redirect: '/management/team',
+        redirect: '/management/projects',
+      },
+      {
+        path: 'management/projects',
+        name: 'Projects',
+        component: () => import('../views/management/Projects.vue'),
+        meta: { title: '项目树', module: 'management' },
       },
       {
         path: 'management/team',

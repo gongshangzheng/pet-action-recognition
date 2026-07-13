@@ -1,5 +1,46 @@
 @use 'variables' as *;
 
+// ── 主题令牌（运行时切换）──────────────────────────────────────
+:root {
+  --color-bg: #{$bg-color};
+  --color-card: #{$bg-card};
+  --color-elevated: #{$border-light};
+  --color-hover: rgba(0, 0, 0, 0.04);
+  --color-selected: rgba(79, 70, 229, 0.08);
+  --color-border: #{$border-color};
+  --color-border-light: #{$border-light};
+  --color-text: #{$text-primary};
+  --color-text-secondary: #{$text-secondary};
+  --color-text-dim: #{$text-light};
+  --color-text-heading: #{$text-primary};
+  --color-primary: #{$primary-color};
+  --color-primary-soft: rgba(79, 70, 229, 0.12);
+  --color-code-bg: #f0f0f0;
+  --color-shadow: rgba(0, 0, 0, 0.08);
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a8a8a8;
+}
+
+:root[data-theme='dark'] {
+  --color-bg: #18181b;
+  --color-card: #1f1f23;
+  --color-elevated: #27272a;
+  --color-hover: rgba(255, 255, 255, 0.05);
+  --color-selected: rgba(99, 179, 237, 0.12);
+  --color-border: #3f3f46;
+  --color-border-light: #2a2a2e;
+  --color-text: #e4e4e7;
+  --color-text-secondary: #a1a1aa;
+  --color-text-dim: #71717a;
+  --color-text-heading: #fafafa;
+  --color-primary: #818cf8;
+  --color-primary-soft: rgba(129, 140, 248, 0.15);
+  --color-code-bg: #2a2a2e;
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --scrollbar-thumb: #3f3f46;
+  --scrollbar-thumb-hover: #52525b;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -13,8 +54,9 @@ html, body, #app {
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: $bg-color;
-  color: $text-primary;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -35,12 +77,12 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--scrollbar-thumb-hover);
 }
 
 // 通用工具类
@@ -111,23 +153,23 @@ a {
     margin-bottom: 16px;
 
     th, td {
-      border: 1px solid $border-color;
+      border: 1px solid var(--color-border);
       padding: 8px 12px;
       text-align: left;
     }
 
     th {
-      background-color: $border-light;
+      background-color: var(--color-elevated);
       font-weight: 600;
     }
 
     tr:nth-child(even) {
-      background-color: $border-light;
+      background-color: var(--color-elevated);
     }
   }
 
   code {
-    background-color: #f0f0f0;
+    background-color: var(--color-code-bg);
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 13px;

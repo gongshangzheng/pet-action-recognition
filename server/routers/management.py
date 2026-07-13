@@ -1,12 +1,15 @@
 """项目管理路由"""
 import os
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from server.config import MANAGEMENT_DIR
 from server.utils.file_utils import read_file, scan_directory
 from server.parsers.team_parser import parse_team_list, parse_member_profile
 from server.parsers.report_parser import get_report_list, get_report_detail
 from server.parsers.tasks_parser import parse_tasks
 from server.parsers.milestones_parser import parse_milestones
+from server.parsers.projects_parser import (
+    list_projects, get_project, get_project_tasks, get_task_note,
+)
 
 router = APIRouter(prefix="/api/management", tags=["management"])
 
@@ -155,3 +158,38 @@ async def get_meeting_detail(date: str):
         if content:
             return {'date': date, 'content': content}
     return {"detail": "Meeting not found"}, 404
+
+
+# ========== 项目树 ==========
+
+@router.get("/projects")
+async def get_projects():
+    """获取所有项目列表"""
+    return list_projects()
+
+
+@router.get("/projects/{slug}")
+async def get_project_detail(slug: str):
+    """获取项目 README 元信息 + 正文"""
+    project = get_project(slug)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+@router.get("/projects/{slug}/tasks")
+async def get_project_tasks_route(slug: str):
+    """获取项目任务树"""
+    tree = get_project_tasks(slug)
+    if tree is None:
+        raise HTTPException(status_code=404, detail="Tasks not found")
+    return tree
+
+
+@router.get("/projects/{slug}/notes/{note_path:path}")
+async def get_task_note_route(slug: str, note_path: str):
+    """获取任务笔记 markdown"""
+    content = get_task_note(slug, note_path)
+    if content is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return {'content': content}

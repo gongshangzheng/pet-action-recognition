@@ -25,3 +25,9 @@ export const getMilestones = () => request.get('/management/milestones')
 // 会议纪要
 export const getMeetings = () => request.get('/management/meetings')
 export const getMeetingDetail = (date) => request.get(`/management/meetings/${date}`)
+
+// 项目树
+export const getProjects = () => request.get('/management/projects')
+export const getProjectDetail = (slug) => request.get(`/management/projects/${slug}`)
+export const getProjectTasks = (slug) => request.get(`/management/projects/${slug}/tasks`)
+export const getTaskNote = (slug, notePath) => request.get(`/management/projects/${slug}/notes/${notePath}`)
