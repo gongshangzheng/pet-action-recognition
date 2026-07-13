@@ -2,6 +2,23 @@ import os
 import re
 
 
+def safe_resolve(base_dir, *parts):
+    """安全地拼接并解析路径，确保结果位于 base_dir 内部（含符号链接解析）。"""
+    if not isinstance(base_dir, str):
+        return None
+    try:
+        base = os.path.realpath(base_dir)
+        if not os.path.isdir(base):
+            return None
+        path = os.path.realpath(os.path.join(base, *parts))
+        # 允许等于 base 目录，或位于 base 之下
+        if path != base and not path.startswith(base + os.sep):
+            return None
+        return path
+    except (ValueError, OSError):
+        return None
+
+
 def scan_directory(base_dir, pattern=None):
     """递归扫描目录，返回匹配的文件列表"""
     if not os.path.exists(base_dir):
