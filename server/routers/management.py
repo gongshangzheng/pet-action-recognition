@@ -1,8 +1,9 @@
 """项目管理路由"""
 import os
+import re
 from fastapi import APIRouter, HTTPException
 from server.config import MANAGEMENT_DIR
-from server.utils.file_utils import read_file, scan_directory
+from server.utils.file_utils import read_file, safe_resolve, scan_directory
 from server.parsers.team_parser import parse_team_list, parse_member_profile
 from server.parsers.report_parser import get_report_list, get_report_detail
 from server.parsers.tasks_parser import parse_tasks
@@ -12,6 +13,22 @@ from server.parsers.projects_parser import (
 )
 
 router = APIRouter(prefix="/api/management", tags=["management"])
+
+# 日期/作者参数校验（防止路径遍历与非法文件名）
+_DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+_YEAR_RE = re.compile(r'^\d{4}$')
+_MONTH_RE = re.compile(r'^(0[1-9]|1[0-2])$')
+_DAY_RE = re.compile(r'^(0[1-9]|[12]\d|3[01])$')
+_WEEK_RE = re.compile(r'^[1-5]?\d$')
+_FILENAME_PART_RE = re.compile(r'^[^/\\\x00-\x1f\x7f]+$')
+
+
+def _safe_report_path(base_dir, *parts):
+    """安全拼接报告路径，确保位于 base_dir 内。"""
+    filepath = safe_resolve(base_dir, *parts)
+    if not filepath or not os.path.exists(filepath):
+        return None
+    return filepath
 
 
 @router.get("/team")
@@ -47,18 +64,27 @@ async def get_daily_detail(date: str, author: str):
     """获取指定日报内容"""
     # 从 date 解析年月日
     parts = date.split('-')
-    if len(parts) == 3:
-        year, month, day = parts
-        # 尝试 YYYY/MM/DD-姓名.md
-        filepath = os.path.join(MANAGEMENT_DIR, 'daily', year, month, f"{day}-{author}.md")
-        if os.path.exists(filepath):
-            result = get_report_detail(filepath)
-            if result:
-                result['title'] = f"日报 — {author} — {date}"
-                result['author'] = author
-                result['date'] = date
-                return result
-    return {"detail": "Report not found"}, 404
+    if len(parts) != 3:
+        raise HTTPException(status_code=400, detail="Invalid date")
+    year, month, day = parts
+    if not (_YEAR_RE.match(year) and _MONTH_RE.match(month) and _DAY_RE.match(day)):
+        raise HTTPException(status_code=400, detail="Invalid date")
+    if not _FILENAME_PART_RE.match(author):
+        raise HTTPException(status_code=400, detail="Invalid author")
+
+    # 尝试 YYYY/MM/DD-姓名.md
+    filepath = _safe_report_path(
+        os.path.join(MANAGEMENT_DIR, 'daily', year, month),
+        f"{day}-{author}.md",
+    )
+    if filepath:
+        result = get_report_detail(filepath)
+        if result:
+            result['title'] = f"日报 — {author} — {date}"
+            result['author'] = author
+            result['date'] = date
+            return result
+    raise HTTPException(status_code=404, detail="Report not found")
 
 
 @router.get("/weekly")
@@ -70,8 +96,14 @@ async def get_weekly_list():
 @router.get("/weekly/{year}/{week}/{author}")
 async def get_weekly_detail(year: str, week: str, author: str):
     """获取指定周报内容"""
-    filepath = os.path.join(MANAGEMENT_DIR, 'weekly', year, f"W{week}-{author}.md")
-    if os.path.exists(filepath):
+    if not (_YEAR_RE.match(year) and _WEEK_RE.match(week) and _FILENAME_PART_RE.match(author)):
+        raise HTTPException(status_code=400, detail="Invalid parameters")
+
+    filepath = _safe_report_path(
+        os.path.join(MANAGEMENT_DIR, 'weekly', year),
+        f"W{week}-{author}.md",
+    )
+    if filepath:
         result = get_report_detail(filepath)
         if result:
             result['title'] = f"周报 — {author} — {year} 第 {week} 周"
@@ -79,7 +111,7 @@ async def get_weekly_detail(year: str, week: str, author: str):
             result['year'] = year
             result['week'] = week
             return result
-    return {"detail": "Report not found"}, 404
+    raise HTTPException(status_code=404, detail="Report not found")
 
 
 @router.get("/monthly")
@@ -91,8 +123,14 @@ async def get_monthly_list():
 @router.get("/monthly/{year}/{month}/{author}")
 async def get_monthly_detail(year: str, month: str, author: str):
     """获取指定月报内容"""
-    filepath = os.path.join(MANAGEMENT_DIR, 'monthly', year, f"{month}-{author}.md")
-    if os.path.exists(filepath):
+    if not (_YEAR_RE.match(year) and _MONTH_RE.match(month) and _FILENAME_PART_RE.match(author)):
+        raise HTTPException(status_code=400, detail="Invalid parameters")
+
+    filepath = _safe_report_path(
+        os.path.join(MANAGEMENT_DIR, 'monthly', year),
+        f"{month}-{author}.md",
+    )
+    if filepath:
         result = get_report_detail(filepath)
         if result:
             result['title'] = f"月报 — {author} — {year} 年 {month} 月"
@@ -100,7 +138,7 @@ async def get_monthly_detail(year: str, month: str, author: str):
             result['year'] = year
             result['month'] = month
             return result
-    return {"detail": "Report not found"}, 404
+    raise HTTPException(status_code=404, detail="Report not found")
 
 
 @router.get("/tasks")
@@ -154,13 +192,16 @@ async def get_meetings():
 @router.get("/meetings/{date}")
 async def get_meeting_detail(date: str):
     """获取指定会议纪要内容"""
+    if not _DATE_RE.match(date):
+        raise HTTPException(status_code=400, detail="Invalid date")
+
     meetings_dir = os.path.join(MANAGEMENT_DIR, 'docs', 'meetings')
-    filepath = os.path.join(meetings_dir, f"{date}.md")
-    if os.path.exists(filepath):
+    filepath = _safe_report_path(meetings_dir, f"{date}.md")
+    if filepath:
         content = read_file(filepath)
         if content:
             return {'date': date, 'content': content}
-    return {"detail": "Meeting not found"}, 404
+    raise HTTPException(status_code=404, detail="Meeting not found")
 
 
 # ========== 项目树 ==========

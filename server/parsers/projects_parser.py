@@ -1,15 +1,29 @@
 """项目树解析器 — 解析 management/docs/projects/{slug}/ 下的项目数据"""
-import os
 import json
+import os
 import re
 
 import yaml
 
 from server.config import MANAGEMENT_DIR
-from server.utils.file_utils import read_file
+from server.utils.file_utils import read_file, safe_resolve
 
 # 项目目录：management/docs/projects/
 PROJECTS_DIR = os.path.join(MANAGEMENT_DIR, 'docs', 'projects')
+
+# slug 只允许字母、数字、下划线、连字符
+_SLUG_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+
+def _is_valid_slug(slug):
+    return isinstance(slug, str) and bool(_SLUG_RE.match(slug))
+
+
+def _project_file_path(slug, *parts):
+    """生成并校验项目目录内的安全路径；越界或非法 slug 返回 None。"""
+    if not _is_valid_slug(slug):
+        return None
+    return safe_resolve(PROJECTS_DIR, slug, *parts)
 
 
 def list_projects():
@@ -23,7 +37,11 @@ def list_projects():
 
     projects = []
     for slug in os.listdir(PROJECTS_DIR):
-        readme_path = os.path.join(PROJECTS_DIR, slug, 'README.md')
+        project_base = _project_file_path(slug)
+        if not project_base or not os.path.isdir(project_base):
+            continue
+
+        readme_path = os.path.join(project_base, 'README.md')
         if not os.path.isfile(readme_path):
             continue
 
@@ -37,8 +55,8 @@ def list_projects():
 
 def get_project(slug):
     """获取单个项目元信息 + README 正文。"""
-    readme_path = os.path.join(PROJECTS_DIR, slug, 'README.md')
-    if not os.path.isfile(readme_path):
+    readme_path = _project_file_path(slug, 'README.md')
+    if not readme_path or not os.path.isfile(readme_path):
         return None
 
     meta, body = _parse_readme(read_file(readme_path))
@@ -49,8 +67,8 @@ def get_project(slug):
 
 def get_project_tasks(slug):
     """读取项目任务树 tasks.json，并执行级联完成计算。"""
-    tasks_path = os.path.join(PROJECTS_DIR, slug, 'tasks.json')
-    if not os.path.isfile(tasks_path):
+    tasks_path = _project_file_path(slug, 'tasks.json')
+    if not tasks_path or not os.path.isfile(tasks_path):
         return None
 
     content = read_file(tasks_path)
@@ -68,13 +86,16 @@ def get_project_tasks(slug):
 
 def get_task_note(slug, note_path):
     """读取项目下的任务笔记 markdown（notePath 相对项目目录）。"""
-    # 防止路径穿越
-    safe = os.path.normpath(note_path).lstrip('/')
-    if safe.startswith('..'):
+    if not isinstance(note_path, str):
         return None
 
-    full = os.path.join(PROJECTS_DIR, slug, safe)
-    if not os.path.isfile(full):
+    # 禁止绝对路径，并清除前导 /
+    safe_note_path = note_path.lstrip('/')
+    if not safe_note_path or safe_note_path.startswith('/'):
+        return None
+
+    full = _project_file_path(slug, safe_note_path)
+    if not full or not os.path.isfile(full):
         return None
 
     return read_file(full)
