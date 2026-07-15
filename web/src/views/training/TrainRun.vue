@@ -12,9 +12,6 @@
           <n-form-item label="训练配置">
             <n-select v-model:value="form.config_id" :options="configOptions" placeholder="超参 preset（可选）" clearable />
           </n-form-item>
-          <n-form-item label="Quality">
-            <n-input-number v-model:value="form.quality" :min="1" :max="8" />
-          </n-form-item>
           <n-form-item label="Epochs">
             <n-input-number v-model:value="form.epochs" :min="1" :max="1000" />
           </n-form-item>
@@ -23,9 +20,6 @@
           </n-form-item>
           <n-form-item label="Batch Size">
             <n-input-number v-model:value="form.batch_size" :min="1" :max="512" />
-          </n-form-item>
-          <n-form-item label="λ (RD)">
-            <n-input-number v-model:value="form.lamb" :step="0.001" :min="0" />
           </n-form-item>
           <n-form-item label="设备">
             <n-radio-group v-model:value="form.device">
@@ -57,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { NCard, NSpin, NForm, NFormItem, NSelect, NInputNumber, NRadioGroup, NRadio, NInput, NButton, NAlert, NCode, useMessage } from 'naive-ui'
 import { getTrainModels, getTrainDatasets, getTrainConfigs, runTraining } from '../../api/training'
 
@@ -68,11 +62,41 @@ const models = ref([])
 const datasets = ref([])
 const configs = ref([])
 const runResult = ref(null)
-const form = ref({ model_id: null, dataset_id: null, config_id: null, quality: 3, epochs: 100, lr: 1e-4, batch_size: 16, lamb: 0.01, device: 'cuda', extra_args: '' })
+const form = ref({ model_id: null, dataset_id: null, config_id: null, epochs: 100, lr: 1e-4, batch_size: 16, device: 'cuda', extra_args: '' })
+
+// 下拉框跨浏览器刷新(F5)持久化（不清空）
+const FORM_STORE_KEY = 'projflow:train-run'
+const PERSIST_FIELDS = ['model_id', 'dataset_id', 'config_id']
+function persistForm() {
+  try {
+    const snap = {}
+    for (const k of PERSIST_FIELDS) snap[k] = form.value[k]
+    localStorage.setItem(FORM_STORE_KEY, JSON.stringify(snap))
+  } catch { /* localStorage 不可用静默 */ }
+}
+function restoreForm() {
+  try {
+    const snap = JSON.parse(localStorage.getItem(FORM_STORE_KEY) || '{}')
+    for (const k of PERSIST_FIELDS) if (snap[k] != null) form.value[k] = snap[k]
+  } catch { /* ignore */ }
+}
+watch(() => [form.value.model_id, form.value.dataset_id, form.value.config_id], persistForm)
+restoreForm()
 
 const modelOptions = computed(() => models.value.map(m => ({ label: `${m.name || m.id} (${m.架构 || m.type || '?'})`, value: m.id })))
 const datasetOptions = computed(() => datasets.value.map(d => ({ label: d.name || d.id, value: d.id })))
 const configOptions = computed(() => configs.value.map(c => ({ label: c.name || c.id, value: c.id })))
+
+// 选中「训练配置」preset 时把其超参回填到表单（仅覆盖 preset 含的字段）。
+watch(() => form.value.config_id, (cfgId) => {
+  if (!cfgId) return
+  const cfg = configs.value.find(c => c.id === cfgId)
+  if (!cfg) return
+  const fields = ['epochs', 'lr', 'batch_size']
+  for (const f of fields) {
+    if (cfg[f] != null) form.value[f] = cfg[f]
+  }
+})
 
 async function handleRun() {
   if (!form.value.model_id || !form.value.dataset_id) {

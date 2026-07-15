@@ -104,9 +104,12 @@ async def get_monthly_detail(year: str, month: str, author: str):
 
 
 @router.get("/tasks")
-async def get_tasks():
-    """获取任务看板数据"""
-    return parse_tasks()
+async def get_tasks(slug: str = None):
+    """获取任务看板数据（从 per-project tasks.json 派生，按项目切换）。
+
+    slug 缺省时取首个项目。返回 {in_progress, pending, completed} 三桶。
+    """
+    return parse_tasks(slug)
 
 
 @router.get("/milestones")

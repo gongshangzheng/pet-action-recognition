@@ -29,7 +29,7 @@ infraredComp  pet-action  DigitalTeacher   (downstream, 下游)
 
 | 范围 | 归属 | 典型路径 |
 |------|------|----------|
-| 共享全栈脚手架 | **ProjFlow（上游）** | `server/main.py`(app+CORS+router 挂载)、`server/config.py`(路径常量模式)、`server/utils/file_utils.py`、`server/parsers/markdown_table.py`(含空表修复)、parser 模式、`web/` 脚手架(vite.config/api/request.js/layouts/MainLayout.vue/router/index.js/styles/)、`start_services.sh`、`AGENTS.md` 结构、management/papers/evaluation **模块结构**、`.github/workflows` |
+| 共享全栈脚手架 | **ProjFlow（上游）** | `server/main.py`(app+CORS+router 挂载)、`server/config.py`(路径常量模式)、`server/utils/file_utils.py`、`server/parsers/markdown_table.py`(含空表修复)、`server/parsers/tasks_parser.py`(看板=项目树同源派生)、parser 模式、`web/` 脚手架(vite.config/api/request.js/layouts/MainLayout.vue/router/index.js/styles/)、`start_services.sh`、`AGENTS.md` 结构、management/papers/evaluation **模块结构**、`.github/workflows` |
 | 共享 skills | **ProjFlow（上游）** | 跨项目复用的 skill（management CRUD、web 开发指南、本 upstream-sync 等）；下游镜像成自己前缀版本时从上游取改进 |
 | 红外压缩领域 | **infraredComp（下游）** | `benchmark/video/` 轮廓视频压缩评测、`datasets/`、`results/`、`server/routers/benchmark.py`、`web/src/views/benchmark/`、contour-video-* skills |
 | 宠物动作识别领域 | **pet-action-recognition（下游）** | `evaluation/`、宠物专属 router/views、pet-action-recognition-* skills |
@@ -54,6 +54,23 @@ git cherry-pick <SHA>                   # 精准搬一个共享改进
 ```
 
 > 慎用 `git merge upstream/main`：虽有共同祖先（159e4aa），但四库重叠文件已分叉，blanket merge 会大面积冲突。**cherry-pick 具体的 [shared] commit 更可控**。
+
+### 取上游的「部分文件」到下游（共享件，保留 git 血缘）
+
+当上游的一个 `[shared]` commit 里**只有一部分**是下游要的（例如 evaluation 模块：上游有通用后端 + 共享前端视图，下游只取前端视图、后端要自己定制），**不要用 `cp`**——会丢 git 血缘，下游看不出文件源自上游。用 `git checkout upstream/main -- <path>` 取：
+
+```bash
+git fetch upstream
+# 只取共享的前端视图/组件（带血缘 stage 进下游），后端 evaluation.py 下游自己写
+git checkout upstream/main -- web/src/views/evaluation/ web/src/components/common/VideoModal.vue web/src/api/evaluation.js
+# 下游定制的后端/配置：直接在下游写，不 checkout（会被上游通用版覆盖）
+#   server/routers/evaluation.py  -> 下游接领域数据源(codecs/序列/results.json)
+#   server/config.py 的 OUTPUTS_DIR -> 下游指 results/video/ 而非 evaluation/outputs/
+```
+
+**判别规则**：文件内容跨库**通用**（视图/组件/api 客户端/数据模板）→ `git checkout upstream/main -- <path>` 取；文件**绑定领域数据源**（router 读 results.json、列 codecs）→ 下游自己写。`cp` 只在「两库该文件已分叉、想手动合并」时用，且务必 commit message 注明源自上游哪个 commit。
+
+> 注意：`git checkout upstream/main -- <path>` 取回的文件会**覆盖**工作区同名文件（用上游版本替换），所以只对「下游该文件应等于上游」的路径用；对已定制分叉的路径别用，否则丢下游定制。
 
 ### 下游改了共享脚手架 → port 回上游
 
@@ -85,6 +102,11 @@ git format-patch -1 HEAD --stdout > /tmp/shared.patch   # 在下游
 - ❌ 把领域代码/数据推到 ProjFlow（上游只放共享脚手架 + 共享 skill）。
 - ❌ 在下游改共享脚手架后不 port 回上游（会导致兄弟库拿不到、长期分叉）。
 - ❌ `git merge upstream/main` 不带审查（重叠文件冲突，易吞掉下游定制）。
+
+## 经验沉淀（架构决策，供后人参考）
+
+- **任务数据单源（2026-07-15）**：任务看板与项目树曾用两份冗余文件——`management/docs/tasks.md`（全局看板，3 段 markdown 表）+ `management/docs/projects/{slug}/tasks.json`（项目树，层级 JSON），schema 各异、手动双写易分叉。已合并为**单源 = per-project `tasks.json`**：看板（`server/parsers/tasks_parser.parse_tasks(slug)`）递归展平树 + 按 status 映射成 3 桶（completed→completed / active→in_progress / planned·paused·blocked→pending）；`tasks.md` 删除。改一处、看板与项目树同步。脚手架改动按铁律先在 ProjFlow 落地 `[shared]` commit，再同构同步到 infraredComp。管理 skill 脚本（`add/update/delete/list_task.py`）改操作 `tasks.json`（`--slug --id`），成员/报表/会议/里程碑仍是 markdown（`mgmt_io` markdown helpers 保留）。
+- **训练界面上游/下游边界**：ProjFlow 训练 UI 是上游契约（`/run` 是 stub，models/datasets 空，待下游覆盖）。infraredComp 的训练 UX（localStorage F5 持久化、config preset 回填、3s 实时轮询曲线、auto-select-latest、withSelected 下拉稳定）已回移植到 ProjFlow 作为通用范本，**丢弃红外特异设计**（method canny/sobel/hed、isVideo 条件字段、imagenet 提示、λ/quality 率失真字段）。下游 infraredComp **保留** λ/quality/method 等领域字段（RD 训练脚本 `scripts/train_model.py` 需要 `--quality`/`--lambda`）。判断标准： ProjFlow 表单只放通用超参（epochs/lr/batch/optimizer/device/extra_args），领域超参由下游加。
 
 ## 备份与历史
 

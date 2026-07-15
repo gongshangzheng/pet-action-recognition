@@ -27,8 +27,6 @@ const columns = [
   { title: 'lr', key: 'lr', width: 90 },
   { title: 'batch', key: 'batch_size', width: 70 },
   { title: 'optimizer', key: 'optimizer', width: 100 },
-  { title: 'λ(RD)', key: 'lambda', width: 80 },
-  { title: 'quality', key: 'quality', width: 80 },
   { title: '描述', key: 'description' },
 ]
 

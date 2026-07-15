@@ -138,7 +138,7 @@ async def get_dataset_detail(dataset_id: str):
 
 @router.get("/configs")
 async def get_configs():
-    """训练超参 preset（epochs/lr/batch/optimizer/scheduler/lambda/quality）。"""
+    """训练超参 preset（epochs/lr/batch/optimizer/scheduler；按模型/数据集增领域超参）。"""
     return DEFAULT_CONFIGS
 
 

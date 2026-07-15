@@ -24,7 +24,7 @@
       <div v-if="curveOption" class="curve-wrap">
         <v-chart class="curve" :option="curveOption" autoresize />
       </div>
-      <div v-else class="curve-placeholder">选择下方任意一条训练 run，loss/PSNR/bpp 曲线将在此处显示</div>
+      <div v-else class="curve-placeholder">选择下方任意一条训练 run，loss/指标曲线将在此处显示</div>
     </n-card>
 
     <!-- 训练 run 列表 -->
@@ -46,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, h } from 'vue'
+import { ref, onMounted, onUnmounted, computed, h, watch } from 'vue'
 import { NCard, NSpin, NSpace, NSelect, NButton, NDataTable, useMessage } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -65,10 +65,77 @@ const runs = ref([])
 const checkpoints = ref([])
 const filters = ref({ model: null, dataset: null, status: null })
 const currentRun = ref(null)
+const currentRunId = ref(null)
 
-const modelOptions = computed(() => [...new Set(runs.value.map(r => r.model))].map(m => ({ label: m, value: m })))
-const datasetOptions = computed(() => [...new Set(runs.value.map(r => r.dataset))].map(d => ({ label: d, value: d })))
-const statusOptions = computed(() => [...new Set(runs.value.map(r => r.status))].map(s => ({ label: s, value: s })))
+// 跨浏览器刷新(F5)持久化筛选 + 选中 run（下拉框刷新不清空）
+const STORE_KEY = 'projflow:train-results'
+function persistState() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ filters: filters.value, currentRunId: currentRunId.value }))
+  } catch { /* localStorage 不可用时静默 */ }
+}
+function restoreState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || '{}')
+    if (s.filters) filters.value = { model: null, dataset: null, status: null, ...s.filters }
+    if (s.currentRunId) currentRunId.value = s.currentRunId
+  } catch { /* ignore */ }
+}
+watch([filters, () => currentRunId.value], persistState, { deep: true })
+restoreState()
+
+// 实时曲线：3s 轮询 getTrainRuns，同步选中 run 的 loss_series（曲线随 epoch 增长）
+const RUNNING = new Set(['running', 'started'])
+let pollTimer = null
+const isRunning = (r) => !!r && RUNNING.has(r.status)
+
+function sortRuns(list) {
+  return [...list].sort((a, b) => (b.started_at || '').localeCompare(a.started_at || ''))
+}
+
+function syncCurrent() {
+  if (!currentRunId.value) return
+  const r = runs.value.find(x => x.id === currentRunId.value)
+  if (r) currentRun.value = r
+}
+
+async function refreshCheckpoints() {
+  cpLoading.value = true
+  try {
+    const cps = await listCheckpoints().catch(() => ({ checkpoints: [] }))
+    checkpoints.value = cps?.checkpoints || []
+  } finally { cpLoading.value = false }
+}
+
+function startPolling() {
+  if (pollTimer) return
+  pollTimer = setInterval(async () => {
+    const res = await getTrainRuns().catch(() => null)
+    if (res?.runs) {
+      runs.value = sortRuns(res.runs)
+      syncCurrent()
+    }
+    // 全部 run 结束：补刷一次 checkpoints（拿新 .pth），停轮询
+    if (!runs.value.some(isRunning)) {
+      stopPolling()
+      refreshCheckpoints()
+    }
+  }, 3000)
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+
+// 选项列表始终包含当前已选中值：即使 runs 变动导致该值暂时不在列表里，
+// 下拉框也不会被清空（轮询/刷新不清空选中）。
+const withSelected = (values, selected) => {
+  if (selected && !values.includes(selected)) values.push(selected)
+  return values.map(v => ({ label: v, value: v }))
+}
+const modelOptions = computed(() => withSelected([...new Set(runs.value.map(r => r.model))], filters.value.model))
+const datasetOptions = computed(() => withSelected([...new Set(runs.value.map(r => r.dataset))], filters.value.dataset))
+const statusOptions = computed(() => withSelected([...new Set(runs.value.map(r => r.status))], filters.value.status))
 
 const filteredRuns = computed(() => {
   let list = runs.value
@@ -78,8 +145,15 @@ const filteredRuns = computed(() => {
   return list
 })
 
-const curveTitle = computed(() => currentRun.value ? `${currentRun.value.model} · ${currentRun.value.dataset} · ${currentRun.value.id}` : '')
+const curveTitle = computed(() => {
+  const r = currentRun.value
+  if (!r) return ''
+  const tail = isRunning(r) ? ' · 训练中，实时刷新…' : ''
+  return `${r.model} · ${r.dataset} · ${r.id}${tail}`
+})
 
+// 曲线 series 数据驱动：loss_series 里含哪个指标就画哪条
+// （通用训练可能只有 loss；率失真等下游可能含 psnr/bpp）。
 const curveOption = computed(() => {
   const r = currentRun.value
   if (!r || !r.loss_series?.length) return null
@@ -94,7 +168,7 @@ const curveOption = computed(() => {
     tooltip: { trigger: 'axis' },
     legend: { data: series.map(s => s.name) },
     xAxis: { type: 'category', data: epochs, name: 'epoch' },
-    yAxis: [{ type: 'value', name: 'loss' }, { type: 'value', name: 'PSNR/bpp' }],
+    yAxis: [{ type: 'value', name: 'loss' }, { type: 'value', name: '指标' }],
     series,
   }
 })
@@ -135,8 +209,11 @@ function fmtSize(b) {
 }
 
 function selectRun(r) {
-  currentRun.value = r
-  if (!r.loss_series?.length) message.info('该 run 暂无 loss_series（训练未完成或未记录）')
+  currentRunId.value = r?.id ?? null
+  currentRun.value = r ?? null
+  if (r && !r.loss_series?.length) message.info('该 run 暂无 loss_series（训练未开始或未记录）')
+  // 选中一条还在跑的 run → 确保轮询开着，曲线会随 epoch 更新
+  if (isRunning(r)) startPolling()
 }
 
 function copyUrl(cp) {
@@ -160,14 +237,22 @@ async function load() {
       getTrainRuns().catch(() => ({ runs: [] })),
       listCheckpoints().catch(() => ({ checkpoints: [] })),
     ])
-    runs.value = runsRes?.runs || []
+    runs.value = sortRuns(runsRes?.runs || [])
     checkpoints.value = cps?.checkpoints || []
+    // 自动选中最新一条 run（开页面即可看到正在跑的曲线）
+    if (!currentRunId.value && runs.value.length) {
+      selectRun(runs.value[0])
+    } else {
+      syncCurrent()
+    }
+    if (runs.value.some(isRunning)) startPolling()
   } catch (e) { message.error('加载失败') }
   loading.value = false
   cpLoading.value = false
 }
 
 onMounted(load)
+onUnmounted(stopPolling)
 </script>
 
 <style scoped lang="scss">

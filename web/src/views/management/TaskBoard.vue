@@ -1,12 +1,25 @@
 <template>
   <div class="page-container">
     <n-spin :show="loading">
-      <n-grid v-if="hasData" :cols="3" :x-gap="16" :y-gap="16">
+      <!-- 项目切换：看板从选中项目的 tasks.json 派生 -->
+      <div class="project-bar">
+        <span class="lbl">项目</span>
+        <n-select
+          v-model:value="currentSlug"
+          :options="projectOptions"
+          size="small"
+          style="width: 220px"
+          placeholder="选择项目"
+          @update:value="onProjectChange"
+        />
+      </div>
+
+      <n-grid :cols="3" :x-gap="16" :y-gap="16" style="margin-top: 12px">
         <n-gi>
           <n-card title="待开始" size="small">
             <template #header-extra><n-tag size="small" round>{{ tasks.pending.length }}</n-tag></template>
             <div class="task-list">
-              <div v-for="t in tasks.pending" :key="t.name" class="task-card">
+              <div v-for="t in tasks.pending" :key="t.id" class="task-card">
                 <div class="task-name">{{ t.name }}</div>
                 <div class="task-meta">
                   <span>{{ t.owner }}</span>
@@ -21,7 +34,7 @@
           <n-card title="进行中" size="small">
             <template #header-extra><n-tag size="small" type="info" round>{{ tasks.in_progress.length }}</n-tag></template>
             <div class="task-list">
-              <div v-for="t in tasks.in_progress" :key="t.name" class="task-card">
+              <div v-for="t in tasks.in_progress" :key="t.id" class="task-card">
                 <div class="task-name">{{ t.name }}</div>
                 <div class="task-meta">
                   <StatusBadge :status="t.status" />
@@ -37,7 +50,7 @@
           <n-card title="已完成" size="small">
             <template #header-extra><n-tag size="small" type="success" round>{{ tasks.completed.length }}</n-tag></template>
             <div class="task-list">
-              <div v-for="t in tasks.completed" :key="t.name" class="task-card">
+              <div v-for="t in tasks.completed" :key="t.id" class="task-card">
                 <div class="task-name">{{ t.name }}</div>
                 <div class="task-meta">
                   <span>{{ t.owner }}</span>
@@ -49,30 +62,53 @@
           </n-card>
         </n-gi>
       </n-grid>
-      <EmptyState v-else description="暂无任务数据，可在 management/docs/tasks.md 中添加" />
     </n-spin>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { NGrid, NGi, NCard, NTag, NSpin } from 'naive-ui'
+import { NGrid, NGi, NCard, NTag, NSpin, NSelect } from 'naive-ui'
 import StatusBadge from '../../components/common/StatusBadge.vue'
-import EmptyState from '../../components/common/EmptyState.vue'
-import { getTasks } from '../../api/management'
+import { getProjects, getTasks } from '../../api/management'
 
 const loading = ref(false)
+const projects = ref([])
+const currentSlug = ref(null)
 const tasks = ref({ pending: [], in_progress: [], completed: [] })
-const hasData = computed(() => tasks.value.pending.length || tasks.value.in_progress.length || tasks.value.completed.length)
+
+const projectOptions = computed(() => projects.value.map(p => ({ label: p.title || p.slug, value: p.slug })))
+
+async function loadTasks(slug) {
+  if (!slug) { tasks.value = { pending: [], in_progress: [], completed: [] }; return }
+  try {
+    tasks.value = await getTasks(slug)
+  } catch {
+    tasks.value = { pending: [], in_progress: [], completed: [] }
+  }
+}
+
+function onProjectChange(slug) {
+  currentSlug.value = slug
+  loadTasks(slug)
+}
 
 onMounted(async () => {
   loading.value = true
-  try { tasks.value = await getTasks() } catch {}
+  try {
+    projects.value = await getProjects()
+    if (projects.value.length) {
+      currentSlug.value = projects.value[0].slug
+      await loadTasks(currentSlug.value)
+    }
+  } catch {}
   loading.value = false
 })
 </script>
 
 <style scoped lang="scss">
+.project-bar { display: flex; align-items: center; gap: 8px; }
+.lbl { font-size: 13px; color: var(--color-text-secondary); }
 .task-list { display: flex; flex-direction: column; gap: 8px; }
 .task-card {
   padding: 12px;
