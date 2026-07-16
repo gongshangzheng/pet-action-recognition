@@ -139,12 +139,12 @@ import ProjectTaskNode from './ProjectTaskNode.vue'
 import { getProjects, getProjectDetail, getProjectTasks, getTaskNote } from '../../api/management'
 
 const PROJECT_COLORS = [
-  { dot: '#10b981', text: '#34d399', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.3)', line: 'rgba(16,185,129,0.5)' },
-  { dot: '#3b82f6', text: '#60a5fa', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.3)', line: 'rgba(59,130,246,0.5)' },
-  { dot: '#f59e0b', text: '#fbbf24', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)', line: 'rgba(245,158,11,0.5)' },
-  { dot: '#8b5cf6', text: '#a78bfa', bg: 'rgba(139,92,246,0.1)', border: 'rgba(139,92,246,0.3)', line: 'rgba(139,92,246,0.5)' },
-  { dot: '#ec4899', text: '#f472b6', bg: 'rgba(236,72,153,0.1)', border: 'rgba(236,72,153,0.3)', line: 'rgba(236,72,153,0.5)' },
-  { dot: '#06b6d4', text: '#22d3ee', bg: 'rgba(6,182,212,0.1)', border: 'rgba(6,182,212,0.3)', line: 'rgba(6,182,212,0.5)' },
+  { dot: '#10b981', text: '#34d399', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.3)', line: 'var(--color-border)' },
+  { dot: '#3b82f6', text: '#60a5fa', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.3)', line: 'var(--color-border)' },
+  { dot: '#f59e0b', text: '#fbbf24', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)', line: 'var(--color-border)' },
+  { dot: '#8b5cf6', text: '#a78bfa', bg: 'rgba(139,92,246,0.1)', border: 'rgba(139,92,246,0.3)', line: 'var(--color-border)' },
+  { dot: '#ec4899', text: '#f472b6', bg: 'rgba(236,72,153,0.1)', border: 'rgba(236,72,153,0.3)', line: 'var(--color-border)' },
+  { dot: '#06b6d4', text: '#22d3ee', bg: 'rgba(6,182,212,0.1)', border: 'rgba(6,182,212,0.3)', line: 'var(--color-border)' },
 ]
 
 const TASK_STATUS = {
