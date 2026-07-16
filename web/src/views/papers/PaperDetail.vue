@@ -17,18 +17,6 @@
                   <span v-if="paper.published_at" class="date">{{ formatDate(paper.published_at) }}</span>
                 </div>
               </div>
-              <div class="header-actions">
-                <n-button size="small" :type="paper.starred ? 'warning' : 'default'" @click="handleStar">
-                  {{ paper.starred ? '⭐ 已收藏' : '☆ 收藏' }}
-                </n-button>
-                <n-button size="small" :type="paper.pinned ? 'info' : 'default'" @click="handlePin">
-                  {{ paper.pinned ? '📌 已置顶' : '置顶' }}
-                </n-button>
-                <n-button tag="a" :href="paper.url" target="_blank" size="small" v-if="paper.url">arXiv</n-button>
-                <n-button tag="a" :href="paper.pdf_url" target="_blank" size="small" v-if="paper.pdf_url">PDF</n-button>
-                <n-button tag="a" :href="paper.blog_url" target="_blank" size="small" v-if="paper.blog_url">Blog</n-button>
-                <n-button @click="router.back()" size="small">返回</n-button>
-              </div>
             </div>
           </template>
 
@@ -95,19 +83,55 @@
         </n-space>
       </template>
     </n-modal>
+
+    <!-- 底部悬浮动作栏：收藏/置顶/arXiv/PDF（图标按钮，不占内容区） -->
+    <div v-if="paper" class="action-fab">
+      <n-tooltip>
+        <template #trigger>
+          <n-button quaternary circle :type="paper.starred ? 'warning' : 'default'" @click="handleStar">
+            <template #icon><n-icon size="20"><star v-if="paper.starred" /><star-outline v-else /></n-icon></template>
+          </n-button>
+        </template>
+        {{ paper.starred ? '已收藏' : '收藏' }}
+      </n-tooltip>
+      <n-tooltip>
+        <template #trigger>
+          <n-button quaternary circle :type="paper.pinned ? 'info' : 'default'" @click="handlePin">
+            <template #icon><n-icon size="20"><bookmarks v-if="paper.pinned" /><bookmarks-outline v-else /></n-icon></template>
+          </n-button>
+        </template>
+        {{ paper.pinned ? '已置顶' : '置顶' }}
+      </n-tooltip>
+      <n-tooltip v-if="paper.url">
+        <template #trigger>
+          <n-button quaternary circle tag="a" :href="paper.url" target="_blank">
+            <template #icon><n-icon size="20"><document-text-outline /></n-icon></template>
+          </n-button>
+        </template>
+        arXiv
+      </n-tooltip>
+      <n-tooltip v-if="paper.pdf_url">
+        <template #trigger>
+          <n-button quaternary circle tag="a" :href="paper.pdf_url" target="_blank">
+            <template #icon><n-icon size="20"><document-outline /></n-icon></template>
+          </n-button>
+        </template>
+        PDF
+      </n-tooltip>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { NCard, NSpin, NButton, NTag, NSpace, NDivider, NInput, NModal, useMessage } from 'naive-ui'
+import { useRoute } from 'vue-router'
+import { NCard, NSpin, NButton, NTag, NSpace, NDivider, NInput, NModal, NIcon, NTooltip, useMessage } from 'naive-ui'
+import { Star, StarOutline, Bookmarks, BookmarksOutline, DocumentTextOutline, DocumentOutline } from '@vicons/ionicons5'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
 import { getPaperDetail, getPaperNote, savePaperNote, setPaperBlog, summarizePaper, getThumbnailUrl, starPaper, pinPaper } from '../../api/papers'
 
 const route = useRoute()
-const router = useRouter()
 const message = useMessage()
 
 const loading = ref(false)
@@ -213,7 +237,14 @@ onMounted(async () => {
 .title-en { font-size: 13px; color: #94a3b8; font-style: italic; margin-bottom: 4px; }
 .authors { font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .meta-tags { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; .date { font-size: 12px; color: #94a3b8; margin-left: 6px; } }
-.header-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.action-fab {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; padding: 8px 16px;
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: 999px; box-shadow: 0 4px 16px var(--color-shadow);
+  z-index: 100;
+}
 
 .detail-body { display: flex; gap: 20px; }
 .detail-thumb { width: 200px; flex-shrink: 0; img { width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; } }

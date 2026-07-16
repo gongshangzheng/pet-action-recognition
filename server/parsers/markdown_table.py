@@ -26,7 +26,12 @@ def parse_markdown_tables(md_text):
 
             if len(table_lines) >= 2:
                 table = _parse_single_table(table_lines)
-                if table:
+                # Preserve empty-but-valid tables (header + separator, no rows)
+                # so positional callers (tasks_parser maps in_progress/pending/
+                # completed by table index) don't misalign when some sections
+                # are empty. _parse_single_table returns None only for invalid
+                # blocks (no header / bad separator).
+                if table is not None:
                     tables.append(table)
         else:
             i += 1
@@ -35,18 +40,22 @@ def parse_markdown_tables(md_text):
 
 
 def _parse_single_table(table_lines):
-    """解析单个表格块"""
+    """解析单个表格块。
+
+    Returns a list of row dicts (possibly empty for a valid header+separator
+    table with no data rows), or None if the block is not a well-formed table.
+    """
     if len(table_lines) < 2:
-        return []
+        return None
 
     # 第一行是表头
     headers = _split_row(table_lines[0])
     if not headers:
-        return []
+        return None
 
     # 第二行是分隔符（|---|---|）
     if not re.match(r'^\|[\s\-:|]+\|?$', table_lines[1]):
-        return []
+        return None
 
     rows = []
     for line in table_lines[2:]:

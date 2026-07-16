@@ -76,7 +76,7 @@ import {
   HomeOutline, PeopleOutline, GitBranchOutline, CalendarOutline,
   DocumentTextOutline, GridOutline, FlagOutline, ChatbubblesOutline,
   SearchOutline, SettingsOutline, FlaskOutline, BarChartOutline,
-  CubeOutline, LayersOutline, SchoolOutline, SunnyOutline, MoonOutline,
+  CubeOutline, LayersOutline, SchoolOutline, FilmOutline, SunnyOutline, MoonOutline,
 } from '@vicons/ionicons5'
 import { useThemeStore } from '../stores/theme'
 
@@ -140,8 +140,10 @@ const menuOptions = [
     children: [
       { label: '评测运行', key: '/evaluation/run', icon: renderIcon(FlaskOutline) },
       { label: '评测结果', key: '/evaluation/results', icon: renderIcon(BarChartOutline) },
+      { label: '查看输出', key: '/evaluation/outputs', icon: renderIcon(FilmOutline) },
       { label: '模型管理', key: '/evaluation/models', icon: renderIcon(CubeOutline) },
       { label: '数据集管理', key: '/evaluation/datasets', icon: renderIcon(LayersOutline) },
+      { label: '评测配置', key: '/evaluation/configs', icon: renderIcon(SettingsOutline) },
     ],
   },
   {
@@ -165,7 +167,7 @@ const activeKey = computed(() => {
     '/', '/management/projects', '/management/team', '/management/daily', '/management/weekly',
     '/management/monthly', '/management/tasks', '/management/milestones',
     '/management/meetings', '/papers/list', '/papers/config',
-    '/evaluation/run', '/evaluation/results', '/evaluation/models', '/evaluation/datasets',
+    '/evaluation/run', '/evaluation/results', '/evaluation/outputs', '/evaluation/models', '/evaluation/datasets', '/evaluation/configs',
     '/training/run', '/training/results', '/training/models', '/training/datasets', '/training/configs',
   ]
   let best = '/'

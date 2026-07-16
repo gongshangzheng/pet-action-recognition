@@ -141,6 +141,18 @@ const routes = [
         component: () => import('../views/evaluation/DatasetManage.vue'),
         meta: { title: '数据集管理', module: 'evaluation' },
       },
+      {
+        path: 'evaluation/outputs',
+        name: 'EvalOutputs',
+        component: () => import('../views/evaluation/EvalOutputs.vue'),
+        meta: { title: '查看输出', module: 'evaluation' },
+      },
+      {
+        path: 'evaluation/configs',
+        name: 'EvalConfigManage',
+        component: () => import('../views/evaluation/ConfigManage.vue'),
+        meta: { title: '评测配置', module: 'evaluation' },
+      },
       // ===== training 训练体系 =====
       { path: 'training', redirect: '/training/results' },
       {
