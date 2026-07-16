@@ -128,25 +128,16 @@ python3 $SD/list_tasks.py --slug projflow --status active
 "description": "实现项目树页面的分支线渲染逻辑，用递归组件包裹每个 task node，支持任意深度，带 git 风格连接线，悬浮卡展示详情，要求性能达标（500节点<100ms），不包括拖拽排序功能，那个放到后面的 t9 里做。"
 ```
 
-**调用专用 subagent（推荐）**：创建/修改任务时，若 description 需要新写或重写，主 agent 应通过 `Agent` 工具派生一个 `general-purpose` subagent 专门产出描述文本，避免主上下文被写作过程污染。Prompt 模板：
+**调用专用 subagent（推荐）**：创建/修改任务时，若 description 需要新写或重写，主 agent 应派生一个 `general-purpose` subagent 专门产出描述文本，避免主上下文被写作过程污染。
 
-```
-你是 ProjFlow 任务描述写手。严格按以下规范输出 description 字段值（纯文本，用 \n 换行，不要 ```json 代码块，不要任何前言后语）：
+- **提示词文件**：`.claude/agents/description-writer.md`（frontmatter 含 subagent 类型、输入/输出约定、完整规则）
+- **调用方式**：
+  1. 读取 `.claude/agents/description-writer.md` 正文
+  2. 在末尾追加：`任务 title：<TITLE>\n上下文：<CONTEXT>`（占位符替换为实际值）
+  3. 通过 `Agent` 工具派生 subagent（`subagent_type: general-purpose`）
+  4. subagent 返回的字符串即 description 值，原样传给 `add_task.py --description "..."` 或 `update_task.py --description "..."`
 
-规范：
-1. 首行：单句定位（≤40 汉字），不复述 title
-2. 一个空行
-3. 2-4 条 • 要点（每条 ≤60 汉字），涵盖范围/交付物/约束/非目标
-4. 总长 ≤6 行；禁止 emoji、markdown、HTML
-5. 中文里夹英文专有名词左右留空格，首字母大写
-
-任务 title：<TITLE>
-上下文（父任务/项目/slug 等，可选）：<CONTEXT>
-
-直接输出 description 字符串（已转义好可直接塞 JSON）。
-```
-
-subagent 返回后，主 agent 把字符串原样传给 `add_task.py --description "$(cat <<'EOF'\n...\nEOF\n)"` 或 `update_task.py --description`。
+> 写作规范的**人读版**（给主 agent / 人类 review 用）见上面的"硬性规则"。subagent 提示词是其**机器读版**，含更严格的输出格式约束（只输出字符串本身，不要前言后语）。两份要保持语义一致；修改规范时两处同步更新。
 
 ---
 
