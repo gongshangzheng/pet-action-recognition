@@ -264,7 +264,7 @@ function onClick() {
   .hc-title-row { display: flex; align-items: center; gap: 6px; strong { font-size: 13px; color: var(--color-text-heading); } }
   .hc-meta-row { display: flex; align-items: center; gap: 6px; padding-left: 14px; }
   .hc-id { font-family: 'SF Mono', 'Menlo', monospace; font-size: 10px; color: var(--color-text-dim); background: var(--color-elevated); padding: 1px 5px; border-radius: 3px; }
-  .hc-badge { font-size: 10px; width: 42px; text-align: center; background: var(--color-elevated); padding: 1px 6px; border-radius: 4px; color: var(--color-text-secondary); }
+  .hc-badge { font-size: 10px; min-width: 42px; text-align: center; background: var(--color-elevated); padding: 1px 6px; border-radius: 4px; color: var(--color-text-secondary); }
   .hc-priority {
     font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 500;
     &.p-high { background: rgba(239,68,68,0.12); color: #dc2626; }

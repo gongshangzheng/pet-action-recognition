@@ -99,15 +99,26 @@
 
           <div class="cornell-body">
             <div class="cornell-main">
-              <div v-if="noteLoading" class="empty-inline">加载笔记中…</div>
-              <markdown-renderer v-else-if="noteContent !== null" :content="noteContent" />
-              <p v-else-if="selectedTask.description" class="desc-text">{{ selectedTask.description }}</p>
-              <p v-else class="empty-inline">该任务暂无描述或笔记。</p>
+              <div class="desc-panel">
+                <div v-if="noteLoading" class="empty-inline">加载笔记中…</div>
+                <markdown-renderer v-else-if="noteContent !== null" :content="noteContent" />
+                <p v-else-if="selectedTask.description" class="desc-text">{{ selectedTask.description }}</p>
+                <p v-else class="empty-inline">该任务暂无描述或笔记。</p>
+              </div>
+
+              <div v-if="completionProgress.length" class="completion-panel">
+                <div class="completion-head">完成总结</div>
+                <div v-for="(p, i) in completionProgress" :key="i" class="completion-entry">
+                  <span class="progress-date">{{ p.date }}</span>
+                  <span class="progress-note">{{ p.note.replace(/^\[完成\]\s*/, '') }}</span>
+                </div>
+              </div>
             </div>
 
-            <aside v-if="ongoingProgress.length" class="cornell-right">
+            <aside v-if="allProgress.length" class="cornell-right">
               <div class="progress-head">进展记录</div>
-              <div v-for="(p, i) in ongoingProgress" :key="i" class="progress-entry">
+              <div v-for="(p, i) in allProgress" :key="i" class="progress-entry"
+                   :class="{ 'is-done': p.note && p.note.startsWith('[完成]') }">
                 <div class="progress-dot"></div>
                 <div class="progress-body">
                   <span class="progress-date">{{ p.date }}</span>
@@ -115,14 +126,6 @@
                 </div>
               </div>
             </aside>
-          </div>
-
-          <div v-if="completionProgress.length" class="cornell-bottom">
-            <div class="completion-head">完成总结</div>
-            <div v-for="(p, i) in completionProgress" :key="i" class="completion-entry">
-              <span class="progress-date">{{ p.date }}</span>
-              <span class="progress-note">{{ p.note.replace(/^\[完成\]\s*/, '') }}</span>
-            </div>
           </div>
         </div>
 
@@ -391,9 +394,9 @@ onMounted(loadProjects)
 </script>
 
 <style scoped lang="scss">
-.projects-page { padding: 4px 8px; }
+.projects-page { padding: 4px 8px; height: 100%; display: flex; flex-direction: column; }
 
-.page-header { margin-bottom: 20px; }
+.page-header { margin-bottom: 20px; flex-shrink: 0; }
 .title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
   h2 { font-size: 18px; font-weight: 600; margin: 0; color: var(--color-text-heading); }
 }
@@ -411,6 +414,7 @@ onMounted(loadProjects)
 .content-grid {
   display: grid; gap: 24px;
   grid-template-columns: 280px 1fr;
+  flex: 1; min-height: 0;
 }
 @media (max-width: 900px) { .content-grid { grid-template-columns: 1fr; } }
 
@@ -444,7 +448,14 @@ onMounted(loadProjects)
   p { margin-top: 8px; font-size: 12px; }
 }
 
-.detail-main { min-width: 0; }
+.detail-main {
+  min-width: 0;
+  display: flex; flex-direction: column;
+}
+.task-detail {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+}
 .detail-head {
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
   border-bottom: 1px solid var(--color-border); padding-bottom: 16px; margin-bottom: 0;
@@ -455,7 +466,7 @@ onMounted(loadProjects)
   color: var(--color-text-dim); background: var(--color-elevated);
   padding: 2px 8px; border-radius: 4px;
 }
-.detail-badge { font-size: 10px; width: 42px; text-align: center; background: var(--color-elevated); padding: 2px 8px; border-radius: 4px; color: var(--color-text-secondary); }
+.detail-badge { font-size: 10px; min-width: 42px; text-align: center; background: var(--color-elevated); padding: 2px 8px; border-radius: 4px; color: var(--color-text-secondary); }
 .detail-assignee {
   display: inline-flex; align-items: center; gap: 4px;
   background: var(--color-primary-soft); color: var(--color-primary);
@@ -466,9 +477,18 @@ onMounted(loadProjects)
 .cornell-body {
   display: grid; gap: 20px; padding: 20px 0;
   grid-template-columns: 1fr 220px;
+  flex: 1; min-height: 0;
   @media (max-width: 900px) { grid-template-columns: 1fr; }
 }
-.cornell-main { min-width: 0; }
+.cornell-main {
+  min-width: 0;
+  display: flex; flex-direction: column; gap: 20px;
+  .desc-panel {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding: 14px; border: 1px solid var(--color-border); border-radius: 8px;
+    background: var(--color-elevated);
+  }
+}
 .cornell-right {
   border-left: 2px solid var(--color-border); padding-left: 16px;
   @media (max-width: 900px) { border-left: none; border-top: 2px solid var(--color-border); padding-left: 0; padding-top: 16px; }
@@ -483,13 +503,19 @@ onMounted(loadProjects)
   .progress-body { display: flex; flex-direction: column; gap: 2px; }
   .progress-date { font-size: 10px; color: var(--color-text-dim); font-family: monospace; }
   .progress-note { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; white-space: pre-line; word-break: break-word; }
+  &.is-done {
+    .progress-dot { background: #22c55e; }
+    .progress-note { color: #22c55e; }
+  }
 }
-.cornell-bottom {
-  border-top: 2px solid rgba(34,197,94,0.3); padding-top: 16px;
-  .completion-head { font-size: 11px; font-weight: 600; color: #22c55e; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.completion-panel {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 12px 14px;
+  border: 1px solid rgba(34,197,94,0.15); border-radius: 8px;
+  background: rgba(34,197,94,0.03);
+  .completion-head { font-size: 11px; font-weight: 600; color: #22c55e; margin-bottom: 6px; letter-spacing: 0.5px; }
   .completion-entry {
-    display: flex; gap: 10px; margin-bottom: 8px; padding: 8px 12px;
-    background: rgba(34,197,94,0.04); border-radius: 6px; border: 1px solid rgba(34,197,94,0.1);
+    display: flex; gap: 10px; margin-bottom: 4px;
     .progress-date { font-size: 10px; color: var(--color-text-dim); font-family: monospace; flex-shrink: 0; min-width: 70px; }
     .progress-note { font-size: 12px; color: var(--color-text); line-height: 1.5; white-space: pre-line; word-break: break-word; }
   }

@@ -266,5 +266,13 @@ const today = computed(() => {
 .app-content {
   height: calc(100vh - 56px);
   padding: 0;
+
+  :deep(.n-scrollbar-content) {
+    height: 100%;
+  }
+
+  :deep(.n-scrollbar-content > *) {
+    min-height: 100%;
+  }
 }
 </style>
