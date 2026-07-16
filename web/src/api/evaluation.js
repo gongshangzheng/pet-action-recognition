@@ -19,3 +19,8 @@ export const runEvaluation = (data) => request.post('/evaluation/run', data)
 export const getEvalResults = (params) => request.get('/evaluation/results', { params })
 export const getEvalResultDetail = (id) => request.get(`/evaluation/results/${id}`)
 export const compareResults = (params) => request.get('/evaluation/results/compare', { params })
+
+// 输出视频/码流（按需服务）
+export const listOutputs = () => request.get('/evaluation/outputs')
+// 拼接按需播放 URL（<video preload="none"> 仅在挂载时才请求字节）
+export const getOutputUrl = (path) => `/api/evaluation/outputs/${path}`

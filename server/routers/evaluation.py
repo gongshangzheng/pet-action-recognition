@@ -2,10 +2,21 @@
 import os
 import json
 from fastapi import APIRouter, Body
-from server.config import EVALUATION_DIR
-from server.utils.file_utils import read_file, scan_directory
+from fastapi.responses import FileResponse
+from server.config import EVALUATION_DIR, OUTPUTS_DIR
+from server.utils.file_utils import read_file, scan_directory, safe_resolve
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"])
+
+# 视频文件扩展名 -> MIME（outputs 端点按需服务压缩码流/重建视频）
+VIDEO_MIME = {
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+    ".mkv": "video/x-matroska",
+    ".mov": "video/quicktime",
+    ".avi": "video/x-msvideo",
+    ".m4v": "video/x-m4v",
+}
 
 # 默认模型数据（当 evaluation/models/ 为空时使用）
 DEFAULT_MODELS = [
@@ -79,13 +90,60 @@ async def get_config_detail(config_id: str):
 
 @router.post("/run")
 async def run_evaluation(data: dict = Body(...)):
-    """启动评测任务"""
+    """启动评测任务。
+
+    契约返回 ``output_video``（相对 OUTPUTS_DIR 的路径或 None）——下游若实际执行
+    评测脚本，应填真实输出码流路径，前端据此按需展示输出视频+指标。
+    """
     return {
         'status': 'pending',
         'message': '评测任务已提交',
         'config': data,
-        'note': '评测脚本尚未实现，此为模拟响应。后续将对接 evaluation/scripts/ 中的评测脚本。',
+        'output_video': None,
+        'metrics': None,
+        'note': '上游脚手架为模拟响应；下游库（如 infraredComp）实接评测脚本后填充 output_video/metrics。',
     }
+
+
+# ---- 输出视频/码流（按需服务，防路径穿越）--------------------------- #
+
+@router.get("/outputs")
+async def list_outputs():
+    """列出 OUTPUTS_DIR 下可查看的输出文件（视频/码流），供 EvalOutputs 浏览。"""
+    if not os.path.isdir(OUTPUTS_DIR):
+        return {"outputs": []}
+    out = []
+    for root, _, files in os.walk(OUTPUTS_DIR):
+        for fn in sorted(files):
+            full = os.path.join(root, fn)
+            if not os.path.isfile(full):
+                continue
+            rel = os.path.relpath(full, OUTPUTS_DIR)
+            ext = os.path.splitext(fn)[1].lower()
+            out.append({
+                "name": fn,
+                "path": rel.replace(os.sep, "/"),
+                "ext": ext,
+                "is_video": ext in VIDEO_MIME,
+                "size_bytes": os.path.getsize(full),
+            })
+    out.sort(key=lambda x: x["path"])
+    return {"outputs": out}
+
+
+@router.get("/outputs/{file_path:path}")
+async def serve_output(file_path: str):
+    """按需服务一个输出文件（视频码流/重建帧），流式 FileResponse。
+
+    路径经 safe_resolve 校验必须位于 OUTPUTS_DIR 内，防穿越。
+    前端 <video preload="none"> 仅在用户点开后才请求此端点。
+    """
+    safe = safe_resolve(OUTPUTS_DIR, file_path)
+    if not safe or not os.path.isfile(safe):
+        return {"detail": "Output not found"}, 404
+    ext = os.path.splitext(safe)[1].lower()
+    media = VIDEO_MIME.get(ext, "application/octet-stream")
+    return FileResponse(safe, media_type=media, filename=os.path.basename(safe))
 
 
 @router.get("/results")

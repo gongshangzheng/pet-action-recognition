@@ -35,14 +35,27 @@
       <n-alert :type="runResult.success ? 'success' : 'error'" :title="runResult.success ? '评测完成' : '评测失败'">
         <pre>{{ runResult.output }}</pre>
       </n-alert>
+      <!-- 运行后若返回 output_video，直接按需看输出视频 + 指标 -->
+      <div v-if="runResult.videoSrc" style="margin-top: 12px">
+        <h4 style="margin-bottom: 8px">输出视频</h4>
+        <video :src="runResult.videoSrc" controls preload="none" playsinline style="width: 100%; max-height: 360px; background: #000" />
+        <n-descriptions v-if="runResult.metrics" :column="3" size="small" label-placement="left" bordered style="margin-top: 12px">
+          <n-descriptions-item v-for="(v, k) in runResult.metrics" :key="k" :label="k">
+            {{ typeof v === 'number' ? (v.toFixed?.(3) ?? v) : v }}
+          </n-descriptions-item>
+        </n-descriptions>
+      </div>
     </n-card>
+
+    <VideoModal v-model:show="videoShow" :src="videoSrc" :title="videoTitle" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { NCard, NSpin, NForm, NFormItem, NSelect, NInputNumber, NRadioGroup, NRadio, NInput, NButton, NAlert, useMessage } from 'naive-ui'
-import { getModels, getDatasets, getEvalConfigs, runEvaluation } from '../../api/evaluation'
+import { NCard, NSpin, NForm, NFormItem, NSelect, NInputNumber, NRadioGroup, NRadio, NInput, NButton, NAlert, NDescriptions, NDescriptionsItem, useMessage } from 'naive-ui'
+import { getModels, getDatasets, getEvalConfigs, runEvaluation, getOutputUrl } from '../../api/evaluation'
+import VideoModal from '../../components/common/VideoModal.vue'
 
 const message = useMessage()
 const loading = ref(false)
@@ -51,6 +64,9 @@ const models = ref([])
 const datasets = ref([])
 const configs = ref([])
 const runResult = ref(null)
+const videoShow = ref(false)
+const videoSrc = ref('')
+const videoTitle = ref('')
 const form = ref({ model_id: null, dataset_id: null, config_id: null, batch_size: 8, device: 'cuda', extra_args: '' })
 
 const modelOptions = computed(() => models.value.map(m => ({ label: `${m.name} (${m.type})`, value: m.id })))
@@ -66,7 +82,14 @@ async function handleRun() {
   runResult.value = null
   try {
     const res = await runEvaluation(form.value)
-    runResult.value = { success: true, output: JSON.stringify(res, null, 2) }
+    // 若后端返回 output_video，按需拼 URL（<video preload=none> 仅渲染时才请求字节）
+    const vid = res?.output_video ? getOutputUrl(res.output_video) : ''
+    runResult.value = {
+      success: true,
+      output: JSON.stringify(res, null, 2),
+      videoSrc: vid,
+      metrics: res?.metrics || null,
+    }
     message.success('评测已完成')
   } catch (e) {
     runResult.value = { success: false, output: e.message || '评测执行失败' }
