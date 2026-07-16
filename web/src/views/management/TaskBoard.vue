@@ -86,10 +86,10 @@ const projects = ref([])
 const currentSlug = ref(null)
 const tasks = ref({ pending: [], in_progress: [], completed: [] })
 
-const projectOptions = computed(() => projects.value.map(p => ({ label: p.title || p.slug, value: p.slug })))
-
 const PRIORITY_LABEL = { high: '高', medium: '中', low: '低' }
 function priorityLabel(p) { return PRIORITY_LABEL[p] || p }
+
+const projectOptions = computed(() => projects.value.map(p => ({ label: p.title || p.slug, value: p.slug })))
 
 async function loadTasks(slug) {
   if (!slug) { tasks.value = { pending: [], in_progress: [], completed: [] }; return }
