@@ -3,7 +3,15 @@
 # 端口分配：后端=8080  前端=3000
 # 论文数据库：data/papers.db（本地 SQLite，独立于 SeekVerse）
 
-BASE_DIR=/Users/tangwen/pet-action-recognition
+BASE_DIR="$HOME/pet-action-recognition"
+
+# --- Node 版本：切到 nvm 的 v22，避免 conda 自带 node 20.17 触发 Vite 警告 ---
+# 注：nvm use 在 conda/cmux 环境下 prepend 不生效，故手动把 nvm v22 bin 插到 PATH 最前
+NVM_NODE_BIN="$(printf '%s\n' "$HOME"/.nvm/versions/node/v22.*/bin | sort -V | tail -1)"
+if [ -n "$NVM_NODE_BIN" ] && [ -x "$NVM_NODE_BIN/node" ]; then
+  export PATH="$NVM_NODE_BIN:$PATH"
+  hash -r 2>/dev/null
+fi
 
 # --- 1. Backend (port 8080) ---
 if lsof -i :8080 -sTCP:LISTEN >/dev/null 2>&1; then

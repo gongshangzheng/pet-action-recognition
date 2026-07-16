@@ -15,7 +15,13 @@ const routes = [
       // 项目管理
       {
         path: 'management',
-        redirect: '/management/team',
+        redirect: '/management/projects',
+      },
+      {
+        path: 'management/projects',
+        name: 'Projects',
+        component: () => import('../views/management/Projects.vue'),
+        meta: { title: '项目树', module: 'management' },
       },
       {
         path: 'management/team',
@@ -134,6 +140,38 @@ const routes = [
         name: 'DatasetManage',
         component: () => import('../views/evaluation/DatasetManage.vue'),
         meta: { title: '数据集管理', module: 'evaluation' },
+      },
+      // ===== training 训练体系 =====
+      { path: 'training', redirect: '/training/results' },
+      {
+        path: 'training/run',
+        name: 'TrainRun',
+        component: () => import('../views/training/TrainRun.vue'),
+        meta: { title: '训练运行', module: 'training' },
+      },
+      {
+        path: 'training/results',
+        name: 'TrainResults',
+        component: () => import('../views/training/TrainResults.vue'),
+        meta: { title: '训练结果', module: 'training' },
+      },
+      {
+        path: 'training/models',
+        name: 'TrainModelManage',
+        component: () => import('../views/training/TrainModelManage.vue'),
+        meta: { title: '模型配置', module: 'training' },
+      },
+      {
+        path: 'training/datasets',
+        name: 'TrainDatasetManage',
+        component: () => import('../views/training/TrainDatasetManage.vue'),
+        meta: { title: '数据集配置', module: 'training' },
+      },
+      {
+        path: 'training/configs',
+        name: 'TrainConfigManage',
+        component: () => import('../views/training/TrainConfigManage.vue'),
+        meta: { title: '训练配置', module: 'training' },
       },
     ],
   },

@@ -1,0 +1,127 @@
+{
+  "project": "pet-action-recognition",
+  "tasks": [
+    {
+      "id": "t1",
+      "title": "文献调研与技术路线梳理",
+      "status": "active",
+      "startDate": "2026-07-09",
+      "endDate": "2026-07-22",
+      "assignee": "郑鑫裕",
+      "description": "梳理宠物动作识别主流方法，明确粗粒度/细粒度性能鸿沟的成因",
+      "notePath": "notes/01-survey.md",
+      "children": [
+        {
+          "id": "t1-1",
+          "title": "粗粒度 vs 细粒度动作性能调研",
+          "status": "active",
+          "assignee": "郑鑫裕",
+          "description": "量化现有方法在粗粒度（行走/站立/奔跑）与细粒度动作上的准确率差距",
+          "children": []
+        },
+        {
+          "id": "t1-2",
+          "title": "主流技术路线对比",
+          "status": "planned",
+          "description": "2D/3D CNN、Transformer、Skeleton、多模态、视频基础模型横向对比",
+          "children": []
+        },
+        {
+          "id": "t1-3",
+          "title": "细粒度识别难点梳理",
+          "status": "planned",
+          "description": "如「反刍-躺卧」vs「反刍-站立」等相似动作的判别难点",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "t2",
+      "title": "数据集构建与预处理",
+      "status": "active",
+      "startDate": "2026-07-15",
+      "endDate": "2026-07-25",
+      "assignee": "吴赟阳",
+      "description": "完成公开数据集接入与细粒度动作标注规范",
+      "notePath": "notes/02-dataset.md",
+      "children": [
+        {
+          "id": "t2-1",
+          "title": "Animal Kingdom 数据集预处理",
+          "status": "planned",
+          "assignee": "吴赟阳",
+          "description": "140 类动物行为标签的清洗、划分与格式统一",
+          "children": []
+        },
+        {
+          "id": "t2-2",
+          "title": "细粒度动作标注规范",
+          "status": "planned",
+          "description": "定义宠物细粒度动作的标签层级与标注流程",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "t3",
+      "title": "基线模型复现",
+      "status": "planned",
+      "startDate": "2026-07-20",
+      "endDate": "2026-08-05",
+      "assignee": "吴赟阳",
+      "description": "搭建评测环境并复现 3D CNN 基线方法",
+      "notePath": "notes/03-baseline.md",
+      "children": [
+        {
+          "id": "t3-1",
+          "title": "评测环境搭建",
+          "status": "active",
+          "assignee": "吴赟阳",
+          "description": "PyTorch + SlowFast 训练/评测流水线",
+          "children": []
+        },
+        {
+          "id": "t3-2",
+          "title": "SlowFast / I3D 基线复现",
+          "status": "planned",
+          "description": "在目标数据集上跑通 3D CNN 基线并记录指标",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "t4",
+      "title": "细粒度动作识别方法探索",
+      "status": "planned",
+      "startDate": "2026-08-01",
+      "endDate": "2026-09-15",
+      "assignee": "郑鑫裕",
+      "description": "探索骨架识别、部件级建模与级联架构，缩小细粒度性能鸿沟",
+      "notePath": "notes/04-fine-grained.md",
+      "children": [
+        {
+          "id": "t4-1",
+          "title": "骨架识别方案调研（SkeleTR）",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "description": "基于骨架的动作表征在细粒度识别上的潜力评估",
+          "children": []
+        },
+        {
+          "id": "t4-2",
+          "title": "PMTNet 论文精读与复现",
+          "status": "planned",
+          "description": "部件级时序建模，猫行为专用模型",
+          "children": []
+        },
+        {
+          "id": "t4-3",
+          "title": "级联架构与 Stitching-Retargeting",
+          "status": "planned",
+          "description": "姿态提取 → 粗粒度分类 → 细粒度识别 的级联方案验证",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

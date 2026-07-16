@@ -82,6 +82,19 @@ pet-action-recognition/
 - 工具链使用指南
 - 会议/比赛相关记录
 
+## Claude Code Skills
+
+本项目提供配套的 Claude Code skills，可自动触发使用指南：
+
+| Skill | 功能 |
+|-------|------|
+| `pet-action-recognition-web` | Web 全栈开发、服务启动、调试 |
+| `pet-action-recognition-management` | 项目树、团队、报表、任务看板、里程碑、会议纪要 |
+| `pet-action-recognition-papers` | 论文导入、分类、笔记、搜索筛选 |
+| `pet-action-recognition-evaluation` | 模型、数据集、评测配置、运行、结果对比 |
+
+当你在项目中使用 Claude Code 时，相关 skills 会自动加载，提供操作指导。
+
 ## 快速开始
 
 ```bash
