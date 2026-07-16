@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import os
 import sys
 
@@ -51,6 +52,8 @@ def main() -> int:
     ap.add_argument("--description", default=None)
     ap.add_argument("--note-path", default=None, help="相对项目目录的笔记 markdown 路径")
     ap.add_argument("--priority", default=None)
+    ap.add_argument("--progress", default=None,
+                    help="追加一条进展记录（自动加日期，新条目在前）")
     ap.add_argument("--hidden", action="store_true", default=None,
                     help="标记为不展示（项目树默认隐藏）")
     ap.add_argument("--no-hidden", dest="hidden", action="store_false",
@@ -73,7 +76,14 @@ def main() -> int:
     if args.hidden is True:
         updates["hidden"] = True
 
-    if not updates and args.hidden is not False:
+    progress_entry = None
+    if args.progress is not None:
+        progress_entry = {
+            "date": datetime.date.today().isoformat(),
+            "note": args.progress,
+        }
+
+    if not updates and args.hidden is not False and progress_entry is None:
         print("no updates given; nothing to do.", file=sys.stderr)
         return 1
 
@@ -83,10 +93,17 @@ def main() -> int:
     if args.hidden is False and "hidden" in task:
         new_task.pop("hidden", None)
         removed_keys.append("hidden")
+    if progress_entry is not None:
+        progress = list(new_task.get("progress") or [])
+        progress.insert(0, progress_entry)
+        new_task["progress"] = progress
     parent_list[idx] = new_task
     mgmt_io.write_tasks(args.slug, tree)
     path = mgmt_io.tasks_json_path(args.slug)
     changed = sorted(set(list(updates.keys()) + removed_keys))
+    if progress_entry is not None:
+        changed.append("progress")
+        changed = sorted(set(changed))
     print(f"✓ updated task {args.id!r}: {', '.join(changed)}  ({mgmt_io.rel(path)})")
     return 0
 

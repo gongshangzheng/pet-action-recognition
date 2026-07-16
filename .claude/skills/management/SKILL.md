@@ -61,6 +61,7 @@ management/
   "startDate": "2026-07-08", "endDate": "2026-07-10", "assignee": "张三",
   "description": "...", "notePath": "notes/01.md", "priority": "P1",
   "hidden": true,
+  "progress": [ { "date": "2026-07-16", "note": "完成了 X" } ],
   "children": [ ... ]
 }
 ```
@@ -83,14 +84,20 @@ python3 $SD/update_task.py --slug myproject --id t2-3 --status active --assignee
 python3 $SD/update_task.py --slug myproject --id t2-3 --title "模块X v2" --end 2026-07-20
 # 标记完成
 python3 $SD/update_task.py --slug myproject --id t2-3 --status completed
+# 追加进展记录（自动加日期，新条目在前）
+python3 $SD/update_task.py --slug myproject --id t2-3 --progress "完成 API 对接，数据可正常加载"
+# 完成 + 完成总结（一步到位）
+python3 $SD/update_task.py --slug myproject --id t2-3 --status completed \
+  --progress "[完成] 修复分页 bug——根因是 offset 未重置，已在 onMounted 中加 resetPage() 解决"
 
 # 删除（递归删节点及其子树）
 python3 $SD/delete_task.py --slug myproject --id t2-3
 
-# 查询（树视图 / 展平看板桶 / 按 status 过滤）
+# 查询（树视图 / 展平看板桶 / 按 status 过滤 / 按 ID 精确定位）
 python3 $SD/list_tasks.py --slug myproject              # 树视图
 python3 $SD/list_tasks.py --slug myproject --flat       # 展平成 看板 三桶
 python3 $SD/list_tasks.py --slug myproject --status active
+python3 $SD/list_tasks.py --slug myproject --id t2-3    # 单个任务详情（含 progress）
 ```
 
 `--status` 接受 canonical（completed/active/planned/paused/blocked）或别名（done/in_progress/ongoing/todo/pending）。
@@ -138,6 +145,37 @@ python3 $SD/list_tasks.py --slug myproject --status active
   4. subagent 返回的字符串即 description 值，原样传给 `add_task.py --description "..."` 或 `update_task.py --description "..."`
 
 > 写作规范的**人读版**（给主 agent / 人类 review 用）见上面的"硬性规则"。subagent 提示词是其**机器读版**，含更严格的输出格式约束（只输出字符串本身，不要前言后语）。两份要保持语义一致；修改规范时两处同步更新。
+
+### 1.2 工作流公约（任务状态同步）
+
+每完成一个用户请求，检查是否有对应的任务需要更新状态或进展。**铁律**：做了事就要记到任务树上，不要只做事不更新。
+
+**开始工作时**（把任务从 planned → active）：
+```bash
+python3 $SD/update_task.py --slug <slug> --id <id> --status active
+```
+
+**推进过程中**（每完成一个有意义的步骤，追加一条 progress）：
+```bash
+python3 $SD/update_task.py --slug <slug> --id <id> --progress "完成了 X，下一步 Y"
+```
+
+**完成工作时**（status → completed + 完成总结一步到位）：
+```bash
+python3 $SD/update_task.py --slug <slug> --id <id> --status completed \
+  --progress "[完成] <方法总结>"
+```
+
+**通过编号查找任务**（agent 快速定位任务详情）：
+```bash
+python3 $SD/list_tasks.py --slug <slug> --id <task-id>
+```
+
+**progress 格式规则**：
+1. 进展记录：1-2 句话，不要复述代码变更，写"做了什么 + 下一步"。
+2. 完成总结：以 `[完成]` 开头，侧重"怎么做 + 遇到什么问题 + 怎么解决"，不写"做了什么"（title 已经说了）。
+3. 每条 note ≤ 120 汉字。太长说明该拆子任务了。
+4. 不要写空泛的进展（"继续开发中"、"修了一些 bug"）。
 
 ---
 

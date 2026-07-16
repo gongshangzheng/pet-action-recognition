@@ -16,6 +16,10 @@ Task node shape:
       "description": "...",
       "notePath": "notes/01.md",     # optional, relative to project dir
       "priority": "P1",              # optional
+      "hidden": true,                # optional, hide in project tree
+      "progress": [                  # optional, newest first
+        { "date": "2026-07-16", "note": "完成了 X" }
+      ],
       "children": [ ... recursive ... ]
     }
 
@@ -43,7 +47,7 @@ STATUS_BUCKET = {
 
 # task node fields the CRUD scripts may set/update (excluding id/children)
 TASK_FIELDS = ("title", "status", "startDate", "endDate", "assignee",
-               "description", "notePath", "priority")
+               "description", "notePath", "priority", "progress")
 
 
 def resolve_status(s: str) -> str:

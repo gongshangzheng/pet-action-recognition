@@ -85,6 +85,7 @@
       <main class="detail-main">
         <div v-if="selectedTask" class="task-detail">
           <div class="detail-head">
+            <span class="detail-task-id">{{ selectedTask.id }}</span>
             <span class="status-dot" :class="[taskStatus(selectedTask.status).dot, taskStatus(selectedTask.status).ring]"></span>
             <h3>{{ selectedTask.title }}</h3>
             <span class="detail-badge">{{ taskStatus(selectedTask.status).label }}</span>
@@ -95,10 +96,34 @@
               {{ selectedTask.startDate }}{{ selectedTask.endDate ? ' → ' + selectedTask.endDate : '' }}
             </span>
           </div>
-          <div v-if="noteLoading" class="empty-inline">加载笔记中…</div>
-          <markdown-renderer v-else-if="noteContent !== null" :content="noteContent" />
-          <p v-else-if="selectedTask.description" class="desc-text">{{ selectedTask.description }}</p>
-          <p v-else class="empty-inline">该任务暂无描述或笔记。</p>
+
+          <div class="cornell-body">
+            <div class="cornell-main">
+              <div v-if="noteLoading" class="empty-inline">加载笔记中…</div>
+              <markdown-renderer v-else-if="noteContent !== null" :content="noteContent" />
+              <p v-else-if="selectedTask.description" class="desc-text">{{ selectedTask.description }}</p>
+              <p v-else class="empty-inline">该任务暂无描述或笔记。</p>
+            </div>
+
+            <aside v-if="ongoingProgress.length" class="cornell-right">
+              <div class="progress-head">进展记录</div>
+              <div v-for="(p, i) in ongoingProgress" :key="i" class="progress-entry">
+                <div class="progress-dot"></div>
+                <div class="progress-body">
+                  <span class="progress-date">{{ p.date }}</span>
+                  <span class="progress-note">{{ p.note }}</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <div v-if="completionProgress.length" class="cornell-bottom">
+            <div class="completion-head">完成总结</div>
+            <div v-for="(p, i) in completionProgress" :key="i" class="completion-entry">
+              <span class="progress-date">{{ p.date }}</span>
+              <span class="progress-note">{{ p.note.replace(/^\[完成\]\s*/, '') }}</span>
+            </div>
+          </div>
         </div>
 
         <div v-else class="readme-view">
@@ -202,6 +227,10 @@ const hiddenCount = computed(() => {
   if (!activeTree.value) return 0
   return treeCount.value.total - countAll(filterTree(activeTree.value.tasks, false)).total
 })
+
+const allProgress = computed(() => selectedTask.value?.progress || [])
+const ongoingProgress = computed(() => allProgress.value.filter(p => !p.note?.startsWith('[完成]')))
+const completionProgress = computed(() => allProgress.value.filter(p => p.note?.startsWith('[完成]')))
 
 function projectColor(idx) {
   return PROJECT_COLORS[((idx % PROJECT_COLORS.length) + PROJECT_COLORS.length) % PROJECT_COLORS.length]
@@ -418,16 +447,53 @@ onMounted(loadProjects)
 .detail-main { min-width: 0; }
 .detail-head {
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-  border-bottom: 1px solid var(--color-border); padding-bottom: 16px; margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border); padding-bottom: 16px; margin-bottom: 0;
   h3 { font-size: 18px; font-weight: 700; margin: 0; color: var(--color-text-heading); }
 }
-.detail-badge { font-size: 10px; background: var(--color-elevated); padding: 2px 8px; border-radius: 4px; color: var(--color-text-secondary); }
+.detail-task-id {
+  font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px;
+  color: var(--color-text-dim); background: var(--color-elevated);
+  padding: 2px 8px; border-radius: 4px;
+}
+.detail-badge { font-size: 10px; width: 42px; text-align: center; background: var(--color-elevated); padding: 2px 8px; border-radius: 4px; color: var(--color-text-secondary); }
 .detail-assignee {
   display: inline-flex; align-items: center; gap: 4px;
   background: var(--color-primary-soft); color: var(--color-primary);
   padding: 2px 10px; border-radius: 999px; font-size: 11px;
 }
 .detail-date { font-family: monospace; font-size: 12px; color: var(--color-text-secondary); }
+
+.cornell-body {
+  display: grid; gap: 20px; padding: 20px 0;
+  grid-template-columns: 1fr 220px;
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+.cornell-main { min-width: 0; }
+.cornell-right {
+  border-left: 2px solid var(--color-border); padding-left: 16px;
+  @media (max-width: 900px) { border-left: none; border-top: 2px solid var(--color-border); padding-left: 0; padding-top: 16px; }
+  .progress-head { font-size: 11px; font-weight: 600; color: var(--color-text-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+}
+.progress-entry {
+  display: flex; gap: 8px; margin-bottom: 10px;
+  .progress-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    background: var(--color-border); margin-top: 4px;
+  }
+  .progress-body { display: flex; flex-direction: column; gap: 2px; }
+  .progress-date { font-size: 10px; color: var(--color-text-dim); font-family: monospace; }
+  .progress-note { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; white-space: pre-line; word-break: break-word; }
+}
+.cornell-bottom {
+  border-top: 2px solid rgba(34,197,94,0.3); padding-top: 16px;
+  .completion-head { font-size: 11px; font-weight: 600; color: #22c55e; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .completion-entry {
+    display: flex; gap: 10px; margin-bottom: 8px; padding: 8px 12px;
+    background: rgba(34,197,94,0.04); border-radius: 6px; border: 1px solid rgba(34,197,94,0.1);
+    .progress-date { font-size: 10px; color: var(--color-text-dim); font-family: monospace; flex-shrink: 0; min-width: 70px; }
+    .progress-note { font-size: 12px; color: var(--color-text); line-height: 1.5; white-space: pre-line; word-break: break-word; }
+  }
+}
 .desc-text { font-size: 14px; color: var(--color-text); line-height: 1.6; white-space: pre-line; }
 .empty-inline { padding: 16px 0; text-align: center; color: var(--color-text-dim); font-size: 13px; }
 
