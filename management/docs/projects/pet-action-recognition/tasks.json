@@ -231,6 +231,14 @@
           "children": []
         }
       ]
+    },
+    {
+      "id": "t8",
+      "title": "ProjFlow 评测输出与论文详情 UI 同步",
+      "status": "completed",
+      "assignee": "汤问",
+      "description": "cherry-pick ProjFlow c41bb78：接入评测输出按需查看（EvalOutputs/VideoModal/outputs 端点）、评测配置页；同步论文详情页底部悬浮按钮栏；修复 markdown_table 空表解析",
+      "children": []
     }
   ]
 }
