@@ -29,3 +29,8 @@ participants:
 ## 协作方式
 
 大部分操作可通过 AI 协作完成，配套 Claude Code skills 提供操作指南。
+
+### 进程跟踪
+
+- **任务单源**：`management/docs/projects/pet-action-recognition/tasks.json` 同时驱动项目树与看板（TaskBoard）。
+- **勤更新**：每次关键进展后应立即更新任务树与看板，确保项目记忆与真实进展同步。详见 [notes/00-process.md](notes/00-process.md)。

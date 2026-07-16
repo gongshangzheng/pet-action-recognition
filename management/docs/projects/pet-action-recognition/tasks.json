@@ -65,7 +65,7 @@
     {
       "id": "t3",
       "title": "基线模型复现",
-      "status": "planned",
+      "status": "active",
       "startDate": "2026-07-20",
       "endDate": "2026-08-05",
       "assignee": "吴赟阳",
@@ -74,17 +74,33 @@
       "children": [
         {
           "id": "t3-1",
-          "title": "评测环境搭建",
+          "title": "mmaction2 训练环境搭建",
           "status": "active",
           "assignee": "吴赟阳",
-          "description": "PyTorch + SlowFast 训练/评测流水线",
+          "description": "vendor 引入 mmaction2，安装 mmengine/mmcv/decord 等依赖，确保可 import 并跑通官方 demo",
           "children": []
         },
         {
           "id": "t3-2",
-          "title": "SlowFast / I3D 基线复现",
+          "title": "mmaction2 基线训练跑通",
           "status": "planned",
-          "description": "在目标数据集上跑通 3D CNN 基线并记录指标",
+          "description": "基于 mmaction2 configs/recognition 下的 TSN/SlowFast/I3D 等配置，在四足动物数据集上跑通训练并记录指标",
+          "children": []
+        },
+        {
+          "id": "t3-3",
+          "title": "训练后端实接 mmaction2",
+          "status": "planned",
+          "assignee": "吴赟阳",
+          "description": "把 server/routers/training.py 的 POST /run 从模拟响应改为 subprocess 调用 third_party/mmaction2/tools/train.py，解析 vis_data/scalars.json 并写入 results/training/metrics.json",
+          "children": []
+        },
+        {
+          "id": "t3-4",
+          "title": "推理端点接入 mmaction2",
+          "status": "planned",
+          "assignee": "吴赟阳",
+          "description": "新增 /api/inference 或 /api/training/inference 端点，调用 tools/test.py 或 mmaction 推理 API，支持传入视频返回动作类别与置信度",
           "children": []
         }
       ]
@@ -119,6 +135,32 @@
           "title": "级联架构与 Stitching-Retargeting",
           "status": "planned",
           "description": "姿态提取 → 粗粒度分类 → 细粒度识别 的级联方案验证",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "t5",
+      "title": "ProjFlow 共享脚手架同步",
+      "status": "completed",
+      "assignee": "汤问",
+      "description": "完成与 origin/main 的合并，同步 upstream ProjFlow 的 [shared] 改进：管理模块单 tasks.json、训练/评测 UI 脚手架、skills、面包屑与优先级字段",
+      "children": []
+    },
+    {
+      "id": "t6",
+      "title": "项目进程管理",
+      "status": "active",
+      "assignee": "团队",
+      "description": "维护项目树与看板，确保任务状态、依赖关系与实际进展保持一致",
+      "children": [
+        {
+          "id": "t6-1",
+          "title": "定期同步项目树与看板",
+          "status": "active",
+          "assignee": "团队",
+          "description": "每次关键进展后更新 management/docs/projects/pet-action-recognition/tasks.json，确保项目树与 TaskBoard 看板反映最新状态，避免记忆与实际脱节",
+          "notePath": "notes/00-process.md",
           "children": []
         }
       ]
