@@ -428,12 +428,9 @@ async function handleFetch() {
   fetching.value = false
 }
 
-onMounted(() => {
-  loadPapers()
+onMounted(async () => {
+  await loadPapers()
   loadStats()
-  // 恢复滚动位置
-  const scrollContainer = document.querySelector('.app-content .n-scrollbar-container')
-  const savedScroll = sessionStorage.getItem('paperList:scrollY')
   // 恢复浮窗状态
   const hash = window.location.hash
   if (hash.startsWith('#paper=')) {
@@ -444,10 +441,14 @@ onMounted(() => {
       loadDetail(id)
     }
   }
-  // 滚动恢复需要等数据加载完
-  if (savedScroll && scrollContainer) {
-    nextTick(() => {
-      setTimeout(() => { scrollContainer.scrollTop = parseInt(savedScroll) }, 100)
+  // 恢复滚动位置：等数据渲染进 DOM 后再写 scrollTop
+  // （原 100ms setTimeout 与异步 loadPapers 赛跑，常被 Naive scrollbar 重渲染冲掉）
+  const savedScroll = sessionStorage.getItem('paperList:scrollY')
+  if (savedScroll) {
+    await nextTick()
+    requestAnimationFrame(() => {
+      const el = document.querySelector('.app-content .n-scrollbar-container')
+      if (el) el.scrollTop = parseInt(savedScroll)
     })
   }
 })

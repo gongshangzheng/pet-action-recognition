@@ -34,6 +34,10 @@
             {{ task.title }}
           </span>
 
+          <span v-if="task.priority" class="priority-tag" :class="'p-' + task.priority">
+            {{ priorityLabel(task.priority) }}
+          </span>
+
           <span v-if="hasChildren" class="progress-text">{{ count.completed }}/{{ count.total }}</span>
 
           <span v-if="task.assignee" class="assignee">
@@ -51,6 +55,7 @@
           <div class="status-dot sm" :class="[statusCfg.dot, statusCfg.ring]"></div>
           <strong>{{ task.title }}</strong>
           <span class="hc-badge">{{ statusCfg.label }}</span>
+          <span v-if="task.priority" class="hc-priority" :class="'p-' + task.priority">{{ priorityLabel(task.priority) }}</span>
         </div>
         <div v-if="task.assignee" class="hc-line">执行人: {{ task.assignee }}</div>
         <div v-if="task.startDate" class="hc-line">
@@ -103,6 +108,9 @@ const TASK_STATUS = {
   blocked: { label: '阻塞', dot: 'bg-red', ring: 'ring-red' },
   paused: { label: '已暂停', dot: 'bg-amber', ring: 'ring-amber' },
 }
+
+const PRIORITY_LABEL = { high: '高', medium: '中', low: '低' }
+function priorityLabel(p) { return PRIORITY_LABEL[p] || p }
 
 const expanded = ref(props.depth < 1)
 const hovered = ref(false)
@@ -208,6 +216,13 @@ function onClick() {
   &.title-selected { color: var(--color-text-heading); font-weight: 500; }
 }
 .progress-text { flex-shrink: 0; font-size: 10px; color: var(--color-text-dim); }
+.priority-tag {
+  flex-shrink: 0; font-size: 9px; line-height: 1;
+  padding: 1px 5px; border-radius: 3px; font-weight: 500;
+  &.p-high { background: rgba(239,68,68,0.12); color: #dc2626; }
+  &.p-medium { background: rgba(245,158,11,0.12); color: #d97706; }
+  &.p-low { background: rgba(100,116,139,0.10); color: #64748b; }
+}
 .assignee {
   flex-shrink: 0; margin-left: auto;
   display: inline-flex; align-items: center; gap: 2px;
@@ -223,6 +238,12 @@ function onClick() {
   border-radius: 8px; box-shadow: 0 8px 24px var(--color-shadow);
   .hc-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; strong { font-size: 13px; color: var(--color-text-heading); } }
   .hc-badge { font-size: 10px; background: var(--color-elevated); padding: 1px 6px; border-radius: 4px; color: var(--color-text-secondary); }
+  .hc-priority {
+    font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 500;
+    &.p-high { background: rgba(239,68,68,0.12); color: #dc2626; }
+    &.p-medium { background: rgba(245,158,11,0.12); color: #d97706; }
+    &.p-low { background: rgba(100,116,139,0.10); color: #64748b; }
+  }
   .hc-line { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
   .hc-progress { font-size: 11px; color: var(--color-text-secondary); margin-top: 4px; }
   .hc-desc { font-size: 12px; color: var(--color-text); margin-top: 6px; }

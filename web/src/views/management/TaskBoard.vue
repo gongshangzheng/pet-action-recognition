@@ -20,7 +20,10 @@
             <template #header-extra><n-tag size="small" round>{{ tasks.pending.length }}</n-tag></template>
             <div class="task-list">
               <div v-for="t in tasks.pending" :key="t.id" class="task-card">
-                <div class="task-name">{{ t.name }}</div>
+                <div class="task-name">
+                  <span v-if="t.priority" class="priority-tag" :class="'p-' + t.priority">{{ priorityLabel(t.priority) }}</span>
+                  {{ t.name }}
+                </div>
                 <div class="task-meta">
                   <span>{{ t.owner }}</span>
                   <span v-if="t.end_date">{{ t.end_date }}</span>
@@ -35,7 +38,10 @@
             <template #header-extra><n-tag size="small" type="info" round>{{ tasks.in_progress.length }}</n-tag></template>
             <div class="task-list">
               <div v-for="t in tasks.in_progress" :key="t.id" class="task-card">
-                <div class="task-name">{{ t.name }}</div>
+                <div class="task-name">
+                  <span v-if="t.priority" class="priority-tag" :class="'p-' + t.priority">{{ priorityLabel(t.priority) }}</span>
+                  {{ t.name }}
+                </div>
                 <div class="task-meta">
                   <StatusBadge :status="t.status" />
                   <span>{{ t.owner }}</span>
@@ -51,7 +57,10 @@
             <template #header-extra><n-tag size="small" type="success" round>{{ tasks.completed.length }}</n-tag></template>
             <div class="task-list">
               <div v-for="t in tasks.completed" :key="t.id" class="task-card">
-                <div class="task-name">{{ t.name }}</div>
+                <div class="task-name">
+                  <span v-if="t.priority" class="priority-tag" :class="'p-' + t.priority">{{ priorityLabel(t.priority) }}</span>
+                  {{ t.name }}
+                </div>
                 <div class="task-meta">
                   <span>{{ t.owner }}</span>
                   <span v-if="t.end_date">{{ t.end_date }}</span>
@@ -78,6 +87,9 @@ const currentSlug = ref(null)
 const tasks = ref({ pending: [], in_progress: [], completed: [] })
 
 const projectOptions = computed(() => projects.value.map(p => ({ label: p.title || p.slug, value: p.slug })))
+
+const PRIORITY_LABEL = { high: '高', medium: '中', low: '低' }
+function priorityLabel(p) { return PRIORITY_LABEL[p] || p }
 
 async function loadTasks(slug) {
   if (!slug) { tasks.value = { pending: [], in_progress: [], completed: [] }; return }
@@ -112,12 +124,19 @@ onMounted(async () => {
 .task-list { display: flex; flex-direction: column; gap: 8px; }
 .task-card {
   padding: 12px;
-  background: #f9fafb;
+  background: var(--color-elevated, #f9fafb);
   border-radius: 8px;
   border-left: 3px solid #e5e7eb;
 
-  .task-name { font-weight: 500; margin-bottom: 6px; }
+  .task-name { font-weight: 500; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
   .task-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
   .task-note { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+}
+.priority-tag {
+  font-size: 10px; line-height: 1; padding: 1px 5px;
+  border-radius: 3px; font-weight: 500; flex-shrink: 0;
+  &.p-high { background: rgba(239,68,68,0.12); color: #dc2626; }
+  &.p-medium { background: rgba(245,158,11,0.12); color: #d97706; }
+  &.p-low { background: rgba(100,116,139,0.10); color: #64748b; }
 }
 </style>

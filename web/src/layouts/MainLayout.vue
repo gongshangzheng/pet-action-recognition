@@ -33,7 +33,13 @@
       <n-layout-header bordered class="app-header">
         <div class="header-left">
           <n-breadcrumb>
-            <n-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
+            <n-breadcrumb-item
+              v-for="item in breadcrumbs"
+              :key="item.path || item.title"
+              :to="item.path || undefined"
+              :clickable="!!item.path"
+              @click="onBreadcrumbClick(item)"
+            >
               {{ item.title }}
             </n-breadcrumb-item>
           </n-breadcrumb>
@@ -175,6 +181,18 @@ function handleMenuSelect(key) {
   router.push(key)
 }
 
+function onBreadcrumbClick(item) {
+  if (item.path && item.path !== route.path) router.push(item.path)
+}
+
+// 模块 -> 模块首页路径（让 breadcrumb 的模块项可点回退）
+const MODULE_PATH = {
+  management: '/management/projects',
+  papers: '/papers/list',
+  evaluation: '/evaluation/run',
+  training: '/training/run',
+}
+
 const breadcrumbs = computed(() => {
   const items = [{ title: '首页', path: '/' }]
   const moduleMap = {
@@ -184,7 +202,7 @@ const breadcrumbs = computed(() => {
     training: '训练体系',
   }
   if (route.meta.module && moduleMap[route.meta.module]) {
-    items.push({ title: moduleMap[route.meta.module], path: '' })
+    items.push({ title: moduleMap[route.meta.module], path: MODULE_PATH[route.meta.module] || '' })
   }
   if (route.meta.title) {
     items.push({ title: route.meta.title, path: route.path })
