@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create a meeting minutes file management/docs/meetings/{date}.md.
 
-Self-locating; argparse; identical file used in infraredComp and ProjFlow.
+Self-locating; argparse; identical file used in upstream and downstream repos.
 
 Usage:
     python3 create_meeting.py --date 2026-07-11 \\

@@ -10,11 +10,11 @@ Mirrors the same file in ~/infraredComp (identical tasks.json schema).
 
 Usage:
     # change status / assignee
-    python3 update_task.py --slug projflow --id t2-3 --status active --assignee 李四
+    python3 update_task.py --slug myproject --id t2-3 --status active --assignee 李四
     # rename + dates
-    python3 update_task.py --slug projflow --id t2-3 --title "轮廓提取 v2" --end 2026-07-20
+    python3 update_task.py --slug myproject --id t2-3 --title "轮廓提取 v2" --end 2026-07-20
     # mark done
-    python3 update_task.py --slug projflow --id t2-3 --status completed
+    python3 update_task.py --slug myproject --id t2-3 --status completed
 """
 from __future__ import annotations
 

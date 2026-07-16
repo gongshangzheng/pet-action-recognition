@@ -8,9 +8,9 @@ Self-locating: run from anywhere; resolves the repo root from its own path.
 Mirrors the same file in ~/infraredComp (identical tasks.json schema).
 
 Usage:
-    python3 list_tasks.py --slug projflow                 # tree view
-    python3 list_tasks.py --slug projflow --flat          # flat (kanban buckets)
-    python3 list_tasks.py --slug projflow --status active # filter by status
+    python3 list_tasks.py --slug myproject                 # tree view
+    python3 list_tasks.py --slug myproject --flat          # flat (kanban buckets)
+    python3 list_tasks.py --slug myproject --status active # filter by status
 """
 from __future__ import annotations
 

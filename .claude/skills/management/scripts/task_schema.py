@@ -1,6 +1,6 @@
 """Task schema constants for the per-project tasks.json tree.
 
-infraredComp and ProjFlow use an IDENTICAL tasks.json schema (single source of
+Upstream and downstream repos use an IDENTICAL tasks.json schema (single source of
 truth for both the project tree and the kanban board). The kanban is a derived
 view that flattens the tree into three buckets by status — see
 ``server/parsers/tasks_parser.py`` and ``mgmt_io.STATUS_BUCKET``.

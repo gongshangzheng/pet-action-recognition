@@ -1,8 +1,8 @@
-"""Generic markdown-table CRUD helpers for infraredComp / ProjFlow management data.
+"""Generic markdown-table CRUD helpers for upstream / downstream management data.
 
 These helpers are **self-locating** (resolve the repo root from the script's
 own path via ``parents[4]``), so the SAME script file works unchanged in both
-``infraredComp`` and ``ProjFlow`` as long as it lives at
+upstream and downstream repos as long as it lives at
 ``.claude/skills/<management-skill>/scripts/``.
 
 The markdown table editor is **schema-agnostic**: it auto-detects columns

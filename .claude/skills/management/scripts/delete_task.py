@@ -7,7 +7,7 @@ Self-locating: run from anywhere; resolves the repo root from its own path.
 Mirrors the same file in ~/infraredComp (identical tasks.json schema).
 
 Usage:
-    python3 delete_task.py --slug projflow --id t2-3
+    python3 delete_task.py --slug myproject --id t2-3
 """
 from __future__ import annotations
 

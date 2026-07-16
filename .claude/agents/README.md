@@ -1,6 +1,6 @@
 # Subagent Prompts
 
-本目录集中存放 ProjFlow 所有**专用 subagent 的提示词文件**，每个 agent 一个 `.md`。
+本目录集中存放当前项目所有**专用 subagent 的提示词文件**，每个 agent 一个 `.md`。
 
 ## 目录约定
 

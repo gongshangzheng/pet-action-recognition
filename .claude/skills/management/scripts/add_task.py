@@ -10,11 +10,11 @@ Mirrors the same file in ~/infraredComp (identical tasks.json schema).
 
 Usage:
     # root task
-    python3 add_task.py --slug projflow --title "轮廓提取优化" --status active \\
+    python3 add_task.py --slug myproject --title "轮廓提取优化" --status active \\
         --assignee 张三 --start 2026-07-11 --end 2026-07-18 \\
         --description "sobel 降噪" --note-path notes/contour.md
     # child under t2
-    python3 add_task.py --slug projflow --parent t2 --title "AV1 baseline" \\
+    python3 add_task.py --slug myproject --parent t2 --title "AV1 baseline" \\
         --status planned --priority P1
 """
 from __future__ import annotations

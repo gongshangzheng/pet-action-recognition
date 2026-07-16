@@ -14,7 +14,7 @@
 ## 常用操作
 
 ```bash
-SD=.claude/skills/projflow-management/scripts
+SD=.claude/skills/management/scripts
 
 # 查看任务树
 python3 $SD/list_tasks.py --slug pet-action-recognition

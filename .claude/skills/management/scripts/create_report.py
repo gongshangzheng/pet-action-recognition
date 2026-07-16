@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create a report file (daily / weekly / monthly).
 
-Self-locating; argparse; identical file used in infraredComp and ProjFlow.
+Self-locating; argparse; identical file used in upstream and downstream repos.
 
     daily:   management/daily/{YYYY}/{MM}/{DD}-{author}.md     (--date YYYY-MM-DD)
     weekly:  management/weekly/{YYYY}/W{NN}-{author}.md         (--year --week)

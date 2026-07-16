@@ -6,7 +6,7 @@ Two steps:
    (and drop the "暂无" placeholder row when the first real member is added).
 2. Create the profile management/team/{id}.md from a template.
 
-Self-locating; argparse; identical file used in infraredComp and ProjFlow.
+Self-locating; argparse; identical file used in upstream and downstream repos.
 
 Usage:
     python3 add_member.py --name 张三 --id zhangsan --role 算法工程师 \\

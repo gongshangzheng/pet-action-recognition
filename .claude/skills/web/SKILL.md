@@ -1,18 +1,18 @@
 ---
-name: projflow-web
+name: web
 description: |
-  ProjFlow Web 全栈开发指南。用于前后端开发、服务启动、调试等。
+  Web 全栈开发指南。用于前后端开发、服务启动、调试等。
   触发场景：(1) 启动服务，(2) 开发前端页面，(3) 开发后端 API，(4) 调试，(5) 查看日志
 ---
 
-# ProjFlow Web 全栈开发
+# Web 全栈开发
 
-本 skill 提供 ProjFlow 前后端开发的完整指南。
+本 skill 提供前后端开发的完整指南。
 
 ## 项目结构
 
 ```
-ProjFlow/
+<repo-root>/
 ├── server/              # FastAPI 后端
 │   ├── config.py        # 配置
 │   ├── main.py          # 入口
@@ -38,7 +38,7 @@ ProjFlow/
 
 ### 一键启动
 ```bash
-cd /Users/zhengxinyu/ProjFlow
+cd <仓库根>
 bash start_services.sh
 ```
 
@@ -46,13 +46,13 @@ bash start_services.sh
 
 **后端 (8090)**
 ```bash
-cd /Users/zhengxinyu/ProjFlow
+cd <仓库根>
 python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8090
 ```
 
 **前端 (3002)**
 ```bash
-cd /Users/zhengxinyu/ProjFlow/web
+cd <仓库根>/web
 npm run dev
 ```
 

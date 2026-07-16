@@ -1,21 +1,21 @@
 ---
-name: projflow-management
+name: management
 description: |
-  ProjFlow 项目管理模块操作指南。用于团队成员管理、日报/周报/月报、任务（看板+项目树）、里程碑、会议纪要等 CRUD 操作（脚本直接改文件，后端只读）。
+  项目管理模块操作指南。用于团队成员管理、日报/周报/月报、任务（看板+项目树）、里程碑、会议纪要等 CRUD 操作（脚本直接改文件，后端只读）。
   触发场景：(1) 添加/修改/删除团队成员，(2) 创建/更新/删除报表，(3) 管理任务(增删改查+改状态跨段移动)，(4) 创建/更新/删除会议纪要，(5) 了解项目结构
 ---
 
-# ProjFlow 项目管理模块
+# 项目管理模块
 
-本 skill 提供 ProjFlow 项目管理模块（`management/`）的完整操作指南，以及一套**自定位**的 CRUD 脚本，直接读写 `management/` 下的数据文件。
+本 skill 提供项目管理模块（`management/`）的完整操作指南，以及一套**自定位**的 CRUD 脚本，直接读写 `management/` 下的数据文件。
 
 > **架构前提**：后端 `server/routers/management.py` 是**只读**的（解析数据文件暴露给前端）。所有"增删改"由本 skill 的脚本直接修改文件完成，再由只读 API 暴露。infraredComp 镜像本库。
 
 > **任务数据单源**：任务（看板 + 项目树）的唯一来源是 **per-project `management/docs/projects/{slug}/tasks.json`**（层级树）。看板（TaskBoard）是它的**派生视图**——按 status 展平成 3 桶，按项目切换。`tasks.md` 已废弃删除。成员/报表/会议/里程碑仍是 markdown。
 
-## 脚本一览（`.claude/skills/projflow-management/scripts/`）
+## 脚本一览（`.claude/skills/management/scripts/`）
 
-脚本 **self-locating**（用 `parents[4]` 解析仓库根），同一份文件在 ProjFlow 与 infraredComp 都能跑（两库 `tasks.json` schema 一致）。纯标准库，`python3` 直接运行。
+脚本 **self-locating**（用 `parents[4]` 解析仓库根），同一份文件在上下游都能跑（两库 `tasks.json` schema 一致）。纯标准库，`python3` 直接运行。
 
 | 实体 | 新增 | 修改 | 删除 | 查询 |
 |------|------|------|------|------|
@@ -40,7 +40,7 @@ management/
     └── meetings/   # 会议纪要 YYYY-MM-DD.md
 ```
 
-启动服务（后端 8090 + 前端 3002）：`bash start_services.sh`。日志 `/tmp/projflow-backend.log`、`/tmp/projflow-frontend.log`。
+启动服务（后端 8090 + 前端 3002）：`bash start_services.sh`。日志 `/tmp/<项目名>-backend.log`、`/tmp/<项目名>-frontend.log`。
 
 只读 API（`GET /api/management/*`）：`team`、`daily`、`weekly`、`monthly`、`tasks`（`?slug=` 派生看板，缺省取首个项目）、`milestones`、`meetings`、`projects` 等。脚本改完文件，前端经 API 即可看到。
 
@@ -69,28 +69,28 @@ management/
 - `hidden: true` — 项目树默认不展示此节点（前端眼睛图标可切换显示，节点以半透明斜体呈现）。子任务会随父任务一起隐藏。用法：`add_task.py --hidden` / `update_task.py --hidden` 或 `--no-hidden`。
 
 ```bash
-SD=.claude/skills/projflow-management/scripts
+SD=.claude/skills/management/scripts
 
 # 新增根级任务（id 自动生成 tN）
-python3 $SD/add_task.py --slug projflow --title "模块X开发" --status active \
+python3 $SD/add_task.py --slug myproject --title "模块X开发" --status active \
   --assignee 张三 --start 2026-07-11 --end 2026-07-18 --description "备注" --note-path notes/x.md
 # 新增子任务（挂到 t2 下，id 自动生成 t2-N）
-python3 $SD/add_task.py --slug projflow --parent t2 --title "Y调研" --status planned --priority P1
+python3 $SD/add_task.py --slug myproject --parent t2 --title "Y调研" --status planned --priority P1
 
 # 修改字段（只改传了的；--status 即跨段移动，看板桶随之变）
-python3 $SD/update_task.py --slug projflow --id t2-3 --status active --assignee 李四
+python3 $SD/update_task.py --slug myproject --id t2-3 --status active --assignee 李四
 # 改名 / 改日期
-python3 $SD/update_task.py --slug projflow --id t2-3 --title "模块X v2" --end 2026-07-20
+python3 $SD/update_task.py --slug myproject --id t2-3 --title "模块X v2" --end 2026-07-20
 # 标记完成
-python3 $SD/update_task.py --slug projflow --id t2-3 --status completed
+python3 $SD/update_task.py --slug myproject --id t2-3 --status completed
 
 # 删除（递归删节点及其子树）
-python3 $SD/delete_task.py --slug projflow --id t2-3
+python3 $SD/delete_task.py --slug myproject --id t2-3
 
 # 查询（树视图 / 展平看板桶 / 按 status 过滤）
-python3 $SD/list_tasks.py --slug projflow              # 树视图
-python3 $SD/list_tasks.py --slug projflow --flat       # 展平成 看板 三桶
-python3 $SD/list_tasks.py --slug projflow --status active
+python3 $SD/list_tasks.py --slug myproject              # 树视图
+python3 $SD/list_tasks.py --slug myproject --flat       # 展平成 看板 三桶
+python3 $SD/list_tasks.py --slug myproject --status active
 ```
 
 `--status` 接受 canonical（completed/active/planned/paused/blocked）或别名（done/in_progress/ongoing/todo/pending）。
@@ -214,16 +214,16 @@ python3 $SD/delete_meeting.py --date 2026-07-11
 - **跨段移动 = 改 status**：`update_task --status completed|active|planned|paused|blocked` 即把任务移到对应看板桶（无独立 move 概念）。
 - **id 自动生成**：`add_task` 根级生成 `tN`（现有根级最大号 +1），子任务生成 `{parent}-N`，保证项目内不重复。
 - **parser 兼容（markdown 实体）**：成员/会议/报表/里程碑仍是 markdown 表格；脚本的表格编辑器**保留表头**、按段实际列数生成行，与对应 parser（按表顺序 + 按表头名取列）兼容。空表保留（header+separator 无数据行也保留），保证位置映射不错位。
-- **自定位**：脚本用 `parents[4]` 解析仓库根，从任意 cwd 运行均可；同一份文件在 ProjFlow 与 infraredComp 通用。
+- **自定位**：脚本用 `parents[4]` 解析仓库根，从任意 cwd 运行均可；同一份文件在上下游通用。
 
 ## 常用命令
 
 ```bash
-SD=.claude/skills/projflow-management/scripts
-python3 $SD/list_tasks.py --slug projflow          # 看任务树
-python3 $SD/list_tasks.py --slug projflow --flat   # 看展平看板桶
-python3 $SD/add_task.py --slug projflow --title "X" --status active --assignee Y --start 2026-07-11 --end 2026-07-18
+SD=.claude/skills/management/scripts
+python3 $SD/list_tasks.py --slug myproject          # 看任务树
+python3 $SD/list_tasks.py --slug myproject --flat   # 看展平看板桶
+python3 $SD/add_task.py --slug myproject --title "X" --status active --assignee Y --start 2026-07-11 --end 2026-07-18
 bash start_services.sh                             # 启动后端 8090 + 前端 3002
-curl --noproxy '*' "http://localhost:8090/api/management/tasks?slug=projflow"   # 前端所见看板
-tail -f /tmp/projflow-backend.log                  # 后端日志
+curl --noproxy '*' "http://localhost:8090/api/management/tasks?slug=myproject"   # 前端所见看板
+tail -f /tmp/<项目名>-backend.log                  # 后端日志
 ```
