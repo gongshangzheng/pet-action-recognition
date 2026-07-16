@@ -47,6 +47,8 @@ def build_node(args, new_id: str) -> dict:
         node["notePath"] = args.note_path
     if args.priority:
         node["priority"] = args.priority
+    if args.hidden:
+        node["hidden"] = True
     node["children"] = []
     return node
 
@@ -62,6 +64,7 @@ def main() -> int:
     ap.add_argument("--description", default="", help="任务描述")
     ap.add_argument("--note-path", default="", help="相对项目目录的笔记 markdown 路径")
     ap.add_argument("--priority", default="", help="优先级 (e.g. P1)")
+    ap.add_argument("--hidden", action="store_true", help="标记为不展示（项目树默认隐藏，可通过眼睛图标切换显示）")
     ap.add_argument("--parent", default="", help="父任务 id；省略则加到根级")
     args = ap.parse_args()
 

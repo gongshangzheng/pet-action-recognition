@@ -60,9 +60,13 @@ management/
   "id": "t1-1", "title": "...", "status": "completed|active|planned|paused|blocked",
   "startDate": "2026-07-08", "endDate": "2026-07-10", "assignee": "张三",
   "description": "...", "notePath": "notes/01.md", "priority": "P1",
+  "hidden": true,
   "children": [ ... ]
 }
 ```
+
+字段说明补充：
+- `hidden: true` — 项目树默认不展示此节点（前端眼睛图标可切换显示，节点以半透明斜体呈现）。子任务会随父任务一起隐藏。用法：`add_task.py --hidden` / `update_task.py --hidden` 或 `--no-hidden`。
 
 ```bash
 SD=.claude/skills/projflow-management/scripts
@@ -90,6 +94,59 @@ python3 $SD/list_tasks.py --slug projflow --status active
 ```
 
 `--status` 接受 canonical（completed/active/planned/paused/blocked）或别名（done/in_progress/ongoing/todo/pending）。
+
+### 1.1 任务描述（description）写作规范
+
+**反模式**：把所有信息塞进一行的 description 字段（标题、范围、交付物、约束都连在一起），导致看板/项目树悬浮卡只看到一行密密麻麻的字。
+
+**正确做法**：description 字段允许 `\n` 换行（前端 `white-space: pre-line` 渲染）。按下面结构写，每段各司其职：
+
+```
+<一句话定位：做什么 + 为什么>                       ← 必填
+                                                   ← 一个空行
+• <要点 1：范围 / 交付物 / 约束>                    ← 2-4 条，可选
+• <要点 2：关键依赖或验收标准>
+• <要点 3：非目标 / 不在范围内>
+```
+
+**硬性规则**：
+1. 首行必须是**单句定位**，≤ 40 汉字，回答"这个任务到底要做什么"。不要复述 title。
+2. 要点段用 `• `（U+2022 + 空格）开头，每条独立成行；不要写 `- ` 或 `* `（会被当成 markdown 渲染错乱）。
+3. 每条要点 ≤ 60 汉字；超过就拆成两条。
+4. 整段 ≤ 6 行（含空行）。太长说明该拆子任务了，不要堆在 description 里。
+5. **禁止**：HTML 标签、emoji、markdown 链接、`TODO:` 前缀、"详见 notePath" 这种占位废话。
+6. 中文语境下英文专有名词首字母大写（PyTorch 不是 pytorch），且左右各留一个半角空格。
+7. 如果任务已经挂了 `notePath`，description 仍要独立可读（用户不点进笔记也能看懂）。
+
+**好例子**（tasks.json 中的 description 值）：
+```json
+"description": "为项目树页面包裹一层 Git 风格的分支线，让层级关系一眼可见。\n\n• 输入：任意深度 children 数组，输出递归分支线 + 悬浮卡\n• 首屏性能：500 节点内 < 100ms 渲染完成\n• 不在范围内：节点拖拽排序（放到 t9）"
+```
+
+**坏例子**：
+```json
+"description": "实现项目树页面的分支线渲染逻辑，用递归组件包裹每个 task node，支持任意深度，带 git 风格连接线，悬浮卡展示详情，要求性能达标（500节点<100ms），不包括拖拽排序功能，那个放到后面的 t9 里做。"
+```
+
+**调用专用 subagent（推荐）**：创建/修改任务时，若 description 需要新写或重写，主 agent 应通过 `Agent` 工具派生一个 `general-purpose` subagent 专门产出描述文本，避免主上下文被写作过程污染。Prompt 模板：
+
+```
+你是 ProjFlow 任务描述写手。严格按以下规范输出 description 字段值（纯文本，用 \n 换行，不要 ```json 代码块，不要任何前言后语）：
+
+规范：
+1. 首行：单句定位（≤40 汉字），不复述 title
+2. 一个空行
+3. 2-4 条 • 要点（每条 ≤60 汉字），涵盖范围/交付物/约束/非目标
+4. 总长 ≤6 行；禁止 emoji、markdown、HTML
+5. 中文里夹英文专有名词左右留空格，首字母大写
+
+任务 title：<TITLE>
+上下文（父任务/项目/slug 等，可选）：<CONTEXT>
+
+直接输出 description 字符串（已转义好可直接塞 JSON）。
+```
+
+subagent 返回后，主 agent 把字符串原样传给 `add_task.py --description "$(cat <<'EOF'\n...\nEOF\n)"` 或 `update_task.py --description`。
 
 ---
 

@@ -34,8 +34,18 @@
           </button>
           <div class="sidebar-meta">
             <span v-if="activeTree" class="meta-count">
-              {{ treeCount.completed }}/{{ treeCount.total }}
+              {{ visibleCount.completed }}/{{ visibleCount.total }}
             </span>
+            <button
+              v-if="activeTree && hiddenCount > 0"
+              class="hidden-toggle"
+              :class="{ active: showHidden }"
+              :title="showHidden ? '隐藏已标记为不展示的任务' : '显示已标记为不展示的任务'"
+              @click="showHidden = !showHidden"
+            >
+              <n-icon size="12"><component :is="showHidden ? EyeOffOutline : EyeOutline" /></n-icon>
+              <span>{{ hiddenCount }}</span>
+            </button>
             <n-tooltip trigger="hover" placement="bottom-end">
               <template #trigger>
                 <n-icon size="14" class="help-icon"><help-circle-outline /></n-icon>
@@ -52,13 +62,13 @@
         </div>
 
         <div v-if="treeLoading" class="empty">加载中…</div>
-        <div v-else-if="activeTree && activeTree.tasks.length" class="tree-list">
+        <div v-else-if="activeTree && visibleTasks.length" class="tree-list">
           <project-task-node
-            v-for="(task, i) in activeTree.tasks"
+            v-for="(task, i) in visibleTasks"
             :key="task.id"
             :task="task"
             :depth="0"
-            :is-last="i === activeTree.tasks.length - 1"
+            :is-last="i === visibleTasks.length - 1"
             :parent-lines="[]"
             :color="activeColor"
             :selected-id="selectedTask?.id"
@@ -132,7 +142,7 @@ import { NIcon, NTooltip } from 'naive-ui'
 import {
   GitBranchOutline, ArrowBackOutline, HelpCircleOutline,
   PersonOutline, PeopleOutline, CheckmarkCircleOutline,
-  PauseOutline, EllipseOutline,
+  PauseOutline, EllipseOutline, EyeOutline, EyeOffOutline,
 } from '@vicons/ionicons5'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import ProjectTaskNode from './ProjectTaskNode.vue'
@@ -163,6 +173,7 @@ const selectedTask = ref(null)
 const noteContent = ref(null)
 const noteLoading = ref(false)
 const pendingTaskId = ref(null) // 从 URL 恢复的任务 id，等任务树加载后定位
+const showHidden = ref(false)   // 是否展示 hidden:true 的任务
 
 const route = useRoute()
 const router = useRouter()
@@ -170,6 +181,27 @@ const router = useRouter()
 const activeColorIndex = computed(() => projects.value.findIndex(p => p.slug === activeSlug.value))
 const activeColor = computed(() => projectColor(Math.max(0, activeColorIndex.value)))
 const treeCount = computed(() => activeTree.value ? countAll(activeTree.value.tasks) : { total: 0, completed: 0 })
+
+function filterTree(tasks, show) {
+  const out = []
+  for (const t of tasks) {
+    if (t.hidden && !show) continue
+    const childList = t.children?.length ? filterTree(t.children, show) : []
+    out.push({ ...t, children: childList, __hidden: !!t.hidden })
+  }
+  return out
+}
+
+const visibleTasks = computed(() =>
+  activeTree.value ? filterTree(activeTree.value.tasks, showHidden.value) : []
+)
+
+const visibleCount = computed(() => countAll(visibleTasks.value))
+
+const hiddenCount = computed(() => {
+  if (!activeTree.value) return 0
+  return treeCount.value.total - countAll(filterTree(activeTree.value.tasks, false)).total
+})
 
 function projectColor(idx) {
   return PROJECT_COLORS[((idx % PROJECT_COLORS.length) + PROJECT_COLORS.length) % PROJECT_COLORS.length]
@@ -366,6 +398,15 @@ onMounted(loadProjects)
 }
 .sidebar-meta { margin-left: auto; display: flex; align-items: center; gap: 6px;
   .meta-count { font-size: 10px; color: var(--color-text-dim); }
+  .hidden-toggle {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; color: var(--color-text-dim);
+    background: var(--color-elevated); border: 1px solid transparent;
+    padding: 1px 6px; border-radius: 999px; cursor: pointer;
+    transition: all 0.15s;
+    &:hover { color: var(--color-text); border-color: var(--color-border); }
+    &.active { color: var(--color-primary); border-color: var(--color-primary-soft); background: var(--color-primary-soft); }
+  }
   .help-icon { color: var(--color-text-dim); cursor: help; &:hover { color: var(--color-text-secondary); } }
 }
 .tree-list { display: flex; flex-direction: column; gap: 2px; }

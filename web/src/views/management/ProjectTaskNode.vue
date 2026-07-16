@@ -3,7 +3,7 @@
     <div class="node-row-wrap" @mouseenter="onEnter" @mouseleave="onLeave">
       <div
         class="node-row"
-        :class="{ selected: isSelected, clickable: isClickable }"
+        :class="{ selected: isSelected, clickable: isClickable, 'is-hidden': task.hidden || task.__hidden }"
         @click="onClick"
       >
         <!-- git 分支线 -->
@@ -112,7 +112,7 @@ const TASK_STATUS = {
 const PRIORITY_LABEL = { high: '高', medium: '中', low: '低' }
 function priorityLabel(p) { return PRIORITY_LABEL[p] || p }
 
-const expanded = ref(props.depth < 1)
+const expanded = ref(false)
 const hovered = ref(false)
 let hoverTimer = null
 
@@ -163,6 +163,7 @@ function onClick() {
   padding: 2px 0;
   &.clickable { cursor: pointer; &:hover { background: var(--color-hover); } }
   &.clickable.selected { background: var(--color-selected); }
+  &.is-hidden { opacity: 0.45; .node-title { font-style: italic; } }
 }
 
 .branch-lines {
@@ -236,6 +237,7 @@ function onClick() {
   width: 240px; padding: 12px;
   background: var(--color-card); border: 1px solid var(--color-border);
   border-radius: 8px; box-shadow: 0 8px 24px var(--color-shadow);
+      word-break: break-word; overflow-wrap: anywhere;
   .hc-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; strong { font-size: 13px; color: var(--color-text-heading); } }
   .hc-badge { font-size: 10px; background: var(--color-elevated); padding: 1px 6px; border-radius: 4px; color: var(--color-text-secondary); }
   .hc-priority {
@@ -246,6 +248,6 @@ function onClick() {
   }
   .hc-line { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
   .hc-progress { font-size: 11px; color: var(--color-text-secondary); margin-top: 4px; }
-  .hc-desc { font-size: 12px; color: var(--color-text); margin-top: 6px; }
+  .hc-desc { font-size: 12px; color: var(--color-text); margin-top: 6px; white-space: pre-line; line-height: 1.5; }
 }
 </style>
