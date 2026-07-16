@@ -234,10 +234,10 @@
     },
     {
       "id": "t8",
-      "title": "ProjFlow 评测输出与论文详情 UI 同步",
+      "title": "ProjFlow 评测输出与论文详情 UI 同步 + 管理模块技能升级",
       "status": "completed",
       "assignee": "汤问",
-      "description": "cherry-pick ProjFlow c41bb78：接入评测输出按需查看（EvalOutputs/VideoModal/outputs 端点）、评测配置页；同步论文详情页底部悬浮按钮栏；修复 markdown_table 空表解析",
+      "description": "cherry-pick ProjFlow c41bb78/1ffaa50/1ec3740/c59709b/b8b3d55/5443eae：评测输出按需查看、论文详情页悬浮按钮栏、项目树 hidden 字段、subagent 提示词目录、skill 去前缀、任务 ID + progress 字段、Cornell 布局迭代、markdown_table 空表修复",
       "children": []
     }
   ]
