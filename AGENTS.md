@@ -147,6 +147,23 @@ paper_id, category, confidence
 - Python 版本：3.9（不支持 `str | None` 语法，需用 `Optional[str]`）
 - 管理路由直接读写 Markdown 文件
 
+### Skill 管理
+
+- **项目级 skill 必须创建在项目内部** `.claude/skills/<skill-name>/SKILL.md`，随仓库版本管理
+- **禁止**将项目级 skill 放到 `~/.qoder/skills/` 或任何用户级目录——那些目录只存放跨项目的通用 skill
+- Agent 新建 skill 时，默认路径就是 `.claude/skills/`，无需额外确认
+
+当前项目 skill：
+
+| Skill | 路径 | 用途 |
+|-------|------|------|
+| using-mmaction2 | `.claude/skills/using-mmaction2/` | mmaction2 安装、训练、推理、config 系统 |
+| evaluation | `.claude/skills/evaluation/` | LLM 评测模块 |
+| papers | `.claude/skills/papers/` | 论文收集模块 |
+| management | `.claude/skills/management/` | 项目管理 CRUD |
+| web | `.claude/skills/web/` | Web 全栈开发 |
+| upstream-sync | `.claude/skills/upstream-sync/` | 上下游仓库同步 |
+
 ### macOS 后台进程
 
 ```bash
