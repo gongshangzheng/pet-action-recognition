@@ -81,7 +81,7 @@
     {
       "id": "t3",
       "title": "mmaction2 基础设施与单模型基线",
-      "status": "active",
+      "status": "completed",
       "startDate": "2026-07-20",
       "endDate": "2026-08-05",
       "assignee": "吴赟阳",
@@ -91,7 +91,7 @@
         {
           "id": "t3-1",
           "title": "mmaction2 训练环境搭建",
-          "status": "active",
+          "status": "completed",
           "assignee": "吴赟阳",
           "description": "vendor 引入 mmaction2，安装 mmengine/mmcv/decord 等依赖，确保可 import 并跑通官方 demo",
           "children": []
@@ -99,24 +99,24 @@
         {
           "id": "t3-2",
           "title": "mmaction2 单模型训练跑通",
-          "status": "planned",
-          "description": "选取 TSN/SlowFast/I3D 等代表配置，在四足数据集上跑通训练并记录指标，验证 mmaction2 端到端链路可用",
+          "status": "completed",
+          "description": "选取 TSN 代表配置，在四足合成数据集上跑通训练并记录指标，验证 mmaction2 端到端链路可用",
           "children": []
         },
         {
           "id": "t3-3",
           "title": "训练后端实接 mmaction2",
-          "status": "planned",
+          "status": "completed",
           "assignee": "吴赟阳",
-          "description": "把 server/routers/training.py 的 POST /run 从模拟响应改为 subprocess 调用 third_party/mmaction2/tools/train.py，解析 vis_data/scalars.json 并写入 results/training/metrics.json",
+          "description": "scripts/train_model.py 包装 third_party/mmaction2/tools/train.py；server/routers/training.py POST /run 改为 subprocess 调用，解析 vis_data/scalars.json 并写入 results/training/metrics.json",
           "children": []
         },
         {
           "id": "t3-4",
-          "title": "推理端点接入 mmaction2",
-          "status": "planned",
+          "title": "推理/测试端点接入 mmaction2",
+          "status": "completed",
           "assignee": "吴赟阳",
-          "description": "新增 /api/inference 或 /api/training/inference 端点，调用 tools/test.py 或 mmaction 推理 API，支持传入视频返回动作类别与置信度",
+          "description": "新增 POST /api/training/run_test 调用 scripts/run_test.py；新增 POST/GET /api/training/inference 调用 scripts/inference.py；均写入 results/training/ 对应产物",
           "children": []
         }
       ]

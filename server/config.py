@@ -16,15 +16,20 @@ OUTPUTS_DIR = os.path.join(EVALUATION_DIR, "outputs")
 # 下游库可覆盖：infraredComp 用 results/training/，其它库用 training/outputs/
 TRAINING_DIR = os.path.join(BASE_DIR, "results", "training")
 TRAINING_METRICS_JSON = os.path.join(TRAINING_DIR, "metrics.json")  # 训练 run 列表(含 loss_series)
+TRAINING_TEST_RESULTS_JSON = os.path.join(TRAINING_DIR, "test_results.json")  # 测试/评估结果
 CHECKPOINTS_DIR = os.path.join(TRAINING_DIR, "checkpoints")         # trained .pth state_dicts
 TRAINING_LOGS_DIR = os.path.join(TRAINING_DIR, "logs")              # 训练日志
-# 训练产物服务根目录（checkpoint + log 文件，供 /api/training/outputs 按需服务）
-TRAINING_OUTPUTS_DIR = TRAINING_DIR
+TRAINING_WORK_DIR = os.path.join(TRAINING_DIR, "work_dirs")         # mmaction2 work_dirs
+TRAINING_OUTPUTS_DIR = TRAINING_DIR                                 # 训练产物服务根目录
+
+# mmaction2 vendor 路径（已 vendored，非 pip/submodule）
+MMACTION2_DIR = os.path.join(BASE_DIR, "third_party", "mmaction2")
 
 # 四足动物动作数据集（名称未定，先设为变量；数据集收集后改这一处即可）
 # datasets/<QUADRUPED_DATASET_NAME>/ 为训练/评测共用根目录
 QUADRUPED_DATASET_NAME = "quadruped_action"
 QUADRUPED_DATASET_DIR = os.path.join(BASE_DIR, "datasets", QUADRUPED_DATASET_NAME)
+QUADRUPED_CLASSES_FILE = os.path.join(QUADRUPED_DATASET_DIR, "classes.txt")
 
 # 论文数据库路径（本地独立数据库）
 PAPERS_DB = os.path.join(BASE_DIR, "data", "papers.db")

@@ -1,0 +1,8 @@
+sit_001.mp4 0
+sit_002.mp4 0
+sit_003.mp4 0
+sit_004.mp4 0
+walk_001.mp4 1
+walk_002.mp4 1
+walk_003.mp4 1
+walk_004.mp4 1
