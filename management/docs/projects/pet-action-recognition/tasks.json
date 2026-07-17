@@ -119,6 +119,12 @@
           "description": "新增 POST /api/training/run_test 调用 scripts/run_test.py；新增 POST/GET /api/training/inference 调用 scripts/inference.py；均写入 results/training/ 对应产物",
           "children": []
         }
+      ],
+      "progress": [
+        {
+          "date": "2026-07-17",
+          "note": "[完成] 训练 checkpoint 管理升级：支持 best/latest 双备份 + JSON 元数据；新增 resume/load/pretrained/scratch 四种互斥训练模式；内置 21 个 mmaction2 模型预训练权重注册表，pretrained:true 自动解析 URL"
+        }
       ]
     },
     {
@@ -177,7 +183,13 @@
           "assignee": "团队",
           "description": "每次关键进展后更新 management/docs/projects/pet-action-recognition/tasks.json，确保项目树与 TaskBoard 看板反映最新状态，避免记忆与实际脱节",
           "notePath": "notes/00-process.md",
-          "children": []
+          "children": [],
+          "progress": [
+            {
+              "date": "2026-07-17",
+              "note": "[完成] 创建 .agents → .claude 软链接，统一项目级 skill 入口"
+            }
+          ]
         }
       ]
     },
