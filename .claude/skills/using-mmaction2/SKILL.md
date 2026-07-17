@@ -50,17 +50,35 @@ train_pipeline = [ dict(type='DecordInit', ...), dict(type='SampleFrames', clip_
 
 **改模型只改 `_base_/models/*.py` 或在 config 里覆盖 `model = dict(..., cls_head=dict(num_classes=N))`**，不动源码。
 
-## 3. 训练入口
+## 3. 训练入口与四种模式
 
-```bash
-python third_party/mmaction2/tools/train.py <CONFIG.py> \
-    --work-dir results/training/runs/<run_id> \
-    [--resume] [--amp] [--seed 42]
-# 多卡：
-bash third_party/mmaction2/tools/dist_train.sh <CONFIG> <NGPU> --work-dir ...
+训练通过 `scripts/train_model.py`（由 `POST /api/training/run` 触发），最终调用 `third_party/mmaction2/tools/train.py`。
+
+### 四种训练模式（互斥，API body / CLI 只能选一个）
+
+| 模式 | API 字段 | CLI 参数 | 说明 |
+|------|---------|---------|------|
+| 默认 | （不传） | （不传） | 使用 config 中已有的 `init_cfg` / `load_from` |
+| 预训练 finetune | `pretrained: true` 或 `"<url\|path>"` | `--pretrained <url\|path>` | `true` 自动从注册表解析 mmaction2 模型仓库 URL；也可传自定义 URL 或本地路径。通过 `load_from` 加载全部可匹配权重（backbone + head），head 维度不匹配时自动跳过 |
+| 加载权重从头训 | `load_from: "<checkpoint\|run_id>"` | `--load-from <path\|run_id>` | 加载我们已有 checkpoint 的全部权重，重置 epoch=0 / optimizer / scheduler |
+| 断点续训 | `resume_from: "<run_id>"` | `--resume <path>` | 复用原 run_id，恢复 epoch / optimizer / scheduler；完成后覆盖 latest，best 仅在更优时覆盖 |
+| 从头训练 | `from_scratch: true` | `--from-scratch` | 随机初始化，禁用 config 中的 `init_cfg` |
+
+### Checkpoint 产物结构
+
+每次训练产出 4 个文件，按模型分子目录：
+
+```
+results/training/checkpoints/<model_id>/
+  <run_id>_latest.pth        # → work_dir/epoch_N.pth
+  <run_id>_latest.json       # {run_id, model_id, dataset, type, epoch, total_epochs, metrics, created_at, source_file}
+  <run_id>_best.pth          # → work_dir/best_acc_top1_epoch_N.pth
+  <run_id>_best.json         # 同上，type=best
 ```
 
-产物（写到 `--work-dir`）：`<run_id>/epoch_*.pth`（checkpoint）、`<run_id>/*.log` + `vis_data/scalars.json`（loss/metric 曲线）。我们要把这些搬到 `results/training/checkpoints/` 与 `results/training/logs/` 并汇总进 `metrics.json`（见 §5）。
+### 训练 run 记录（metrics.json）
+
+每个 run 记录训练模式标记：`resumed_at`、`loaded_from`、`pretrained`、`from_scratch`。
 
 ## 4. 适配四足动物数据集
 

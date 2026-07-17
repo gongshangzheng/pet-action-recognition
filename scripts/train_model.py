@@ -5,22 +5,28 @@
   python3 scripts/train_model.py \
     --model-id tsn-resnet50 --dataset-id quadruped_action \
     --run-id train-1234567890 \
-    --mmaction2-config configs/recognition/tsn/tsn_imagenet-pretrained-r50_8xb32-1x1x3-100e_kinetics400-rgb.py \
-    --epochs 100 --lr 1e-4 --batch-size 16 --device cuda \
-    [--resume] [--extra-args "--amp --seed 42"]
+    --mmaction2-config configs/recognition/tsn/... \
+    --epochs 100 --lr 1e-4 --batch-size 16 --device cuda
+
+四种训练模式（互斥，都不选则使用 config 默认值）：
+  --resume <path>         断点续训，复用 run_id，恢复 epoch/optimizer/scheduler
+  --load-from <path|id>   加载我们 checkpoint 的权重，epoch=0 从头训练
+  --pretrained <url|path> 加载 backbone 预训练权重（mmaction2 模型仓库 URL 或本地路径），finetune
+  --from-scratch          随机初始化，禁用 config 中的任何预训练权重
 
 流程：
-  1. 校验四足数据集目录/标注文件（不存在则记录 error 到 metrics.json 后退出）。
-  2. 用 mmaction2 的 tools/train.py 启动训练，work_dir=results/training/work_dirs/<run_id>/。
+  1. 校验四足数据集目录/标注文件。
+  2. 用 mmaction2 的 tools/train.py 启动训练。
   3. 解析 vis_data/scalars.json 生成 loss_series。
-  4. 把最新 epoch_*.pth 软链/复制到 results/training/checkpoints/<run_id>.pth。
-  5. 追加/更新 run 到 results/training/metrics.json（status: running -> completed/error）。
+  4. 把 latest + best checkpoint 软链到 results/training/checkpoints/<model_id>/，附带 JSON 元数据。
+  5. 追加/更新 run 到 results/training/metrics.json。
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -60,7 +66,6 @@ def ensure_dirs() -> None:
 
 
 def _cpu_patch_dir() -> str:
-    """macOS MPS 会选 float64 不支持的设备，通过 sitecustomize 强制 CPU。"""
     d = os.path.join(TRAINING_WORK_DIR, ".cpu_sitecustomize")
     os.makedirs(d, exist_ok=True)
     sf = os.path.join(d, "sitecustomize.py")
@@ -109,7 +114,6 @@ def upsert_run(run: dict) -> None:
 
 
 def num_classes_for(dataset_id: str) -> int | None:
-    """从 classes.txt / class_map.json 推断类别数；无则返回 None。"""
     if os.path.isfile(QUADRUPED_CLASSES_FILE):
         with open(QUADRUPED_CLASSES_FILE, "r", encoding="utf-8") as f:
             lines = [ln.strip() for ln in f if ln.strip()]
@@ -126,7 +130,6 @@ def num_classes_for(dataset_id: str) -> int | None:
 
 
 def resolve_dataset_paths(dataset_id: str):
-    """返回训练/验证所需的 ann_file 与 data_root；若数据集未构建则返回空字符串。"""
     if dataset_id == QUADRUPED_DATASET_NAME:
         root = Path(QUADRUPED_DATASET_DIR)
     else:
@@ -173,6 +176,12 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
         cfg_options.append(f"val_dataloader.dataset.ann_file={ann_val}")
     if videos_val:
         cfg_options.append(f"val_dataloader.dataset.data_prefix.video={videos_val}")
+    if getattr(args, "load_from", None):
+        cfg_options.append(f"load_from={args.load_from}")
+    if getattr(args, "pretrained", None):
+        cfg_options.append(f"load_from={args.pretrained}")
+    if getattr(args, "from_scratch", False):
+        cfg_options.append("model.backbone.init_cfg=None")
 
     if cfg_options:
         cmd += ["--cfg-options"] + cfg_options
@@ -182,10 +191,8 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
 
 
 def parse_scalars(work_dir: str) -> list[dict]:
-    """解析 mmengine 的 vis_data/scalars.json，返回 {epoch, loss, top1_acc, top5_acc, lr} 列表。"""
     path = os.path.join(work_dir, "vis_data", "scalars.json")
     if not os.path.isfile(path):
-        # 新版 mmengine 把时间戳子目录也包含进 work_dir，递归查找
         for root, _dirs, files in os.walk(work_dir):
             if "scalars.json" in files:
                 path = os.path.join(root, "scalars.json")
@@ -193,7 +200,6 @@ def parse_scalars(work_dir: str) -> list[dict]:
         else:
             return []
     series: list[dict] = []
-    seen_epochs: set[int] = set()
     try:
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
@@ -207,7 +213,6 @@ def parse_scalars(work_dir: str) -> list[dict]:
                 epoch = obj.get("epoch")
                 if epoch is None:
                     continue
-                # 每个 epoch 只保留最后一条（汇总）
                 rec = next((r for r in series if r["epoch"] == epoch), None)
                 if rec is None:
                     rec = {"epoch": epoch}
@@ -231,7 +236,6 @@ def parse_scalars(work_dir: str) -> list[dict]:
 
 
 def find_latest_checkpoint(work_dir: str) -> str | None:
-    """返回 work_dir 中最新 epoch_*.pth 的绝对路径。"""
     if not os.path.isdir(work_dir):
         return None
     cks = [
@@ -241,7 +245,7 @@ def find_latest_checkpoint(work_dir: str) -> str | None:
     ]
     if not cks:
         return None
-    # epoch_1.pth ... epoch_100.pth；按文件 mtime/数字排序
+
     def epoch_of(p: str) -> int:
         try:
             return int(os.path.basename(p)[6:-4])
@@ -250,18 +254,109 @@ def find_latest_checkpoint(work_dir: str) -> str | None:
     return max(cks, key=epoch_of)
 
 
-def link_checkpoint(src: str, run_id: str) -> str | None:
+def find_best_checkpoint(work_dir: str) -> str | None:
+    if not os.path.isdir(work_dir):
+        return None
+    pattern = re.compile(r"^best_.*_epoch_(\d+)\.pth$")
+    best_path = None
+    best_epoch = -1
+    for fn in os.listdir(work_dir):
+        m = pattern.match(fn)
+        if m:
+            epoch = int(m.group(1))
+            if epoch > best_epoch:
+                best_epoch = epoch
+                best_path = os.path.join(work_dir, fn)
+    return best_path
+
+
+def _ckpt_dir(model_id: str) -> str:
+    d = os.path.join(CHECKPOINTS_DIR, model_id)
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def link_checkpoint(src: str, model_id: str, run_id: str, suffix: str) -> str | None:
     if not src or not os.path.isfile(src):
         return None
-    dst = os.path.join(CHECKPOINTS_DIR, f"{run_id}.pth")
-    os.makedirs(CHECKPOINTS_DIR, exist_ok=True)
+    dst_dir = _ckpt_dir(model_id)
+    dst = os.path.join(dst_dir, f"{run_id}_{suffix}.pth")
     if os.path.lexists(dst):
         os.remove(dst)
     try:
-        os.symlink(os.path.relpath(src, CHECKPOINTS_DIR), dst)
+        os.symlink(os.path.relpath(src, dst_dir), dst)
     except OSError:
         shutil.copy2(src, dst)
-    return f"checkpoints/{run_id}.pth"
+    return f"checkpoints/{model_id}/{run_id}_{suffix}.pth"
+
+
+def write_checkpoint_meta(
+    model_id: str,
+    run_id: str,
+    ckpt_type: str,
+    epoch: int,
+    total_epochs: int,
+    metrics: dict,
+    source_file: str,
+    dataset_id: str = "",
+) -> str:
+    dst_dir = _ckpt_dir(model_id)
+    meta = {
+        "run_id": run_id,
+        "model_id": model_id,
+        "dataset": dataset_id,
+        "type": ckpt_type,
+        "epoch": epoch,
+        "total_epochs": total_epochs,
+        "metrics": metrics,
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "checkpoint_path": f"checkpoints/{model_id}/{run_id}_{ckpt_type}.pth",
+        "source_file": source_file,
+    }
+    meta_path = os.path.join(dst_dir, f"{run_id}_{ckpt_type}.json")
+    tmp = meta_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, meta_path)
+    return meta_path
+
+
+def resolve_checkpoint_path(path_or_run_id: str, model_id: str) -> str | None:
+    if os.path.isfile(path_or_run_id):
+        return path_or_run_id
+    ckpt_file = os.path.join(CHECKPOINTS_DIR, model_id, f"{path_or_run_id}_latest.pth")
+    if os.path.isfile(ckpt_file):
+        return os.path.realpath(ckpt_file)
+    for fn in os.listdir(CHECKPOINTS_DIR) if os.path.isdir(CHECKPOINTS_DIR) else []:
+        candidate = os.path.join(CHECKPOINTS_DIR, fn, f"{path_or_run_id}_latest.pth")
+        if os.path.isfile(candidate):
+            return os.path.realpath(candidate)
+    return None
+
+
+def _read_old_best_top1(model_id: str, run_id: str) -> float | None:
+    meta_path = os.path.join(CHECKPOINTS_DIR, model_id, f"{run_id}_best.json")
+    if not os.path.isfile(meta_path):
+        return None
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("metrics", {}).get("top1_acc")
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _metrics_for_epoch(series: list[dict], epoch: int) -> dict:
+    for rec in series:
+        if rec.get("epoch") == epoch:
+            return {k: rec[k] for k in ("loss", "top1_acc", "top5_acc", "lr") if k in rec}
+    return {}
+
+
+def _epoch_of_file(path: str) -> int:
+    fn = os.path.basename(path)
+    m = re.search(r"epoch_(\d+)\.pth$", fn)
+    return int(m.group(1)) if m else 0
 
 
 def main() -> int:
@@ -269,22 +364,44 @@ def main() -> int:
     parser.add_argument("--model-id", required=True)
     parser.add_argument("--dataset-id", required=True)
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--mmaction2-config", required=True, help="mmaction2 config path (relative to MMACTION2_DIR or absolute)")
+    parser.add_argument("--mmaction2-config", required=True)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
     parser.add_argument("--num-classes", type=int, default=None)
     parser.add_argument("--resume", default=None, help="resume from checkpoint path or 'auto'")
+    parser.add_argument("--load-from", default=None, help="load our checkpoint weights (path or run_id); starts from epoch 0")
+    parser.add_argument("--pretrained", default=None, help="backbone pretrained weights URL or local path (e.g. mmaction2 model zoo)")
+    parser.add_argument("--from-scratch", action="store_true", help="train from random init, disable any pretrained weights in config")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--work-dir", default=None)
-    parser.add_argument("--extra-args", default="", help="extra CLI args passed to tools/train.py")
+    parser.add_argument("--extra-args", default="")
     args = parser.parse_args()
 
+    modes = [
+        ("resume", args.resume),
+        ("load_from", args.load_from),
+        ("pretrained", args.pretrained),
+        ("from_scratch", args.from_scratch or None),
+    ]
+    active = [name for name, val in modes if val]
+    if len(active) > 1:
+        parser.error(f"训练模式互斥，只能选一个：{', '.join(active)}")
+
     ensure_dirs()
+
+    is_resume = bool(args.resume)
     work_dir = args.work_dir or os.path.join(TRAINING_WORK_DIR, args.run_id)
     os.makedirs(work_dir, exist_ok=True)
     args.work_dir = work_dir
+
+    if args.load_from:
+        resolved = resolve_checkpoint_path(args.load_from, args.model_id)
+        if resolved:
+            args.load_from = resolved
+        else:
+            log(args.run_id, f"[warn] load_from 未找到有效 checkpoint：{args.load_from}")
 
     run = {
         "id": args.run_id,
@@ -297,11 +414,24 @@ def main() -> int:
         "batch_size": args.batch_size,
         "device": args.device,
         "checkpoint_path": None,
+        "best_checkpoint_path": None,
         "metrics": {},
         "loss_series": [],
     }
+    if is_resume:
+        run["resumed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if args.load_from:
+        run["loaded_from"] = args.load_from
+    if args.pretrained:
+        run["pretrained"] = args.pretrained
+    if args.from_scratch:
+        run["from_scratch"] = True
     upsert_run(run)
-    log(args.run_id, f"[start] model={args.model_id} dataset={args.dataset_id} work_dir={work_dir}")
+    log(args.run_id, f"[start] model={args.model_id} dataset={args.dataset_id} work_dir={work_dir}"
+        + (" [resume]" if is_resume else "")
+        + (f" [load_from={args.load_from}]" if args.load_from else "")
+        + (f" [pretrained={args.pretrained}]" if args.pretrained else "")
+        + (" [from_scratch]" if args.from_scratch else ""))
 
     ann_train, videos_train, ann_val, videos_val = resolve_dataset_paths(args.dataset_id)
     if not ann_train or not os.path.isfile(ann_train):
@@ -320,13 +450,10 @@ def main() -> int:
     log(args.run_id, f"[cmd] {' '.join(cmd)}")
 
     env = os.environ.copy()
-    # PyTorch >=2.6 默认 weights_only=True，mmengine 保存的 checkpoint 含 HistoryBuffer 会失败
     env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
-    # 让 mmaction2 可 import（未 pip install -e 时）
     ppath = [str(MMACTION2_DIR), str(REPO)]
     if args.device == "cpu":
         env["CUDA_VISIBLE_DEVICES"] = ""
-        # macOS MPS 不支持 float64，强制让 mmengine 选择 CPU
         ppath.insert(0, _cpu_patch_dir())
     if env.get("PYTHONPATH"):
         ppath.append(env["PYTHONPATH"])
@@ -353,18 +480,69 @@ def main() -> int:
         return 1
 
     # 解析产物
-    run["loss_series"] = parse_scalars(work_dir)
-    latest = find_latest_checkpoint(work_dir)
-    cp_rel = link_checkpoint(latest, args.run_id) if latest else None
-    run["checkpoint_path"] = cp_rel
-    if cp_rel:
-        run["metrics"]["latest_epoch"] = int(os.path.basename(latest)[6:-4])
+    series = parse_scalars(work_dir)
+    run["loss_series"] = series
 
-    if run["loss_series"]:
-        last = run["loss_series"][-1]
-        run["metrics"].update({k: last[k] for k in ("loss", "top1_acc", "top5_acc", "lr") if k in last})
+    # --- latest checkpoint ---
+    latest = find_latest_checkpoint(work_dir)
+    latest_rel = None
+    if latest:
+        latest_rel = link_checkpoint(latest, args.model_id, args.run_id, "latest")
+        ep = _epoch_of_file(latest)
+        m = _metrics_for_epoch(series, ep)
+        write_checkpoint_meta(
+            args.model_id, args.run_id, "latest",
+            epoch=ep, total_epochs=args.epochs, metrics=m,
+            source_file=os.path.basename(latest),
+            dataset_id=args.dataset_id,
+        )
+        run["checkpoint_path"] = latest_rel
+        run["metrics"]["latest_epoch"] = ep
+        run["metrics"].update(m)
+
+    # --- best checkpoint ---
+    best = find_best_checkpoint(work_dir)
+    if best:
+        best_ep = _epoch_of_file(best)
+        best_metrics = _metrics_for_epoch(series, best_ep)
+        should_save = True
+        if is_resume:
+            old_top1 = _read_old_best_top1(args.model_id, args.run_id)
+            new_top1 = best_metrics.get("top1_acc")
+            if old_top1 is not None and new_top1 is not None and new_top1 <= old_top1:
+                should_save = False
+                log(args.run_id, f"[best] 新 best top1={new_top1} 未超过旧 best top1={old_top1}，保留旧 best")
+
+        if should_save:
+            link_checkpoint(best, args.model_id, args.run_id, "best")
+            write_checkpoint_meta(
+                args.model_id, args.run_id, "best",
+                epoch=best_ep, total_epochs=args.epochs, metrics=best_metrics,
+                source_file=os.path.basename(best),
+                dataset_id=args.dataset_id,
+            )
+            run["best_checkpoint_path"] = f"checkpoints/{args.model_id}/{args.run_id}_best.pth"
+            run["metrics"]["best_epoch"] = best_ep
+            if best_metrics.get("top1_acc") is not None:
+                run["best_metric"] = best_metrics["top1_acc"]
+    elif not is_resume and latest:
+        # 没有 val 阶段产出的 best，用 latest 作为 best
+        latest_ep = _epoch_of_file(latest)
+        latest_metrics = _metrics_for_epoch(series, latest_ep)
+        link_checkpoint(latest, args.model_id, args.run_id, "best")
+        write_checkpoint_meta(
+            args.model_id, args.run_id, "best",
+            epoch=latest_ep, total_epochs=args.epochs, metrics=latest_metrics,
+            source_file=os.path.basename(latest),
+            dataset_id=args.dataset_id,
+        )
+        run["best_checkpoint_path"] = f"checkpoints/{args.model_id}/{args.run_id}_best.pth"
+
+    if series:
+        last = series[-1]
         run["final_loss"] = last.get("loss")
-        run["best_metric"] = last.get("top1_acc")
+        if run.get("best_metric") is None:
+            run["best_metric"] = last.get("top1_acc")
 
     if ret == 0:
         run["status"] = "completed"
