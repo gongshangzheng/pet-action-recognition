@@ -40,7 +40,7 @@ management/
     └── meetings/   # 会议纪要 YYYY-MM-DD.md
 ```
 
-启动服务（后端 8080 + 前端 3000）：`bash start_services.sh`。日志 `/tmp/<项目名>-backend.log`、`/tmp/<项目名>-frontend.log`。
+启动服务（后端 8788 + 前端 3000）：`bash start_services.sh`。日志 `/tmp/<项目名>-backend.log`、`/tmp/<项目名>-frontend.log`。
 
 只读 API（`GET /api/management/*`）：`team`、`daily`、`weekly`、`monthly`、`tasks`（`?slug=` 派生看板，缺省取首个项目）、`milestones`、`meetings`、`projects` 等。脚本改完文件，前端经 API 即可看到。
 
@@ -276,7 +276,7 @@ python3 $SD/list_tasks.py --slug myproject --flat   # 看展平看板桶
 python3 $SD/list_tasks.py --slug myproject --id t2-3  # 按 ID 精确定位任务详情
 python3 $SD/add_task.py --slug myproject --title "X" --status active --assignee Y --start 2026-07-11 --end 2026-07-18
 python3 $SD/update_task.py --slug myproject --id t2-3 --progress "完成 X，下一步 Y"  # 追加进展
-bash start_services.sh                             # 启动后端 8080 + 前端 3000
-curl --noproxy '*' "http://localhost:8080/api/management/tasks?slug=myproject"   # 前端所见看板
+bash start_services.sh                             # 启动后端 8788 + 前端 3000
+curl --noproxy '*' "http://localhost:8788/api/management/tasks?slug=myproject"   # 前端所见看板
 tail -f /tmp/<项目名>-backend.log                  # 后端日志
 ```

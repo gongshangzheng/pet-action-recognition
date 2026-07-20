@@ -25,8 +25,8 @@ data/
 ## 启动服务
 
 ```bash
-# 后端 (8080)
-python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8080
+# 后端 (8788)
+python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8788
 ```
 
 ---
@@ -189,7 +189,7 @@ WHERE title LIKE '%language model%' OR title LIKE '%LLM%' OR abstract LIKE '%lan
 
 ```bash
 # API 方式
-curl -X PUT http://localhost:8080/api/papers/2301.12345/note \
+curl -X PUT http://localhost:8788/api/papers/2301.12345/note \
   -H "Content-Type: application/json" \
   -d 'content=这是我的笔记内容...'
 

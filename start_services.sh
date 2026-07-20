@@ -1,6 +1,6 @@
 #!/bin/bash
 # 启动宠物动作识别研究平台全部服务
-# 端口分配：后端=8080  前端=3000
+# 端口分配：后端=8788  前端=3000
 # 论文数据库：data/papers.db（本地 SQLite，独立于 SeekVerse）
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -30,16 +30,16 @@ check_port_conflict() {
 }
 
 # --- 检查端口冲突 ---
-if ! check_port_conflict 8080 "Backend" || ! check_port_conflict 3000 "Frontend"; then
+if ! check_port_conflict 8788 "Backend" || ! check_port_conflict 3000 "Frontend"; then
   echo ""
   echo "Port conflict detected. Stop the conflicting processes and retry."
   exit 1
 fi
 
-# --- 1. Backend (port 8080) ---
-echo "Starting Backend (8080)..."
+# --- 1. Backend (port 8788) ---
+echo "Starting Backend (8788)..."
 cd "$BASE_DIR"
-nohup python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8080 </dev/null > /tmp/backend.log 2>&1 & disown
+nohup python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8788 </dev/null > /tmp/backend.log 2>&1 & disown
 sleep 2
 
 # --- 2. Frontend (port 3000) ---
@@ -51,5 +51,5 @@ sleep 3
 # --- 验证 ---
 echo ""
 echo "=== Service Status ==="
-echo "Backend   (8080): $(curl -s --max-time 3 http://localhost:8080/api/papers/stats/summary | head -c 60)"
+echo "Backend   (8788): $(curl -s --max-time 3 http://localhost:8788/api/papers/stats/summary | head -c 60)"
 echo "Frontend  (3000): $(curl -s --max-time 3 http://localhost:3000 | head -c 40)"
