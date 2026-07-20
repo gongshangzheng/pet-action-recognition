@@ -73,10 +73,11 @@ import {
   NMenu, NBreadcrumb, NBreadcrumbItem, NButton, NIcon,
 } from 'naive-ui'
 import {
-  HomeOutline, PeopleOutline, GitBranchOutline, CalendarOutline,
+  HomeOutline, PeopleOutline, GitBranchOutline,
   DocumentTextOutline, GridOutline, FlagOutline, ChatbubblesOutline,
   SearchOutline, SettingsOutline, FlaskOutline, BarChartOutline,
-  CubeOutline, LayersOutline, SchoolOutline, FilmOutline, SunnyOutline, MoonOutline,
+  CubeOutline, LayersOutline, SchoolOutline, FilmOutline, BookOutline,
+  SunnyOutline, MoonOutline,
 } from '@vicons/ionicons5'
 import { useThemeStore } from '../stores/theme'
 
@@ -116,12 +117,11 @@ const menuOptions = [
     children: [
       { label: '项目树', key: '/management/projects', icon: renderIcon(GitBranchOutline) },
       { label: '团队成员', key: '/management/team', icon: renderIcon(PeopleOutline) },
-      { label: '日报', key: '/management/daily', icon: renderIcon(CalendarOutline) },
-      { label: '周报', key: '/management/weekly', icon: renderIcon(DocumentTextOutline) },
-      { label: '月报', key: '/management/monthly', icon: renderIcon(DocumentTextOutline) },
+      { label: '报告', key: '/management/reports', icon: renderIcon(DocumentTextOutline) },
       { label: '任务看板', key: '/management/tasks', icon: renderIcon(GridOutline) },
       { label: '里程碑', key: '/management/milestones', icon: renderIcon(FlagOutline) },
       { label: '会议纪要', key: '/management/meetings', icon: renderIcon(ChatbubblesOutline) },
+      { label: '文档', key: '/management/docs', icon: renderIcon(BookOutline) },
     ],
   },
   {
@@ -162,11 +162,13 @@ const menuOptions = [
 
 const activeKey = computed(() => {
   const path = route.path
+  if (path.startsWith('/management/reports')) return '/management/reports'
+  if (path.startsWith('/management/docs')) return '/management/docs'
   // 匹配最长前缀
   const allKeys = [
-    '/', '/management/projects', '/management/team', '/management/daily', '/management/weekly',
-    '/management/monthly', '/management/tasks', '/management/milestones',
-    '/management/meetings', '/papers/list', '/papers/config',
+    '/', '/management/projects', '/management/team',
+    '/management/tasks', '/management/milestones',
+    '/management/meetings', '/management/docs', '/papers/list', '/papers/config',
     '/evaluation/run', '/evaluation/results', '/evaluation/outputs', '/evaluation/models', '/evaluation/datasets', '/evaluation/configs',
     '/training/run', '/training/results', '/training/models', '/training/datasets', '/training/configs',
   ]

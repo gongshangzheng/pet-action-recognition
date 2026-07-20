@@ -91,7 +91,7 @@ npx vite --port 3000 --strict-port
 tail -f /tmp/backend.log
 
 # 测试 API
-curl http://localhost:8090/api/management/team
+curl http://localhost:8080/api/management/team
 ```
 
 ## 前端开发
@@ -130,9 +130,9 @@ import { NButton, NInput, NCard, NTable } from 'naive-ui'
 | 日报 | `management/daily/YYYY/MM/` |
 | 周报 | `management/weekly/YYYY/` |
 | 月报 | `management/monthly/YYYY/` |
-| 任务 | `management/docs/projects/{slug}/tasks.json`（看板+项目树单源） |
-| 里程碑 | `management/docs/milestones.md` |
-| 会议 | `management/docs/meetings/` |
+| 任务 | `management/projects/{slug}/tasks.json`（看板+项目树单源） |
+| 里程碑 | `management/milestones.md` |
+| 会议 | `management/meetings/` |
 | 论文 | `data/papers.db` |
 | 模型 | `evaluation/models/` |
 | 数据集 | `evaluation/datasets/` |
@@ -143,12 +143,12 @@ import { NButton, NInput, NCard, NTable } from 'naive-ui'
 ```bash
 # 重启后端
 pkill -f "uvicorn server.main"
-python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8090
+python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8080
 
 # 重启前端
 cd web && npm run dev
 
 # 查看端口
-lsof -i :8090  # 后端
-lsof -i :3002  # 前端
+lsof -i :8080  # 后端
+lsof -i :3000  # 前端
 ```

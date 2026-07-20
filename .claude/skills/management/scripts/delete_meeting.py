@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete a meeting minutes file management/docs/meetings/{date}.md.
+"""Delete a meeting minutes file management/meetings/{date}.md.
 
 Usage:
     python3 delete_meeting.py --date 2026-07-11

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add a task node to management/docs/projects/{slug}/tasks.json.
+"""Add a task node to management/projects/{slug}/tasks.json.
 
 Operates on the hierarchical task tree (single source of truth, shared with
 the project-tree page). New node is appended to the root list, or to a

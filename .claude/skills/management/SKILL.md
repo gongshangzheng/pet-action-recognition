@@ -11,7 +11,7 @@ description: |
 
 > **架构前提**：后端 `server/routers/management.py` 是**只读**的（解析数据文件暴露给前端）。所有"增删改"由本 skill 的脚本直接修改文件完成，再由只读 API 暴露。infraredComp 镜像本库。
 
-> **任务数据单源**：任务（看板 + 项目树）的唯一来源是 **per-project `management/docs/projects/{slug}/tasks.json`**（层级树）。看板（TaskBoard）是它的**派生视图**——按 status 展平成 3 桶，按项目切换。`tasks.md` 已废弃删除。成员/报表/会议/里程碑仍是 markdown。
+> **任务数据单源**：任务（看板 + 项目树）的唯一来源是 **per-project `management/projects/{slug}/tasks.json`**（层级树）。看板（TaskBoard）是它的**派生视图**——按 status 展平成 3 桶，按项目切换。`tasks.md` 已废弃删除。成员/报表/会议/里程碑仍是 markdown。
 
 ## 脚本一览（`.claude/skills/management/scripts/`）
 
@@ -40,7 +40,7 @@ management/
     └── meetings/   # 会议纪要 YYYY-MM-DD.md
 ```
 
-启动服务（后端 8090 + 前端 3002）：`bash start_services.sh`。日志 `/tmp/<项目名>-backend.log`、`/tmp/<项目名>-frontend.log`。
+启动服务（后端 8080 + 前端 3000）：`bash start_services.sh`。日志 `/tmp/<项目名>-backend.log`、`/tmp/<项目名>-frontend.log`。
 
 只读 API（`GET /api/management/*`）：`team`、`daily`、`weekly`、`monthly`、`tasks`（`?slug=` 派生看板，缺省取首个项目）、`milestones`、`meetings`、`projects` 等。脚本改完文件，前端经 API 即可看到。
 
@@ -48,7 +48,7 @@ management/
 
 ## 1. 任务 CRUD（per-project tasks.json）
 
-任务数据**单源** = `management/docs/projects/{slug}/tasks.json`（层级树，与项目树页同源）。看板是派生视图：`server/parsers/tasks_parser.parse_tasks(slug)` 递归展平所有节点，按 status 映射进 3 桶：
+任务数据**单源** = `management/projects/{slug}/tasks.json`（层级树，与项目树页同源）。看板是派生视图：`server/parsers/tasks_parser.parse_tasks(slug)` 递归展平所有节点，按 status 映射进 3 桶：
 
 - `completed` → completed
 - `active` → in_progress
@@ -234,7 +234,7 @@ python3 $SD/delete_report.py --type monthly --author zhangsan --year 2026 --mont
 
 ## 4. 会议纪要 CRUD
 
-文件：`management/docs/meetings/YYYY-MM-DD.md`。
+文件：`management/meetings/YYYY-MM-DD.md`。
 
 ```bash
 # 创建
@@ -256,7 +256,7 @@ python3 $SD/delete_meeting.py --date 2026-07-11
 
 `milestones.md` 单表（名称|目标日期|状态|备注），暂无专用 CRUD 脚本，直接编辑 markdown 即可，只读 API `GET /api/management/milestones` 解析。
 
-项目树 `docs/projects/{slug}/`：`README.md`（项目元信息 + 正文）+ **`tasks.json`（任务单源，CRUD 见 §1）** + `notes/`（任务笔记 markdown，task 节点 `notePath` 引用）。只读 API `GET /api/management/projects[/{slug}[/tasks|/notes/{path}]]` 解析。项目树页与看板页读同一份 `tasks.json`。
+项目树 `management/projects/{slug}/`：`README.md`（项目元信息 + 正文）+ **`tasks.json`（任务单源，CRUD 见 §1）** + `notes/`（任务笔记 markdown，task 节点 `notePath` 引用）。只读 API `GET /api/management/projects[/{slug}[/tasks|/notes/{path}]]` 解析。项目树页与看板页读同一份 `tasks.json`。
 
 ## 关键约定
 
@@ -276,7 +276,7 @@ python3 $SD/list_tasks.py --slug myproject --flat   # 看展平看板桶
 python3 $SD/list_tasks.py --slug myproject --id t2-3  # 按 ID 精确定位任务详情
 python3 $SD/add_task.py --slug myproject --title "X" --status active --assignee Y --start 2026-07-11 --end 2026-07-18
 python3 $SD/update_task.py --slug myproject --id t2-3 --progress "完成 X，下一步 Y"  # 追加进展
-bash start_services.sh                             # 启动后端 8090 + 前端 3002
-curl --noproxy '*' "http://localhost:8090/api/management/tasks?slug=myproject"   # 前端所见看板
+bash start_services.sh                             # 启动后端 8080 + 前端 3000
+curl --noproxy '*' "http://localhost:8080/api/management/tasks?slug=myproject"   # 前端所见看板
 tail -f /tmp/<项目名>-backend.log                  # 后端日志
 ```

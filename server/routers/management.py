@@ -1,6 +1,7 @@
 """项目管理路由"""
 import os
 import re
+import yaml
 from fastapi import APIRouter, HTTPException
 from server.config import MANAGEMENT_DIR
 from server.utils.file_utils import read_file, safe_resolve, scan_directory
@@ -159,7 +160,7 @@ async def get_milestones():
 @router.get("/meetings")
 async def get_meetings():
     """获取会议纪要列表"""
-    meetings_dir = os.path.join(MANAGEMENT_DIR, 'docs', 'meetings')
+    meetings_dir = os.path.join(MANAGEMENT_DIR, 'meetings')
     files = scan_directory(meetings_dir, pattern=r'.*\.md$')
     files = [f for f in files if 'template' not in os.path.basename(f).lower()]
 
@@ -195,13 +196,82 @@ async def get_meeting_detail(date: str):
     if not _DATE_RE.match(date):
         raise HTTPException(status_code=400, detail="Invalid date")
 
-    meetings_dir = os.path.join(MANAGEMENT_DIR, 'docs', 'meetings')
+    meetings_dir = os.path.join(MANAGEMENT_DIR, 'meetings')
     filepath = _safe_report_path(meetings_dir, f"{date}.md")
     if filepath:
         content = read_file(filepath)
         if content:
             return {'date': date, 'content': content}
     raise HTTPException(status_code=404, detail="Meeting not found")
+
+
+# ========== 文档 (wiki) ==========
+
+_DOCS_DIR = os.path.join(MANAGEMENT_DIR, 'docs')
+_SLUG_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+
+def _parse_frontmatter(content):
+    """从 markdown 内容中解析 YAML frontmatter，返回 (meta_dict, body_str)。"""
+    if not content or not content.startswith('---'):
+        return {}, content or ''
+    end = content.find('---', 3)
+    if end < 0:
+        return {}, content
+    try:
+        meta = yaml.safe_load(content[3:end]) or {}
+    except yaml.YAMLError:
+        meta = {}
+    body = content[end + 3:].strip()
+    return meta, body
+
+
+@router.get("/docs")
+async def get_docs():
+    """获取文档列表（management/docs/*.md，仅顶层文件）"""
+    if not os.path.isdir(_DOCS_DIR):
+        return []
+    docs = []
+    for f in sorted(os.listdir(_DOCS_DIR)):
+        if not f.endswith('.md'):
+            continue
+        filepath = os.path.join(_DOCS_DIR, f)
+        if not os.path.isfile(filepath):
+            continue
+        content = read_file(filepath)
+        meta, _ = _parse_frontmatter(content)
+        slug = f[:-3]
+        docs.append({
+            'slug': slug,
+            'title': meta.get('title', slug),
+            'author': meta.get('author', ''),
+            'date': meta.get('date', ''),
+            'tags': meta.get('tags', []),
+            'summary': meta.get('summary', ''),
+        })
+    docs.sort(key=lambda d: d['date'] or '', reverse=True)
+    return docs
+
+
+@router.get("/docs/{slug}")
+async def get_doc_detail(slug: str):
+    """获取指定文档详情"""
+    if not _SLUG_RE.match(slug):
+        raise HTTPException(status_code=400, detail="Invalid slug")
+    filepath = safe_resolve(_DOCS_DIR, f"{slug}.md")
+    if not filepath or not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail="Doc not found")
+    content = read_file(filepath)
+    meta, body = _parse_frontmatter(content)
+    return {
+        'slug': slug,
+        'title': meta.get('title', slug),
+        'author': meta.get('author', ''),
+        'date': meta.get('date', ''),
+        'tags': meta.get('tags', []),
+        'summary': meta.get('summary', ''),
+        'content': body,
+    }
 
 
 # ========== 项目树 ==========

@@ -41,7 +41,7 @@ def tasks_md() -> Path:
 
 
 def milestones_md() -> Path:
-    return MGMT_DIR / "docs" / "milestones.md"
+    return MGMT_DIR / "milestones.md"
 
 
 def team_readme() -> Path:
@@ -53,7 +53,7 @@ def team_dir() -> Path:
 
 
 def meetings_dir() -> Path:
-    return MGMT_DIR / "docs" / "meetings"
+    return MGMT_DIR / "meetings"
 
 
 def meeting_path(iso_date: str) -> Path:
@@ -418,7 +418,7 @@ def append_to_section(lines: list[str], header: str, bullets: list[str]) -> list
 import json
 import re as _re
 
-_PROJECTS_DIR = MGMT_DIR / "docs" / "projects"
+_PROJECTS_DIR = MGMT_DIR / "projects"
 _SLUG_RE = _re.compile(r"^[A-Za-z0-9_-]+$")
 
 # canonical task statuses + 看板桶映射

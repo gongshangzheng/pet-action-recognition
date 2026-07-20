@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete a task node from management/docs/projects/{slug}/tasks.json.
+"""Delete a task node from management/projects/{slug}/tasks.json.
 
 Recursively locates the node by id and removes it (including its children).
 

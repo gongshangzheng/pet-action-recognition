@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update a task node in management/docs/projects/{slug}/tasks.json.
+"""Update a task node in management/projects/{slug}/tasks.json.
 
 Only fields passed on the CLI are changed; omitted fields keep their current
 value. ``--status`` is the kanban "move between buckets" lever (status drives

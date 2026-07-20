@@ -8,7 +8,7 @@ from server.parsers.markdown_table import parse_markdown_tables, parse_emoji_sta
 def parse_milestones(md_content=None):
     """解析 milestones.md，返回里程碑列表"""
     if md_content is None:
-        filepath = os.path.join(MANAGEMENT_DIR, 'docs', 'milestones.md')
+        filepath = os.path.join(MANAGEMENT_DIR, 'milestones.md')
         md_content = read_file(filepath)
 
     if not md_content:

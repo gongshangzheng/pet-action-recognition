@@ -105,7 +105,7 @@ git format-patch -1 HEAD --stdout > /tmp/shared.patch   # 在下游
 
 ## 经验沉淀（架构决策，供后人参考）
 
-- **任务数据单源（2026-07-15）**：任务看板与项目树曾用两份冗余文件——`management/docs/tasks.md`（全局看板，3 段 markdown 表）+ `management/docs/projects/{slug}/tasks.json`（项目树，层级 JSON），schema 各异、手动双写易分叉。已合并为**单源 = per-project `tasks.json`**：看板（`server/parsers/tasks_parser.parse_tasks(slug)`）递归展平树 + 按 status 映射成 3 桶（completed→completed / active→in_progress / planned·paused·blocked→pending）；`tasks.md` 删除。改一处、看板与项目树同步。脚手架改动按铁律先在上游落地 `[shared]` commit，再同构同步到 infraredComp。管理 skill 脚本（`add/update/delete/list_task.py`）改操作 `tasks.json`（`--slug --id`），成员/报表/会议/里程碑仍是 markdown（`mgmt_io` markdown helpers 保留）。
+- **任务数据单源（2026-07-15）**：任务看板与项目树曾用两份冗余文件——`management/docs/tasks.md`（全局看板，3 段 markdown 表）+ `management/projects/{slug}/tasks.json`（项目树，层级 JSON），schema 各异、手动双写易分叉。已合并为**单源 = per-project `tasks.json`**：看板（`server/parsers/tasks_parser.parse_tasks(slug)`）递归展平树 + 按 status 映射成 3 桶（completed→completed / active→in_progress / planned·paused·blocked→pending）；`tasks.md` 删除。改一处、看板与项目树同步。脚手架改动按铁律先在上游落地 `[shared]` commit，再同构同步到 infraredComp。管理 skill 脚本（`add/update/delete/list_task.py`）改操作 `tasks.json`（`--slug --id`），成员/报表/会议/里程碑仍是 markdown（`mgmt_io` markdown helpers 保留）。
 - **训练界面上游/下游边界**：上游训练 UI 是上游契约（`/run` 是 stub，models/datasets 空，待下游覆盖）。infraredComp 的训练 UX（localStorage F5 持久化、config preset 回填、3s 实时轮询曲线、auto-select-latest、withSelected 下拉稳定）已回移植到上游作为通用范本，**丢弃红外特异设计**（method canny/sobel/hed、isVideo 条件字段、imagenet 提示、λ/quality 率失真字段）。下游 infraredComp **保留** λ/quality/method 等领域字段（RD 训练脚本 `scripts/train_model.py` 需要 `--quality`/`--lambda`）。判断标准：上游表单只放通用超参（epochs/lr/batch/optimizer/device/extra_args），领域超参由下游加。
 
 ## 备份与历史

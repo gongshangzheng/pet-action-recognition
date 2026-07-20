@@ -1,4 +1,4 @@
-"""项目树解析器 — 解析 management/docs/projects/{slug}/ 下的项目数据"""
+"""项目树解析器 — 解析 management/projects/{slug}/ 下的项目数据"""
 import json
 import os
 import re
@@ -8,8 +8,8 @@ import yaml
 from server.config import MANAGEMENT_DIR
 from server.utils.file_utils import read_file, safe_resolve
 
-# 项目目录：management/docs/projects/
-PROJECTS_DIR = os.path.join(MANAGEMENT_DIR, 'docs', 'projects')
+# 项目目录：management/projects/
+PROJECTS_DIR = os.path.join(MANAGEMENT_DIR, 'projects')
 
 # slug 只允许字母、数字、下划线、连字符
 _SLUG_RE = re.compile(r'^[a-zA-Z0-9_-]+$')

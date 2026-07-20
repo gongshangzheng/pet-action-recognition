@@ -23,8 +23,8 @@ evaluation/
 ## 启动服务
 
 ```bash
-# 后端 (8090)
-python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8090
+# 后端 (8080)
+python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8080
 ```
 
 ---
@@ -364,14 +364,14 @@ if __name__ == "__main__":
 
 ```bash
 # 启动服务
-python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8090
+python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8080
 
 # 查看所有模型
-curl http://localhost:8090/api/evaluation/models
+curl http://localhost:8080/api/evaluation/models
 
 # 查看所有数据集
-curl http://localhost:8090/api/evaluation/datasets
+curl http://localhost:8080/api/evaluation/datasets
 
 # 查看所有评测结果
-curl http://localhost:8090/api/evaluation/results
+curl http://localhost:8080/api/evaluation/results
 ```

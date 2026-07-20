@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""List tasks in management/docs/projects/{slug}/tasks.json (tree or flat).
+"""List tasks in management/projects/{slug}/tasks.json (tree or flat).
 
 Single source of truth is the per-project tasks.json (hierarchical tree, shared
 with the project-tree page). The kanban board is a derived flatten-view.

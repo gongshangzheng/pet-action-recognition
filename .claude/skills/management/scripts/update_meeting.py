@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update a meeting minutes file management/docs/meetings/{date}.md.
+"""Update a meeting minutes file management/meetings/{date}.md.
 
 Supports:
   --participants  replace the 参会人 bullet

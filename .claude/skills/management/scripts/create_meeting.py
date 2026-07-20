@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a meeting minutes file management/docs/meetings/{date}.md.
+"""Create a meeting minutes file management/meetings/{date}.md.
 
 Self-locating; argparse; identical file used in upstream and downstream repos.
 

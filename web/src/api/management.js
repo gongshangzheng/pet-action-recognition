@@ -16,6 +16,10 @@ export const getWeeklyDetail = (year, week, author) => request.get(`/management/
 export const getMonthlyList = (params) => request.get('/management/monthly', { params })
 export const getMonthlyDetail = (year, month, author) => request.get(`/management/monthly/${year}/${month}/${author}`)
 
+// 文档 (wiki)
+export const getDocList = () => request.get('/management/docs')
+export const getDocDetail = (slug) => request.get(`/management/docs/${slug}`)
+
 // 任务（看板：从 per-project tasks.json 派生，按项目切换）
 export const getTasks = (slug) => request.get('/management/tasks', { params: { slug } })
 
