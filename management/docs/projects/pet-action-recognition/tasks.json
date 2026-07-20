@@ -223,8 +223,33 @@
           "title": "复杂/细粒度动作：视频识别模型",
           "status": "planned",
           "assignee": "郑鑫裕",
-          "description": "对复杂或细粒度动作采用 mmaction2 视频识别模型（TSN/SlowFast/I3D 等）进行建模",
-          "children": []
+          "description": "对复杂或细粒度动作采用 mmaction2 视频识别模型（TSN/SlowFast/I3D 等）进行建模，并设计三组对照实验：人体 baseline 参考、四足端到端训练、人体预训练权重向四足迁移微调。",
+          "children": [
+            {
+              "id": "t7-3-1",
+              "title": "人体数据集 baseline 验证",
+              "status": "planned",
+              "assignee": "郑鑫裕",
+              "description": "将 mmaction2 注册表中的已有模型直接在人体动作数据集（如 Kinetics-400/700）上跑通训练与测试，作为后续四足实验的参考基线。\\n\\n• 覆盖 TSN/SlowFast/I3D 等至少 3 个模型族\\n• 记录 top-1/top-5 指标与收敛曲线\\n• 输出：人体 baseline 结果表",
+              "children": []
+            },
+            {
+              "id": "t7-3-2",
+              "title": "四足动物端到端训练验证",
+              "status": "planned",
+              "assignee": "郑鑫裕",
+              "description": "在四足动物动作数据集（如 Animal Kingdom）上从头训练 mmaction2 模型并测试，观察四足动物相比人体动作的特殊性（如视角变化、毛发遮挡、四肢运动模式等）。\\n\\n• 使用已接入的 4 种训练模式中的 from_scratch/scratch 基线\\n• 与人体 baseline 对比，定位四足特有难点\\n• 输出：四足端到端结果与问题清单",
+              "children": []
+            },
+            {
+              "id": "t7-3-3",
+              "title": "人体预训练权重向四足迁移微调",
+              "status": "planned",
+              "assignee": "郑鑫裕",
+              "description": "加载在人体动作数据集上预训练得到的权重，在四足动物数据集上进行微调并验证，判断人体上学习到的时序/运动表示能否迁移到四足动物。\\n\\n• 使用 pretrained 模式加载人体 checkpoint\\n• 对比从头训练 vs 迁移微调的收敛速度与最终指标\\n• 输出：迁移能力评估结论",
+              "children": []
+            }
+          ]
         },
         {
           "id": "t7-4",
