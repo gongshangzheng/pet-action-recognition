@@ -1,8 +1,8 @@
 ---
 name: management
 description: |
-  项目管理模块操作指南。用于团队成员管理、日报/周报/月报、任务（看板+项目树）、里程碑、会议纪要等 CRUD 操作（脚本直接改文件，后端只读）。
-  触发场景：(1) 添加/修改/删除团队成员，(2) 创建/更新/删除报表，(3) 管理任务(增删改查+改状态跨段移动)，(4) 创建/更新/删除会议纪要，(5) 了解项目结构
+  项目管理模块操作指南。用于团队成员管理、日报/周报/月报、任务（看板+项目树）、里程碑、会议纪要、Wiki 文档等 CRUD 操作（脚本直接改文件，后端只读）。
+  触发场景：(1) 添加/修改/删除团队成员，(2) 创建/更新/删除报表，(3) 管理任务(增删改查+改状态跨段移动)，(4) 创建/更新/删除会议纪要，(5) 了解项目结构，(6) 创建/更新/删除 Wiki 文档
 ---
 
 # 项目管理模块
@@ -23,6 +23,7 @@ description: |
 | 成员 member | `add_member.py` | `update_member.py` | `delete_member.py` | — |
 | 会议 meeting | `create_meeting.py` | `update_meeting.py` | `delete_meeting.py` | — |
 | 报表 report | `create_report.py` | `update_report.py` | `delete_report.py` | — |
+| 文档 doc（wiki） | `create_doc.py` | `update_doc.py` | `delete_doc.py` | `list_docs.py` |
 
 ## 项目结构
 
@@ -34,15 +35,15 @@ management/
 ├── daily/          # 日报  YYYY/MM/DD-{author}.md
 ├── weekly/         # 周报  YYYY/W{NN}-{author}.md
 ├── monthly/        # 月报  YYYY/{MM}-{author}.md
-└── docs/
-    ├── milestones.md # 里程碑
-    ├── projects/   # 项目树 {slug}/README.md + tasks.json（任务单源）+ notes/
-    └── meetings/   # 会议纪要 YYYY-MM-DD.md
+├── meetings/       # 会议纪要 YYYY-MM-DD.md
+├── projects/       # 项目树 {slug}/README.md + tasks.json（任务单源）+ notes/
+├── milestones.md   # 里程碑
+└── docs/           # Wiki 文档（纯知识库，{slug}.md + YAML frontmatter）
 ```
 
 启动服务（后端 8788 + 前端 3000）：`bash start_services.sh`。日志 `/tmp/<项目名>-backend.log`、`/tmp/<项目名>-frontend.log`。
 
-只读 API（`GET /api/management/*`）：`team`、`daily`、`weekly`、`monthly`、`tasks`（`?slug=` 派生看板，缺省取首个项目）、`milestones`、`meetings`、`projects` 等。脚本改完文件，前端经 API 即可看到。
+只读 API（`GET /api/management/*`）：`team`、`daily`、`weekly`、`monthly`、`tasks`（`?slug=` 派生看板，缺省取首个项目）、`milestones`、`meetings`、`projects`、`docs`（wiki 文档列表/详情）等。脚本改完文件，前端经 API 即可看到。
 
 ---
 
@@ -256,7 +257,41 @@ python3 $SD/delete_meeting.py --date 2026-07-11
 
 `milestones.md` 单表（名称|目标日期|状态|备注），暂无专用 CRUD 脚本，直接编辑 markdown 即可，只读 API `GET /api/management/milestones` 解析。
 
-项目树 `management/projects/{slug}/`：`README.md`（项目元信息 + 正文）+ **`tasks.json`（任务单源，CRUD 见 §1）** + `notes/`（任务笔记 markdown，task 节点 `notePath` 引用）。只读 API `GET /api/management/projects[/{slug}[/tasks|/notes/{path}]]` 解析。项目树页与看板页读同一份 `tasks.json`。
+项目树 `projects/{slug}/`：`README.md`（项目元信息 + 正文）+ **`tasks.json`（任务单源，CRUD 见 §1）** + `notes/`（任务笔记 markdown，task 节点 `notePath` 引用）。只读 API `GET /api/management/projects[/{slug}[/tasks|/notes/{path}]]` 解析。项目树页与看板页读同一份 `tasks.json`。
+
+## 6. 文档（Wiki）CRUD
+
+文件：`management/docs/{slug}.md`（纯 wiki 目录，仅顶层 `.md` 文件）。YAML frontmatter 格式：
+
+```yaml
+---
+title: JWT 认证指南
+author: 张三
+date: 2026-07-10
+tags: [auth, jwt, 安全]
+summary: JWT token 的生成、验证与刷新流程
+---
+```
+
+报告、会议纪要、项目笔记中可用 `[[slug]]` 或 `[[slug|显示文本]]` 链接到文档页（MarkdownRenderer 自动转换）。
+
+```bash
+# 创建（生成 frontmatter + 正文骨架，不覆盖已有）
+python3 $SD/create_doc.py --slug jwt-auth-guide --title "JWT 认证指南" \
+  --author 张三 --tags "auth,jwt,安全" --summary "JWT token 的生成、验证与刷新流程"
+
+# 查询
+python3 $SD/list_docs.py                        # 表格列出所有文档
+python3 $SD/list_docs.py --slug jwt-auth-guide   # 单篇详情（frontmatter + body）
+
+# 修改（替换 frontmatter 字段 / 追加正文）
+python3 $SD/update_doc.py --slug jwt-auth-guide --tags "auth,jwt,安全,后端"
+python3 $SD/update_doc.py --slug jwt-auth-guide --summary "新摘要"
+python3 $SD/update_doc.py --slug jwt-auth-guide --append "\n## 参考资料\n\n- RFC 7519"
+
+# 删除
+python3 $SD/delete_doc.py --slug jwt-auth-guide
+```
 
 ## 关键约定
 

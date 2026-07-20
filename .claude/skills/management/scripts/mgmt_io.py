@@ -36,12 +36,19 @@ TODAY = date.today().isoformat()
 # --------------------------------------------------------------------------- #
 # Path helpers                                                                #
 # --------------------------------------------------------------------------- #
-def tasks_md() -> Path:
-    return MGMT_DIR / "docs" / "tasks.md"
-
-
 def milestones_md() -> Path:
     return MGMT_DIR / "milestones.md"
+
+
+def docs_dir() -> Path:
+    """Wiki-style documentation directory: management/docs/*.md"""
+    return MGMT_DIR / "docs"
+
+
+def doc_path(slug: str) -> Path:
+    """Resolve a wiki doc path by slug (filename without .md)."""
+    _validate_slug(slug)
+    return docs_dir() / f"{slug}.md"
 
 
 def team_readme() -> Path:
@@ -181,7 +188,7 @@ def section_header_index(lines: list[str], section: str) -> int:
     for i, line in enumerate(lines):
         if line.strip() == target:
             return i
-    sys.exit(f"error: section {section!r} not found in {rel(tasks_md())}")
+    sys.exit(f"error: section {section!r} not found in file")
 
 
 def table_block_range(lines: list[str], header_idx: int) -> tuple[int, int]:
@@ -244,7 +251,7 @@ def find_row_by_col(
         idx = cols.index(col)
         if cells[idx] == value:
             return i, dict(zip(cols, cells))
-    sys.exit(f"error: {value!r} not found in column {col!r} of {section!r} ({rel(tasks_md())})")
+    sys.exit(f"error: {value!r} not found in column {col!r} of {section!r}")
 
 
 def list_rows(lines: list[str], section: str) -> list[dict[str, str]]:
