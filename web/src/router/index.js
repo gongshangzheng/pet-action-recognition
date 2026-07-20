@@ -38,25 +38,25 @@ const routes = [
       {
         path: 'management/reports',
         name: 'ReportList',
-        component: () => import('../views/management/ReportList.vue'),
+        component: () => import('../views/management/ReportPage.vue'),
         meta: { title: '报告', module: 'management' },
       },
       {
         path: 'management/reports/:type(daily)/:date/:author',
         name: 'ReportDailyDetail',
-        component: () => import('../views/management/ReportDetail.vue'),
+        component: () => import('../views/management/ReportPage.vue'),
         meta: { title: '日报详情', module: 'management' },
       },
       {
         path: 'management/reports/:type(weekly)/:year/:week/:author',
         name: 'ReportWeeklyDetail',
-        component: () => import('../views/management/ReportDetail.vue'),
+        component: () => import('../views/management/ReportPage.vue'),
         meta: { title: '周报详情', module: 'management' },
       },
       {
         path: 'management/reports/:type(monthly)/:year/:month/:author',
         name: 'ReportMonthlyDetail',
-        component: () => import('../views/management/ReportDetail.vue'),
+        component: () => import('../views/management/ReportPage.vue'),
         meta: { title: '月报详情', module: 'management' },
       },
       {
