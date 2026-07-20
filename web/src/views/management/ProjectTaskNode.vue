@@ -279,7 +279,7 @@ function onClick() {
     .hc-progress-entry {
       font-size: 11px; line-height: 1.4; color: var(--color-text-secondary);
       display: flex; gap: 6px; margin-top: 2px;
-      .hc-pdate { flex-shrink: 0; color: var(--color-text-dim); font-size: 10px; min-width: 70px; }
+      .hc-pdate { flex-shrink: 0; color: var(--color-text-dim); font-size: 10px; min-width: 95px; }
       .hc-pnote { white-space: pre-line; word-break: break-word; }
       &.is-done { color: #22c55e; .hc-pnote { font-weight: 500; } }
     }

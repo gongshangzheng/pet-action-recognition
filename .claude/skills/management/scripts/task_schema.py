@@ -18,7 +18,7 @@ Task node shape:
       "priority": "P1",              # optional
       "hidden": true,                # optional, hide in project tree
       "progress": [                  # optional, newest first
-        { "date": "2026-07-16", "note": "完成了 X" }
+        { "date": "2026-07-16 14:30", "note": "完成了 X" }
       ],
       "children": [ ... recursive ... ]
     }

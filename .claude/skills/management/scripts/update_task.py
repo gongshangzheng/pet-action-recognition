@@ -79,7 +79,7 @@ def main() -> int:
     progress_entry = None
     if args.progress is not None:
         progress_entry = {
-            "date": datetime.date.today().isoformat(),
+            "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
             "note": args.progress,
         }
 

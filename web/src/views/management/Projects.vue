@@ -516,7 +516,7 @@ onMounted(loadProjects)
   .completion-head { font-size: 11px; font-weight: 600; color: #22c55e; margin-bottom: 6px; letter-spacing: 0.5px; }
   .completion-entry {
     display: flex; gap: 10px; margin-bottom: 4px;
-    .progress-date { font-size: 10px; color: var(--color-text-dim); font-family: monospace; flex-shrink: 0; min-width: 70px; }
+    .progress-date { font-size: 10px; color: var(--color-text-dim); font-family: monospace; flex-shrink: 0; min-width: 95px; }
     .progress-note { font-size: 12px; color: var(--color-text); line-height: 1.5; white-space: pre-line; word-break: break-word; }
   }
 }

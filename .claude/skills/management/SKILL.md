@@ -72,8 +72,8 @@ management/
 
 字段说明补充：
 - `hidden: true` — 项目树默认不展示此节点（前端眼睛图标可切换显示，节点以半透明斜体呈现）。子任务会随父任务一起隐藏。用法：`add_task.py --hidden` / `update_task.py --hidden` 或 `--no-hidden`。
-- `progress` — 进展记录数组，**新条目在前**（unshift）。每条 `{ "date": "YYYY-MM-DD", "note": "..." }`。
-  - 推进时：`update_task.py --progress "完成 X，下一步 Y"`（日期自动填今天）。
+- `progress` — 进展记录数组，**新条目在前**（unshift）。每条 `{ "date": "YYYY-MM-DD HH:MM", "note": "..." }`。
+  - 推进时：`update_task.py --progress "完成 X，下一步 Y"`（日期自动填当前时间，精确到分钟）。
   - 完成时：`update_task.py --status completed --progress "[完成] 方法总结"`（`[完成]` 前缀标识完成条目）。
   - **UI 渲染**：项目树 hover-card 展示最近 3 条；任务详情页用 Cornell 布局——左列上半为描述面板、下半为完成总结面板（`[完成]` 条目），右列通栏为完整进展时间线（`[完成]` 条目绿色高亮）。
   - **不要手写 progress**：始终通过 `--progress` 脚本追加，不要直接编辑 tasks.json 的 progress 数组（日期格式、unshift 顺序容易出错）。
