@@ -165,7 +165,7 @@
       "id": "t5",
       "title": "ProjFlow 共享脚手架同步",
       "status": "completed",
-      "assignee": "汤问",
+      "assignee": "郑鑫裕",
       "description": "完成与 origin/main 的合并，同步 upstream ProjFlow 的 [shared] 改进：管理模块单 tasks.json、训练/评测 UI 脚手架、skills、面包屑与优先级字段",
       "children": []
     },
@@ -248,7 +248,7 @@
       "id": "t8",
       "title": "ProjFlow 评测输出与论文详情 UI 同步 + 管理模块技能升级",
       "status": "completed",
-      "assignee": "汤问",
+      "assignee": "郑鑫裕",
       "description": "cherry-pick ProjFlow c41bb78/1ffaa50/1ec3740/c59709b/b8b3d55/5443eae：评测输出按需查看、论文详情页悬浮按钮栏、项目树 hidden 字段、subagent 提示词目录、skill 去前缀、任务 ID + progress 字段、Cornell 布局迭代、markdown_table 空表修复",
       "children": []
     }
