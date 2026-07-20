@@ -1,6 +1,8 @@
 """项目管理路由"""
 import os
 import re
+import datetime
+
 import yaml
 from fastapi import APIRouter, HTTPException
 from server.config import MANAGEMENT_DIR
@@ -211,6 +213,13 @@ _DOCS_DIR = os.path.join(MANAGEMENT_DIR, 'docs')
 _SLUG_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
 
 
+def _normalize_date(value):
+    """YAML 会把 `2024-01-15` 解析成 datetime.date，统一转为 ISO 字符串。"""
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        return value.isoformat()
+    return value or ''
+
+
 def _parse_frontmatter(content):
     """从 markdown 内容中解析 YAML frontmatter，返回 (meta_dict, body_str)。"""
     if not content or not content.startswith('---'):
@@ -245,7 +254,7 @@ async def get_docs():
             'slug': slug,
             'title': meta.get('title', slug),
             'author': meta.get('author', ''),
-            'date': meta.get('date', ''),
+            'date': _normalize_date(meta.get('date', '')),
             'tags': meta.get('tags', []),
             'summary': meta.get('summary', ''),
         })
@@ -267,7 +276,7 @@ async def get_doc_detail(slug: str):
         'slug': slug,
         'title': meta.get('title', slug),
         'author': meta.get('author', ''),
-        'date': meta.get('date', ''),
+        'date': _normalize_date(meta.get('date', '')),
         'tags': meta.get('tags', []),
         'summary': meta.get('summary', ''),
         'content': body,
