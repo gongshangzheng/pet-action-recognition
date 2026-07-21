@@ -106,23 +106,28 @@
                 <p v-else class="empty-inline">该任务暂无描述或笔记。</p>
               </div>
 
-              <div v-if="completionProgress.length" class="completion-panel">
+              <div class="completion-panel">
                 <div class="completion-head">完成总结</div>
-                <div v-for="(p, i) in completionProgress" :key="i" class="completion-entry">
-                  <span class="progress-date">{{ p.date }}</span>
-                  <span class="progress-note">{{ p.note.replace(/^\[完成\]\s*/, '') }}</span>
+                <div v-if="completionProgress.length" class="completion-scroll">
+                  <div v-for="(p, i) in completionProgress" :key="i" class="completion-entry">
+                    <span class="progress-date">{{ p.date }}</span>
+                    <span class="progress-note">{{ p.note.replace(/^\[完成\]\s*/, '') }}</span>
+                  </div>
                 </div>
+                <p v-else class="empty-inline">暂无完成总结。</p>
               </div>
             </div>
 
-            <aside v-if="allProgress.length" class="cornell-right">
+            <aside class="cornell-right">
               <div class="progress-head">进展记录</div>
-              <div v-for="(p, i) in allProgress" :key="i" class="progress-entry"
-                   :class="{ 'is-done': p.note && p.note.startsWith('[完成]') }">
-                <div class="progress-dot"></div>
-                <div class="progress-body">
-                  <span class="progress-date">{{ p.date }}</span>
-                  <span class="progress-note">{{ p.note }}</span>
+              <div class="progress-list">
+                <div v-for="(p, i) in allProgress" :key="i" class="progress-entry"
+                     :class="{ 'is-done': p.note && p.note.startsWith('[完成]') }">
+                  <div class="progress-dot"></div>
+                  <div class="progress-body">
+                    <span class="progress-date">{{ p.date }}</span>
+                    <span class="progress-note">{{ p.note }}</span>
+                  </div>
                 </div>
               </div>
             </aside>
@@ -481,7 +486,7 @@ onMounted(loadProjects)
   @media (max-width: 900px) { grid-template-columns: 1fr; }
 }
 .cornell-main {
-  min-width: 0;
+  min-width: 0; min-height: 0;
   display: flex; flex-direction: column; gap: 20px;
   .desc-panel {
     flex: 1; min-height: 0; overflow-y: auto;
@@ -490,9 +495,12 @@ onMounted(loadProjects)
   }
 }
 .cornell-right {
+  min-height: 0;
   border-left: 2px solid var(--color-border); padding-left: 16px;
+  display: flex; flex-direction: column;
   @media (max-width: 900px) { border-left: none; border-top: 2px solid var(--color-border); padding-left: 0; padding-top: 16px; }
-  .progress-head { font-size: 11px; font-weight: 600; color: var(--color-text-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .progress-head { flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--color-text-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .progress-list { flex: 1; min-height: 0; overflow-y: auto; }
 }
 .progress-entry {
   display: flex; gap: 8px; margin-bottom: 10px;
@@ -509,11 +517,13 @@ onMounted(loadProjects)
   }
 }
 .completion-panel {
-  flex: 1; min-height: 0; overflow-y: auto;
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
   padding: 12px 14px;
   border: 1px solid rgba(34,197,94,0.15); border-radius: 8px;
   background: rgba(34,197,94,0.03);
-  .completion-head { font-size: 11px; font-weight: 600; color: #22c55e; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .completion-head { flex-shrink: 0; font-size: 11px; font-weight: 600; color: #22c55e; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .completion-scroll { flex: 1; min-height: 0; overflow-y: auto; }
   .completion-entry {
     display: flex; gap: 10px; margin-bottom: 4px;
     .progress-date { font-size: 10px; color: var(--color-text-dim); font-family: monospace; flex-shrink: 0; min-width: 95px; }
