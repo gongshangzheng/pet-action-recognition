@@ -481,9 +481,9 @@ onMounted(loadProjects)
 
 .cornell-body {
   display: grid; gap: 20px; padding: 20px 0;
-  grid-template-columns: 1fr 220px;
+  grid-template-columns: 1fr 440px;
   flex: 1; min-height: 0;
-  @media (max-width: 900px) { grid-template-columns: 1fr; }
+  @media (max-width: 1100px) { grid-template-columns: 1fr; }
 }
 .cornell-main {
   min-width: 0; min-height: 0;

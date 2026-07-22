@@ -69,14 +69,6 @@
         <div v-if="hasChildren" class="hc-progress">
           子任务: {{ count.completed }}/{{ count.total }} 已完成
         </div>
-        <div v-if="recentProgress.length" class="hc-progress-section">
-          <div class="hc-progress-title">进展记录</div>
-          <div v-for="(p, i) in recentProgress" :key="i" class="hc-progress-entry"
-               :class="{ 'is-done': p.note && p.note.startsWith('[完成]') }">
-            <span class="hc-pdate">{{ p.date }}</span>
-            <span class="hc-pnote">{{ p.note }}</span>
-          </div>
-        </div>
         <div v-if="task.description" class="hc-desc">{{ task.description }}</div>
       </div>
     </div>
@@ -135,7 +127,6 @@ const isSelected = computed(() => props.selectedId === props.task.id)
 const isClickable = computed(() => !!(props.task.notePath || props.task.description || (props.task.progress || []).length))
 
 const count = computed(() => countTasks(props.task.children || []))
-const recentProgress = computed(() => (props.task.progress || []).slice(0, 3))
 
 function countTasks(tasks) {
   let total = 0
@@ -256,7 +247,7 @@ function onClick() {
 
 .hover-card {
   position: absolute; left: 32px; top: 100%; z-index: 50;
-  width: 240px; padding: 12px;
+  width: 480px; padding: 12px;
   background: var(--color-card); border: 1px solid var(--color-border);
   border-radius: 8px; box-shadow: 0 8px 24px var(--color-shadow);
       word-break: break-word; overflow-wrap: anywhere;
@@ -273,17 +264,6 @@ function onClick() {
   }
   .hc-line { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
   .hc-progress { font-size: 11px; color: var(--color-text-secondary); margin-top: 4px; }
-  .hc-progress-section {
-    margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--color-border);
-    .hc-progress-title { font-size: 10px; color: var(--color-text-dim); margin-bottom: 3px; }
-    .hc-progress-entry {
-      font-size: 11px; line-height: 1.4; color: var(--color-text-secondary);
-      display: flex; gap: 6px; margin-top: 2px;
-      .hc-pdate { flex-shrink: 0; color: var(--color-text-dim); font-size: 10px; min-width: 95px; }
-      .hc-pnote { white-space: pre-line; word-break: break-word; }
-      &.is-done { color: #22c55e; .hc-pnote { font-weight: 500; } }
-    }
-  }
   .hc-desc { font-size: 12px; color: var(--color-text); margin-top: 6px; white-space: pre-line; line-height: 1.5; }
 }
 </style>
