@@ -45,6 +45,22 @@ management/
 
 只读 API（`GET /api/management/*`）：`team`、`daily`、`weekly`、`monthly`、`tasks`（`?slug=` 派生看板，缺省取首个项目）、`milestones`、`meetings`、`projects`、`docs`（wiki 文档列表/详情）等。脚本改完文件，前端经 API 即可看到。
 
+## 前端页面结构（`web/src/views/management/`）
+
+| 页面 | 组件文件 | 路由 | 说明 |
+|------|----------|------|------|
+| 项目树 | `Projects.vue` + `ProjectTaskNode.vue` | `/management/projects` | Cornell 三栏布局：左列上=描述面板、下=完成总结，右列=进展时间线 |
+| 团队成员 | `TeamList.vue` / `TeamDetail.vue` | `/management/team[/:id]` | 列表+档案详情 |
+| 报告 | `ReportPage.vue` | `/management/reports[?tab=daily\|weekly\|monthly]` | **统一页面**，`n-tabs` 切换日报/周报/月报；详情复用同一组件（路由参数 `:type`） |
+| 任务看板 | `TaskBoard.vue` | `/management/tasks` | 三桶看板（派生自 tasks.json） |
+| 里程碑 | `MilestoneTimeline.vue` | `/management/milestones` | 时间线视图 |
+| 会议纪要 | `MeetingList.vue` | `/management/meetings[/:date]` | 列表+详情（同一组件） |
+| 文档 | `DocPage.vue` | `/management/docs[/:slug]` | Wiki 知识库，列表+详情（同一组件），支持 `[[slug]]` 内部链接 |
+
+侧边栏"项目管理"子菜单：项目树 → 团队成员 → 报告 → 任务看板 → 里程碑 → 会议纪要 → 文档。
+
+> **训练体系**（`/training/*`）是上游脚手架——`server/routers/training.py` 提供通用 API 契约（空数据），`web/src/views/training/` 有 5 个视图组件。下游库（如 infraredComp）覆盖此路由接领域模型。management skill 不涉及训练模块的 CRUD。
+
 ---
 
 ## 1. 任务 CRUD（per-project tasks.json）
@@ -211,9 +227,9 @@ python3 $SD/delete_member.py --id zhangsan --keep-profile
 
 ---
 
-## 3. 报表 CRUD
+## 3. 报表 CRUD（日报/周报/月报 → 统一"报告"页）
 
-文件路径：daily `YYYY/MM/DD-{author}.md`、weekly `YYYY/W{NN}-{author}.md`、monthly `YYYY/{MM}-{author}.md`。
+文件路径：daily `YYYY/MM/DD-{author}.md`、weekly `YYYY/W{NN}-{author}.md`、monthly `YYYY/{MM}-{author}.md`。前端通过 `ReportPage.vue` 统一展示（`n-tabs` 切换日报/周报/月报，详情复用同一组件）。
 
 ```bash
 # 创建
@@ -259,9 +275,13 @@ python3 $SD/delete_meeting.py --date 2026-07-11
 
 项目树 `projects/{slug}/`：`README.md`（项目元信息 + 正文）+ **`tasks.json`（任务单源，CRUD 见 §1）** + `notes/`（任务笔记 markdown，task 节点 `notePath` 引用）。只读 API `GET /api/management/projects[/{slug}[/tasks|/notes/{path}]]` 解析。项目树页与看板页读同一份 `tasks.json`。
 
-## 6. 文档（Wiki）CRUD
+## 6. 文档（Wiki）CRUD → `DocPage.vue`
 
-文件：`management/docs/{slug}.md`（纯 wiki 目录，仅顶层 `.md` 文件）。YAML frontmatter 格式：
+文件：`management/docs/{slug}.md`（纯 wiki 目录，仅顶层 `.md` 文件）。前端通过 `DocPage.vue` 展示（列表+详情同一组件），支持 `[[slug]]` 和 `[[slug|显示文本]]` 内部链接（MarkdownRenderer 自动转换）。
+
+> **内容写作规范**：文档结构、Mermaid 图表、链接用法、写作风格等见 **`docs` skill**（`.claude/skills/docs/SKILL.md`）。本 skill 只负责文件的 CRUD 操作。
+
+YAML frontmatter 格式：
 
 ```yaml
 ---
@@ -272,8 +292,6 @@ tags: [auth, jwt, 安全]
 summary: JWT token 的生成、验证与刷新流程
 ---
 ```
-
-报告、会议纪要、项目笔记中可用 `[[slug]]` 或 `[[slug|显示文本]]` 链接到文档页（MarkdownRenderer 自动转换）。
 
 ```bash
 # 创建（生成 frontmatter + 正文骨架，不覆盖已有）
@@ -296,7 +314,7 @@ python3 $SD/delete_doc.py --slug jwt-auth-guide
 ## 关键约定
 
 - **只读后端**：management 后端只读数据文件；所有写操作走本 skill 脚本（直接改文件 + 原子写：tmp + os.replace）。
-- **任务单源 tasks.json**：任务（看板+项目树）唯一来源是 per-project `tasks.json`。看板（`tasks_parser.parse_tasks(slug)`）递归展平 + 按 status 映射成 3 桶；项目树页直接读同一份树。改一处，两处同步。
+- **任务单源 tasks.json**：任务（看板+项目树）唯一来源是 per-project `management/projects/{slug}/tasks.json`。看板（`tasks_parser.parse_tasks(slug)`）递归展平 + 按 status 映射成 3 桶；项目树页直接读同一份树。改一处，两处同步。
 - **跨段移动 = 改 status**：`update_task --status completed|active|planned|paused|blocked` 即把任务移到对应看板桶（无独立 move 概念）。
 - **id 自动生成**：`add_task` 根级生成 `tN`（现有根级最大号 +1），子任务生成 `{parent}-N`，保证项目内不重复。
 - **parser 兼容（markdown 实体）**：成员/会议/报表/里程碑仍是 markdown 表格；脚本的表格编辑器**保留表头**、按段实际列数生成行，与对应 parser（按表顺序 + 按表头名取列）兼容。空表保留（header+separator 无数据行也保留），保证位置映射不错位。
