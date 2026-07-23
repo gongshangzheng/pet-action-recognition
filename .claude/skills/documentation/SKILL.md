@@ -1,5 +1,5 @@
 ---
-name: docs
+name: documentation
 description: |
   文档写作指南。用于撰写 Wiki 文档、技术文档、设计文档、会议纪要、报告等 Markdown 内容。
   触发场景：(1) 创建/修改 Wiki 文档，(2) 在文档中画 Mermaid 图表，(3) 写技术方案/设计文档，(4) 规范文档结构和风格
@@ -84,7 +84,7 @@ summary: JWT token 的生成、验证与刷新流程
 
 ## 2. Mermaid 图表
 
-Mermaid 是文档中表达流程、时序、架构的首选方式。完整速查见 `.claude/skills/docs/references/mermaid-cheatsheet.md`。
+Mermaid 是文档中表达流程、时序、架构的首选方式。完整速查见 `.claude/skills/documentation/references/mermaid-cheatsheet.md`。
 
 常用场景：
 
@@ -194,4 +194,4 @@ flowchart TD
 
 ## 参考文件
 
-- `.claude/skills/docs/references/mermaid-cheatsheet.md` — Mermaid 语法速查与项目常用图例
+- `.claude/skills/documentation/references/mermaid-cheatsheet.md` — Mermaid 语法速查与项目常用图例
