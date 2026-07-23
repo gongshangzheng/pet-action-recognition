@@ -63,13 +63,13 @@ const routes = [
         path: 'management/docs',
         name: 'DocPage',
         component: () => import('../views/management/DocPage.vue'),
-        meta: { title: '文档', module: 'management', hideBreadcrumbTitle: true },
+        meta: { title: '文档', module: 'management' },
       },
       {
         path: 'management/docs/:slug',
         name: 'DocDetail',
         component: () => import('../views/management/DocPage.vue'),
-        meta: { title: '文档详情', module: 'management', hideBreadcrumbTitle: true },
+        meta: { title: '文档详情', module: 'management' },
       },
       {
         path: 'management/tasks',

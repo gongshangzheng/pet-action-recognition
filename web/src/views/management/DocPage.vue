@@ -49,7 +49,7 @@
             <p v-if="currentDoc.summary" class="doc-summary">{{ currentDoc.summary }}</p>
           </header>
           <div class="doc-body">
-            <MarkdownRenderer :content="currentDoc.content" />
+            <MarkdownRenderer :content="bodyContent" />
           </div>
         </div>
         <div v-else-if="!loading" class="doc-empty">
@@ -97,6 +97,9 @@ const listLoading = ref(false)
 
 const currentSlug = computed(() => route.params.slug || '')
 const tocItems = computed(() => currentDoc.value ? extractToc(currentDoc.value.content) : [])
+const bodyContent = computed(() =>
+  currentDoc.value ? currentDoc.value.content.replace(/^# .+\n*/gm, '') : ''
+)
 
 const mobileOptions = computed(() =>
   docsList.value.map(d => ({ label: d.title || d.slug, value: d.slug }))

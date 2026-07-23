@@ -208,7 +208,7 @@ const breadcrumbs = computed(() => {
   if (route.meta.module && moduleMap[route.meta.module]) {
     items.push({ title: moduleMap[route.meta.module], path: MODULE_PATH[route.meta.module] || '' })
   }
-  if (route.meta.title && !route.meta.hideBreadcrumbTitle) {
+  if (route.meta.title) {
     items.push({ title: route.meta.title, path: route.path })
   }
   return items
