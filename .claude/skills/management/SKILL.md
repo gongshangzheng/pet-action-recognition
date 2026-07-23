@@ -290,8 +290,11 @@ author: 张三
 date: 2026-07-10
 tags: [auth, jwt, 安全]
 summary: JWT token 的生成、验证与刷新流程
+id: 1
 ---
 ```
+
+`id`（可选，数字）：控制文档列表排序。有 `id` 的按 `id` 升序排前，无 `id` 的按 `date` 降序排后。
 
 ```bash
 # 创建（生成 frontmatter + 正文骨架，不覆盖已有）

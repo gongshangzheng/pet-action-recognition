@@ -5,15 +5,26 @@
       <div class="doc-sidebar-inner">
         <div class="doc-sidebar-title">文档</div>
         <nav class="doc-sidebar-nav">
-          <a
-            v-for="doc in docsList"
-            :key="doc.slug"
-            class="doc-sidebar-link"
-            :class="{ active: currentSlug === doc.slug }"
-            @click.prevent="navigateTo(doc.slug)"
-          >
-            {{ doc.title || doc.slug }}
-          </a>
+          <template v-for="item in sidebarItems" :key="item.type === 'folder' ? item.path : item.slug">
+            <a
+              v-if="item.type === 'folder'"
+              class="doc-sidebar-folder"
+              :style="{ paddingLeft: 10 + item.depth * 14 + 'px' }"
+              @click="toggleFolder(item.path)"
+            >
+              <span class="folder-arrow" :class="{ expanded: item.expanded }">▶</span>
+              {{ item.name }}
+            </a>
+            <a
+              v-else
+              class="doc-sidebar-link"
+              :class="{ active: currentSlug === item.slug }"
+              :style="{ paddingLeft: 10 + item.depth * 14 + 'px' }"
+              @click.prevent="navigateTo(item.slug)"
+            >
+              {{ item.title || item.slug }}
+            </a>
+          </template>
         </nav>
         <div v-if="!docsList.length && !listLoading" class="doc-sidebar-empty">暂无文档</div>
       </div>
@@ -105,6 +116,50 @@ const mobileOptions = computed(() =>
   docsList.value.map(d => ({ label: d.title || d.slug, value: d.slug }))
 )
 
+const expandedFolders = ref(new Set())
+
+function toggleFolder(path) {
+  const next = new Set(expandedFolders.value)
+  if (next.has(path)) next.delete(path)
+  else next.add(path)
+  expandedFolders.value = next
+}
+
+const docTree = computed(() => {
+  const root = { children: [] }
+  for (const doc of docsList.value) {
+    const parts = doc.slug.split('/')
+    let current = root
+    for (let i = 0; i < parts.length - 1; i++) {
+      let folder = current.children.find(c => c.type === 'folder' && c.name === parts[i])
+      if (!folder) {
+        folder = { type: 'folder', name: parts[i], path: parts.slice(0, i + 1).join('/'), children: [] }
+        current.children.push(folder)
+      }
+      current = folder
+    }
+    current.children.push({ type: 'doc', slug: doc.slug, title: doc.title })
+  }
+  return root
+})
+
+const sidebarItems = computed(() => {
+  const items = []
+  function walk(nodes, depth) {
+    for (const node of nodes) {
+      if (node.type === 'folder') {
+        const expanded = expandedFolders.value.has(node.path)
+        items.push({ type: 'folder', name: node.name, path: node.path, expanded, depth })
+        if (expanded) walk(node.children, depth + 1)
+      } else {
+        items.push({ type: 'doc', slug: node.slug, title: node.title, depth })
+      }
+    }
+  }
+  walk(docTree.value.children, 0)
+  return items
+})
+
 function navigateTo(slug) {
   if (slug === currentSlug.value) return
   router.push(`/management/docs/${slug}`)
@@ -153,6 +208,17 @@ onMounted(async () => {
 watch(currentSlug, (slug) => {
   if (slug) fetchDoc(slug)
 })
+
+watch(currentSlug, (slug) => {
+  if (!slug) return
+  const parts = slug.split('/')
+  if (parts.length < 2) return
+  const next = new Set(expandedFolders.value)
+  for (let i = 1; i < parts.length; i++) {
+    next.add(parts.slice(0, i).join('/'))
+  }
+  expandedFolders.value = next
+}, { immediate: true })
 </script>
 
 <style scoped lang="scss">
@@ -218,6 +284,38 @@ watch(currentSlug, (slug) => {
     background: var(--color-selected);
     color: var(--color-primary);
     font-weight: 500;
+  }
+}
+
+.doc-sidebar-folder {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  margin-bottom: 2px;
+  user-select: none;
+
+  &:hover {
+    background: var(--color-hover);
+    color: var(--color-text);
+  }
+
+  .folder-arrow {
+    display: inline-block;
+    font-size: 9px;
+    transition: transform 0.15s;
+
+    &.expanded {
+      transform: rotate(90deg);
+    }
   }
 }
 
