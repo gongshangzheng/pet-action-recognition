@@ -156,5 +156,14 @@ watch(
   :deep(.d-error) {
     display: none;
   }
+
+  :deep(a) {
+    color: var(--color-primary);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 </style>
