@@ -56,13 +56,31 @@ summary: JWT token 的生成、验证与刷新流程
 
 ### 1.3 内部链接
 
-Wiki 文档之间用 `[[slug]]` 或 `[[slug|显示文本]]` 链接，由前端 MarkdownRenderer 自动转换为路由。
+前端 MarkdownRenderer 在渲染前自动将 `[[…]]` 语法转为路由链接，支持两种目标：
+
+#### 链接到其他文档
+
+`[[slug]]` 或 `[[slug|显示文本]]`，指向 `/management/docs/{slug}`。
 
 ```markdown
 - [[api-design-conventions]]
 - [[api-design-conventions|API 设计规范]]
 - 详见 [[git-workflow|Git 工作流规范]]。
 ```
+
+#### 链接到任务
+
+`[[项目slug/任务ID]]` 或 `[[项目slug/任务ID|显示文本]]`，指向项目树页面并自动选中对应任务。
+
+```markdown
+- [[projflow/t2-3]]                          → 显示为 projflow/t2-3
+- [[projflow/t2-3|重构认证模块]]              → 显示为"重构认证模块"
+- 当前进度见 [[projflow/t1|项目第一阶段]]。
+```
+
+任务 ID 格式：顶层 `t1`、`t2`，子任务 `t1-1`、`t2-3`（对应 `management/projects/{slug}/tasks.json` 中的 `id` 字段）。
+
+> 链接语法对 `/` 有无来区分目标和文档：含 `/` 的是任务链接，不含的是文档链接。
 
 ## 2. Mermaid 图表
 

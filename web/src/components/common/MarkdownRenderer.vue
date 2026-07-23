@@ -1,9 +1,10 @@
 <template>
-  <div class="markdown-body" ref="containerRef" v-html="rendered"></div>
+  <div class="markdown-body" ref="containerRef" v-html="rendered" @click="handleClick"></div>
 </template>
 
 <script setup>
 import { computed, ref, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import checkbox from 'markdown-it-task-checkbox'
 import { slugify } from '../../utils/markdown'
@@ -16,6 +17,17 @@ const props = defineProps({
 
 const containerRef = ref(null)
 const themeStore = useThemeStore()
+const router = useRouter()
+
+function handleClick(e) {
+  const anchor = e.target.closest('a')
+  if (!anchor) return
+  const href = anchor.getAttribute('href')
+  if (href && href.startsWith('/management/')) {
+    e.preventDefault()
+    router.push(href)
+  }
+}
 
 const md = new MarkdownIt({
   html: true,
@@ -62,8 +74,13 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
 
 const rendered = computed(() => {
   if (!props.content) return '<p class="text-light">暂无内容</p>'
-  // Wiki links: [[slug]] → link to doc page, [[slug|display]] → link with custom text
   let src = props.content
+  // Task links: [[proj/t2-3]] or [[proj/t2-3|display]] → project tree with task selected
+  src = src.replace(/\[\[([^\/\]|]+)\/([^\/\]|]+)\|([^\]]+)\]\]/g, (_, proj, task, text) =>
+    `[${text.trim()}](/management/projects?slug=${proj.trim()}&task=${task.trim()})`)
+  src = src.replace(/\[\[([^\/\]|]+)\/([^\/\]]+)\]\]/g, (_, proj, task) =>
+    `[${proj.trim()}/${task.trim()}](/management/projects?slug=${proj.trim()}&task=${task.trim()})`)
+  // Doc links: [[slug]] or [[slug|display]] → doc detail page
   src = src.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_, slug, text) => `[${text.trim()}](/management/docs/${slug.trim()})`)
   src = src.replace(/\[\[([^\]]+)\]\]/g, (_, slug) => `[${slug.trim()}](/management/docs/${slug.trim()})`)
   return md.render(src)
