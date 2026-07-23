@@ -79,4 +79,4 @@ graph LR
 ## 相关文档
 
 - [[git-workflow|Git 工作流规范]] — 提交规范与分支策略
-- [[projflow/t2|项目树任务]] — 查看项目任务进度
+- [[projflow#t2|项目树任务]] — 查看项目任务进度

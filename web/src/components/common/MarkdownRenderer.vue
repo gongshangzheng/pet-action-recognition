@@ -75,10 +75,10 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
 const rendered = computed(() => {
   if (!props.content) return '<p class="text-light">暂无内容</p>'
   let src = props.content
-  // Task links: [[proj/t2-3]] or [[proj/t2-3|display]] → project tree with task selected
-  src = src.replace(/\[\[([^\/\]|]+)\/([^\/\]|]+)\|([^\]]+)\]\]/g, (_, proj, task, text) =>
+  // Task links: [[proj#t2-3]] or [[proj#t2-3|display]] → project tree with task selected
+  src = src.replace(/\[\[([^#|\]]+)#([^|\]]+)\|([^\]]+)\]\]/g, (_, proj, task, text) =>
     `[${text.trim()}](/management/projects?slug=${proj.trim()}&task=${task.trim()})`)
-  src = src.replace(/\[\[([^\/\]|]+)\/([^\/\]]+)\]\]/g, (_, proj, task) =>
+  src = src.replace(/\[\[([^#|\]]+)#([^|\]]+)\]\]/g, (_, proj, task) =>
     `[${proj.trim()}/${task.trim()}](/management/projects?slug=${proj.trim()}&task=${task.trim()})`)
   // Doc links: [[slug]] or [[slug|display]] → doc detail page
   src = src.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_, slug, text) => `[${text.trim()}](/management/docs/${slug.trim()})`)

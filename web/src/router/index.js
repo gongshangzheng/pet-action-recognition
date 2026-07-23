@@ -66,7 +66,7 @@ const routes = [
         meta: { title: '文档', module: 'management' },
       },
       {
-        path: 'management/docs/:slug',
+        path: 'management/docs/:slug(.*)',
         name: 'DocDetail',
         component: () => import('../views/management/DocPage.vue'),
         meta: { title: '文档详情', module: 'management' },

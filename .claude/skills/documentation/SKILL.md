@@ -11,13 +11,14 @@ description: |
 
 > **与 management skill 的分工**：management skill 负责文档的**CRUD 操作**（`create_doc.py` / `update_doc.py` 等）；本 skill 负责文档**内容怎么写**（结构、Mermaid、链接、风格）。
 
-## 1. Wiki 文档（`management/docs/*.md`）
+## 1. Wiki 文档（`management/docs/`）
 
 ### 1.1 文件规范
 
-- **文件名**：`{slug}.md`，slug 只允许字母、数字、连字符 `-`、下划线 `_`。
-- **存放位置**：`management/docs/`（纯 wiki 目录，不混会议纪要/项目/里程碑）。
+- **文件名**：`{slug}.md`，slug 只允许字母、数字、连字符 `-`、下划线 `_`、斜杠 `/`（子目录）。
+- **存放位置**：`management/docs/`（纯 wiki 目录，不混会议纪要/项目/里程碑）。支持子目录，如 `management/docs/architecture/api-design.md`，slug 为 `architecture/api-design`。
 - **frontmatter 必填**：`title`、`author`、`date`、`tags`、`summary`。
+- **frontmatter 可选**：`id`（数字），用于控制文档列表排序。有 `id` 的文档按 `id` 升序排列在前，无 `id` 的按 `date` 降序排列在后。
 
 ```yaml
 ---
@@ -26,6 +27,7 @@ author: 张三
 date: 2026-07-10
 tags: [auth, jwt, 安全]
 summary: JWT token 的生成、验证与刷新流程
+id: 1
 ---
 ```
 
@@ -60,27 +62,27 @@ summary: JWT token 的生成、验证与刷新流程
 
 #### 链接到其他文档
 
-`[[slug]]` 或 `[[slug|显示文本]]`，指向 `/management/docs/{slug}`。
+`[[slug]]` 或 `[[slug|显示文本]]`，指向 `/management/docs/{slug}`。slug 可含 `/`（子目录文档）。
 
 ```markdown
 - [[api-design-conventions]]
 - [[api-design-conventions|API 设计规范]]
-- 详见 [[git-workflow|Git 工作流规范]]。
+- [[architecture/api-design|API 设计规范]]     ← 子目录文档
 ```
 
 #### 链接到任务
 
-`[[项目slug/任务ID]]` 或 `[[项目slug/任务ID|显示文本]]`，指向项目树页面并自动选中对应任务。
+`[[项目slug#任务ID]]` 或 `[[项目slug#任务ID|显示文本]]`，指向项目树页面并自动选中对应任务。
 
 ```markdown
-- [[projflow/t2-3]]                          → 显示为 projflow/t2-3
-- [[projflow/t2-3|重构认证模块]]              → 显示为"重构认证模块"
-- 当前进度见 [[projflow/t1|项目第一阶段]]。
+- [[projflow#t2-3]]                          → 显示为 projflow/t2-3
+- [[projflow#t2-3|重构认证模块]]              → 显示为"重构认证模块"
+- 当前进度见 [[projflow#t1|项目第一阶段]]。
 ```
 
 任务 ID 格式：顶层 `t1`、`t2`，子任务 `t1-1`、`t2-3`（对应 `management/projects/{slug}/tasks.json` 中的 `id` 字段）。
 
-> 链接语法对 `/` 有无来区分目标和文档：含 `/` 的是任务链接，不含的是文档链接。
+> 用 `#` 区分：含 `#` 的是任务链接，不含的是文档链接（文档 slug 可含 `/`）。
 
 ## 2. Mermaid 图表
 

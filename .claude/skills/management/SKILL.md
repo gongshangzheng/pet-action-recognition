@@ -277,7 +277,7 @@ python3 $SD/delete_meeting.py --date 2026-07-11
 
 ## 6. 文档（Wiki）CRUD → `DocPage.vue`
 
-文件：`management/docs/{slug}.md`（纯 wiki 目录，仅顶层 `.md` 文件）。前端通过 `DocPage.vue` 展示（列表+详情同一组件），支持 `[[slug]]` 和 `[[slug|显示文本]]` 内部链接（MarkdownRenderer 自动转换）。
+文件：`management/docs/`（纯 wiki 目录，递归扫描所有 `.md` 文件，支持子目录）。前端通过 `DocPage.vue` 展示（列表+详情同一组件），支持 `[[slug]]` 和 `[[slug|显示文本]]` 文档链接、`[[proj#task]]` 任务链接（MarkdownRenderer 自动转换）。
 
 > **内容写作规范**：文档结构、Mermaid 图表、链接用法、写作风格等见 **`documentation` skill**（`.claude/skills/documentation/SKILL.md`）。本 skill 只负责文件的 CRUD 操作。
 

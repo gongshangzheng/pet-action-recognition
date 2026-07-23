@@ -210,7 +210,7 @@ async def get_meeting_detail(date: str):
 # ========== 文档 (wiki) ==========
 
 _DOCS_DIR = os.path.join(MANAGEMENT_DIR, 'docs')
-_SLUG_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+_SLUG_RE = re.compile(r'^[a-zA-Z0-9_/-]+$')
 
 
 def _normalize_date(value):
@@ -237,34 +237,36 @@ def _parse_frontmatter(content):
 
 @router.get("/docs")
 async def get_docs():
-    """获取文档列表（management/docs/*.md，仅顶层文件）"""
+    """获取文档列表（management/docs/ 递归扫描所有 .md 文件）"""
     if not os.path.isdir(_DOCS_DIR):
         return []
     docs = []
-    for f in sorted(os.listdir(_DOCS_DIR)):
-        if not f.endswith('.md'):
-            continue
-        filepath = os.path.join(_DOCS_DIR, f)
-        if not os.path.isfile(filepath):
-            continue
-        content = read_file(filepath)
-        meta, _ = _parse_frontmatter(content)
-        slug = f[:-3]
-        docs.append({
-            'slug': slug,
-            'title': meta.get('title', slug),
-            'author': meta.get('author', ''),
-            'date': _normalize_date(meta.get('date', '')),
-            'tags': meta.get('tags', []),
-            'summary': meta.get('summary', ''),
-        })
-    docs.sort(key=lambda d: d['date'] or '', reverse=True)
+    for root, _dirs, files in os.walk(_DOCS_DIR):
+        for f in sorted(files):
+            if not f.endswith('.md'):
+                continue
+            filepath = os.path.join(root, f)
+            content = read_file(filepath)
+            meta, _ = _parse_frontmatter(content)
+            rel = os.path.relpath(filepath, _DOCS_DIR)
+            slug = rel[:-3].replace(os.sep, '/')
+            docs.append({
+                'slug': slug,
+                'title': meta.get('title', slug),
+                'author': meta.get('author', ''),
+                'date': meta.get('date', ''),
+                'tags': meta.get('tags', []),
+                'summary': meta.get('summary', ''),
+                'id': meta.get('id'),
+            })
+    docs.sort(key=lambda d: d.get('date') or '', reverse=True)
+    docs.sort(key=lambda d: float(d['id']) if d.get('id') is not None and str(d['id']).replace('.', '').replace('-', '').isdigit() else float('inf'))
     return docs
 
 
-@router.get("/docs/{slug}")
+@router.get("/docs/{slug:path}")
 async def get_doc_detail(slug: str):
-    """获取指定文档详情"""
+    """获取指定文档详情（支持子目录路径，如 architecture/api-design）"""
     if not _SLUG_RE.match(slug):
         raise HTTPException(status_code=400, detail="Invalid slug")
     filepath = safe_resolve(_DOCS_DIR, f"{slug}.md")
@@ -279,6 +281,7 @@ async def get_doc_detail(slug: str):
         'date': _normalize_date(meta.get('date', '')),
         'tags': meta.get('tags', []),
         'summary': meta.get('summary', ''),
+        'id': meta.get('id'),
         'content': body,
     }
 
