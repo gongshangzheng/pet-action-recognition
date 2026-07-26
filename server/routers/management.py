@@ -46,6 +46,8 @@ async def get_team_member(member_id: str):
     """获取成员档案详情"""
     team_dir = os.path.join(MANAGEMENT_DIR, 'team')
     # 遍历 .md 文件，找到英文标识匹配的成员
+    if not os.path.isdir(team_dir):
+        return {"detail": "Member not found"}, 404
     for f in os.listdir(team_dir):
         if f.endswith('.md') and f != 'README.md':
             content = read_file(os.path.join(team_dir, f))

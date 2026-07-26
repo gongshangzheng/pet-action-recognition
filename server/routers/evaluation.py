@@ -2,11 +2,15 @@
 import os
 import json
 from fastapi import APIRouter, Body
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from server.config import EVALUATION_DIR, OUTPUTS_DIR
 from server.utils.file_utils import read_file, scan_directory, safe_resolve
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"])
+
+# 本路由是上游脚手架占位，不执行真实评测。
+# 真正的视频动作评测在 training 路由：POST /api/training/run_test（结果 GET /api/training/test_results）。
+SCAFFOLD_NOTE = "本评测路由为上游脚手架占位，不执行真实评测。视频动作评测请用 POST /api/training/run_test，结果见 GET /api/training/test_results。"
 
 # 视频文件扩展名 -> MIME（outputs 端点按需服务压缩码流/重建视频）
 VIDEO_MIME = {
@@ -90,19 +94,21 @@ async def get_config_detail(config_id: str):
 
 @router.post("/run")
 async def run_evaluation(data: dict = Body(...)):
-    """启动评测任务。
+    """启动评测任务 —— 本路由为脚手架占位，不执行真实评测。
 
-    契约返回 ``output_video``（相对 OUTPUTS_DIR 的路径或 None）——下游若实际执行
-    评测脚本，应填真实输出码流路径，前端据此按需展示输出视频+指标。
+    真正的视频动作评测在 training 路由（POST /api/training/run_test →
+    tools/test.py → results/training/test_results.json）。这里返回 501 并指向
+    正确入口，避免前端拿到假的 'pending' 状态。
     """
-    return {
-        'status': 'pending',
-        'message': '评测任务已提交',
-        'config': data,
-        'output_video': None,
-        'metrics': None,
-        'note': '上游脚手架为模拟响应；下游库（如 infraredComp）实接评测脚本后填充 output_video/metrics。',
-    }
+    return JSONResponse(
+        status_code=501,
+        content={
+            'status': 'not_implemented',
+            'scaffold': True,
+            'config': data,
+            'note': SCAFFOLD_NOTE,
+        },
+    )
 
 
 # ---- 输出视频/码流（按需服务，防路径穿越）--------------------------- #

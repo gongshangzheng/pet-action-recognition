@@ -51,5 +51,5 @@ sleep 3
 # --- 验证 ---
 echo ""
 echo "=== Service Status ==="
-echo "Backend   (8788): $(curl -s --max-time 3 http://localhost:8788/api/papers/stats/summary | head -c 60)"
+echo "Backend   (8788): $(curl -s --max-time 3 http://localhost:8788/api/health | head -c 60)"
 echo "Frontend  (3000): $(curl -s --max-time 3 http://localhost:3000 | head -c 40)"
