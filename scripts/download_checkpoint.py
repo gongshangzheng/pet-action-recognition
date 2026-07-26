@@ -12,9 +12,9 @@
   - 失败重试 3 次（指数退避）
   - huggingface.co URL 自动走 hf-mirror.com（国内镜像）
 
-产物：
-  results/training/pretrained/<model_id>.pth       # 权重
-  results/training/pretrained/<model_id>.pth.json   # 元数据（url, sha256, size, time）
+产物（与 trained checkpoint 同目录，按 model 分子目录）：
+  results/training/checkpoints/<model_id>/<model_id>_pretrained.pth       # 预训练权重
+  results/training/checkpoints/<model_id>/<model_id>_pretrained.json      # type=pretrained；不被 latest/best 收录
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from server.config import PRETRAINED_CACHE_DIR
+from server.config import CHECKPOINTS_DIR
 from server.routers.training import _MMACTION2_REGISTRY
 
 CHUNK = 1 << 20  # 1 MB
@@ -75,17 +75,23 @@ def _download(url: str, dst: str, force: bool = False) -> tuple[bool, str, str |
 
 
 def _write_meta(model: dict, path: str, sha256: str | None) -> None:
+    """写 pretrained checkpoint 元数据；type=pretrained 使 trained-checkpoint 扫描忽略它。"""
+    model_id = model["id"]
     meta = {
-        "model_id": model["id"],
+        "run_id": f"{model_id}_pretrained",
+        "model_id": model_id,
         "name": model.get("name", ""),
         "family": model.get("family", ""),
         "pretrained_source": model.get("pretrained_source", ""),
+        "type": "pretrained",
         "url": model["pretrained_url"],
         "downloaded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "size_bytes": os.path.getsize(path) if os.path.isfile(path) else 0,
         "sha256": sha256,
+        "checkpoint_path": f"checkpoints/{model_id}/{model_id}_pretrained.pth",
+        "source_file": "mmaction2_model_zoo",
     }
-    with open(path + ".json", "w", encoding="utf-8") as f:
+    with open(path.replace(".pth", ".json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
 
 
@@ -94,8 +100,9 @@ def main() -> int:
     parser.add_argument("--model-id", help="model id from registry (e.g. tsn-resnet50)")
     parser.add_argument("--all", action="store_true", help="download all models in registry")
     parser.add_argument("--force", action="store_true", help="re-download even if file exists")
-    parser.add_argument("--out-dir", default=PRETRAINED_CACHE_DIR,
-                        help=f"cache dir (default: {PRETRAINED_CACHE_DIR})")
+    parser.add_argument("--out-dir", default=CHECKPOINTS_DIR,
+                        help=f"checkpoints base dir (default: {CHECKPOINTS_DIR}); "
+                             "writes <out-dir>/<model_id>/<model_id>_pretrained.pth")
     parser.add_argument("--list", action="store_true", help="list registry and exit")
     args = parser.parse_args()
 
@@ -119,11 +126,12 @@ def main() -> int:
         if not url:
             print(f"[skip] {m['id']}: no pretrained_url")
             continue
-        dst = os.path.join(args.out_dir, f"{m['id']}.pth")
+        dst = os.path.join(args.out_dir, m["id"], f"{m['id']}_pretrained.pth")
         print(f"[{m['id']}] {url}")
         ok, msg, sha = _download(url, dst, args.force)
         if ok:
-            _write_meta(m, dst, sha)
+            if sha is not None:  # fresh download；skip 时不动已有 meta
+                _write_meta(m, dst, sha)
             size = os.path.getsize(dst) if os.path.isfile(dst) else 0
             print(f"  -> {dst}  ({msg}, {size // (1 << 20)} MB)")
         else:

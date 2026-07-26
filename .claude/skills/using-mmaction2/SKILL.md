@@ -66,15 +66,36 @@ train_pipeline = [ dict(type='DecordInit', ...), dict(type='SampleFrames', clip_
 
 ### Checkpoint 产物结构
 
-每次训练产出 4 个文件，按模型分子目录：
+按模型分子目录，trained 与 pretrained 同处 `results/training/checkpoints/<model_id>/`：
 
 ```
 results/training/checkpoints/<model_id>/
-  <run_id>_latest.pth        # → work_dir/epoch_N.pth
-  <run_id>_latest.json       # {run_id, model_id, dataset, type, epoch, total_epochs, metrics, created_at, source_file}
-  <run_id>_best.pth          # → work_dir/best_acc_top1_epoch_N.pth
-  <run_id>_best.json         # 同上，type=best
+  <model_id>_pretrained.pth   # mmaction2 模型仓库下载的预训练权重（finetune 用）
+  <model_id>_pretrained.json  # type=pretrained；trained-checkpoint 的 latest/best 扫描会忽略它
+  <run_id>_latest.pth         # → work_dir/epoch_N.pth
+  <run_id>_latest.json        # {run_id, model_id, dataset, type, epoch, total_epochs, metrics, created_at, source_file}
+  <run_id>_best.pth           # → work_dir/best_acc_top1_epoch_N.pth
+  <run_id>_best.json          # 同上，type=best
 ```
+
+### 下载 pretrained checkpoint
+
+```bash
+# 单个模型
+python3 scripts/download_checkpoint.py --model-id tsn-resnet50
+# 全部 21 个
+python3 scripts/download_checkpoint.py --all
+# 重下
+python3 scripts/download_checkpoint.py --model-id tsn-resnet50 --force
+# 列出可用模型
+python3 scripts/download_checkpoint.py --list
+```
+
+- 从 `_MMACTION2_REGISTRY` 的 `pretrained_url` 下到 `checkpoints/<model_id>/<model_id>_pretrained.pth`
+- 镜像回退：openmmlab 直链（pet 实测可达）；`huggingface.co` URL 自动走 `hf-mirror.com`
+- 失败重试 3 次；已存在则跳过（`--force` 强制重下）
+- 元数据 `.json` 含 `url`、`sha256`、`size_bytes`、`type:"pretrained"`
+- finetune 时传本地路径：`POST /api/training/run {model_id, pretrained: "checkpoints/<model_id>/<model_id>_pretrained.pth"}`
 
 ### 训练 run 记录（metrics.json）
 
