@@ -153,7 +153,7 @@ _MMACTION2_REGISTRY = [
         "family": "TPN",
         "backbone": "resnet50",
         "pretrained_source": "Kinetics-400",
-        "pretrained_url": "https://download.openmmlab.com/mmaction/v1.0/recognition/tpn/tpn_imagenet_pretrained_slowonly_r50_8x8x1_150e_kinetics_rgb/tpn-slowonly_imagenet-pretrained-r50_8xb8-8x8x1-150e_kinetics400-rgb_20220913-fed3f4c1.pth",
+        "pretrained_url": "https://download.openmmlab.com/mmaction/v1.0/recognition/tpn/tpn-slowonly_imagenet-pretrained-r50_8xb8-8x8x1-150e_kinetics400-rgb/tpn-slowonly_imagenet-pretrained-r50_8xb8-8x8x1-150e_kinetics400-rgb_20220913-fed3f4c1.pth",
         "mmaction2_config": "configs/recognition/tpn/tpn-slowonly_imagenet-pretrained-r50_8xb8-8x8x1-150e_kinetics400-rgb.py",
         "description": "Temporal Pyramid Network。",
     },

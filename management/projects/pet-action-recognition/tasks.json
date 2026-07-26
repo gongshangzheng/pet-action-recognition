@@ -321,10 +321,16 @@
         {
           "id": "t9-3",
           "title": "Phase 2：Pilot TSN 全链路（下载→finetune→test）",
-          "status": "planned",
+          "status": "paused",
           "assignee": "郑鑫裕",
           "description": "用 TSN-ResNet50 打通下载→finetune→test 全链路。\n\n• 先 synthetic 冒烟，真实数据到位后重跑\n• pretrained finetune 出四足 ckpt，再 run_test 拿准确率\n• 逐个排坑（num_classes/pipeline/OOM/decord）",
-          "children": []
+          "children": [],
+          "progress": [
+            {
+              "date": "2026-07-26 17:28",
+              "note": "暂缓：pilot 的 finetune/test 需要真实四足数据，合成数据已弃用。等数据收集后再跑。TSN pretrained 已就位、链路代码 bug 已修，只差数据。"
+            }
+          ]
         },
         {
           "id": "t9-4",

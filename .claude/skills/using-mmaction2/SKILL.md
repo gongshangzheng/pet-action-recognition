@@ -11,20 +11,50 @@ mmaction2 = OpenMMLab 视频动作识别库。**已 vendor 进仓库**：`third_
 
 ## 1. 安装
 
-mmaction2 依赖 mmengine + mmcv + torch + decord。推荐 editable 安装 vendor 目录：
+mmaction2 依赖 mmengine + mmcv + torch + decord。**已验证配方（pet 服务器，2× RTX 4090，2026-07-26 跑通）**：
 
 ```bash
-# 1) 先装 torch（按本机 CUDA / CPU 自选），再：
-pip install -U openmim
-mim install mmengine "mmcv>=2.0.0"
-pip install decord einops opencv-contrib-python scipy matplotlib
-# 2) editable 装 vendor 的 mmaction2（改 third_party/mmaction2 源码即时生效）
-pip install -v -e third_party/mmaction2
-# 3) 验证
-python -c "import mmaction; print(mmaction.__version__)"
+# 在 conda env `pet`（python 3.10）里
+ENV=~/miniconda3/envs/pet
+PIP=$ENV/bin/pip; MIM=$ENV/bin/mim; PY=$ENV/bin/python
+
+# 1) torch 2.1.2 + cu121（4090 兼容；且有对应 mmcv 2.x prebuilt wheel）
+$PIP install --no-cache-dir torch==2.1.2 torchvision==0.16.2 --index-url https://download.pytorch.org/whl/cu121
+
+# 2) openmim + mmengine + mmcv（mmcv 必须 <2.2.0，见下坑2）
+$PIP install -U openmim
+$MIM install mmengine "mmcv>=2.0.0rc4,<2.2.0"
+
+# 3) decord + 其余依赖；opencv 必须 4.10.0.84（见下坑3）
+$PIP install --no-cache-dir decord einops "opencv-python==4.10.0.84" "opencv-contrib-python==4.10.0.84" scipy matplotlib av
+
+# 4) editable 装 vendor 的 mmaction2（改 third_party/mmaction2 源码即时生效）
+$PIP install -v -e third_party/mmaction2
+
+# 5) 验证
+$PY -c "import torch,mmcv,mmengine,mmaction,decord; print(torch.__version__, torch.cuda.is_available(), mmcv.__version__, mmaction.__version__); print(torch.cuda.device_count())"
 ```
 
-> 若 decord 装不上（macOS / 老 Python），可用 PyAV 后端或 `pip install av`，config 里把 `DecordInit` 换 `AVInit`。训练时报 `No module named 'mmcv'` → `mim install mmcv`；报 `MMCV_WITH_OPS=0` → 装 prebuilt mmcv（`mim install mmcv-full` 对老版本，2.x 用 `mmcv`）。
+### ⚠️ 三大版本坑（pet 实踩，按此配方可避开）
+
+1. **numpy 必须 <2** —— torch 2.1.2 是按 numpy 1.x 编的，numpy 2.x 会 `_ARRAY_API not found`，`tensor.numpy()` 在数据管线里崩。装完全栈后**最后**钉一次：`pip install "numpy<2"`（1.26.4）。
+2. **mmcv 必须 `<2.2.0`** —— mmaction2 1.2.0 源码 assert `mmcv>=2.0.0rc4, <2.2.0`；`mim install "mmcv>=2.0.0"` 会拉 2.2.0 → import 时 AssertionError。用 `mim install "mmcv>=2.0.0rc4,<2.2.0"`（落 2.1.0）。
+3. **opencv 钉 `4.10.0.84`** —— opencv 5.x / 4.13+ 的 metadata 声明 `numpy>=2`，pip 装它们会把 numpy 顶回 2.x。钉 4.10.0.84（声明 `numpy>=1.21.2`）才能让 numpy 1.26.4 稳住。
+
+> `pip check` 会报 `decord 0.6.0 is not supported on this platform` —— spurious（metadata 保守），import 正常，忽略。
+>
+> 若 decord 装不上（macOS / 老 Python），用 PyAV 后端：`pip install av`，config 里 `DecordInit` 换 `AVInit`。训练报 `No module named 'mmcv'` → `mim install mmcv`；报 `MMCV_WITH_OPS=0` → 装 prebuilt mmcv（2.x 用 `mmcv`，对 cu121/torch2.1 走 `mim install` 自动选 wheel）。
+
+### pet 环境速查
+
+| 包 | 版本 |
+|---|---|
+| python | 3.10（conda env `pet`） |
+| torch | 2.1.2+cu121 |
+| numpy | 1.26.4（**<2**） |
+| mmcv | 2.1.0（**<2.2.0**） |
+| opencv | 4.10.0.84 |
+| mmengine / mmaction2 / decord | 0.10.7 / 1.2.0 (editable) / 0.6.0 |
 
 ## 2. config 系统（python config + `_base_` 继承）
 
