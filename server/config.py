@@ -25,6 +25,24 @@ TRAINING_OUTPUTS_DIR = TRAINING_DIR                                 # 训练产�
 # mmaction2 vendor 路径（已 vendored，非 pip/submodule）
 MMACTION2_DIR = os.path.join(BASE_DIR, "third_party", "mmaction2")
 
+
+def resolve_mmaction2_config(cfg: str) -> str:
+    """Resolve registry mmaction2_config to absolute path.
+
+    Registry stores either:
+      - mmaction2-builtin config relative to MMACTION2_DIR (configs/recognition/...)
+      - repo config relative to repo root (evaluation/configs/...)
+      - absolute path (returned as-is)
+    """
+    if os.path.isabs(cfg):
+        return cfg
+    # repo-rooted config wins if it exists there (e.g. evaluation/configs/...)
+    repo_rooted = os.path.join(BASE_DIR, cfg)
+    if os.path.isfile(repo_rooted):
+        return repo_rooted
+    # otherwise treat as mmaction2-builtin relative to MMACTION2_DIR
+    return os.path.join(MMACTION2_DIR, cfg)
+
 # 四足动物动作数据集（名称未定，先设为变量；数据集收集后改这一处即可）
 # datasets/<QUADRUPED_DATASET_NAME>/ 为训练/评测共用根目录
 QUADRUPED_DATASET_NAME = "quadruped_action"

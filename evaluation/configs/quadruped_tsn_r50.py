@@ -11,8 +11,10 @@ _base_ = [
 dataset_type = "VideoDataset"
 data_root = "datasets/quadruped_action/videos_train"
 data_root_val = "datasets/quadruped_action/videos_val"
+data_root_test = "datasets/quadruped_action/videos_test"
 ann_file_train = "datasets/quadruped_action/quadruped_action_train_list.txt"
 ann_file_val = "datasets/quadruped_action/quadruped_action_val_list.txt"
+ann_file_test = "datasets/quadruped_action/quadruped_action_test_list.txt"
 num_classes = 2
 
 file_client_args = dict(io_backend="disk")
@@ -63,7 +65,19 @@ val_dataloader = dict(
         test_mode=True,
     ),
 )
-test_dataloader = val_dataloader
+test_dataloader = dict(
+    batch_size=2,
+    num_workers=0,
+    persistent_workers=False,
+    sampler=dict(type="DefaultSampler", shuffle=False),
+    dataset=dict(
+        type=dataset_type,
+        ann_file=ann_file_test,
+        data_prefix=dict(video=data_root_test),
+        pipeline=test_pipeline,
+        test_mode=True,
+    ),
+)
 
 val_evaluator = dict(type="AccMetric")
 test_evaluator = val_evaluator

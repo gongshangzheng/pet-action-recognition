@@ -46,6 +46,7 @@ from server.config import (
     QUADRUPED_DATASET_NAME,
     QUADRUPED_DATASET_DIR,
     QUADRUPED_CLASSES_FILE,
+    resolve_mmaction2_config,
 )
 
 TRAIN_PY = os.path.join(MMACTION2_DIR, "tools", "train.py")
@@ -152,7 +153,7 @@ def resolve_dataset_paths(dataset_id: str):
 def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, videos_val: str) -> list[str]:
     cfg_path = args.mmaction2_config
     if not os.path.isabs(cfg_path):
-        cfg_path = os.path.join(MMACTION2_DIR, cfg_path)
+        cfg_path = resolve_mmaction2_config(cfg_path)
     cmd = [sys.executable, TRAIN_PY, cfg_path, "--work-dir", args.work_dir, "--launcher", "none"]
     if args.seed is not None:
         cmd += ["--seed", str(args.seed)]
@@ -168,6 +169,9 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     n_cls = args.num_classes if args.num_classes is not None else num_classes_for(args.dataset_id)
     if n_cls is not None:
         cfg_options.append(f"model.cls_head.num_classes={n_cls}")
+        # AccMetric topk: avoid meaningless top5 on small datasets (top5 always 1.0 when classes < 5)
+        ks = tuple(k for k in (1, 5) if k <= n_cls)  # n_cls=2 → (1,), n_cls=10 → (1,5)
+        cfg_options.append(f"val_evaluator.metric_options.top_k_accuracy.topk={ks}")
     if ann_train:
         cfg_options.append(f"train_dataloader.dataset.ann_file={ann_train}")
     if videos_train:

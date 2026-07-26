@@ -34,6 +34,17 @@ TEST_SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.pa
 INFER_SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "scripts", "inference.py")
 INFERENCE_DIR = os.path.join(TRAINING_DIR, "inference")
 
+# 视频文件扩展名
+_VIDEO_EXTS = (".mp4", ".avi", ".mov", ".mkv", ".webm")
+
+
+def _split_has_videos(split: str) -> bool:
+    """Check if a dataset split has actual video files."""
+    d = os.path.join(QUADRUPED_DATASET_DIR, f"videos_{split}")
+    if not os.path.isdir(d):
+        return False
+    return any(fn.lower().endswith(_VIDEO_EXTS) for fn in os.listdir(d))
+
 # mmaction2 训练 registry：每个族挑一个代表 config（相对 MMACTION2_DIR）
 _MMACTION2_REGISTRY = [
     {
@@ -243,16 +254,14 @@ _MMACTION2_REGISTRY = [
         "backbone": "resnet50",
         "pretrained_source": "Kinetics-400 (via tsn-resnet50)",
         "pretrained_url": "https://download.openmmlab.com/mmaction/v1.0/recognition/tsn/tsn_imagenet-pretrained-r50_8xb32-1x1x3-100e_kinetics400-rgb/tsn_imagenet-pretrained-r50_8xb32-1x1x3-100e_kinetics400-rgb_20220906-cd10898e.pth",
-        "mmaction2_config": "/Users/tangwen/pet-action-recognition/evaluation/configs/quadruped_tsn_r50.py",
+        "mmaction2_config": "evaluation/configs/quadruped_tsn_r50.py",
         "description": "小分辨率、PyAV 后端；可加载 TSN K400 预训练权重做 finetune。",
     },
 ]
 
 # 数据集 shape: {id, name, splits, num_samples, modalities, status, description}
-_has_dataset = (
-    os.path.isdir(QUADRUPED_DATASET_DIR)
-    and os.path.isfile(os.path.join(QUADRUPED_DATASET_DIR, f"{QUADRUPED_DATASET_NAME}_train_list.txt"))
-)
+# 只有当 videos_train/ 目录存在且包含实际视频时才认为已收集
+_has_dataset = _split_has_videos("train")
 
 DEFAULT_DATASETS = [
     {
@@ -409,17 +418,22 @@ async def get_model_detail(model_id: str):
 
 @router.get("/datasets")
 async def get_datasets():
-    """训练数据集清单。若目录已存在，动态更新 num_samples。"""
+    """训练数据集清单。若目录已存在且有视频文件，动态更新 num_samples。"""
     out = []
     for d in DEFAULT_DATASETS:
         row = dict(d)
         if d["id"] == QUADRUPED_DATASET_NAME and os.path.isdir(QUADRUPED_DATASET_DIR):
-            for split in ("train", "val", "test"):
-                ann = os.path.join(QUADRUPED_DATASET_DIR, f"{QUADRUPED_DATASET_NAME}_{split}_list.txt")
-                if os.path.isfile(ann):
-                    with open(ann, "r", encoding="utf-8") as f:
-                        row["num_samples"] = len([ln for ln in f if ln.strip()])
-                    break
+            # 只有当 videos 目录存在且有视频时才统计样本数
+            has_videos = _split_has_videos("train")
+            if has_videos:
+                for split in ("train", "val", "test"):
+                    ann = os.path.join(QUADRUPED_DATASET_DIR, f"{QUADRUPED_DATASET_NAME}_{split}_list.txt")
+                    if os.path.isfile(ann):
+                        with open(ann, "r", encoding="utf-8") as f:
+                            row["num_samples"] = len([ln for ln in f if ln.strip()])
+                        break
+            else:
+                row["num_samples"] = 0
         out.append(row)
     return out
 

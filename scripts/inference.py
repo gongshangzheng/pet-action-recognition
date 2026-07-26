@@ -26,7 +26,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from server.config import MMACTION2_DIR, QUADRUPED_CLASSES_FILE, TRAINING_WORK_DIR, CHECKPOINTS_DIR
+from server.config import MMACTION2_DIR, QUADRUPED_CLASSES_FILE, TRAINING_WORK_DIR, CHECKPOINTS_DIR, resolve_mmaction2_config
 
 # vendor 未 pip install -e 时，确保 mmaction 包可直接 import
 sys.path.insert(0, MMACTION2_DIR)
@@ -67,7 +67,7 @@ def infer_with_api(args) -> dict:
 
     cfg_path = args.mmaction2_config
     if not os.path.isabs(cfg_path):
-        cfg_path = os.path.join(MMACTION2_DIR, cfg_path)
+        cfg_path = resolve_mmaction2_config(cfg_path)
     cfg = Config.fromfile(cfg_path)
     if args.num_classes is not None:
         cfg.model.cls_head.num_classes = args.num_classes
@@ -115,7 +115,7 @@ def infer_with_test_py(args) -> dict:
     """无 API 环境时，生成单条 ann_file 走 tools/test.py，再解析 stdout。"""
     cfg_path = args.mmaction2_config
     if not os.path.isabs(cfg_path):
-        cfg_path = os.path.join(MMACTION2_DIR, cfg_path)
+        cfg_path = resolve_mmaction2_config(cfg_path)
 
     video_path = os.path.abspath(args.video)
     parent = os.path.dirname(video_path)
@@ -123,6 +123,12 @@ def infer_with_test_py(args) -> dict:
         ann = os.path.join(tmpdir, "infer_list.txt")
         with open(ann, "w", encoding="utf-8") as f:
             f.write(f"{os.path.basename(video_path)} 0\n")
+        cfg_options = [
+            f"test_dataloader.dataset.ann_file={ann}",
+            f"test_dataloader.dataset.data_prefix.video={parent}",
+        ]
+        if args.num_classes is not None:
+            cfg_options.append(f"model.cls_head.num_classes={args.num_classes}")
         cmd = [
             sys.executable,
             TEST_PY,
@@ -133,11 +139,7 @@ def infer_with_test_py(args) -> dict:
             "--launcher",
             "none",
             "--cfg-options",
-            f"test_dataloader.dataset.ann_file={ann}",
-            f"test_dataloader.dataset.data_prefix.video={parent}",
-        ]
-        if args.num_classes is not None:
-            cmd.append(f"model.cls_head.num_classes={args.num_classes}")
+        ] + cfg_options
         env = os.environ.copy()
         env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
         ppath = [str(MMACTION2_DIR), str(REPO)]

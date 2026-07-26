@@ -35,6 +35,7 @@ from server.config import (
     TRAINING_DIR,
     TRAINING_WORK_DIR,
     CHECKPOINTS_DIR,
+    resolve_mmaction2_config,
 )
 
 TEST_PY = os.path.join(MMACTION2_DIR, "tools", "test.py")
@@ -120,7 +121,7 @@ def main() -> int:
     ensure_dirs()
     cfg_path = args.mmaction2_config
     if not os.path.isabs(cfg_path):
-        cfg_path = os.path.join(MMACTION2_DIR, cfg_path)
+        cfg_path = resolve_mmaction2_config(cfg_path)
 
     checkpoint = args.checkpoint
     if not os.path.isabs(checkpoint):
@@ -168,6 +169,9 @@ def main() -> int:
         cfg_options.append(f"test_dataloader.dataset.data_prefix.video={videos}")
     if args.num_classes is not None:
         cfg_options.append(f"model.cls_head.num_classes={args.num_classes}")
+        # AccMetric topk: avoid meaningless top5 on small datasets
+        ks = tuple(k for k in (1, 5) if k <= args.num_classes)
+        cfg_options.append(f"test_evaluator.metric_options.top_k_accuracy.topk={ks}")
     if cfg_options:
         cmd += ["--cfg-options"] + cfg_options
     if args.extra_args:

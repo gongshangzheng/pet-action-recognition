@@ -276,6 +276,76 @@
       "assignee": "郑鑫裕",
       "description": "cherry-pick ProjFlow c41bb78/1ffaa50/1ec3740/c59709b/b8b3d55/5443eae：评测输出按需查看、论文详情页悬浮按钮栏、项目树 hidden 字段、subagent 提示词目录、skill 去前缀、任务 ID + progress 字段、Cornell 布局迭代、markdown_table 空表修复",
       "children": []
+    },
+    {
+      "id": "t9",
+      "title": "pet 远程：mmaction2 全模型接入与评测",
+      "status": "active",
+      "assignee": "郑鑫裕",
+      "startDate": "2026-07-26",
+      "endDate": "2026-08-15",
+      "description": "在 pet 服务器跑通全部 mmaction2 模型并完成评测。\n\n• 含义：下载 pretrained → finetune → test 拿准确率（非直接评预训练头）\n• 区别于 t3：原环境搭在别处，本任务专攻 pet 新算力机\n• 支撑 t7-3-2 四足端到端 / t7-3-3 权重迁移 / t7-5 服务器验证\n• 闭环：本地改码 → push pet → 远程训练/测试/下载",
+      "children": [
+        {
+          "id": "t9-1",
+          "title": "Phase 0：pet 训练环境引导（conda + torch + mmaction2）",
+          "status": "completed",
+          "assignee": "郑鑫裕",
+          "description": "在 pet 搭建可用的 mmaction2 GPU 训练环境。\n\n• conda 26.5.3 已装（~/miniconda3，TUNA 镜像）\n• 建 py3.10 环境，装 cu121 torch + mmengine + mmcv≥2.0 + decord/av\n• editable 装 third_party/mmaction2，验证 2×4090 可用",
+          "children": [],
+          "progress": [
+            {
+              "date": "2026-07-26 15:39",
+              "note": "[完成] pet env 就绪：py3.10+torch2.1.2cu121+numpy1.26.4+mmcv2.1.0+mmaction2 1.2.0(decord/av)，2×4090 可用、numpy 桥接 OK。三坑：numpy<2（torch2.1 按 numpy1.x 编）、mmcv<2.2（mmaction2 1.2.0 硬约束）、opencv 钉 4.10（5.x/4.13 要 numpy>=2 会顶回 numpy2）"
+            },
+            {
+              "date": "2026-07-26 15:29",
+              "note": "conda 26.5.3 已装（~/miniconda3，TUNA 镜像 + .condarc）；下一步建 py3.10 环境装 torch/mmcv/mmaction"
+            }
+          ]
+        },
+        {
+          "id": "t9-2",
+          "title": "Phase 1：checkpoint 下载脚本 + 修 tsn 路径 bug",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "description": "新建 checkpoint 下载脚本并修 tsn 硬编码路径。\n\n• scripts/download_checkpoint.py：按 model_id 下 pretrained 到缓存\n• openmmlab 直链失败走镜像/重试；HF 权重用 hf-mirror\n• 修 tsn-resnet50-quadruped 的 /Users/tangwen 绝对路径为相对路径",
+          "children": []
+        },
+        {
+          "id": "t9-3",
+          "title": "Phase 2：Pilot TSN 全链路（下载→finetune→test）",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "description": "用 TSN-ResNet50 打通下载→finetune→test 全链路。\n\n• 先 synthetic 冒烟，真实数据到位后重跑\n• pretrained finetune 出四足 ckpt，再 run_test 拿准确率\n• 逐个排坑（num_classes/pipeline/OOM/decord）",
+          "children": []
+        },
+        {
+          "id": "t9-4",
+          "title": "Phase 3：沉淀 using-mmaction2 skill（接入+评测 SOP）",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "description": "把接入+评测流程沉淀进 using-mmaction2 skill。\n\n• 含开发闭环、pet 环境配方、下载+镜像、单模型接入 checklist\n• 以 TSN pilot 为参考实现，附踩坑表",
+          "children": []
+        },
+        {
+          "id": "t9-5",
+          "title": "Phase 4：按 skill 批量接入其余 20 个模型",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "description": "按 skill 批量接入其余 mmaction2 模型族。\n\n• 每族写四足 config（2D/3D pipeline 差异）→ 下 ckpt → finetune → test\n• 先跑代表子集（TSM/I3D/SlowFast/X3D/VideoMAE）再铺完",
+          "children": []
+        },
+        {
+          "id": "t9-6",
+          "title": "Phase 5（可选）：打通 evaluation 模块",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "description": "把视频评测结果桥接到 evaluation 模块（可选）。\n\n• 当前 evaluation/ 是 LLM 脚手架 mock；视频评测走 training /run_test\n• 默认不做，除非要统一评测入口",
+          "hidden": true,
+          "children": []
+        }
+      ]
     }
   ]
 }
