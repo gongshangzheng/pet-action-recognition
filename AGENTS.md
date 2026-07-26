@@ -157,6 +157,7 @@ paper_id, category, confidence
 
 | Skill | 路径 | 用途 |
 |-------|------|------|
+| repo-structure | `.claude/skills/repo-structure/` | 仓库文件组织 / 目录结构 / 模块路由（导航入口） |
 | using-mmaction2 | `.claude/skills/using-mmaction2/` | mmaction2 安装、训练、推理、config 系统 |
 | evaluation | `.claude/skills/evaluation/` | LLM 评测模块 |
 | papers | `.claude/skills/papers/` | 论文收集模块 |
