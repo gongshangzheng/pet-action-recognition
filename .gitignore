@@ -28,6 +28,9 @@ results/training/checkpoints/
 results/training/metrics.json
 results/training/test_results.json
 
+# Pretrained checkpoints (mmaction2 model zoo downloads, large)
+/checkpoints/
+
 # Dataset artifacts (large video files; lists/README may be committed)
 datasets/quadruped_action/videos_*/
 

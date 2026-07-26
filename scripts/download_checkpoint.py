@@ -12,9 +12,9 @@
   - 失败重试 3 次（指数退避）
   - huggingface.co URL 自动走 hf-mirror.com（国内镜像）
 
-产物（与 trained checkpoint 同目录，按 model 分子目录）：
-  results/training/checkpoints/<model_id>/<model_id>_pretrained.pth       # 预训练权重
-  results/training/checkpoints/<model_id>/<model_id>_pretrained.json      # type=pretrained；不被 latest/best 收录
+产物（repo 根 ./checkpoints/，按 model 分子目录；与 trained 分开）：
+  checkpoints/<model_id>/<model_id>_pretrained.pth       # 预训练权重
+  checkpoints/<model_id>/<model_id>_pretrained.json      # type=pretrained；不被 trained latest/best 收录
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from server.config import CHECKPOINTS_DIR
+from server.config import PRETRAINED_DIR
 from server.routers.training import _MMACTION2_REGISTRY
 
 CHUNK = 1 << 20  # 1 MB
@@ -100,8 +100,8 @@ def main() -> int:
     parser.add_argument("--model-id", help="model id from registry (e.g. tsn-resnet50)")
     parser.add_argument("--all", action="store_true", help="download all models in registry")
     parser.add_argument("--force", action="store_true", help="re-download even if file exists")
-    parser.add_argument("--out-dir", default=CHECKPOINTS_DIR,
-                        help=f"checkpoints base dir (default: {CHECKPOINTS_DIR}); "
+    parser.add_argument("--out-dir", default=PRETRAINED_DIR,
+                        help=f"pretrained checkpoints base dir (default: {PRETRAINED_DIR}); "
                              "writes <out-dir>/<model_id>/<model_id>_pretrained.pth")
     parser.add_argument("--list", action="store_true", help="list registry and exit")
     args = parser.parse_args()
