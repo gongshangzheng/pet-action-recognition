@@ -20,12 +20,8 @@ papers/cache/
 # Evaluation results
 evaluation/results/
 
-# Training runtime artifacts (logs/work_dirs/inference/metrics are generated)
-results/training/logs/*.log
-results/training/work_dirs/
-results/training/inference/
-results/training/metrics.json
-results/training/test_results.json
+# results/ is entirely runtime-generated (training/eval outputs), not tracked
+results/
 
 # All checkpoints (trained + pretrained), large, not committed
 /checkpoints/
