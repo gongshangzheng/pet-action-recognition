@@ -18,13 +18,13 @@ pet-action-recognition 仓库的**导航地图**。一句话定位每个顶层�
 
 ```
 pet-action-recognition/
-├── server/                     # FastAPI 后端（:8080）
+├── server/                     # FastAPI 后端（:8788）
 │   ├── main.py                 # 入口；config.py = 端口/CORS/DB 路径
 │   ├── db.py                   # 论文 SQLite 操作
 │   ├── routers/                # papers / management / evaluation / training
 │   ├── parsers/                # management/ Markdown 解析器（tasks/team/report/milestones/projects/markdown_table）
 │   └── utils/file_utils.py
-├── web/                        # Vue3 + Vite + Naive UI 前端（:3000，代理 /api → 8080）
+├── web/                        # Vue3 + Vite + Naive UI 前端（:3000，代理 /api → 8788）
 │   └── src/{api, views, components, layouts, router, stores, styles, assets}
 │        └── views/{papers, management, evaluation, training}
 ├── management/                 # 项目管理 Markdown（team/daily/weekly/monthly/docs）—— 后端直接读写
@@ -39,13 +39,13 @@ pet-action-recognition/
 ├── .claude/{agents,skills}     # 项目级 skill 与 agent（随仓库版本管理）
 ├── AGENTS.md                   # 权威架构说明（技术栈/服务架构/目录结构/开发规范）
 ├── README.md                   # 面向人的项目说明 + 项目结构
-└── start_services.sh           # 一键启动（后端 8080 + 前端 3000）
+└── start_services.sh           # 一键启动（后端 8788 + 前端 3000）
 ```
 
 ## 请求流 / Request flow
 
 ```
-浏览器 → Vite(:3000, 代理 /api) → FastAPI(:8080) → SQLite(data/papers.db)
+浏览器 → Vite(:3000, 代理 /api) → FastAPI(:8788) → SQLite(data/papers.db)
                                               ↘ FastAPI → management/ Markdown 读写
                                               ↘ FastAPI → datasets/ + results/training/（训练/推理）
 ```
