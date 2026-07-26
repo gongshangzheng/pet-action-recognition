@@ -66,19 +66,19 @@ train_pipeline = [ dict(type='DecordInit', ...), dict(type='SampleFrames', clip_
 
 ### Checkpoint 产物结构
 
-pretrained 与 trained 分两处：
+所有 checkpoint（trained + pretrained）统一在 repo 根 `./checkpoints/<model_id>/`：
 
 ```
-checkpoints/<model_id>/                        # repo 根 ./checkpoints/，预训练权重（下载的）
-  <model_id>_pretrained.pth
-  <model_id>_pretrained.json   # type=pretrained；含 url/sha256/size；finetune 用
-
-results/training/checkpoints/<model_id>/       # trained 训练产物
-  <run_id>_latest.pth         # → work_dir/epoch_N.pth
-  <run_id>_latest.json        # {run_id, model_id, dataset, type, epoch, total_epochs, metrics, created_at, source_file}
-  <run_id>_best.pth           # → work_dir/best_acc_top1_epoch_N.pth
-  <run_id>_best.json          # 同上，type=best
+checkpoints/<model_id>/
+  <model_id>_pretrained.pth        # mmaction2 模型仓库下载的预训练权重（finetune 用）
+  <model_id>_pretrained.json       # type=pretrained；含 url/sha256/size；不被 latest/best 收录
+  <run_id>_latest.pth              # → work_dir/epoch_N.pth（训练产物）
+  <run_id>_latest.json             # {run_id, model_id, dataset, type, epoch, total_epochs, metrics, created_at, source_file}
+  <run_id>_best.pth                # → work_dir/best_acc_top1_epoch_N.pth
+  <run_id>_best.json               # 同上，type=best
 ```
+
+> trained 与 pretrained 同处一个 `<model_id>/` 子目录，靠 JSON 的 `type` 字段区分（`latest`/`best`/`pretrained`）。`_trained_checkpoints_for` 只收 latest/best，pretrained 被忽略。`GET /api/training/outputs` 列出所有；`/outputs/checkpoints/...` 路径前缀解析到 `./checkpoints/`。
 
 ### 下载 pretrained checkpoint
 

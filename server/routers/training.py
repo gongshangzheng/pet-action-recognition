@@ -852,29 +852,52 @@ async def get_checkpoint_detail(checkpoint_id: str):
 
 @router.get("/outputs")
 async def list_outputs():
-    """列出 TRAINING_OUTPUTS_DIR 下可下载/查看的文件（checkpoint + log）。"""
-    if not os.path.isdir(TRAINING_OUTPUTS_DIR):
-        return {"outputs": []}
+    """列出可下载/查看的训练产物文件（checkpoint + log）。
+
+    checkpoints/ 前缀的来自 CHECKPOINTS_DIR（repo 根 ./checkpoints/，trained + pretrained），
+    其余（logs/work_dirs/inference）来自 TRAINING_OUTPUTS_DIR（results/training/）。
+    """
     out = []
-    for root, _, files in os.walk(TRAINING_OUTPUTS_DIR):
-        for fn in sorted(files):
-            full = os.path.join(root, fn)
-            if not os.path.isfile(full) or fn.startswith('.'):
-                continue
-            rel = os.path.relpath(full, TRAINING_OUTPUTS_DIR).replace(os.sep, "/")
-            ext = os.path.splitext(fn)[1].lower()
-            out.append({
-                "name": fn, "path": rel, "ext": ext,
-                "size_bytes": os.path.getsize(full),
-            })
+    # logs / work_dirs / inference
+    if os.path.isdir(TRAINING_OUTPUTS_DIR):
+        for root, _, files in os.walk(TRAINING_OUTPUTS_DIR):
+            for fn in sorted(files):
+                full = os.path.join(root, fn)
+                if not os.path.isfile(full) or fn.startswith('.'):
+                    continue
+                rel = os.path.relpath(full, TRAINING_OUTPUTS_DIR).replace(os.sep, "/")
+                if rel.startswith("checkpoints/"):
+                    continue  # 旧路径残留跳过；checkpoint 现在在 CHECKPOINTS_DIR
+                out.append({
+                    "name": fn, "path": rel, "ext": os.path.splitext(fn)[1].lower(),
+                    "size_bytes": os.path.getsize(full),
+                })
+    # checkpoints (trained + pretrained)
+    if os.path.isdir(CHECKPOINTS_DIR):
+        for root, _, files in os.walk(CHECKPOINTS_DIR):
+            for fn in sorted(files):
+                full = os.path.join(root, fn)
+                if not os.path.isfile(full) or fn.startswith('.'):
+                    continue
+                rel = "checkpoints/" + os.path.relpath(full, CHECKPOINTS_DIR).replace(os.sep, "/")
+                out.append({
+                    "name": fn, "path": rel, "ext": os.path.splitext(fn)[1].lower(),
+                    "size_bytes": os.path.getsize(full),
+                })
     out.sort(key=lambda x: x["path"])
     return {"outputs": out}
 
 
 @router.get("/outputs/{file_path:path}")
 async def serve_output(file_path: str):
-    """按需服务一个训练产物文件（.pth checkpoint / .log 日志），流式 FileResponse。"""
-    safe = safe_resolve(TRAINING_OUTPUTS_DIR, file_path)
+    """按需服务一个训练产物文件（.pth checkpoint / .log 日志），流式 FileResponse。
+
+    checkpoints/ 前缀解析到 CHECKPOINTS_DIR，其余解析到 TRAINING_OUTPUTS_DIR。均经 safe_resolve 防穿越。
+    """
+    if file_path.startswith("checkpoints/"):
+        safe = safe_resolve(CHECKPOINTS_DIR, file_path[len("checkpoints/"):])
+    else:
+        safe = safe_resolve(TRAINING_OUTPUTS_DIR, file_path)
     if not safe or not os.path.isfile(safe):
         return {"detail": "Output not found"}, 404
     ext = os.path.splitext(safe)[1].lower()
