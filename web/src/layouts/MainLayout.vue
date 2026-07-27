@@ -139,8 +139,8 @@ const menuOptions = [
     icon: renderIcon(FlaskOutline),
     children: [
       { label: '评测运行', key: '/evaluation/run', icon: renderIcon(FlaskOutline) },
+      { label: 'Speed Run', key: '/evaluation/speedrun', icon: renderIcon(FilmOutline) },
       { label: '评测结果', key: '/evaluation/results', icon: renderIcon(BarChartOutline) },
-      { label: '查看输出', key: '/evaluation/outputs', icon: renderIcon(FilmOutline) },
       { label: '模型管理', key: '/evaluation/models', icon: renderIcon(CubeOutline) },
       { label: '数据集管理', key: '/evaluation/datasets', icon: renderIcon(LayersOutline) },
       { label: '评测配置', key: '/evaluation/configs', icon: renderIcon(SettingsOutline) },
@@ -169,7 +169,7 @@ const activeKey = computed(() => {
     '/', '/management/projects', '/management/team',
     '/management/tasks', '/management/milestones',
     '/management/meetings', '/management/docs', '/papers/list', '/papers/config',
-    '/evaluation/run', '/evaluation/results', '/evaluation/outputs', '/evaluation/models', '/evaluation/datasets', '/evaluation/configs',
+    '/evaluation/run', '/evaluation/speedrun', '/evaluation/results', '/evaluation/outputs', '/evaluation/models', '/evaluation/datasets', '/evaluation/configs',
     '/training/run', '/training/results', '/training/models', '/training/datasets', '/training/configs',
   ]
   let best = '/'

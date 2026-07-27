@@ -168,10 +168,10 @@ const routes = [
         meta: { title: '训练运行', module: 'training' },
       },
       {
-        path: 'training/speedrun',
+        path: 'evaluation/speedrun',
         name: 'SpeedRun',
         component: () => import('../views/training/SpeedRun.vue'),
-        meta: { title: 'Speed Run', module: 'training' },
+        meta: { title: 'Speed Run', module: 'evaluation' },
       },
       {
         path: 'training/results',
