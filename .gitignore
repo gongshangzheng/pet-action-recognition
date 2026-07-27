@@ -26,8 +26,8 @@ results/
 # All checkpoints (trained + pretrained), large, not committed
 /checkpoints/
 
-# UCF101 dataset: symlink to NAS external storage (pet-specific, not committed)
-/datasets/ucf101
+# datasets/ entirely: runtime/external data (videos on NAS, list files generated), not committed
+/datasets/
 
 # Dataset artifacts (large video files; lists/README may be committed)
 datasets/quadruped_action/videos_*/
