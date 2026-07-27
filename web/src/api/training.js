@@ -19,6 +19,9 @@ export const runTraining = (data) => request.post('/training/run', data)
 export const getTrainRuns = (params) => request.get('/training/runs', { params })
 export const getTrainRunDetail = (id) => request.get(`/training/runs/${id}`)
 
+// 测试/评测数值结果（run_test 产出：top1_acc/top5_acc）
+export const getTrainTestResults = () => request.get('/training/test_results')
+
 // checkpoint
 export const listCheckpoints = () => request.get('/training/checkpoints')
 export const getCheckpointDetail = (id) => request.get(`/training/checkpoints/${id}`)

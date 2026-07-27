@@ -154,10 +154,11 @@ def main() -> int:
                 results_by_id[rid] = {
                     "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
                     "metrics": res, "output_video": rel_video, "status": "completed",
-                    "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "gpu_mem_mb": res.get("gpu_mem_mb"),
                     "elapsed_s": round(time.time() - t0, 1),
+                    "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 }
-                print(f"  [{video_stem}] top1={res['top1_label']} ({res['top1_score']:.2f}) → {out_video}")
+                print(f"  [{video_stem}] top1={res['top1_label']} ({res['top1_score']:.2f}) gpu={res.get('gpu_mem_mb')}MB → {out_video}")
             except Exception as e:
                 results_by_id[rid] = {
                     "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,

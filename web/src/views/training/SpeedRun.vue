@@ -141,6 +141,13 @@ const resultColumns = [
         () => row.status),
   },
   {
+    title: 'GPU 显存',
+    key: 'gpu_mem_mb',
+    width: 100,
+    render: (row) => row.gpu_mem_mb != null ? `${row.gpu_mem_mb} MB` : '—',
+  },
+  { title: '耗时', key: 'elapsed_s', width: 80, render: (row) => row.elapsed_s != null ? `${row.elapsed_s}s` : '—' },
+  {
     title: '视频',
     key: 'output_video',
     width: 90,

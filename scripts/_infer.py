@@ -65,8 +65,24 @@ def infer_and_annotate(
     """
     from mmaction.apis import inference_recognizer, init_recognizer
 
+    # GPU 显存峰值统计（speed run 的基础资源指标）
+    gpu_mem_mb = None
+    try:
+        import torch
+        if torch.cuda.is_available() and device.startswith("cuda"):
+            torch.cuda.reset_peak_memory_stats()
+    except Exception:
+        pass
+
     model = init_recognizer(cfg, checkpoint, device=device)
     result = inference_recognizer(model, video)
+
+    try:
+        import torch
+        if torch.cuda.is_available() and device.startswith("cuda"):
+            gpu_mem_mb = round(torch.cuda.max_memory_allocated() / 1e6, 1)
+    except Exception:
+        pass
 
     top5 = _extract_topk(result, labels, k=5)
     top1 = top5[0] if top5 else ("", 0.0)
@@ -93,4 +109,4 @@ def infer_and_annotate(
             out_path=out_video_path,
         )
 
-    return {"top1_label": top1[0], "top1_score": top1[1], "top5": top5}
+    return {"top1_label": top1[0], "top1_score": top1[1], "top5": top5, "gpu_mem_mb": gpu_mem_mb}
