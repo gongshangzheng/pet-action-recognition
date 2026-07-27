@@ -72,8 +72,8 @@ import {
   getSpeedrunStatus,
   getSpeedrunResults,
   getSpeedrunOutputUrl,
-} from '@/api/training'
-import VideoModal from '@/components/common/VideoModal.vue'
+} from '../../api/training'
+import VideoModal from '../../components/common/VideoModal.vue'
 
 const loading = ref(false)
 const running = ref(false)
