@@ -26,3 +26,10 @@ export const getCheckpointDetail = (id) => request.get(`/training/checkpoints/${
 // 训练产物（checkpoint/log 文件，按需下载/查看）
 export const listTrainOutputs = () => request.get('/training/outputs')
 export const getTrainOutputUrl = (path) => `/api/training/outputs/${path}`
+
+// speed run（N 视频 × M 模型 → 标注视频 + 聚合结果）
+export const speedRun = (data) => request.post('/speedrun/run', data)
+export const getSpeedrunStatus = () => request.get('/speedrun/status')
+export const getSpeedrunResults = () => request.get('/speedrun/results')
+export const listSpeedrunOutputs = () => request.get('/speedrun/outputs')
+export const getSpeedrunOutputUrl = (path) => `/api/speedrun/outputs/${path}`
