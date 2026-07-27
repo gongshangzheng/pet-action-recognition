@@ -19,6 +19,11 @@ TRAINING_METRICS_JSON = os.path.join(TRAINING_DIR, "metrics.json")  # 训练 run
 TRAINING_TEST_RESULTS_JSON = os.path.join(TRAINING_DIR, "test_results.json")  # 测试/评估结果
 CHECKPOINTS_DIR = os.path.join(BASE_DIR, "checkpoints")            # 所有 checkpoint（trained + pretrained）统一在此
 TRAINING_LOGS_DIR = os.path.join(TRAINING_DIR, "logs")              # 训练日志
+
+# speed run 产物（标注视频 + 聚合结果）
+SPEEDRUN_DIR = os.path.join(BASE_DIR, "results", "speedrun")
+SPEEDRUN_OUTPUTS_DIR = os.path.join(SPEEDRUN_DIR, "outputs")       # results/speedrun/outputs/<model_id>/<video_stem>.mp4
+SPEEDRUN_RESULTS_JSON = os.path.join(SPEEDRUN_DIR, "results.json") # 聚合所有 model×video 结果
 TRAINING_WORK_DIR = os.path.join(TRAINING_DIR, "work_dirs")         # mmaction2 work_dirs
 TRAINING_OUTPUTS_DIR = TRAINING_DIR                                 # 训练产物服务根目录
 
