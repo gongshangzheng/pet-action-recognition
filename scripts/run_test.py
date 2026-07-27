@@ -11,7 +11,7 @@
 
 流程：
   1. 根据 split 定位 ann_file / data_root。
-  2. 调用 third_party/mmaction2/tools/test.py，覆盖 test_dataloader。
+  2. 调用 models/mmaction2/tools/test.py，覆盖 test_dataloader。
   3. 解析 stdout 中的 acc/top1、acc/top5，写入 results/training/test_results.json。
 """
 from __future__ import annotations

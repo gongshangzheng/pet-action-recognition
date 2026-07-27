@@ -23,7 +23,7 @@ TRAINING_WORK_DIR = os.path.join(TRAINING_DIR, "work_dirs")         # mmaction2 
 TRAINING_OUTPUTS_DIR = TRAINING_DIR                                 # 训练产物服务根目录
 
 # mmaction2 vendor 路径（已 vendored，非 pip/submodule）
-MMACTION2_DIR = os.path.join(BASE_DIR, "third_party", "mmaction2")
+MMACTION2_DIR = os.path.join(BASE_DIR, "models", "mmaction2")
 
 
 def resolve_mmaction2_config(cfg: str) -> str:

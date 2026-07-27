@@ -1,10 +1,10 @@
 # 下游四足动作识别 TSN 配置（合成数据冒烟测试用）
 # 不依赖 decord，改用 PyAV 后端；小分辨率以加速 CPU 训练。
-# 本文件位于 evaluation/configs/，因此 _base_ 使用相对路径回到仓库根目录。
+# 本文件位于 configs/，因此 _base_ 使用相对路径回到仓库根目录。
 _base_ = [
-    "../../third_party/mmaction2/configs/_base_/models/tsn_r50.py",
-    "../../third_party/mmaction2/configs/_base_/schedules/sgd_100e.py",
-    "../../third_party/mmaction2/configs/_base_/default_runtime.py",
+    "../models/mmaction2/configs/_base_/models/tsn_r50.py",
+    "../models/mmaction2/configs/_base_/schedules/sgd_100e.py",
+    "../models/mmaction2/configs/_base_/default_runtime.py",
 ]
 
 # 占位，实际由 scripts/train_model.py 通过 --cfg-options 覆盖

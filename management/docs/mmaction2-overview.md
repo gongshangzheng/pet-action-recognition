@@ -8,7 +8,7 @@ summary: mmaction2 在本项目的角色、21 个模型族详解、训练/评测
 
 ## 概述
 
-mmaction2 是 OpenMMLab 的视频动作识别库，本项目用它作为**训练与评测框架**，覆盖从论文方法到可跑模型的落地。它已 **vendor 进仓库**（`third_party/mmaction2/`，shallow clone，HEAD `a5a167d`），不是 pip 依赖、不是 submodule——文件直接在本仓库历史里，可离线改、可追溯版本。
+mmaction2 是 OpenMMLab 的视频动作识别库，本项目用它作为**训练与评测框架**，覆盖从论文方法到可跑模型的落地。它已 **vendor 进仓库**（`models/mmaction2/`，shallow clone，HEAD `a5a167d`），不是 pip 依赖、不是 submodule——文件直接在本仓库历史里，可离线改、可追溯版本。
 
 本文档面向团队新人，介绍 mmaction2 在本项目的角色、注册的 21 个模型族、训练/评测链路、checkpoint 布局与环境要点。**操作级指南**（安装、config 继承、训练入口、排错）见 `.claude/skills/using-mmaction2/SKILL.md`。
 
@@ -22,8 +22,8 @@ mmaction2 是 OpenMMLab 的视频动作识别库，本项目用它作为**训练
 |---|---|---|
 | 模型库 | 21 个模型族注册在 `_MMACTION2_REGISTRY` | `server/routers/training.py` |
 | 训练/测试/推理包装 | `train_model.py` / `run_test.py` / `inference.py` | `scripts/` |
-| mmaction2 本体 | vendor（含 `tools/train.py`、`tools/test.py`、`configs/`） | `third_party/mmaction2/` |
-| 四足 config | TSN 的本地适配（PyAV/小分辨率） | `evaluation/configs/quadruped_tsn_r50.py` |
+| mmaction2 本体 | vendor（含 `tools/train.py`、`tools/test.py`、`configs/`） | `models/mmaction2/` |
+| 四足 config | TSN 的本地适配（PyAV/小分辨率） | `configs/quadruped_tsn_r50.py` |
 | 产物 | checkpoint、日志、metrics | `./checkpoints/`、`results/training/` |
 
 后端 `server/routers/training.py` 把 HTTP 请求转成 subprocess 调 `scripts/*.py`，后者再调 mmaction2 的 `tools/train.py` / `tools/test.py`，产物落盘后被只读 API 暴露给前端训练页。
@@ -92,7 +92,7 @@ mmaction2 是 OpenMMLab 的视频动作识别库，本项目用它作为**训练
 
 ### 3.5 四足本地配置
 
-- **TSN (ResNet-50) — 四足** — 不是新模型，而是 TSN 的**本地四足适配 config**（`evaluation/configs/quadruped_tsn_r50.py`）：PyAV 后端（不依赖 decord）、64px 小分辨率、`num_classes` 由 `classes.txt` 动态注入。加载 `tsn-resnet50` 的 K400 预训练权重做 finetune。pilot 用它跑通四足链路。
+- **TSN (ResNet-50) — 四足** — 不是新模型，而是 TSN 的**本地四足适配 config**（`configs/quadruped_tsn_r50.py`）：PyAV 后端（不依赖 decord）、64px 小分辨率、`num_classes` 由 `classes.txt` 动态注入。加载 `tsn-resnet50` 的 K400 预训练权重做 finetune。pilot 用它跑通四足链路。
 
 ## 4. 训练 / 评测链路
 

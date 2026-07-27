@@ -32,7 +32,7 @@ pet-action-recognition/
 ├── evaluation/                 # 评测（configs/datasets/models/outputs/scripts）
 ├── datasets/quadruped_action/  # 四足动作数据集清单（train/val/test list + classes.txt）
 ├── results/training/           # 训练运行时产物（checkpoints/、logs/；大多 gitignore）
-├── third_party/mmaction2/      # vendored 训练框架（只读快照，别直接改；升级走 using-mmaction2）
+├── models/mmaction2/      # vendored 训练框架（只读快照，别直接改；升级走 using-mmaction2）
 ├── scripts/                    # 顶层脚本：train_model / inference / run_test / import_papers / export_papers / generate_synthetic_quadruped
 ├── data/                       # 运行时数据：extracted_papers.json（导入源）、papers.db（SQLite，gitignore）
 ├── docs/plans/                 # 计划文档（如 mmaction2 训练集成方案）
@@ -71,7 +71,7 @@ pet-action-recognition/
 - **`management/docs/projects/pet-action-recognition/README.md`** ——「项目树」进展（持续更新）
 
 ## 常见坑
-- `third_party/mmaction2/` 是 **vendored 快照**，不要在仓库里直接改它；升级走 using-mmaction2 的 vendor 流程
+- `models/mmaction2/` 是 **vendored 快照**，不要在仓库里直接改它；升级走 using-mmaction2 的 vendor 流程
 - **项目级 skill 必须放 `.claude/skills/`**（随仓库走），不要放 `~/.claude/skills/`（那是跨项目通用 skill）
 - `data/papers.db`、`results/training/work_dirs/`、`papers/data/`、`papers/cache/` 已 gitignore —— 换机器需重新生成/导入
 - 后端是 **Python 3.9**：类型注解用 `Optional[str]`，不要用 `str | None`

@@ -6,7 +6,7 @@
 
 - `server/routers/training.py` 已是 pet-action 下游版：`DEFAULT_MODELS` 仅 2 条代表（tsn-resnet50 / slowfast-resnet101），`DEFAULT_DATASETS` 一条四足占位（`QUADRUPED_DATASET_NAME="quadruped_action"`，`status="pending_collection"`），`POST /run` 仍为模拟响应。
 - `server/config.py` 已有 `QUADRUPED_DATASET_NAME` / `QUADRUPED_DATASET_DIR` / `TRAINING_*` / `CHECKPOINTS_DIR` 变量；`server/utils/file_utils.py` 已 port `safe_resolve`。
-- `third_party/mmaction2/` 已 vendor（sha `a5a167d`）。
+- `models/mmaction2/` 已 vendor（sha `a5a167d`）。
 - web 训练 5 子页 + 路由 + 菜单已就位；`TrainResults.vue` 已按 `metrics.json` 契约画 loss 曲线 / 列 run（上游脚手架已接好，**无需改前端**）。
 
 ## 决策回放（来自本轮 brainstorm）
@@ -91,7 +91,7 @@ datasets/
 `server/routers/training.py` `run_training` 改为：
 1. 解析 body：`model_id` / `dataset_id` / `config_id`（超参 preset）。
 2. 在 registry 找 model → 拿 `mmaction2_config` 路径；拼 `--cfg-options`：`model.cls_head.num_classes=<dataset.num_classes>`、`train_dataloader.batch_size`、`optim_wrapper.optimizer.lr` 等（来自 config preset）。
-3. `subprocess.Popen` 异步跑 `python third_party/mmaction2/tools/train.py <cfg> --work-dir results/training/runs/<run_id>`；立即返回 `status="pending"` + `run_id`。
+3. `subprocess.Popen` 异步跑 `python models/mmaction2/tools/train.py <cfg> --work-dir results/training/runs/<run_id>`；立即返回 `status="pending"` + `run_id`。
 4. 后台任务跑完后（用 lightweight 轮询/线程/独立 worker）：
    - 最新 `epoch_*.pth` → 软链/拷贝到 `results/training/checkpoints/<run_id>.pth`
    - 解析 `results/training/runs/<run_id>/vis_data/scalars.json` → `loss_series`（loss/epoch）+ 末值 `metrics`
@@ -125,7 +125,7 @@ datasets/
 - **num_classes 待定**：数据集类别未定前，`POST /run` 实跑会失败（num_classes=0）。冒烟用 kinetics400 tiny 子集验证流程，四足数据到位再切。
 - **decord/macOS**：本地冒烟若 decord 不可用，改 PyAV 后端。
 - **mmcv 版本**：`mim install "mmcv>=2.0.0"`，避免误装 mmcv-full。
-- **vendor 升级**：改 `third_party/mmaction2/` 源码会被升级冲掉 —— 优先用 config 覆盖与 `evaluation/` 子类，源码改动记录在 `third_party/README.md`。
+- **vendor 升级**：改 `models/mmaction2/` 源码会被升级冲掉 —— 优先用 config 覆盖与 `evaluation/` 子类，源码改动记录在 `models/README.md`。
 - **大文件入 git**：`datasets/*/videos_*` 与 `*.pth` checkpoint 必须在 `.gitignore`（checkpoint 已在 `results/training/checkpoints/` 但 `results/` 未整体 ignore —— 需补 `results/training/checkpoints/*.pth`、`results/training/runs/`）。
 
 ## 不做（YAGNI）

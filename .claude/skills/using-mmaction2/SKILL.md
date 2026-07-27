@@ -2,12 +2,12 @@
 name: using-mmaction2
 description: |
   在 pet-action-recognition 训练框架下使用 mmaction2 的指南。说明 mmaction2 的安装、config 系统（_base_ 继承）、训练入口（tools/train.py）、如何把数据集与模型适配到我们的训练 registry，以及与 server/routers/training.py + results/training/ + web 训练页的对接。
-  触发场景：(1) 训练/调用 mmaction2 模型 (2) 把新模型族注册进训练 registry (3) 适配四足动物数据集到 mmaction2 (4) 排查 mmaction2 训练报错 (5) 升级 third_party/mmaction2 vendor
+  触发场景：(1) 训练/调用 mmaction2 模型 (2) 把新模型族注册进训练 registry (3) 适配四足动物数据集到 mmaction2 (4) 排查 mmaction2 训练报错 (5) 升级 models/mmaction2 vendor
 ---
 
 # 在本仓库使用 mmaction2
 
-mmaction2 = OpenMMLab 视频动作识别库。**已 vendor 进仓库**：`third_party/mmaction2/`（shallow clone，HEAD `a5a167d`，见 `third_party/README.md`）。不是 pip 依赖、不是 submodule —— 文件直接在本仓库历史里。
+mmaction2 = OpenMMLab 视频动作识别库。**已 vendor 进仓库**：`models/mmaction2/`（shallow clone，HEAD `a5a167d`，见 `models/README.md`）。不是 pip 依赖、不是 submodule —— 文件直接在本仓库历史里。
 
 ## 1. 安装
 
@@ -28,8 +28,8 @@ $MIM install mmengine "mmcv>=2.0.0rc4,<2.2.0"
 # 3) decord + 其余依赖；opencv 必须 4.10.0.84（见下坑3）
 $PIP install --no-cache-dir decord einops "opencv-python==4.10.0.84" "opencv-contrib-python==4.10.0.84" scipy matplotlib av
 
-# 4) editable 装 vendor 的 mmaction2（改 third_party/mmaction2 源码即时生效）
-$PIP install -v -e third_party/mmaction2
+# 4) editable 装 vendor 的 mmaction2（改 models/mmaction2 源码即时生效）
+$PIP install -v -e models/mmaction2
 
 # 5) 验证
 $PY -c "import torch,mmcv,mmengine,mmaction,decord; print(torch.__version__, torch.cuda.is_available(), mmcv.__version__, mmaction.__version__); print(torch.cuda.device_count())"
@@ -82,7 +82,7 @@ train_pipeline = [ dict(type='DecordInit', ...), dict(type='SampleFrames', clip_
 
 ## 3. 训练入口与四种模式
 
-训练通过 `scripts/train_model.py`（由 `POST /api/training/run` 触发），最终调用 `third_party/mmaction2/tools/train.py`。
+训练通过 `scripts/train_model.py`（由 `POST /api/training/run` 触发），最终调用 `models/mmaction2/tools/train.py`。
 
 ### 四种训练模式（互斥，API body / CLI 只能选一个）
 
@@ -146,7 +146,7 @@ mmaction2 两种视频数据集类型（见 `mmaction/datasets/`）：
   config: `data_root='datasets/<NAME>/videos_train'`, `ann_file_train='datasets/<NAME>/<NAME>_train_list.txt'`。
 - **`RawframeDataset`** —— 读已抽帧的图片目录；ann_file 每行 `帧目录路径 起始帧 标签 总帧数`。视频多时先用 VideoDataset。
 
-**写一个我们的数据集 base config**（放 `evaluation/configs/dataset_quadruped.py` 或 `third_party/mmaction2/configs/_base_/datasets/`，按项目归属见 §6）：
+**写一个我们的数据集 base config**（放 `evaluation/configs/dataset_quadruped.py` 或 `models/mmaction2/configs/_base_/datasets/`，按项目归属见 §6）：
 
 ```python
 # _base_/datasets/quadruped.py —— 由 server/config.py 的 QUADRUPED_DATASET_NAME 解析后注入
@@ -180,7 +180,7 @@ test_pipeline = [...]
 ```python
 # 伪码
 run_id = f"train-{int(time.time())}"
-cmd = ["python", "third_party/mmaction2/tools/train.py",
+cmd = ["python", "models/mmaction2/tools/train.py",
        cfg_path, "--work-dir", f"results/training/runs/{run_id}"]
 # 子进程异步跑；跑完：
 #   - 把最新 epoch_*.pth 软链/拷到 results/training/checkpoints/{run_id}.pth
@@ -204,8 +204,8 @@ web 训练结果页（`web/src/views/training/TrainResults.vue`）读这个 json
 
 ## 6. 责任归属（改 mmaction2 源码 vs 写 config）
 
-- **改 `third_party/mmaction2/**` 源码** —— 慎用。vendor 的库升级会冲掉本地改动。优先用 config 覆盖（`model=dict(...)`）、`custom_imports`、或在我们 `evaluation/` 里写子类。
-- **我们自己的 config / dataset base / registry** —— 放 `evaluation/configs/` 与 `evaluation/models/`（领域代码，下游自管，不进上游、不进 third_party）。
+- **改 `models/mmaction2/**` 源码** —— 慎用。vendor 的库升级会冲掉本地改动。优先用 config 覆盖（`model=dict(...)`）、`custom_imports`、或在我们 `evaluation/` 里写子类。
+- **我们自己的 config / dataset base / registry** —— 放 `evaluation/configs/` 与 `evaluation/models/`（领域代码，下游自管，不进上游、不进 models）。
 - 共享脚手架改动（如修 `file_utils.py`）→ 走 [[upstream-sync]] 工作流，先 port 回 ProjFlow。
 
 ## 7. mmaction2 模型族 → 训练 registry 映射（step 3 用）

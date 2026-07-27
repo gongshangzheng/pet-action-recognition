@@ -1,12 +1,12 @@
 """训练体系路由 — pet-action-recognition 下游版（mmaction2 实接）。
 
 领域接线：
-  - 模型：mmaction2 模型族（TSN/TSM/I3D/C3D/SlowFast/...），vendor 在 third_party/mmaction2/。
+  - 模型：mmaction2 模型族（TSN/TSM/I3D/C3D/SlowFast/...），vendor 在 models/mmaction2/。
   - 数据集：四足动物动作数据集（QUADRUPED_DATASET_NAME）。
   - 训练脚本：POST /run subprocess 调用 scripts/train_model.py，后者包装
-    third_party/mmaction2/tools/train.py，写入 results/training/metrics.json。
+    models/mmaction2/tools/train.py，写入 results/training/metrics.json。
   - 测试脚本：POST /run_test subprocess 调用 scripts/run_test.py，包装
-    third_party/mmaction2/tools/test.py，写入 results/training/test_results.json。
+    models/mmaction2/tools/test.py，写入 results/training/test_results.json。
   - 推理脚本：POST /inference subprocess 调用 scripts/inference.py，支持单视频。
 """
 from __future__ import annotations
@@ -254,7 +254,7 @@ _MMACTION2_REGISTRY = [
         "backbone": "resnet50",
         "pretrained_source": "Kinetics-400 (via tsn-resnet50)",
         "pretrained_url": "https://download.openmmlab.com/mmaction/v1.0/recognition/tsn/tsn_imagenet-pretrained-r50_8xb32-1x1x3-100e_kinetics400-rgb/tsn_imagenet-pretrained-r50_8xb32-1x1x3-100e_kinetics400-rgb_20220906-cd10898e.pth",
-        "mmaction2_config": "evaluation/configs/quadruped_tsn_r50.py",
+        "mmaction2_config": "configs/quadruped_tsn_r50.py",
         "description": "小分辨率、PyAV 后端；可加载 TSN K400 预训练权重做 finetune。",
     },
 ]

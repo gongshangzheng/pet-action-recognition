@@ -108,7 +108,7 @@
           "title": "训练后端实接 mmaction2",
           "status": "completed",
           "assignee": "吴赟阳",
-          "description": "scripts/train_model.py 包装 third_party/mmaction2/tools/train.py；server/routers/training.py POST /run 改为 subprocess 调用，解析 vis_data/scalars.json 并写入 results/training/metrics.json",
+          "description": "scripts/train_model.py 包装 models/mmaction2/tools/train.py；server/routers/training.py POST /run 改为 subprocess 调用，解析 vis_data/scalars.json 并写入 results/training/metrics.json",
           "children": []
         },
         {
@@ -291,7 +291,7 @@
           "title": "Phase 0：pet 训练环境引导（conda + torch + mmaction2）",
           "status": "completed",
           "assignee": "郑鑫裕",
-          "description": "在 pet 搭建可用的 mmaction2 GPU 训练环境。\n\n• conda 26.5.3 已装（~/miniconda3，TUNA 镜像）\n• 建 py3.10 环境，装 cu121 torch + mmengine + mmcv≥2.0 + decord/av\n• editable 装 third_party/mmaction2，验证 2×4090 可用",
+          "description": "在 pet 搭建可用的 mmaction2 GPU 训练环境。\n\n• conda 26.5.3 已装（~/miniconda3，TUNA 镜像）\n• 建 py3.10 环境，装 cu121 torch + mmengine + mmcv≥2.0 + decord/av\n• editable 装 models/mmaction2，验证 2×4090 可用",
           "children": [],
           "progress": [
             {
