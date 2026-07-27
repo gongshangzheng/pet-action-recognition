@@ -65,12 +65,13 @@ def infer_and_annotate(
     """
     from mmaction.apis import inference_recognizer, init_recognizer
 
-    # GPU 显存峰值统计（speed run 的基础资源指标）
+    # GPU 显存峰值统计（speed run 的基础资源指标；按指定 device 测量）
     gpu_mem_mb = None
     try:
         import torch
-        if torch.cuda.is_available() and device.startswith("cuda"):
-            torch.cuda.reset_peak_memory_stats()
+        dev = torch.device(device)
+        if torch.cuda.is_available() and dev.type == "cuda":
+            torch.cuda.reset_peak_memory_stats(dev)
     except Exception:
         pass
 
@@ -79,8 +80,9 @@ def infer_and_annotate(
 
     try:
         import torch
-        if torch.cuda.is_available() and device.startswith("cuda"):
-            gpu_mem_mb = round(torch.cuda.max_memory_allocated() / 1e6, 1)
+        dev = torch.device(device)
+        if torch.cuda.is_available() and dev.type == "cuda":
+            gpu_mem_mb = round(torch.cuda.max_memory_allocated(dev) / 1e6, 1)
     except Exception:
         pass
 
