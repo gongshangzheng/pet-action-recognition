@@ -88,7 +88,7 @@ def _annotate_video_cv2(video: str, out_path: str, gt_label: str | None,
     bottom_h = max(40, len(top5[:5]) * line_h + 12)
     canvas_h = h + top_h + bottom_h
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    tmp_path = out_path + ".tmp.mp4v"
+    tmp_path = out_path + ".tmp.mp4"
     writer = cv2.VideoWriter(tmp_path, fourcc, fps, (w, canvas_h))
     font = cv2.FONT_HERSHEY_SIMPLEX
 
