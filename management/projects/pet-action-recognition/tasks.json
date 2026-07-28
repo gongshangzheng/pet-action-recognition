@@ -335,18 +335,30 @@
         {
           "id": "t9-4",
           "title": "Phase 3：沉淀 using-mmaction2 skill（接入+评测 SOP）",
-          "status": "planned",
+          "status": "active",
           "assignee": "郑鑫裕",
           "description": "把接入+评测流程沉淀进 using-mmaction2 skill。\n\n• 含开发闭环、pet 环境配方、下载+镜像、单模型接入 checklist\n• 以 TSN pilot 为参考实现，附踩坑表",
-          "children": []
+          "children": [],
+          "progress": [
+            {
+              "date": "2026-07-28 16:01",
+              "note": "[进展] 6 个 skill 已创建：training/testing/datasets/remote-servers + using-mmaction2 已更新 + repo-structure。检测模型接入文档待补（demo_spatiotemporal_det.py 共同路径）。"
+            }
+          ]
         },
         {
           "id": "t9-5",
           "title": "Phase 4：按 skill 批量接入其余 20 个模型",
-          "status": "planned",
+          "status": "active",
           "assignee": "郑鑫裕",
           "description": "按 skill 批量接入其余 mmaction2 模型族。\n\n• 每族写四足 config（2D/3D pipeline 差异）→ 下 ckpt → finetune → test\n• 先跑代表子集（TSM/I3D/SlowFast/X3D/VideoMAE）再铺完",
-          "children": []
+          "children": [],
+          "progress": [
+            {
+              "date": "2026-07-28 16:01",
+              "note": "[进展] 20 分类 + 5 检测模型已注册 + UCF101 speed run 跑通。四足 per-model config + finetune 仍需真实数据。"
+            }
+          ]
         },
         {
           "id": "t9-6",
@@ -356,6 +368,12 @@
           "description": "把视频评测结果桥接到 evaluation 模块（可选）。\n\n• 当前 evaluation/ 是 LLM 脚手架 mock；视频评测走 training /run_test\n• 默认不做，除非要统一评测入口",
           "hidden": true,
           "children": []
+        }
+      ],
+      "progress": [
+        {
+          "date": "2026-07-28 16:01",
+          "note": "[进展] UCF101 speed run 完成：20 分类模型 + 5 AVA 检测模型注册（slowonly/slowfast/videomae/acrn/lfb AVA）+ 93% 准确率 + H.264 标注视频 + 封面图 + GPU 显存/耗时。6 个 skill 就绪（training/testing/datasets/remote-servers/using-mmaction2/repo-structure）。四足 pilot 仍 paused（等真实数据）。下一步：GPU avg util + RTF 采集；card UI 优化；检测模型 skill 文档。"
         }
       ]
     }
