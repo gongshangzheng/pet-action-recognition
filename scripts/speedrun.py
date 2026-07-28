@@ -22,6 +22,7 @@ import os
 import sys
 import time
 import traceback
+import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -42,6 +43,22 @@ _DEFAULT_K400_LABELS = os.path.join(
 
 # 速度 run 不跑 quadruped 变体（那是四足数据集专用 config，不是独立模型）
 _QUADRUPED_SUFFIX = "-quadruped"
+
+
+def _norm_tokens(s: str) -> tuple:
+    """归一化类名为排序 token 组：拆 camelCase + 拆非字母数字 + lowercase + 排序。
+    用于匹配 GT（UCF101 'PlayingGuitar'）与 pred（K400 'playing guitar'）等。"""
+    s = re.sub(r'(.)([A-Z][a-z])', r'\1 \2', s)   # PlayingGuitar → Playing Guitar
+    s = re.sub(r'([a-z])([A-Z])', r'\1 \2', s)     # camelCase 边界
+    toks = [t for t in re.split(r'[^a-z0-9]+', s.lower()) if t]
+    return tuple(sorted(toks))
+
+
+def _matches(gt: str | None, pred: str | None) -> bool | None:
+    """GT vs pred 类名是否匹配（token-set 归一化）。gt 为 None → None（N/A）。"""
+    if not gt or not pred:
+        return None
+    return _norm_tokens(gt) == _norm_tokens(pred)
 
 
 def _models_by_ids(ids: list[str]) -> list[dict]:
@@ -157,6 +174,7 @@ def main() -> int:
                 results_by_id[rid] = {
                     "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
                     "gt_label": gt_label,
+                    "correct": _matches(gt_label, res["top1_label"]),
                     "metrics": res, "output_video": rel_video, "status": "completed",
                     "gpu_mem_mb": res.get("gpu_mem_mb"),
                     "elapsed_s": round(time.time() - t0, 1),

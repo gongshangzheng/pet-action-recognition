@@ -43,12 +43,15 @@ def _extract_topk(result, labels: list[str], k: int = 5) -> list[tuple]:
 
 def _annotate_video_cv2(video: str, out_path: str, gt_label: str | None,
                          top1: tuple, top5: list[tuple]) -> None:
-    """用 cv2 在每帧叠 GT + pred + top5 文字（内置 Hershey 字体，英文 OK，不依赖 mmengine 字体/字段格式）。
+    """用 cv2 给视频加 margin 边条，标签写在边条里——视频画面不被字覆盖。
 
-    ActionVisualizer 检查 'pred_labels'（复数），但 inference_recognizer 只返回
-    pred_label（单数）→ 它根本不画；且 GT 标签空间不匹配 K400。故改 cv2 手动画。
+    上边条：GT（绿）+ pred top1（黄）；下边条：top5（白）。中间原帧不动。
+    检测模型（未来）：若有 bbox，标签贴框边（cv2.rectangle + 框上方小字），不走全局边条。
+    ActionVisualizer 检查 'pred_labels'（复数）但 inference_recognizer 返回 pred_label（单数）→
+    画不了；且 GT 标签空间不匹配。故改 cv2 手动画在边条。
     """
     import cv2
+    import numpy as np
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     cap = cv2.VideoCapture(video)
     if not cap.isOpened():
@@ -56,27 +59,37 @@ def _annotate_video_cv2(video: str, out_path: str, gt_label: str | None,
     fps = cap.get(cv2.CAP_PROP_FPS) or 25
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
-    scale = max(0.5, min(w, h) / 480.0)
+    # 字号适中，按短边自适应；边条高度容纳文字即可
+    scale = max(0.4, min(w, h) / 700.0)
     thick = max(1, int(round(scale * 2)))
-    dy = int(30 * scale)
+    line_h = max(18, int(24 * scale))
+    top_h = max(30, line_h + 14)                       # 上边条：一行 GT + pred
+    bottom_h = max(40, len(top5[:5]) * line_h + 12)    # 下边条：top5
+    canvas_h = h + top_h + bottom_h
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(out_path, fourcc, fps, (w, canvas_h))
     font = cv2.FONT_HERSHEY_SIMPLEX
+
+    gt_text = f"GT: {gt_label}" if gt_label else "GT: (none)"
+    pred_text = f"pred: {top1[0]} ({top1[1]:.2f})"
 
     while True:
         ok, frame = cap.read()
         if not ok:
             break
-        y = dy
-        if gt_label:
-            cv2.putText(frame, f"GT: {gt_label}", (10, y), font, scale, (0, 255, 0), thick, cv2.LINE_AA)  # 绿
-            y += dy
-        cv2.putText(frame, f"pred: {top1[0]} ({top1[1]:.2f})", (10, y), font, scale, (0, 255, 255), thick, cv2.LINE_AA)  # 黄
-        y += dy
+        canvas = np.zeros((canvas_h, w, 3), dtype=np.uint8)  # 黑边条
+        canvas[top_h:top_h + h] = frame                       # 帧居中
+        # 上边条：GT + pred 同一行
+        ty = top_h // 2 + line_h // 3
+        cv2.putText(canvas, gt_text, (10, ty), font, scale, (0, 255, 0), thick, cv2.LINE_AA)   # 绿
+        (gw, _), _ = cv2.getTextSize(gt_text, font, scale, thick)
+        cv2.putText(canvas, pred_text, (10 + gw + 20, ty), font, scale, (0, 255, 255), thick, cv2.LINE_AA)  # 黄
+        # 下边条：top5
+        by = top_h + h + line_h
         for i, (lbl, sc) in enumerate(top5[:5]):
-            cv2.putText(frame, f"  {i+1}. {lbl} {sc:.2f}", (10, y), font, scale * 0.8, (255, 255, 255), max(1, thick - 1), cv2.LINE_AA)  # 白
-            y += int(dy * 0.85)
-        writer.write(frame)
+            cv2.putText(canvas, f"{i+1}. {lbl} {sc:.2f}", (10, by + i * line_h),
+                        font, scale * 0.8, (255, 255, 255), max(1, thick - 1), cv2.LINE_AA)  # 白
+        writer.write(canvas)
     cap.release()
     writer.release()
 

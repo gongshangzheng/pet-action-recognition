@@ -4,16 +4,28 @@
       <template #header>
         <div class="flex-between">
           <h3>Speed Run 结果视频</h3>
-          <n-space align="center" size="small">
+          <n-space align="center" size="small" wrap>
             <n-select
               v-model:value="filterModel"
               :options="modelOptions"
               placeholder="全部模型"
               clearable
               size="small"
+              style="width: 180px"
+              filterable
+            />
+            <n-select
+              v-model:value="filterVideo"
+              :options="videoOptions"
+              placeholder="全部视频"
+              clearable
+              size="small"
               style="width: 200px"
               filterable
             />
+            <n-tag size="small" :type="accuracy.pct >= 50 ? 'success' : 'warning'">
+              准确率 {{ accuracy.correct }}/{{ accuracy.total }} ({{ accuracy.pct }}%)
+            </n-tag>
             <n-button size="small" @click="refreshResults" :loading="loading">刷新</n-button>
             <n-tag v-if="status.running" type="info" size="small">运行中 · 已出 {{ status.results_count }} 条</n-tag>
             <n-tag v-else type="success" size="small">共 {{ results.length }} 条</n-tag>
@@ -28,6 +40,9 @@
               <div class="thumb">
                 <n-icon size="36"><PlayCircleOutline /></n-icon>
                 <span class="ext">MP4</span>
+                <span v-if="r.correct === true" class="badge correct">✓</span>
+                <span v-else-if="r.correct === false" class="badge wrong">✗</span>
+                <span v-else class="badge na">—</span>
               </div>
               <div class="info">
                 <div class="model" :title="r.model_id">{{ r.model_id }}</div>
@@ -127,6 +142,7 @@ const results = ref([])
 const status = reactive({ running: false, results_count: 0 })
 const modelOptionsAll = ref([])
 const filterModel = ref(null)
+const filterVideo = ref(null)
 
 const form = reactive({
   videosText: 'datasets/ucf101/PlayingGuitar/v_PlayingGuitar_g01_c01.avi\ndatasets/ucf101/Archery/v_Archery_g01_c01.avi\ndatasets/ucf101/BabyCrawling/v_BabyCrawling_g01_c01.avi',
@@ -145,9 +161,25 @@ const modelOptions = computed(() => {
   return ids.map(id => ({ label: id, value: id }))
 })
 
-const filteredResults = computed(() =>
-  filterModel.value ? results.value.filter(r => r.model_id === filterModel.value) : results.value
-)
+const videoOptions = computed(() => {
+  const vids = [...new Set(results.value.map(r => r.video))].sort()
+  return vids.map(v => ({ label: videoStem(v), value: v }))
+})
+
+const filteredResults = computed(() => {
+  let list = results.value
+  if (filterModel.value) list = list.filter(r => r.model_id === filterModel.value)
+  if (filterVideo.value) list = list.filter(r => r.video === filterVideo.value)
+  return list
+})
+
+const accuracy = computed(() => {
+  const withGT = filteredResults.value.filter(r => r.correct === true || r.correct === false)
+  const correct = withGT.filter(r => r.correct).length
+  const total = withGT.length
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0
+  return { correct, total, pct }
+})
 
 function videoStem(path) {
   return path.split('/').pop()
@@ -250,6 +282,23 @@ onUnmounted(stopPolling)
   font-size: 11px;
   color: rgba(255,255,255,.7);
 }
+.thumb .badge {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.thumb .badge.correct { background: #18a058; }
+.thumb .badge.wrong { background: #d03050; }
+.thumb .badge.na { background: #909399; }
 .info { padding: 8px 10px; }
 .model {
   font-weight: 600;
