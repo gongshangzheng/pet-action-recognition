@@ -62,6 +62,18 @@
                     <span class="meta-elapsed" :title="r.elapsed_s != null ? `${r.elapsed_s}s 推理耗时` : '推理耗时未知'">
                       {{ r.elapsed_s != null ? r.elapsed_s + 's' : '—' }}
                     </span>
+                    <span v-if="r.gpu_avg_util != null" class="meta-sep">·</span>
+                    <span
+                      v-if="r.gpu_avg_util != null"
+                      class="meta-gpu-util"
+                      :title="`${r.gpu_avg_util}% GPU 平均利用率`"
+                    >{{ r.gpu_avg_util }}%</span>
+                    <span v-if="r.rtf != null" class="meta-sep">·</span>
+                    <span
+                      v-if="r.rtf != null"
+                      class="meta-rtf"
+                      :title="`RTF（实时率）= 推理耗时 / 视频时长`"
+                    >RTF {{ r.rtf }}</span>
                     <n-tag
                       class="meta-status"
                       size="tiny"

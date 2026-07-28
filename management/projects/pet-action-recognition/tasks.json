@@ -372,6 +372,10 @@
       ],
       "progress": [
         {
+          "date": "2026-07-28 16:04",
+          "note": "[进展] #21 card UI 重设计 + #22 GPU util/RTF 指标 + #23 检测模型 skill 文档 全完成。4/5 AVA checkpoint 已下（lfb URL 404 待修）。21 分类 + 5 检测模型注册。"
+        },
+        {
           "date": "2026-07-28 16:01",
           "note": "[进展] UCF101 speed run 完成：20 分类模型 + 5 AVA 检测模型注册（slowonly/slowfast/videomae/acrn/lfb AVA）+ 93% 准确率 + H.264 标注视频 + 封面图 + GPU 显存/耗时。6 个 skill 就绪（training/testing/datasets/remote-servers/using-mmaction2/repo-structure）。四足 pilot 仍 paused（等真实数据）。下一步：GPU avg util + RTF 采集；card UI 优化；检测模型 skill 文档。"
         }
