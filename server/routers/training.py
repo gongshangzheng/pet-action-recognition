@@ -338,6 +338,18 @@ _has_dataset = _split_has_videos("train")
 
 DEFAULT_DATASETS = [
     {
+        "id": "pet_action_mammal_v0",
+        "name": "Pet Action Mammal v0",
+        "splits": ["train", "val", "test"],
+        "num_samples": 2234,
+        "num_classes": 8,
+        "modalities": ["rgb"],
+        "status": "ready",
+        "root_dir": os.path.join(BASE_DIR, "datasets", "pet_action_mammal_v0"),
+        "label_map": "annotation/labels.txt",
+        "description": "哺乳动物动作数据集（7 类 + 1 保留类；1801/216/217 train/val/test；mmaction2 VideoDataset 格式）",
+    },
+    {
         "id": QUADRUPED_DATASET_NAME,
         "name": "四足动物动作数据集",
         "splits": ["train", "val", "test"],

@@ -138,10 +138,20 @@ def resolve_dataset_paths(dataset_id: str):
     if not root.is_dir():
         return "", "", "", ""
     name = root.name
+    # 标准 pattern: {name}/{name}_train_list.txt + videos_train/
     ann_train = root / f"{name}_train_list.txt"
     ann_val = root / f"{name}_val_list.txt"
     videos_train = root / "videos_train"
     videos_val = root / "videos_val"
+    # fallback: pet_action_mammal_v0 pattern: annotation/{train,val}_public.txt + dataset/video/
+    if not ann_train.is_file():
+        ann_train = root / "annotation" / "train_public.txt"
+    if not ann_val.is_file():
+        ann_val = root / "annotation" / "val_public.txt"
+    if not videos_train.is_dir():
+        videos_train = root / "dataset" / "video"
+    if not videos_val.is_dir():
+        videos_val = root / "dataset" / "video"
     return (
         str(ann_train) if ann_train.is_file() else "",
         str(videos_train) if videos_train.is_dir() else "",
