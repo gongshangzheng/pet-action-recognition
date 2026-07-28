@@ -275,12 +275,11 @@ onUnmounted(stopPolling)
 .page-container { padding: 16px; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .video-card {
-  border: 1px solid var(--n-border-color, #e5e7eb);
+  border: 1px solid rgba(128, 128, 128, 0.2);
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   transition: box-shadow .15s, transform .15s;
-  background: var(--n-color, #fff);
 }
 .video-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.12); transform: translateY(-1px); }
 .thumb {
