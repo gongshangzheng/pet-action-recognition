@@ -145,20 +145,24 @@ def main() -> int:
                 continue
 
             t0 = time.time()
+            # 真实标签：从视频路径派生（UCF101: 父目录名 = 类名）
+            gt_label = Path(video).parent.name if "ucf101" in video.lower() else None
             try:
                 cfg = Config.fromfile(cfg_path)
                 res = infer_and_annotate(
                     video, cfg, ckpt, labels,
                     out_video_path=out_video, device=args.device,
+                    gt_label=gt_label,
                 )
                 results_by_id[rid] = {
                     "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
+                    "gt_label": gt_label,
                     "metrics": res, "output_video": rel_video, "status": "completed",
                     "gpu_mem_mb": res.get("gpu_mem_mb"),
                     "elapsed_s": round(time.time() - t0, 1),
                     "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 }
-                print(f"  [{video_stem}] top1={res['top1_label']} ({res['top1_score']:.2f}) gpu={res.get('gpu_mem_mb')}MB → {out_video}")
+                print(f"  [{video_stem}] GT={gt_label} top1={res['top1_label']} ({res['top1_score']:.2f}) gpu={res.get('gpu_mem_mb')}MB → {out_video}")
             except Exception as e:
                 results_by_id[rid] = {
                     "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,

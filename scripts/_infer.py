@@ -41,6 +41,46 @@ def _extract_topk(result, labels: list[str], k: int = 5) -> list[tuple]:
     return out
 
 
+def _annotate_video_cv2(video: str, out_path: str, gt_label: str | None,
+                         top1: tuple, top5: list[tuple]) -> None:
+    """用 cv2 在每帧叠 GT + pred + top5 文字（内置 Hershey 字体，英文 OK，不依赖 mmengine 字体/字段格式）。
+
+    ActionVisualizer 检查 'pred_labels'（复数），但 inference_recognizer 只返回
+    pred_label（单数）→ 它根本不画；且 GT 标签空间不匹配 K400。故改 cv2 手动画。
+    """
+    import cv2
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    cap = cv2.VideoCapture(video)
+    if not cap.isOpened():
+        raise RuntimeError(f"cv2 打不开视频: {video}")
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
+    scale = max(0.5, min(w, h) / 480.0)
+    thick = max(1, int(round(scale * 2)))
+    dy = int(30 * scale)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    while True:
+        ok, frame = cap.read()
+        if not ok:
+            break
+        y = dy
+        if gt_label:
+            cv2.putText(frame, f"GT: {gt_label}", (10, y), font, scale, (0, 255, 0), thick, cv2.LINE_AA)  # 绿
+            y += dy
+        cv2.putText(frame, f"pred: {top1[0]} ({top1[1]:.2f})", (10, y), font, scale, (0, 255, 255), thick, cv2.LINE_AA)  # 黄
+        y += dy
+        for i, (lbl, sc) in enumerate(top5[:5]):
+            cv2.putText(frame, f"  {i+1}. {lbl} {sc:.2f}", (10, y), font, scale * 0.8, (255, 255, 255), max(1, thick - 1), cv2.LINE_AA)  # 白
+            y += int(dy * 0.85)
+        writer.write(frame)
+    cap.release()
+    writer.release()
+
+
 def infer_and_annotate(
     video: str,
     cfg,
@@ -48,20 +88,21 @@ def infer_and_annotate(
     labels: list[str],
     out_video_path: Optional[str] = None,
     device: str = "cuda:0",
-    fps: int = 30,
+    gt_label: Optional[str] = None,
 ) -> dict:
-    """对单视频推理；可选写标注 mp4。
+    """对单视频推理；可选写标注 mp4（cv2 叠 GT + pred + top5）。
 
     Args:
-        video: 视频文件路径（CIFS/本地均可，http 会 NotImplementedError）。
-        cfg: mmengine Config 对象（调用方已 fromfile + 必要 override，如 num_classes）。
+        video: 视频文件路径。
+        cfg: mmengine Config 对象（调用方已 fromfile + 必要 override）。
         checkpoint: checkpoint 文件路径。
         labels: 类名列表（K400 等），index=行号。
-        out_video_path: 给定时用 ActionVisualizer 把 top-5 叠帧写 mp4；None 则只返回预测。
+        out_video_path: 给定时写标注 mp4；None 则只返回预测。
         device: 'cuda:0' / 'cpu'。
+        gt_label: 真实标签名（从视频路径派生，如 UCF101 的类名）；画在帧上对照。
 
     Returns:
-        {top1_label, top1_score, top5: [(label, score), ...]}
+        {top1_label, top1_score, top5, gpu_mem_mb}
     """
     from mmaction.apis import inference_recognizer, init_recognizer
 
@@ -90,25 +131,9 @@ def infer_and_annotate(
     top1 = top5[0] if top5 else ("", 0.0)
 
     if out_video_path:
-        # ActionVisualizer 写标注视频（复刻 models/mmaction2/demo/demo.py:56-108）
-        # 注意：不 subprocess demo.py——它把 out_path 强写成 <cwd>/demo/。
         if video.startswith(("http://", "https://")):
             raise NotImplementedError("http(s) video 不支持出标注视频，请用本地路径")
-        from mmaction.visualization import ActionVisualizer
-
-        os.makedirs(os.path.dirname(out_video_path), exist_ok=True)
-        viz = ActionVisualizer()
-        viz.dataset_meta = dict(classes=labels)
-        viz.add_datasample(
-            os.path.basename(out_video_path),
-            video,
-            result,
-            draw_pred=True,
-            draw_gt=False,
-            text_cfg={"colors": "white"},
-            fps=fps,
-            out_type="video",
-            out_path=out_video_path,
-        )
+        _annotate_video_cv2(video, out_video_path, gt_label, top1, top5)
 
     return {"top1_label": top1[0], "top1_score": top1[1], "top5": top5, "gpu_mem_mb": gpu_mem_mb}
+
