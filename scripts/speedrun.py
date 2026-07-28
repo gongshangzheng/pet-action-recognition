@@ -62,6 +62,19 @@ def _matches(gt: str | None, pred: str | None) -> bool | None:
     return _norm_tokens(gt) == _norm_tokens(pred)
 
 
+def _extract_cover(video_path: str, cover_path: str) -> None:
+    """从视频中间帧提取封面图（JPG，所有模型共用同一张）。"""
+    import cv2
+    cap = cv2.VideoCapture(video_path)
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if total > 2:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, total // 2)
+    ok, frame = cap.read()
+    cap.release()
+    if ok and frame is not None:
+        cv2.imwrite(cover_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+
+
 def _models_by_ids(ids: list[str]) -> list[dict]:
     by_id = {m["id"]: m for m in _MMACTION2_REGISTRY}
     out = []
@@ -145,6 +158,22 @@ def main() -> int:
     results_by_id = {r["id"]: r for r in data.get("results", [])}
     failures: list[str] = []
 
+    # 提取封面图（每个视频一张，所有模型共用）
+    covers_dir = os.path.join(args.out_dir, "covers")
+    os.makedirs(covers_dir, exist_ok=True)
+    video_covers: dict[str, str] = {}
+    for v in args.videos:
+        stem = Path(v).stem
+        cover_rel = f"covers/{stem}.jpg"
+        cover_path = os.path.join(args.out_dir, cover_rel)
+        if not os.path.isfile(cover_path):
+            try:
+                _extract_cover(v, cover_path)
+            except Exception as e:
+                print(f"[warn] 封面提取失败 {stem}: {e}")
+        if os.path.isfile(cover_path):
+            video_covers[stem] = cover_rel
+
     for m in models:
         model_id = m["id"]
         cfg_path = resolve_mmaction2_config(m["mmaction2_config"])
@@ -167,7 +196,8 @@ def main() -> int:
                     results_by_id[rid] = {
                         "id": rid, "model_id": model_id, "video": video,
                         "checkpoint": ckpt, "metrics": {}, "output_video": rel_video,
-                        "status": "skipped", "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "status": "skipped", "cover_image": video_covers.get(video_stem),
+                        "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                     }
                 continue
 
@@ -242,6 +272,10 @@ def main() -> int:
                 print(f"  [{video_stem}] ERROR: {e}")
                 traceback.print_exc()
                 failures.append(rid)
+
+            # 封面图（所有模型共用同一张）
+            if rid in results_by_id:
+                results_by_id[rid].setdefault("cover_image", video_covers.get(video_stem))
 
             # 每个 (model, video) 跑完即落盘（防长跑中途丢失）
             data = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

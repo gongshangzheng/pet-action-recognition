@@ -39,6 +39,14 @@ VIDEO_MIME = {
     ".m4v": "video/x-m4v",
 }
 
+IMAGE_MIME = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+}
+
 # 单次 speed run 进程句柄（单机单跑简化；server 重启会丢，但 results.json 持久）
 _current_proc: subprocess.Popen | None = None
 _current_started_at: str | None = None
@@ -161,5 +169,5 @@ async def serve_output(file_path: str):
     if not safe or not os.path.isfile(safe):
         return {"detail": "Output not found"}, 404
     ext = os.path.splitext(safe)[1].lower()
-    media = VIDEO_MIME.get(ext, "application/octet-stream")
+    media = VIDEO_MIME.get(ext) or IMAGE_MIME.get(ext) or "application/octet-stream"
     return FileResponse(safe, media_type=media, filename=os.path.basename(safe))

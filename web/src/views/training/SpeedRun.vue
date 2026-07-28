@@ -38,7 +38,9 @@
           <n-gi v-for="r in pagedResults" :key="r.id">
             <div class="video-card" @click="playVideo(r)">
               <div class="thumb">
-                <n-icon size="36"><PlayCircleOutline /></n-icon>
+                <img v-if="r.cover_image" :src="getSpeedrunOutputUrl(r.cover_image)" class="cover-img" loading="lazy" />
+                <n-icon v-else size="36"><PlayCircleOutline /></n-icon>
+                <span class="play-overlay">▶</span>
                 <span class="ext">MP4</span>
                 <span v-if="r.correct === true" class="badge correct">✓</span>
                 <span v-else-if="r.correct === false" class="badge wrong">✗</span>
@@ -291,6 +293,22 @@ onUnmounted(stopPolling)
   justify-content: center;
   background: #000;
   color: rgba(255,255,255,.9);
+  overflow: hidden;
+}
+.thumb .cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thumb .play-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  color: rgba(255,255,255,.8);
+  text-shadow: 0 2px 8px rgba(0,0,0,.6);
+  pointer-events: none;
 }
 .thumb .ext {
   position: absolute;
