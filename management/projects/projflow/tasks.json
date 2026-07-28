@@ -1,0 +1,139 @@
+{
+  "project": "projflow",
+  "tasks": [
+    {
+      "id": "t1",
+      "title": "搭建平台基础骨架",
+      "status": "completed",
+      "priority": "high",
+      "startDate": "2026-07-08",
+      "endDate": "2026-07-10",
+      "assignee": "张三",
+      "description": "初始化 ProjFlow 前后端项目结构、技术选型与基础布局",
+      "notePath": "notes/01-goals.md",
+      "children": [
+        {
+          "id": "t1-1",
+          "title": "初始化前后端项目结构",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "李四",
+          "description": "FastAPI 后端 + Vue 3 前端脚手架，约定 Markdown 数据目录结构",
+          "children": []
+        },
+        {
+          "id": "t1-2",
+          "title": "接入 Naive UI 与路由布局",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "王五",
+          "description": "MainLayout 侧边栏 + 面包屑，按模块组织路由与菜单",
+          "children": []
+        }
+      ],
+      "summaryPath": "summary/t1.md"
+    },
+    {
+      "id": "t2",
+      "title": "完善项目管理模块",
+      "status": "active",
+      "priority": "high",
+      "startDate": "2026-07-10",
+      "endDate": "2026-07-16",
+      "assignee": "张三",
+      "description": "团队、报表、任务看板、里程碑、会议纪要与项目树",
+      "notePath": "notes/02-architecture.md",
+      "children": [
+        {
+          "id": "t2-1",
+          "title": "团队成员与日报/周报/月报",
+          "status": "completed",
+          "priority": "high",
+          "assignee": "李四",
+          "description": "成员档案 + 三类报表的列表与详情",
+          "children": []
+        },
+        {
+          "id": "t2-2",
+          "title": "任务看板与里程碑时间线",
+          "status": "completed",
+          "priority": "medium",
+          "assignee": "王五",
+          "description": "任务状态流转与关键节点可视化",
+          "children": []
+        },
+        {
+          "id": "t2-3",
+          "title": "项目树页面（git 风格任务树）",
+          "status": "active",
+          "priority": "high",
+          "assignee": "张三",
+          "description": "解析 projects/{slug}/ 数据，渲染分支线任务树与悬浮卡",
+          "children": [],
+          "progress": [
+            {
+              "date": "2026-07-16",
+              "note": "Cornell 布局迭代完成——双面板各占 50% 高度，cornell-body 占满视口剩余空间，MainLayout 全局修复高度链"
+            },
+            {
+              "date": "2026-07-16",
+              "note": "[完成] Cornell 笔记布局上线——描述居中、进展时间线右侧、完成总结底部。hover-card 也加了 progress 预览（最近 3 条）"
+            },
+            {
+              "date": "2026-07-16",
+              "note": "hidden 字段前后端联调通过，眼睛图标切换流畅"
+            },
+            {
+              "date": "2026-07-16",
+              "note": "项目树默认折叠改为 depth=0 全折叠，用户体验更干净"
+            },
+            {
+              "date": "2026-07-16",
+              "note": "hover-card 英文溢出修复完成，white-space: pre-line 生效"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "t3",
+      "title": "扩展论文搜集与评测体系",
+      "status": "planned",
+      "priority": "medium",
+      "startDate": "2026-07-16",
+      "endDate": "2026-07-24",
+      "assignee": "待分配",
+      "description": "论文模块与模型评测模块的完整能力建设",
+      "notePath": "notes/03-roadmap.md",
+      "children": [
+        {
+          "id": "t3-1",
+          "title": "论文搜集模块",
+          "status": "planned",
+          "priority": "medium",
+          "assignee": "待分配",
+          "description": "论文导入、分类、笔记与搜索筛选",
+          "children": []
+        },
+        {
+          "id": "t3-2",
+          "title": "评测体系模块",
+          "status": "planned",
+          "priority": "medium",
+          "assignee": "待分配",
+          "description": "模型与数据集管理、评测运行、结果对比",
+          "children": []
+        },
+        {
+          "id": "t3-3",
+          "title": "明暗主题切换",
+          "status": "planned",
+          "priority": "low",
+          "assignee": "王五",
+          "description": "Pinia 主题 store + Naive UI darkTheme + CSS 变量双主题",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

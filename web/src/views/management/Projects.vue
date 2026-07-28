@@ -108,28 +108,43 @@
 
               <div class="completion-panel">
                 <div class="completion-head">完成总结</div>
-                <div v-if="completionProgress.length" class="completion-scroll">
-                  <div v-for="(p, i) in completionProgress" :key="i" class="completion-entry">
-                    <span class="progress-date">{{ p.date }}</span>
-                    <span class="progress-note">{{ p.note.replace(/^\[完成\]\s*/, '') }}</span>
-                  </div>
+                <div class="completion-scroll">
+                  <div v-if="summaryLoading" class="empty-inline">加载总结中…</div>
+                  <markdown-renderer v-else-if="summaryContent !== null" :content="summaryContent" />
+                  <template v-else-if="completionProgress.length">
+                    <div v-for="(p, i) in completionProgress" :key="i" class="completion-entry">
+                      <span class="progress-date">{{ p.date }}</span>
+                      <span class="progress-note">{{ p.note.replace(/^\[完成\]\s*/, '') }}</span>
+                    </div>
+                  </template>
+                  <p v-else class="empty-inline">暂无完成总结。</p>
                 </div>
-                <p v-else class="empty-inline">暂无完成总结。</p>
               </div>
             </div>
 
-            <aside class="cornell-right">
-              <div class="progress-head">进展记录</div>
-              <div class="progress-list">
-                <div v-for="(p, i) in allProgress" :key="i" class="progress-entry"
-                     :class="{ 'is-done': p.note && p.note.startsWith('[完成]') }">
-                  <div class="progress-dot"></div>
-                  <div class="progress-body">
-                    <span class="progress-date">{{ p.date }}</span>
-                    <span class="progress-note">{{ p.note }}</span>
+            <aside class="cornell-right" :class="{ collapsed: progressCollapsed }">
+              <template v-if="!progressCollapsed">
+                <div class="progress-head">
+                  <span>进展记录</span>
+                  <button class="progress-toggle" title="收起进展记录" @click="progressCollapsed = true">
+                    <n-icon size="14"><chevron-forward-outline /></n-icon>
+                  </button>
+                </div>
+                <div class="progress-list">
+                  <div v-for="(p, i) in allProgress" :key="i" class="progress-entry"
+                       :class="{ 'is-done': p.note && p.note.startsWith('[完成]') }">
+                    <div class="progress-dot"></div>
+                    <div class="progress-body">
+                      <span class="progress-date">{{ p.date }}</span>
+                      <span class="progress-note">{{ p.note }}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </template>
+              <button v-else class="progress-expand" title="展开进展记录" @click="progressCollapsed = false">
+                <n-icon size="14"><chevron-back-outline /></n-icon>
+                <span class="progress-expand-label">进展记录</span>
+              </button>
             </aside>
           </div>
         </div>
@@ -176,6 +191,7 @@ import {
   GitBranchOutline, ArrowBackOutline, HelpCircleOutline,
   PersonOutline, PeopleOutline, CheckmarkCircleOutline,
   PauseOutline, EllipseOutline, EyeOutline, EyeOffOutline,
+  ChevronForwardOutline, ChevronBackOutline,
 } from '@vicons/ionicons5'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import ProjectTaskNode from './ProjectTaskNode.vue'
@@ -205,8 +221,11 @@ const treeLoading = ref(false)
 const selectedTask = ref(null)
 const noteContent = ref(null)
 const noteLoading = ref(false)
+const summaryContent = ref(null)
+const summaryLoading = ref(false)
 const pendingTaskId = ref(null) // 从 URL 恢复的任务 id，等任务树加载后定位
 const showHidden = ref(false)   // 是否展示 hidden:true 的任务
+const progressCollapsed = ref(false)
 
 const route = useRoute()
 const router = useRouter()
@@ -328,7 +347,7 @@ async function selectProject(slug, syncUrl = true) {
       const found = findTaskById(tree.tasks, pendingTaskId.value)
       if (found) {
         selectedTask.value = found
-        if (found.notePath) await loadNote(slug, found.notePath)
+        await loadTaskFiles(slug, found)
       }
       pendingTaskId.value = null
     }
@@ -353,16 +372,38 @@ async function loadNote(slug, notePath) {
   }
 }
 
+async function loadSummary(slug, summaryPath) {
+  summaryContent.value = null
+  summaryLoading.value = true
+  try {
+    const res = await getTaskNote(slug, summaryPath)
+    summaryContent.value = res.content
+  } catch (e) {
+    summaryContent.value = null
+  } finally {
+    summaryLoading.value = false
+  }
+}
+
+function loadTaskFiles(slug, task) {
+  noteContent.value = null
+  summaryContent.value = null
+  return Promise.all([
+    task.notePath ? loadNote(slug, task.notePath) : Promise.resolve(),
+    task.summaryPath ? loadSummary(slug, task.summaryPath) : Promise.resolve(),
+  ])
+}
+
 async function selectTask(task) {
   selectedTask.value = task
-  noteContent.value = null
-  if (task.notePath) await loadNote(activeSlug.value, task.notePath)
+  await loadTaskFiles(activeSlug.value, task)
   syncUrl(activeSlug.value, task.id)
 }
 
 function backToReadme() {
   selectedTask.value = null
   noteContent.value = null
+  summaryContent.value = null
   syncUrl(activeSlug.value, null)
 }
 
@@ -383,12 +424,12 @@ watch(() => route.query, (q) => {
       if (!taskId) {
         selectedTask.value = null
         noteContent.value = null
+        summaryContent.value = null
       } else {
         const found = findTaskById(activeTree.value.tasks, taskId)
         if (found) {
           selectedTask.value = found
-          if (found.notePath) loadNote(activeSlug.value, found.notePath)
-          else noteContent.value = null
+          loadTaskFiles(activeSlug.value, found)
         }
       }
     }
@@ -483,13 +524,14 @@ onMounted(loadProjects)
   display: grid; gap: 20px; padding: 20px 0;
   grid-template-columns: 1fr 440px;
   flex: 1; min-height: 0;
+  &:has(.cornell-right.collapsed) { grid-template-columns: 1fr 28px; }
   @media (max-width: 1100px) { grid-template-columns: 1fr; }
 }
 .cornell-main {
   min-width: 0; min-height: 0;
   display: flex; flex-direction: column; gap: 20px;
   .desc-panel {
-    flex: 1; min-height: 0; overflow-y: auto;
+    flex: 1 1 0; min-height: 0; overflow-y: auto;
     padding: 14px; border: 1px solid var(--color-border); border-radius: 8px;
     background: var(--color-elevated);
   }
@@ -499,7 +541,29 @@ onMounted(loadProjects)
   border-left: 2px solid var(--color-border); padding-left: 16px;
   display: flex; flex-direction: column;
   @media (max-width: 900px) { border-left: none; border-top: 2px solid var(--color-border); padding-left: 0; padding-top: 16px; }
-  .progress-head { flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--color-text-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  &.collapsed { padding-left: 0; border-left: none; }
+  .progress-head {
+    flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--color-text-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .progress-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: none; padding: 2px; cursor: pointer;
+    color: var(--color-text-dim); border-radius: 4px;
+    &:hover { background: var(--color-hover); color: var(--color-text); }
+  }
+  .progress-expand {
+    flex: 1; width: 100%;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    background: var(--color-elevated); border: 1px solid var(--color-border);
+    border-radius: 8px; padding: 10px 0; cursor: pointer;
+    color: var(--color-text-dim);
+    &:hover { background: var(--color-hover); color: var(--color-text); }
+  }
+  .progress-expand-label {
+    writing-mode: vertical-rl; letter-spacing: 2px;
+    font-size: 11px; font-weight: 600;
+  }
   .progress-list { flex: 1; min-height: 0; overflow-y: auto; }
 }
 .progress-entry {
@@ -517,7 +581,7 @@ onMounted(loadProjects)
   }
 }
 .completion-panel {
-  flex: 1; min-height: 0;
+  flex: 1 1 0; min-height: 0;
   display: flex; flex-direction: column;
   padding: 12px 14px;
   border: 1px solid rgba(34,197,94,0.15); border-radius: 8px;

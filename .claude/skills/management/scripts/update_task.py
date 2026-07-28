@@ -36,6 +36,7 @@ FLAG_FIELD = {
     "end": "endDate",
     "description": "description",
     "note_path": "notePath",
+    "summary_path": "summaryPath",
     "priority": "priority",
 }
 
@@ -51,6 +52,9 @@ def main() -> int:
     ap.add_argument("--end", default=None, help="endDate (YYYY-MM-DD)")
     ap.add_argument("--description", default=None)
     ap.add_argument("--note-path", default=None, help="相对项目目录的笔记 markdown 路径")
+    ap.add_argument("--summary-path", default=None, help="相对项目目录的完成总结 markdown 路径")
+    ap.add_argument("--summary", default=None,
+                    help="完成总结 markdown 内容，写入 summary/{id}.md 并设置 summaryPath")
     ap.add_argument("--priority", default=None)
     ap.add_argument("--progress", default=None,
                     help="追加一条进展记录（自动加日期，新条目在前）")
@@ -76,6 +80,12 @@ def main() -> int:
     if args.hidden is True:
         updates["hidden"] = True
 
+    summary_file = None
+    if args.summary is not None:
+        rel_summary = f"summary/{args.id}.md"
+        summary_file = mgmt_io.projects_dir() / args.slug / rel_summary
+        updates["summaryPath"] = rel_summary
+
     progress_entry = None
     if args.progress is not None:
         progress_entry = {
@@ -98,6 +108,12 @@ def main() -> int:
         progress.insert(0, progress_entry)
         new_task["progress"] = progress
     parent_list[idx] = new_task
+    if summary_file is not None:
+        summary_file.parent.mkdir(parents=True, exist_ok=True)
+        text = args.summary
+        if not text.endswith("\n"):
+            text += "\n"
+        summary_file.write_text(text, encoding="utf-8")
     mgmt_io.write_tasks(args.slug, tree)
     path = mgmt_io.tasks_json_path(args.slug)
     changed = sorted(set(list(updates.keys()) + removed_keys))

@@ -76,7 +76,7 @@ management/
 {
   "id": "t1-1", "title": "...", "status": "completed|active|planned|paused|blocked",
   "startDate": "2026-07-08", "endDate": "2026-07-10", "assignee": "张三",
-  "description": "...", "notePath": "notes/01.md", "priority": "P1",
+  "description": "...", "notePath": "notes/01.md", "summaryPath": "summary/t1-1.md", "priority": "P1",
   "hidden": true,
   "progress": [
     { "date": "2026-07-17", "note": "[完成] 修复分页 bug——offset 未重置，加 resetPage() 解决" },
@@ -88,10 +88,11 @@ management/
 
 字段说明补充：
 - `hidden: true` — 项目树默认不展示此节点（前端眼睛图标可切换显示，节点以半透明斜体呈现）。子任务会随父任务一起隐藏。用法：`add_task.py --hidden` / `update_task.py --hidden` 或 `--no-hidden`。
+- `summaryPath` — 完成总结 markdown 路径（相对项目目录，约定 `summary/{id}.md`，存放在独立的 `summary/` 文件夹，**不要放 notes/**）。任务详情页完成总结面板渲染此文件；无 `summaryPath` 时回退展示 progress 中的 `[完成]` 条目。写法见 §1.3。
 - `progress` — 进展记录数组，**新条目在前**（unshift）。每条 `{ "date": "YYYY-MM-DD HH:MM", "note": "..." }`。
   - 推进时：`update_task.py --progress "完成 X，下一步 Y"`（日期自动填当前时间，精确到分钟）。
-  - 完成时：`update_task.py --status completed --progress "[完成] 方法总结"`（`[完成]` 前缀标识完成条目）。
-  - **UI 渲染**：项目树 hover-card 展示最近 3 条；任务详情页用 Cornell 布局——左列上半为描述面板、下半为完成总结面板（`[完成]` 条目），右列通栏为完整进展时间线（`[完成]` 条目绿色高亮）。
+  - 完成时：`update_task.py --status completed --summary "<markdown 总结>" --progress "[完成] 一句话结论"`（`[完成]` 前缀标识时间线上的完成节点；成果详情写进 summary）。
+  - **UI 渲染**：项目树 hover-card 展示最近 3 条；任务详情页用 Cornell 布局——左列上半为描述面板（notePath/description）、下半为完成总结面板（summaryPath markdown），两块各占半屏、超出各自滚动；右列为完整进展时间线（`[完成]` 条目绿色高亮，可折叠收起）。
   - **不要手写 progress**：始终通过 `--progress` 脚本追加，不要直接编辑 tasks.json 的 progress 数组（日期格式、unshift 顺序容易出错）。
 
 ```bash
@@ -111,9 +112,12 @@ python3 $SD/update_task.py --slug myproject --id t2-3 --title "模块X v2" --end
 python3 $SD/update_task.py --slug myproject --id t2-3 --status completed
 # 追加进展记录（自动加日期，新条目在前）
 python3 $SD/update_task.py --slug myproject --id t2-3 --progress "完成 API 对接，数据可正常加载"
-# 完成 + 完成总结（一步到位）
+# 完成 + 完成总结（一步到位：--summary 写入 summary/t2-3.md 并设置 summaryPath）
 python3 $SD/update_task.py --slug myproject --id t2-3 --status completed \
-  --progress "[完成] 修复分页 bug——根因是 offset 未重置，已在 onMounted 中加 resetPage() 解决"
+  --summary $'## 成果\n\n- 修复分页 bug，列表页 500 条数据翻页正常\n\n## 问题与解决\n\n根因是 offset 未重置，在 onMounted 中加 resetPage() 解决' \
+  --progress "[完成] 修复分页 bug——根因 offset 未重置"
+# 已有 markdown 文件时，直接挂路径（相对项目目录）
+python3 $SD/update_task.py --slug myproject --id t2-3 --summary-path summary/t2-3.md
 
 # 删除（递归删节点及其子树）
 python3 $SD/delete_task.py --slug myproject --id t2-3
@@ -190,10 +194,11 @@ python3 $SD/update_task.py --slug <slug> --id <id> --status active
 python3 $SD/update_task.py --slug <slug> --id <id> --progress "完成了 X，下一步 Y"
 ```
 
-**完成工作时**（status → completed + 完成总结一步到位）：
+**完成工作时**（status → completed + summary 总结 + 时间线标记，一步到位）：
 ```bash
 python3 $SD/update_task.py --slug <slug> --id <id> --status completed \
-  --progress "[完成] <方法总结>"
+  --summary "<markdown 成果总结，见 §1.3>" \
+  --progress "[完成] <一句话结论>"
 ```
 
 **通过编号查找任务**（agent 快速定位任务详情）：
@@ -203,9 +208,36 @@ python3 $SD/list_tasks.py --slug <slug> --id <task-id>
 
 **progress 格式规则**：
 1. 进展记录：1-2 句话，不要复述代码变更，写"做了什么 + 下一步"。
-2. 完成总结：以 `[完成]` 开头，侧重"怎么做 + 遇到什么问题 + 怎么解决"，不写"做了什么"（title 已经说了）。
+2. 完成条目：以 `[完成]` 开头，一句话结论（时间线标记用）；成果详情写进 `--summary`，不要塞进 progress。
 3. 每条 note ≤ 120 汉字。太长说明该拆子任务了。
 4. 不要写空泛的进展（"继续开发中"、"修了一些 bug"）。
+
+### 1.3 完成总结（summary）写作规范
+
+summary 是一篇独立 markdown 文章（`summary/{id}.md`），**用途是展示成果**——用户在任务详情页直接看到这块，要能回答"这个任务交付了什么、效果如何"。
+
+**结构建议**（按需取舍，不必全有）：
+
+```markdown
+## 成果
+
+做出了什么、可量化的效果（数据、指标、前后对比）。
+
+## 方法
+
+关键思路与技术选型，为什么这么做。
+
+## 问题与解决
+
+踩过的坑、根因、解决方式（给后来者留路标）。
+```
+
+**规则**：
+1. 成果导向：先写产出与效果，再写过程；能量化就量化（表格对比、指标数字）。
+2. 支持完整 markdown：表格、代码块、Mermaid 图（架构/流程图很适合展示成果全貌）、`[[slug]]` 文档链接、`[[proj#task]]` 任务链接。
+3. 不写流水账（"做了 X" title 已经说了）；不复述 description。
+4. 篇幅 300-800 字为宜；超过说明该沉淀成 wiki 文档（放 `management/docs/`，summary 里用 `[[slug]]` 链过去）。
+5. 存放位置：`management/projects/{slug}/summary/{id}.md`，由 `--summary` 自动写入；**不要放 notes/**（那是任务过程笔记）。
 
 ---
 
@@ -273,7 +305,7 @@ python3 $SD/delete_meeting.py --date 2026-07-11
 
 `milestones.md` 单表（名称|目标日期|状态|备注），暂无专用 CRUD 脚本，直接编辑 markdown 即可，只读 API `GET /api/management/milestones` 解析。
 
-项目树 `projects/{slug}/`：`README.md`（项目元信息 + 正文）+ **`tasks.json`（任务单源，CRUD 见 §1）** + `notes/`（任务笔记 markdown，task 节点 `notePath` 引用）。只读 API `GET /api/management/projects[/{slug}[/tasks|/notes/{path}]]` 解析。项目树页与看板页读同一份 `tasks.json`。
+项目树 `projects/{slug}/`：`README.md`（项目元信息 + 正文）+ **`tasks.json`（任务单源，CRUD 见 §1）** + `notes/`（任务笔记 markdown，task 节点 `notePath` 引用）+ `summary/`（完成总结 markdown，task 节点 `summaryPath` 引用，写法见 §1.3）。只读 API `GET /api/management/projects[/{slug}[/tasks|/notes/{path}]]` 解析（`/notes/{path}` 相对项目目录解析，也用于读取 `summary/xx.md`）。项目树页与看板页读同一份 `tasks.json`。
 
 ## 6. 文档（Wiki）CRUD → `DocPage.vue`
 
