@@ -46,42 +46,22 @@
                 <span v-else-if="r.correct === false" class="badge wrong">✗</span>
                 <span v-else class="badge na">—</span>
               </div>
-              <div class="info">
-                <div class="model" :title="r.model_id">{{ r.model_id }}</div>
-                <div class="info-row">
-                  <div class="pred">
-                    <span class="pred-label">{{ r.metrics?.top1_label || '—' }}</span>
-                    <span v-if="r.metrics?.top1_score != null" class="pred-score">{{ r.metrics.top1_score.toFixed(2) }}</span>
-                  </div>
-                  <div class="meta">
-                    <span class="meta-gpu" :title="r.gpu_mem_mb != null ? `${r.gpu_mem_mb}MB GPU 显存` : 'GPU 显存未知'">
-                      <span v-if="r.gpu_mem_mb != null">{{ r.gpu_mem_mb }}MB</span>
-                      <span v-else class="dim">—MB</span>
-                    </span>
-                    <span class="meta-sep">·</span>
-                    <span class="meta-elapsed" :title="r.elapsed_s != null ? `${r.elapsed_s}s 推理耗时` : '推理耗时未知'">
-                      {{ r.elapsed_s != null ? r.elapsed_s + 's' : '—' }}
-                    </span>
-                    <span v-if="r.gpu_avg_util != null" class="meta-sep">·</span>
-                    <span
-                      v-if="r.gpu_avg_util != null"
-                      class="meta-gpu-util"
-                      :title="`${r.gpu_avg_util}% GPU 平均利用率`"
-                    >{{ r.gpu_avg_util }}%</span>
-                    <span v-if="r.rtf != null" class="meta-sep">·</span>
-                    <span
-                      v-if="r.rtf != null"
-                      class="meta-rtf"
-                      :title="`RTF（实时率）= 推理耗时 / 视频时长`"
-                    >RTF {{ r.rtf }}</span>
-                    <n-tag
-                      class="meta-status"
-                      size="tiny"
-                      :type="r.status === 'completed' ? 'success' : r.status === 'error' ? 'error' : 'warning'"
-                    >{{ r.status === 'completed' ? '✓' : r.status === 'error' ? '✗' : '…' }}</n-tag>
-                  </div>
+              <div class="card-body">
+                <div class="card-model" :title="r.model_id">{{ r.model_id }}</div>
+                <div class="card-pred" :title="r.metrics?.top1_label">
+                  <span class="card-pred-label">{{ r.metrics?.top1_label || '—' }}</span>
+                  <span v-if="r.metrics?.top1_score != null" class="card-pred-score">{{ r.metrics.top1_score.toFixed(2) }}</span>
                 </div>
-                <div class="video-name" :title="r.video">{{ videoStem(r.video) }}</div>
+                <div class="card-stats">
+                  <span v-if="r.gpu_mem_mb != null">{{ r.gpu_mem_mb }}MB</span><span v-else>—MB</span>
+                  <span class="dot">·</span>
+                  <span>{{ r.elapsed_s != null ? r.elapsed_s + 's' : '—' }}</span>
+                  <span v-if="r.gpu_avg_util != null"><span class="dot">·</span>{{ r.gpu_avg_util }}%</span>
+                  <span v-if="r.rtf != null"><span class="dot">·</span>RTF {{ r.rtf }}</span>
+                  <span class="dot">·</span>
+                  <span :class="r.status === 'completed' ? 'st-ok' : r.status === 'error' ? 'st-err' : 'st-wait'">{{ r.status === 'completed' ? '✓' : r.status === 'error' ? '✗' : '…' }}</span>
+                </div>
+                <div class="card-video" :title="r.video">{{ videoStem(r.video) }}</div>
               </div>
             </div>
           </n-gi>
@@ -352,73 +332,46 @@ onUnmounted(stopPolling)
 .thumb .badge.correct { background: #18a058; }
 .thumb .badge.wrong { background: #d03050; }
 .thumb .badge.na { background: #909399; }
-.info {
+.card-body {
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
-.model {
+.card-model {
   font-weight: 600;
   font-size: 13px;
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--n-text-color, #1f2329);
 }
-.info-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 18px;
-}
-.pred {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-}
-.pred-label {
+.card-pred {
   font-size: 12px;
-  font-weight: 500;
   line-height: 1.3;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(128, 128, 128, 0.12);
-  color: inherit;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
 }
-.pred-score {
+.card-pred-label { font-weight: 500; }
+.card-pred-score { color: #6b7280; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.card-stats {
   font-size: 11px;
+  color: #9ca3af;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-2, #6b7280);
-}
-.meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-dim, #9ca3af);
   white-space: nowrap;
 }
-.meta-sep { opacity: .55; }
-.meta-status { margin-left: 2px; }
-.video-name {
-  margin-top: 1px;
+.card-stats .dot { margin: 0 3px; opacity: .5; }
+.card-stats .st-ok { color: #18a058; font-weight: bold; }
+.card-stats .st-err { color: #d03050; font-weight: bold; }
+.card-stats .st-wait { color: #f0a020; font-weight: bold; }
+.card-video {
   font-size: 10px;
   font-style: italic;
-  line-height: 1.3;
-  color: var(--color-text-dim, #9ca3af);
-  opacity: .85;
+  color: #9ca3af;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 2px;
 }
-.dim { color: var(--color-text-dim, #9ca3af); }
 </style>
