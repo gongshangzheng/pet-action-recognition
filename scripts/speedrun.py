@@ -94,7 +94,7 @@ def _gpu_util() -> float | None:
     """采样 GPU 利用率（%）。nvidia-smi 不可用返回 None。"""
     try:
         proc = subprocess.run(
-            ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounit"],
+            ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=10,
         )
         if proc.returncode != 0:
