@@ -243,3 +243,61 @@ web 训练结果页（`web/src/views/training/TrainResults.vue`）读这个 json
 - mmcv 版本 → mmaction2 要求 `mmcv>=2.0.0`（非 mmcv-full），用 `mim install` 锁版本。
 - checkpoint 路径穿越 → `server/routers/training.py` 的 `/outputs` 端点用 `safe_resolve` 守卫（已在 `server/utils/file_utils.py`）。
 - 训练 OOM → 调小 `batch_size`、加 `--amp`、降 `clip_len`/`num_clips`。
+
+## 9. 检测模型接入（AVA 时空动作检测）
+
+前面 §1–§8 全是**分类**模型（Recognizer2D/3D，单视频→一个 label）。AVA 是**时空动作检测**（spatiotemporal detection）：视频里每个**人框**→多类别动作 label。流程完全不同，独立成节。
+
+### 9.1 公共路径（所有检测模型共享）
+
+注册表里检测模型靠 `type: "detection"` 区分（分类无此字段或为 `recognition`）。每个检测模型 registry 条目拆成「公共 + per-model」两块：
+
+**公共（所有检测模型同一套）**：
+- `det_config` — Faster-RCNN 人体检测器：`models/mmaction2/demo/demo_configs/faster-rcnn_r50_fpn_2x_coco_infer.py`
+- `det_checkpoint` — `checkpoints/faster-rcnn-coco/faster_rcnn_r50_fpn_2x_coco.pth`（COCO 预训练，只取 `person` 类）
+- `label_map` — `models/mmaction2/tools/data/ava/label_map.txt`（60 个 AVA 类别）
+
+**per-model**：
+- `mmaction2_config` — `models/mmaction2/configs/detection/<model>/` 下的 AVA config
+- `pretrained_url` — 对应 checkpoint（见 §9.5 checkpoint 坑）
+
+### 9.2 推理：用 `demo_spatiotemporal_det.py`，不是 `inference_recognizer`
+
+**关键**：`inference_recognizer` 不能用于 AVA —— 检测模型需要外部 actor proposals（人框）才能前向，纯视频 tensor 喂进去会报缺 proposals。统一走 demo 脚本（subprocess）：
+
+```bash
+python models/mmaction2/demo/demo_spatiotemporal_det.py <video> <out_filename> \
+  --config <AVA_config> --checkpoint <AVA_ckpt> \
+  --det-config <faster_rcnn_config> --det-checkpoint <faster_rcnn_ckpt> \
+  --label-map <ava_label_map> --device cuda:0
+```
+
+demo 内部流程：抽帧 → Faster-RCNN 检人框 → 滑动时序窗口 → `model(tensor, [ActionDataSample(proposals=...)], mode='predict')` → 对 `pred_instances.scores` 按类别阈值过滤 → 输出带人框 + AVA 动作 label 的标注视频。
+
+### 9.3 Speed run 走检测分支
+
+`scripts/speedrun.py` 读 registry 检测 `type=detection` → subprocess `demo_spatiotemporal_det.py` 而不是 `infer_and_annotate`。结果 shape 与分类不同：
+
+- `correct: null` —— N/A，检测的 label 空间是 60 类 AVA 动作，与四足分类 label 空间不同，无法判对错
+- `metrics.type: "detection"` —— 标记是检测结果
+- 标注视频本身就是「结果」（人框 + 动作 label 叠在画面上）
+
+### 9.4 已注册检测模型（5 个）
+
+| model_id | mmaction2_config 目录 |
+|---|---|
+| `slowonly-ava-r101` | `configs/detection/slowonly/` |
+| `slowfast-ava-r50` | `configs/detection/slowfast/` |
+| `videomae-ava-base` | `configs/detection/videomae/` |
+| `acrn-ava-r50` | `configs/detection/acrn/` |
+| `lfb-ava-r50` | `configs/detection/lfb/` |
+
+全部共用同一套 Faster-RCNN 检测器 + AVA label map（§9.1），只是 AVA 骨干不同。
+
+### 9.5 Checkpoint 坑：v1.0 URL 部分失效
+
+mmaction2 部分 AVA checkpoint 的 `pretrained_url`（v1.0 路径）会 404，例如 slowonly R50。**老格式 URL 仍可用**（如 slowonly R101 是 demo 默认配置）。接入流程：
+
+1. 看 `models/mmaction2/configs/detection/<model>/metafile.yml` 里的精确 URL（不是 README 表格，README 有时滞后）
+2. `curl -I <url>` 验证 200 再写进 registry
+3. 失效就找同族老格式 URL 替换，或本地缓存后改用 `file://` 路径

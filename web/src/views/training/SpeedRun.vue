@@ -48,20 +48,26 @@
               </div>
               <div class="info">
                 <div class="model" :title="r.model_id">{{ r.model_id }}</div>
-                <div class="pred">
-                  <span class="pred-label">{{ r.metrics?.top1_label || '—' }}</span>
-                  <span class="pred-score">{{ r.metrics?.top1_score != null ? r.metrics.top1_score.toFixed(2) : '' }}</span>
-                </div>
-                <div class="meta">
-                  <span v-if="r.gpu_mem_mb != null">{{ r.gpu_mem_mb }}MB</span>
-                    <span v-else class="dim">— MB</span>
-                  <span>·</span>
-                  <span>{{ r.elapsed_s != null ? r.elapsed_s + 's' : '—' }}</span>
-                  <span>·</span>
-                  <n-tag
-                    size="tiny"
-                    :type="r.status === 'completed' ? 'success' : r.status === 'error' ? 'error' : 'warning'"
-                  >{{ r.status === 'completed' ? '✓' : r.status === 'error' ? '✗' : '…' }}</n-tag>
+                <div class="info-row">
+                  <div class="pred">
+                    <span class="pred-label">{{ r.metrics?.top1_label || '—' }}</span>
+                    <span v-if="r.metrics?.top1_score != null" class="pred-score">{{ r.metrics.top1_score.toFixed(2) }}</span>
+                  </div>
+                  <div class="meta">
+                    <span class="meta-gpu" :title="r.gpu_mem_mb != null ? `${r.gpu_mem_mb}MB GPU 显存` : 'GPU 显存未知'">
+                      <span v-if="r.gpu_mem_mb != null">{{ r.gpu_mem_mb }}MB</span>
+                      <span v-else class="dim">—MB</span>
+                    </span>
+                    <span class="meta-sep">·</span>
+                    <span class="meta-elapsed" :title="r.elapsed_s != null ? `${r.elapsed_s}s 推理耗时` : '推理耗时未知'">
+                      {{ r.elapsed_s != null ? r.elapsed_s + 's' : '—' }}
+                    </span>
+                    <n-tag
+                      class="meta-status"
+                      size="tiny"
+                      :type="r.status === 'completed' ? 'success' : r.status === 'error' ? 'error' : 'warning'"
+                    >{{ r.status === 'completed' ? '✓' : r.status === 'error' ? '✗' : '…' }}</n-tag>
+                  </div>
                 </div>
                 <div class="video-name" :title="r.video">{{ videoStem(r.video) }}</div>
               </div>
@@ -334,28 +340,70 @@ onUnmounted(stopPolling)
 .thumb .badge.correct { background: #18a058; }
 .thumb .badge.wrong { background: #d03050; }
 .thumb .badge.na { background: #909399; }
-.info { padding: 8px 10px; }
+.info {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
 .model {
   font-weight: 600;
   font-size: 13px;
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--n-text-color, #1f2329);
 }
-.pred { font-size: 12px; margin: 2px 0; }
-.pred-label { color: var(--n-color-target, #2563eb); }
-.pred-score { color: var(--color-text-dim, #9ca3af); margin-left: 6px; }
-.meta {
-  font-size: 11px;
-  color: var(--color-text-dim, #9ca3af);
+.info-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin: 2px 0;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 18px;
 }
-.video-name {
-  font-size: 10px;
+.pred {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.pred-label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--n-color-target-bg, rgba(37, 99, 235, 0.08));
+  color: var(--n-color-target, #2563eb);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.pred-score {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-2, #6b7280);
+}
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-dim, #9ca3af);
+  white-space: nowrap;
+}
+.meta-sep { opacity: .55; }
+.meta-status { margin-left: 2px; }
+.video-name {
+  margin-top: 1px;
+  font-size: 10px;
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--color-text-dim, #9ca3af);
+  opacity: .85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

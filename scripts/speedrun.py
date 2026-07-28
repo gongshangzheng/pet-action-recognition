@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 import time
 import traceback
@@ -73,6 +74,37 @@ def _extract_cover(video_path: str, cover_path: str) -> None:
     cap.release()
     if ok and frame is not None:
         cv2.imwrite(cover_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+
+
+def _video_duration(video_path: str) -> float:
+    """视频时长（秒）= frame_count / fps；读取失败返回 0。"""
+    import cv2
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return 0.0
+    fc = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    if not fps or fps <= 0:
+        return 0.0
+    return (fc or 0.0) / fps
+
+
+def _gpu_util() -> float | None:
+    """采样 GPU 利用率（%）。nvidia-smi 不可用返回 None。"""
+    try:
+        proc = subprocess.run(
+            ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounit"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if proc.returncode != 0:
+            return None
+        vals = [float(x) for x in proc.stdout.strip().splitlines() if x.strip() != ""]
+        if not vals:
+            return None
+        return round(sum(vals) / len(vals), 1)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
 
 
 def _models_by_ids(ids: list[str]) -> list[dict]:
@@ -207,7 +239,6 @@ def main() -> int:
             try:
                 if m.get("type") == "detection":
                     # 检测模型：subprocess demo_spatiotemporal_det.py（不走 inference_recognizer）
-                    import subprocess as _sp
                     demo_script = os.path.join(MMACTION2_DIR, "demo", "demo_spatiotemporal_det.py")
                     abs_video = video if os.path.isabs(video) else os.path.join(str(REPO), video)
                     abs_out = out_video if os.path.isabs(out_video) else os.path.join(str(REPO), out_video)
@@ -219,6 +250,8 @@ def main() -> int:
                     lm = m.get("label_map", _DEFAULT_K400_LABELS)
                     if not os.path.isabs(lm):
                         lm = os.path.join(str(REPO), lm)
+                    gpu_before = _gpu_util()
+                    vdur = _video_duration(video)
                     cmd = [
                         sys.executable, demo_script,
                         abs_video, abs_out,
@@ -229,15 +262,21 @@ def main() -> int:
                         "--label-map", lm,
                         "--device", args.device,
                     ]
-                    proc = _sp.run(cmd, cwd=str(MMACTION2_DIR), capture_output=True, text=True, timeout=300)
+                    proc = subprocess.run(cmd, cwd=str(MMACTION2_DIR), capture_output=True, text=True, timeout=300)
                     status = "completed" if proc.returncode == 0 else "error"
+                    elapsed_s = round(time.time() - t0, 1)
+                    gpu_after = _gpu_util()
+                    gpu_avg = round((gpu_before + gpu_after) / 2, 1) if gpu_before is not None and gpu_after is not None else None
+                    rtf = round(elapsed_s / vdur, 2) if vdur > 0 else None
                     results_by_id[rid] = {
                         "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
                         "gt_label": gt_label, "correct": None,
                         "metrics": {"type": "detection", "note": "annotated video has person boxes + AVA action labels"},
                         "output_video": rel_video if os.path.isfile(abs_out) else None,
                         "status": status,
-                        "elapsed_s": round(time.time() - t0, 1),
+                        "elapsed_s": elapsed_s,
+                        "gpu_avg_util": gpu_avg,
+                        "rtf": rtf,
                         "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                     }
                     print(f"  [{video_stem}] detection {'OK' if status == 'completed' else 'FAIL'} → {abs_out}")
@@ -247,21 +286,29 @@ def main() -> int:
                 else:
                     # 分类模型：inference_recognizer + cv2 margin 叠字
                     cfg = Config.fromfile(cfg_path)
+                    gpu_before = _gpu_util()
+                    vdur = _video_duration(video)
                     res = infer_and_annotate(
                         video, cfg, ckpt, _labels_for(m),
                         out_video_path=out_video, device=args.device,
                         gt_label=gt_label,
                     )
+                    elapsed_s = round(time.time() - t0, 1)
+                    gpu_after = _gpu_util()
+                    gpu_avg = round((gpu_before + gpu_after) / 2, 1) if gpu_before is not None and gpu_after is not None else None
+                    rtf = round(elapsed_s / vdur, 2) if vdur > 0 else None
                     results_by_id[rid] = {
                         "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
                         "gt_label": gt_label,
                         "correct": _matches(gt_label, res["top1_label"]),
                         "metrics": res, "output_video": rel_video, "status": "completed",
                         "gpu_mem_mb": res.get("gpu_mem_mb"),
-                        "elapsed_s": round(time.time() - t0, 1),
+                        "elapsed_s": elapsed_s,
+                        "gpu_avg_util": gpu_avg,
+                        "rtf": rtf,
                         "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                     }
-                    print(f"  [{video_stem}] GT={gt_label} top1={res['top1_label']} ({res['top1_score']:.2f}) gpu={res.get('gpu_mem_mb')}MB → {out_video}")
+                    print(f"  [{video_stem}] GT={gt_label} top1={res['top1_label']} ({res['top1_score']:.2f}) gpu={res.get('gpu_mem_mb')}MB rtf={rtf} util={gpu_avg}% → {out_video}")
             except Exception as e:
                 results_by_id[rid] = {
                     "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
