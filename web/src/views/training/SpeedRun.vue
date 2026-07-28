@@ -1,61 +1,103 @@
 <template>
   <div class="page-container">
-    <n-card title="Speed Run — 视频×模型 → 标注视频" size="small">
-      <n-spin :show="loading">
-        <n-form :model="form" label-placement="left" :label-width="90" style="max-width: 760px">
-          <n-form-item label="视频路径" required>
-            <n-input
-              v-model:value="form.videosText"
-              type="textarea"
-              :rows="3"
-              placeholder="每行一个视频路径（相对仓库根或绝对），如&#10;models/mmaction2/demo/demo.mp4&#10;datasets/ucf101/videos/PlayingGuitar/xxx.avi"
+    <n-card size="small">
+      <template #header>
+        <div class="flex-between">
+          <h3>Speed Run 结果视频</h3>
+          <n-space align="center" size="small">
+            <n-select
+              v-model:value="filterModel"
+              :options="modelOptions"
+              placeholder="全部模型"
+              clearable
+              size="small"
+              style="width: 200px"
+              filterable
             />
-          </n-form-item>
-          <n-form-item label="模型">
-            <n-space align="center" style="width: 100%">
-              <n-select
-                v-model:value="form.models"
-                multiple
-                :options="modelOptions"
-                placeholder="选择模型（留空=全部）"
-                style="flex: 1; min-width: 360px"
-                filterable
-              />
-              <n-checkbox v-model:checked="allModels">全部</n-checkbox>
-            </n-space>
-          </n-form-item>
-          <n-form-item label="设备">
-            <n-radio-group v-model:value="form.device">
-              <n-radio value="cuda:0">GPU (cuda:0)</n-radio>
-              <n-radio value="cpu">CPU</n-radio>
-            </n-radio-group>
-          </n-form-item>
-          <n-form-item label="选项">
-            <n-checkbox v-model:checked="form.force">强制重跑（覆盖已有）</n-checkbox>
-          </n-form-item>
-          <n-form-item label=" ">
-            <n-button type="primary" :loading="running" :disabled="!videos.length" @click="handleRun">
-              启动 Speed Run
-            </n-button>
-            <n-tag v-if="status.running" type="info" style="margin-left: 12px">运行中 · 已出 {{ status.results_count }} 条</n-tag>
-            <n-tag v-else-if="lastRunId" type="success" style="margin-left: 12px">已完成 · {{ status.results_count }} 条</n-tag>
-          </n-form-item>
-        </n-form>
+            <n-button size="small" @click="refreshResults" :loading="loading">刷新</n-button>
+            <n-tag v-if="status.running" type="info" size="small">运行中 · 已出 {{ status.results_count }} 条</n-tag>
+            <n-tag v-else type="success" size="small">共 {{ results.length }} 条</n-tag>
+          </n-space>
+        </div>
+      </template>
+
+      <n-spin :show="loading">
+        <n-grid v-if="filteredResults.length" cols="3 600:2 900:3 1200:4" :x-gap="12" :y-gap="12" responsive="screen">
+          <n-gi v-for="r in filteredResults" :key="r.id">
+            <div class="video-card" @click="playVideo(r)">
+              <div class="thumb">
+                <n-icon size="36"><PlayCircleOutline /></n-icon>
+                <span class="ext">MP4</span>
+              </div>
+              <div class="info">
+                <div class="model" :title="r.model_id">{{ r.model_id }}</div>
+                <div class="pred">
+                  <span class="pred-label">{{ r.metrics?.top1_label || '—' }}</span>
+                  <span class="pred-score">{{ r.metrics?.top1_score != null ? r.metrics.top1_score.toFixed(2) : '' }}</span>
+                </div>
+                <div class="meta">
+                  <span v-if="r.gpu_mem_mb != null">{{ r.gpu_mem_mb }}MB</span>
+                    <span v-else class="dim">— MB</span>
+                  <span>·</span>
+                  <span>{{ r.elapsed_s != null ? r.elapsed_s + 's' : '—' }}</span>
+                  <span>·</span>
+                  <n-tag
+                    size="tiny"
+                    :type="r.status === 'completed' ? 'success' : r.status === 'error' ? 'error' : 'warning'"
+                  >{{ r.status === 'completed' ? '✓' : r.status === 'error' ? '✗' : '…' }}</n-tag>
+                </div>
+                <div class="video-name" :title="r.video">{{ videoStem(r.video) }}</div>
+              </div>
+            </div>
+          </n-gi>
+        </n-grid>
+        <EmptyState v-else description="暂无结果视频。展开下方「运行设置」启动一次 speed run。" />
       </n-spin>
     </n-card>
 
-    <n-card title="结果" size="small" style="margin-top: 16px">
-      <n-space style="margin-bottom: 8px">
-        <n-button size="small" @click="refreshResults" :loading="loading">刷新</n-button>
-        <n-text depth="3">{{ results.length }} 条结果 · {{ generatedAt }}</n-text>
-      </n-space>
-      <n-data-table
-        :columns="resultColumns"
-        :data="results"
-        :pagination="{ pageSize: 20 }"
-        size="small"
-        :row-key="row => row.id"
-      />
+    <n-card size="small" style="margin-top: 16px">
+      <n-collapse>
+        <n-collapse-item title="运行设置（新建 / 重跑 speed run）" name="run">
+          <n-form :model="form" label-placement="left" :label-width="90" style="max-width: 760px">
+            <n-form-item label="视频路径" required>
+              <n-input
+                v-model:value="form.videosText"
+                type="textarea"
+                :rows="3"
+                placeholder="每行一个视频路径，如&#10;datasets/ucf101/PlayingGuitar/v_PlayingGuitar_g01_c01.avi"
+              />
+            </n-form-item>
+            <n-form-item label="模型">
+              <n-space align="center" style="width: 100%">
+                <n-select
+                  v-model:value="form.models"
+                  multiple
+                  :options="modelOptionsAll"
+                  placeholder="选择模型（留空=全部）"
+                  style="flex: 1; min-width: 360px"
+                  filterable
+                />
+                <n-checkbox v-model:checked="allModels">全部</n-checkbox>
+              </n-space>
+            </n-form-item>
+            <n-form-item label="设备">
+              <n-radio-group v-model:value="form.device">
+                <n-radio value="cuda:0">cuda:0</n-radio>
+                <n-radio value="cuda:1">cuda:1</n-radio>
+                <n-radio value="cpu">CPU</n-radio>
+              </n-radio-group>
+            </n-form-item>
+            <n-form-item label="选项">
+              <n-checkbox v-model:checked="form.force">强制重跑（覆盖已有）</n-checkbox>
+            </n-form-item>
+            <n-form-item label=" ">
+              <n-button type="primary" :loading="running" :disabled="!videos.length" @click="handleRun">
+                启动 Speed Run
+              </n-button>
+            </n-form-item>
+          </n-form>
+        </n-collapse-item>
+      </n-collapse>
     </n-card>
 
     <VideoModal v-model:show="videoShow" :src="videoSrc" :title="videoTitle" />
@@ -64,8 +106,13 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
-import { h } from 'vue'
-import { NButton, NTag } from 'naive-ui'
+import {
+  NCard, NSpin, NSpace, NSelect, NButton, NTag, NGrid, NGi, NIcon,
+  NForm, NFormItem, NInput, NRadioGroup, NRadio, NCheckbox, NCollapse, NCollapseItem,
+} from 'naive-ui'
+import { PlayCircleOutline } from '@vicons/ionicons5'
+import EmptyState from '../../components/common/EmptyState.vue'
+import VideoModal from '../../components/common/VideoModal.vue'
 import {
   getTrainModels,
   speedRun,
@@ -73,122 +120,75 @@ import {
   getSpeedrunResults,
   getSpeedrunOutputUrl,
 } from '../../api/training'
-import VideoModal from '../../components/common/VideoModal.vue'
 
 const loading = ref(false)
 const running = ref(false)
-const lastRunId = ref('')
 const results = ref([])
-const generatedAt = ref('')
 const status = reactive({ running: false, results_count: 0 })
-const modelOptions = ref([])
+const modelOptionsAll = ref([])
+const filterModel = ref(null)
 
 const form = reactive({
-  videosText: 'models/mmaction2/demo/demo.mp4',
+  videosText: 'datasets/ucf101/PlayingGuitar/v_PlayingGuitar_g01_c01.avi\ndatasets/ucf101/Archery/v_Archery_g01_c01.avi\ndatasets/ucf101/BabyCrawling/v_BabyCrawling_g01_c01.avi',
   models: [],
   device: 'cuda:0',
   force: false,
 })
 const allModels = ref(true)
 
-const videos = computed(() =>
-  form.videosText.split('\n').map(s => s.trim()).filter(Boolean)
+const videos = computed(() => form.videosText.split('\n').map(s => s.trim()).filter(Boolean))
+
+watch(allModels, (v) => { form.models = v ? [] : form.models })
+
+const modelOptions = computed(() => {
+  const ids = [...new Set(results.value.map(r => r.model_id))].sort()
+  return ids.map(id => ({ label: id, value: id }))
+})
+
+const filteredResults = computed(() =>
+  filterModel.value ? results.value.filter(r => r.model_id === filterModel.value) : results.value
 )
 
-watch(allModels, (v) => {
-  form.models = v ? [] : form.models
-})
+function videoStem(path) {
+  return path.split('/').pop()
+}
 
 const videoShow = ref(false)
 const videoSrc = ref('')
 const videoTitle = ref('')
 
-function playVideo(path, title) {
-  videoSrc.value = getSpeedrunOutputUrl(path)
-  videoTitle.value = title
+function playVideo(r) {
+  if (!r.output_video) return
+  videoSrc.value = getSpeedrunOutputUrl(r.output_video)
+  videoTitle.value = `${r.model_id} · ${videoStem(r.video)}`
   videoShow.value = true
 }
-
-const resultColumns = [
-  { title: '模型', key: 'model_id', width: 180 },
-  { title: '视频', key: 'video', ellipsis: { tooltip: true }, minWidth: 220 },
-  {
-    title: 'Top-1',
-    key: 'metrics',
-    width: 200,
-    render: (row) => {
-      const m = row.metrics || {}
-      return m.top1_label ? `${m.top1_label} (${(m.top1_score ?? 0).toFixed(2)})` : '—'
-    },
-  },
-  {
-    title: 'Top-5',
-    key: 'top5',
-    render: (row) => {
-      const top5 = row.metrics?.top5 || []
-      return top5.map(([label, score], i) =>
-        h(NTag, { size: 'small', type: i === 0 ? 'success' : 'default', style: 'margin: 2px' },
-          () => `${label} ${score.toFixed(2)}`)
-      )
-    },
-  },
-  {
-    title: '状态',
-    key: 'status',
-    width: 100,
-    render: (row) =>
-      h(NTag, { size: 'small', type: row.status === 'completed' ? 'success' : row.status === 'error' ? 'error' : 'warning' },
-        () => row.status),
-  },
-  {
-    title: 'GPU 显存',
-    key: 'gpu_mem_mb',
-    width: 100,
-    render: (row) => row.gpu_mem_mb != null ? `${row.gpu_mem_mb} MB` : '—',
-  },
-  { title: '耗时', key: 'elapsed_s', width: 80, render: (row) => row.elapsed_s != null ? `${row.elapsed_s}s` : '—' },
-  {
-    title: '视频',
-    key: 'output_video',
-    width: 90,
-    render: (row) =>
-      row.output_video
-        ? h(NButton, { size: 'small', onClick: () => playVideo(row.output_video, `${row.model_id} · ${row.video}`) }, () => '播放')
-        : '—',
-  },
-]
 
 async function loadModels() {
   loading.value = true
   try {
     const models = await getTrainModels()
-    modelOptions.value = (models || [])
+    modelOptionsAll.value = (models || [])
       .filter(m => !m.id.endsWith('-quadruped'))
       .map(m => ({ label: `${m.id} · ${m.name}`, value: m.id }))
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 }
 
 async function handleRun() {
   if (!videos.value.length) return
   loading.value = true
   try {
-    const body = {
+    const res = await speedRun({
       videos: videos.value,
       models: allModels.value ? 'all' : form.models,
       device: form.device,
       force: form.force,
-    }
-    const res = await speedRun(body)
-    lastRunId.value = res.run_id || ''
+    })
     running.value = true
     status.running = true
     status.results_count = 0
     startPolling()
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 }
 
 let pollTimer = null
@@ -202,33 +202,79 @@ function startPolling() {
     }
   }, 3000)
 }
-function stopPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
-}
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
 
 async function refreshStatus() {
   try {
     const s = await getSpeedrunStatus()
     status.running = !!s.running
     status.results_count = s.results_count ?? 0
-  } catch { /* ignore */ }
+  } catch {}
 }
 async function refreshResults() {
   try {
     const d = await getSpeedrunResults()
     results.value = d.results || []
-    generatedAt.value = d.generated_at || ''
-  } catch { /* ignore */ }
+  } catch {}
 }
 
-onMounted(() => {
-  loadModels()
-  refreshResults()
-  refreshStatus()
-})
+onMounted(() => { loadModels(); refreshResults(); refreshStatus() })
 onUnmounted(stopPolling)
 </script>
 
 <style scoped>
 .page-container { padding: 16px; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.video-card {
+  border: 1px solid var(--n-border-color, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow .15s, transform .15s;
+  background: var(--n-color, #fff);
+}
+.video-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.12); transform: translateY(-1px); }
+.thumb {
+  position: relative;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: rgba(255,255,255,.9);
+}
+.thumb .ext {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 11px;
+  color: rgba(255,255,255,.7);
+}
+.info { padding: 8px 10px; }
+.model {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pred { font-size: 12px; margin: 2px 0; }
+.pred-label { color: var(--n-color-target, #2563eb); }
+.pred-score { color: var(--color-text-dim, #9ca3af); margin-left: 6px; }
+.meta {
+  font-size: 11px;
+  color: var(--color-text-dim, #9ca3af);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0;
+}
+.video-name {
+  font-size: 10px;
+  color: var(--color-text-dim, #9ca3af);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dim { color: var(--color-text-dim, #9ca3af); }
 </style>
