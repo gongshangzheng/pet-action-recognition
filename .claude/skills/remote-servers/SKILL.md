@@ -7,6 +7,8 @@ description: |
 
 # 远程服务器使用指南
 
+> **铁律**：训练、测试、推理、speed run、checkpoint 下载等所有 GPU/重算活**都必须在远程服务器（pet / A100）上跑**，不在本地 mac。本地只改代码 + push。详见 [[training]] 和 [[testing]] skill。
+
 ## 服务器一览
 
 | 别名 | 硬件 | 角色 | 环境 | 状态 |
