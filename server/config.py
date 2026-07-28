@@ -51,7 +51,8 @@ def resolve_mmaction2_config(cfg: str) -> str:
 # 四足动物动作数据集（名称未定，先设为变量；数据集收集后改这一处即可）
 # datasets/<QUADRUPED_DATASET_NAME>/ 为训练/评测共用根目录
 QUADRUPED_DATASET_NAME = "quadruped_action"
-QUADRUPED_DATASET_DIR = os.path.join(BASE_DIR, "datasets", QUADRUPED_DATASET_NAME)
+DATASETS_DIR = os.path.join(BASE_DIR, "datasets")
+QUADRUPED_DATASET_DIR = os.path.join(DATASETS_DIR, QUADRUPED_DATASET_NAME)
 QUADRUPED_CLASSES_FILE = os.path.join(QUADRUPED_DATASET_DIR, "classes.txt")
 
 # 论文数据库路径（本地独立数据库）

@@ -142,8 +142,15 @@ const menuOptions = [
       { label: 'Speed Run', key: '/evaluation/speedrun', icon: renderIcon(FilmOutline) },
       { label: '评测结果', key: '/evaluation/results', icon: renderIcon(BarChartOutline) },
       { label: '模型管理', key: '/evaluation/models', icon: renderIcon(CubeOutline) },
-      { label: '数据集管理', key: '/evaluation/datasets', icon: renderIcon(LayersOutline) },
       { label: '评测配置', key: '/evaluation/configs', icon: renderIcon(SettingsOutline) },
+    ],
+  },
+  {
+    label: '数据集',
+    key: 'datasets',
+    icon: renderIcon(LayersOutline),
+    children: [
+      { label: '数据集浏览', key: '/datasets', icon: renderIcon(LayersOutline) },
     ],
   },
   {
@@ -154,7 +161,6 @@ const menuOptions = [
       { label: '训练运行', key: '/training/run', icon: renderIcon(SchoolOutline) },
       { label: '训练结果', key: '/training/results', icon: renderIcon(BarChartOutline) },
       { label: '模型配置', key: '/training/models', icon: renderIcon(CubeOutline) },
-      { label: '数据集配置', key: '/training/datasets', icon: renderIcon(LayersOutline) },
       { label: '训练配置', key: '/training/configs', icon: renderIcon(SettingsOutline) },
     ],
   },
@@ -169,8 +175,9 @@ const activeKey = computed(() => {
     '/', '/management/projects', '/management/team',
     '/management/tasks', '/management/milestones',
     '/management/meetings', '/management/docs', '/papers/list', '/papers/config',
-    '/evaluation/run', '/evaluation/speedrun', '/evaluation/results', '/evaluation/outputs', '/evaluation/models', '/evaluation/datasets', '/evaluation/configs',
-    '/training/run', '/training/results', '/training/models', '/training/datasets', '/training/configs',
+    '/evaluation/run', '/evaluation/speedrun', '/evaluation/results', '/evaluation/outputs', '/evaluation/models', '/evaluation/configs',
+    '/datasets',
+    '/training/run', '/training/results', '/training/models', '/training/configs',
   ]
   let best = '/'
   for (const k of allKeys) {

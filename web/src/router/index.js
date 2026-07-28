@@ -159,6 +159,13 @@ const routes = [
         component: () => import('../views/evaluation/ConfigManage.vue'),
         meta: { title: '评测配置', module: 'evaluation' },
       },
+      // ===== datasets 数据集 =====
+      {
+        path: 'datasets',
+        name: 'DatasetBrowser',
+        component: () => import('../views/datasets/DatasetBrowser.vue'),
+        meta: { title: '数据集浏览', module: 'datasets' },
+      },
       // ===== training 训练体系 =====
       { path: 'training', redirect: '/training/results' },
       {

@@ -1,7 +1,7 @@
 ---
 name: datasets
 description: |
-  数据集与预训练权重的管理指南。说明 UCF101/四足数据集的下载与组织、per-model label_map、checkpoint 下载、NAS 软链、ann_file 格式。
+  数据集与预训练权重的管理指南。说明 UCF101/四足数据集/pet_action_mammal_v0 的下载与组织、per-model label_map、checkpoint 下载、软链（NAS 或本地）、ann_file 格式。
   触发场景：(1) 下载数据集 (2) 下载预训练 checkpoint (3) 管理 label_map (4) 组织 datasets/ 目录 (5) 了解数据集状态
 ---
 
@@ -14,10 +14,14 @@ description: |
 - 数据集 + checkpoint 都在 **pet**（远程训练机），本地不存。`checkpoints/` 同样被 `.gitignore`（`/checkpoints/`）忽略。
 - 配置入口：`server/config.py` 的 `QUADRUPED_DATASET_NAME` / `QUADRUPED_DATASET_DIR` / `QUADRUPED_CLASSES_FILE` / `CHECKPOINTS_DIR`。
 
-## NAS 软链
+## 软链约定
 
-- `/home/wyy/mnt/` 是 CIFS 挂载（NAS @ `192.168.110.4`），pet 可达。
-- 大数据集放 NAS，从 `datasets/<name>` 软链到 NAS 子目录，例如 `datasets/ucf101 → /home/wyy/mnt/ucf101/UCF-101`。
+- **NAS 挂载**：`/home/wyy/mnt/` 是 CIFS 挂载（NAS @ `192.168.110.4`），pet 可达；大数据集放 NAS，从 `datasets/<name>` 软链到 NAS 子目录。
+- **pet 本地**：`~/datasets/` 是 pet 机器本地磁盘上的数据集目录（不走 NAS），同样从 `datasets/<name>` 软链过去。
+- 统一模式：`ln -s <绝对路径> datasets/<name>`，软链只对 pet 生效（绝对路径，本地 mac / A100 上是断链，别在本地依赖）。
+- 现有软链：
+  - `datasets/ucf101 → /home/wyy/mnt/ucf101/UCF-101`（NAS）
+  - `datasets/pet_action_mammal_v0 → /home/wyy/datasets/pet_action_mammal_v0`（pet 本地）
 
 ## UCF101（人类动作，speed run 验证用）
 
@@ -25,6 +29,27 @@ description: |
 - 软链：`datasets/ucf101 → /home/wyy/mnt/ucf101/UCF-101`。
 - 规模：101 类，13320 视频。
 - 用途：K400 预训练模型可在此做 speed run 验证（K400 与 UCF101 有重叠类，如 "playing guitar" / "archery" / "crawling baby"）。
+
+## pet_action_mammal_v0（项目自有，哺乳动物动作）
+
+- 来源：项目 `data/pet_action_v0` 的严格哺乳动物子集（筛选规则：`species_parent_class` 全部为 `Mammal`；混合类如 `Mammal|Reptile` 一律剔除）。父级 14938 段里选了 2234，剔了 12704。
+- 实体位置：pet 本地 `~/datasets/pet_action_mammal_v0/`（不走 NAS）。
+- 软链：`datasets/pet_action_mammal_v0 → /home/wyy/datasets/pet_action_mammal_v0`。
+- 重建脚本：`python scripts/build_pet_action_mammal_v0.py`（项目根目录）。
+- 结构：
+  ```
+  datasets/pet_action_mammal_v0/
+  ├── README.md / SHA256SUMS.txt
+  ├── annotation/   # train_public.txt / val_public.txt / test_public.txt 等（MMAction2 VideoDataset manifest）
+  └── dataset/video/*.mp4   # 2234 个视频（922 MB）
+  ```
+- 规模：2234 视频，划分 train 1801 / val 216 / test 217。
+- 类别：7 个训练类（`num_classes=7`）—— `0 locomotion`(1276) / `1 jump`(144) / `2 eating`(281) / `3 drinking`(26) / `4 grooming`(37) / `5 still_rest`(310) / `6 social_interaction`(160)。`7 other_unknown` 是保留类，0 样本，**不要用 num_classes=8**。
+- MMAction2 接入：
+  - `data_prefix = datasets/pet_action_mammal_v0`
+  - `ann_file = datasets/pet_action_mammal_v0/annotation/{train,val,test}_public.txt`（manifest 路径形如 `dataset/video/AAABBBBB.mp4 0`，相对 `data_prefix`）
+  - `num_classes = 7`
+- 注意：片段**未经人工视觉复核**（物种/动作歧义/字幕水印都没人看过），继承父版本 `not_visually_reviewed` 标志。
 
 ## 四足动作数据集（目标数据集，待收集）
 

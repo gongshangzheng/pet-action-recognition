@@ -29,6 +29,9 @@ results/
 # datasets/ entirely: runtime/external data (videos on NAS, list files generated), not committed
 /datasets/
 
+# Dataset thumbnails cache (generated from video middle frames)
+/datasets/.thumbs/
+
 # Dataset artifacts (large video files; lists/README may be committed)
 datasets/quadruped_action/videos_*/
 
