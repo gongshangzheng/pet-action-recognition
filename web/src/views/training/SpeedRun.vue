@@ -386,8 +386,8 @@ onUnmounted(stopPolling)
   line-height: 1.3;
   padding: 1px 6px;
   border-radius: 4px;
-  background: var(--n-color-target-bg, rgba(37, 99, 235, 0.08));
-  color: var(--n-color-target, #2563eb);
+  background: rgba(128, 128, 128, 0.12);
+  color: inherit;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
