@@ -260,6 +260,20 @@ _MMACTION2_REGISTRY = [
         "mmaction2_config": "configs/quadruped_tsn_r50.py",
         "description": "小分辨率、PyAV 后端；可加载 TSN K400 预训练权重做 finetune。",
     },
+    {
+        "id": "slowonly-ava-r101",
+        "name": "SlowOnly (AVA detection, R101)",
+        "family": "AVA",
+        "backbone": "resnet101",
+        "pretrained_source": "AVA v2.1",
+        "pretrained_url": "https://download.openmmlab.com/mmaction/detection/ava/slowonly_omnisource_pretrained_r101_8x8x1_20e_ava_rgb/slowonly_omnisource_pretrained_r101_8x8x1_20e_ava_rgb_20201217-16378594.pth",
+        "mmaction2_config": "configs/detection/slowonly/slowonly_kinetics400-pretrained-r101_8xb16-8x8x1-20e_ava21-rgb.py",
+        "label_map": "models/mmaction2/tools/data/ava/label_map.txt",
+        "type": "detection",
+        "det_config": "demo/demo_configs/faster-rcnn_r50_fpn_2x_coco_infer.py",
+        "det_checkpoint": "checkpoints/faster-rcnn-coco/faster_rcnn_r50_fpn_2x_coco.pth",
+        "description": "AVA 时空动作检测（人物框 + 60 类 AVA 动作标签贴框边）",
+    },
 ]
 
 # 数据集 shape: {id, name, splits, num_samples, modalities, status, description}

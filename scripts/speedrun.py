@@ -30,6 +30,7 @@ sys.path.insert(0, str(REPO))
 
 from server.config import (
     CHECKPOINTS_DIR,
+    MMACTION2_DIR,
     SPEEDRUN_OUTPUTS_DIR,
     SPEEDRUN_RESULTS_JSON,
     resolve_mmaction2_config,
@@ -174,22 +175,63 @@ def main() -> int:
             # 真实标签：从视频路径派生（UCF101: 父目录名 = 类名）
             gt_label = Path(video).parent.name if "ucf101" in video.lower() else None
             try:
-                cfg = Config.fromfile(cfg_path)
-                res = infer_and_annotate(
-                    video, cfg, ckpt, _labels_for(m),
-                    out_video_path=out_video, device=args.device,
-                    gt_label=gt_label,
-                )
-                results_by_id[rid] = {
-                    "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
-                    "gt_label": gt_label,
-                    "correct": _matches(gt_label, res["top1_label"]),
-                    "metrics": res, "output_video": rel_video, "status": "completed",
-                    "gpu_mem_mb": res.get("gpu_mem_mb"),
-                    "elapsed_s": round(time.time() - t0, 1),
-                    "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                }
-                print(f"  [{video_stem}] GT={gt_label} top1={res['top1_label']} ({res['top1_score']:.2f}) gpu={res.get('gpu_mem_mb')}MB → {out_video}")
+                if m.get("type") == "detection":
+                    # 检测模型：subprocess demo_spatiotemporal_det.py（不走 inference_recognizer）
+                    import subprocess as _sp
+                    demo_script = os.path.join(MMACTION2_DIR, "demo", "demo_spatiotemporal_det.py")
+                    abs_video = video if os.path.isabs(video) else os.path.join(str(REPO), video)
+                    abs_out = out_video if os.path.isabs(out_video) else os.path.join(str(REPO), out_video)
+                    os.makedirs(os.path.dirname(abs_out), exist_ok=True)
+                    det_cfg = m.get("det_config", "")
+                    det_ckpt = m.get("det_checkpoint", "")
+                    if not os.path.isabs(det_ckpt):
+                        det_ckpt = os.path.join(str(REPO), det_ckpt)
+                    lm = m.get("label_map", _DEFAULT_K400_LABELS)
+                    if not os.path.isabs(lm):
+                        lm = os.path.join(str(REPO), lm)
+                    cmd = [
+                        sys.executable, demo_script,
+                        abs_video, abs_out,
+                        "--config", cfg_path,
+                        "--checkpoint", ckpt,
+                        "--det-config", det_cfg,
+                        "--det-checkpoint", det_ckpt,
+                        "--label-map", lm,
+                        "--device", args.device,
+                    ]
+                    proc = _sp.run(cmd, cwd=str(MMACTION2_DIR), capture_output=True, text=True, timeout=300)
+                    status = "completed" if proc.returncode == 0 else "error"
+                    results_by_id[rid] = {
+                        "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
+                        "gt_label": gt_label, "correct": None,
+                        "metrics": {"type": "detection", "note": "annotated video has person boxes + AVA action labels"},
+                        "output_video": rel_video if os.path.isfile(abs_out) else None,
+                        "status": status,
+                        "elapsed_s": round(time.time() - t0, 1),
+                        "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    }
+                    print(f"  [{video_stem}] detection {'OK' if status == 'completed' else 'FAIL'} → {abs_out}")
+                    if status == "error":
+                        print(f"    stderr: {proc.stderr[-500:] if proc.stderr else '(empty)'}")
+                        failures.append(rid)
+                else:
+                    # 分类模型：inference_recognizer + cv2 margin 叠字
+                    cfg = Config.fromfile(cfg_path)
+                    res = infer_and_annotate(
+                        video, cfg, ckpt, _labels_for(m),
+                        out_video_path=out_video, device=args.device,
+                        gt_label=gt_label,
+                    )
+                    results_by_id[rid] = {
+                        "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
+                        "gt_label": gt_label,
+                        "correct": _matches(gt_label, res["top1_label"]),
+                        "metrics": res, "output_video": rel_video, "status": "completed",
+                        "gpu_mem_mb": res.get("gpu_mem_mb"),
+                        "elapsed_s": round(time.time() - t0, 1),
+                        "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    }
+                    print(f"  [{video_stem}] GT={gt_label} top1={res['top1_label']} ({res['top1_score']:.2f}) gpu={res.get('gpu_mem_mb')}MB → {out_video}")
             except Exception as e:
                 results_by_id[rid] = {
                     "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
