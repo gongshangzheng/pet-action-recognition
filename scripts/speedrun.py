@@ -131,7 +131,7 @@ def main() -> int:
             video_stem = Path(video).stem
             rid = f"speedrun-{model_id}-{video_stem}"
             out_video = os.path.join(args.out_dir, model_id, f"{video_stem}.mp4")
-            rel_video = f"outputs/{model_id}/{video_stem}.mp4"  # 相对 SPEEDRUN_DIR
+            rel_video = f"{model_id}/{video_stem}.mp4"  # 相对 SPEEDRUN_OUTPUTS_DIR（服务端点根），不含 outputs/ 前缀
 
             # 跳过已存在（除非 --force）
             if os.path.isfile(out_video) and not args.force:
