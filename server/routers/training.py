@@ -85,6 +85,7 @@ _MMACTION2_REGISTRY = [
         "pretrained_source": "UCF-101 (from Sports-1M)",
         "pretrained_url": "https://download.openmmlab.com/mmaction/v1.0/recognition/c3d/c3d_sports1m-pretrained_8xb30-16x1x1-45e_ucf101-rgb/c3d_sports1m-pretrained_8xb30-16x1x1-45e_ucf101-rgb_20220811-31723200.pth",
         "mmaction2_config": "configs/recognition/c3d/c3d_sports1m-pretrained_8xb30-16x1x1-45e_ucf101-rgb.py",
+        "label_map": "models/mmaction2/tools/data/ucf101/label_map.txt",
         "description": "早期 3D CNN 代表，Sports-1M 预训练。",
     },
     {
@@ -105,6 +106,7 @@ _MMACTION2_REGISTRY = [
         "pretrained_source": "Kinetics-700",
         "pretrained_url": "https://download.openmmlab.com/mmaction/v1.0/recognition/slowonly/slowonly_imagenet-pretrained-r50_16xb16-4x16x1-steplr-150e_kinetics700-rgb/slowonly_imagenet-pretrained-r50_16xb16-4x16x1-steplr-150e_kinetics700-rgb_20221013-98b1b0a7.pth",
         "mmaction2_config": "configs/recognition/slowonly/slowonly_imagenet-pretrained-r50_16xb16-4x16x1-steplr-150e_kinetics700-rgb.py",
+        "label_map": "models/mmaction2/tools/data/kinetics/label_map_k700.txt",
         "description": "SlowFast 的慢路径单分支版本。",
     },
     {
@@ -145,6 +147,7 @@ _MMACTION2_REGISTRY = [
         "pretrained_source": "Something-Something V2",
         "pretrained_url": "https://download.openmmlab.com/mmaction/v1.0/recognition/trn/trn_imagenet-pretrained-r50_8xb16-1x1x8-50e_sthv2-rgb/trn_imagenet-pretrained-r50_8xb16-1x1x8-50e_sthv2-rgb_20220815-e01617db.pth",
         "mmaction2_config": "configs/recognition/trn/trn_imagenet-pretrained-r50_8xb16-1x1x8-50e_sthv2-rgb.py",
+        "label_map": "models/mmaction2/tools/data/sthv2/label_map.txt",
         "description": "Temporal Relation Network。",
     },
     {

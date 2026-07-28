@@ -120,7 +120,16 @@ def main() -> int:
     from scripts._infer import infer_and_annotate, load_labels
     from mmengine.config import Config
 
-    labels = load_labels(args.labels)
+    # per-model label_map 缓存（非 K400 模型用自己的 label_map）
+    _label_cache: dict[str, list[str]] = {}
+    def _labels_for(model_entry):
+        lm = model_entry.get("label_map", args.labels)
+        if not os.path.isabs(lm):
+            lm = os.path.join(str(REPO), lm)
+        if lm not in _label_cache:
+            _label_cache[lm] = load_labels(lm)
+        return _label_cache[lm]
+
     models = _resolve_models(args.models)
     if not models:
         print("[error] 没有可跑的模型", file=sys.stderr)
@@ -167,7 +176,7 @@ def main() -> int:
             try:
                 cfg = Config.fromfile(cfg_path)
                 res = infer_and_annotate(
-                    video, cfg, ckpt, labels,
+                    video, cfg, ckpt, _labels_for(m),
                     out_video_path=out_video, device=args.device,
                     gt_label=gt_label,
                 )

@@ -41,14 +41,36 @@ def _extract_topk(result, labels: list[str], k: int = 5) -> list[tuple]:
     return out
 
 
+def _transcode_h264(src: str, dst: str) -> None:
+    """用 ffmpeg 把 cv2 写的 mp4v 转成 H.264（浏览器 <video> 只认 H.264）。
+
+    ffmpeg 来自 moviepy 的 imageio_ffmpeg（已装，自带 libx264）。
+    转码失败（无 ffmpeg）→ 直接重命名（mp4v，浏览器可能播不了但文件在）。
+    """
+    import subprocess
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        ffmpeg = get_ffmpeg_exe()
+    except ImportError:
+        os.replace(src, dst)
+        return
+    try:
+        subprocess.run(
+            [ffmpeg, "-y", "-i", src, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", dst],
+            check=True, capture_output=True,
+        )
+        os.remove(src)
+    except Exception:
+        # 转码失败 → 用原 mp4v（至少文件在，有些播放器能放）
+        os.replace(src, dst)
+
+
 def _annotate_video_cv2(video: str, out_path: str, gt_label: str | None,
                          top1: tuple, top5: list[tuple]) -> None:
     """用 cv2 给视频加 margin 边条，标签写在边条里——视频画面不被字覆盖。
 
     上边条：GT（绿）+ pred top1（黄）；下边条：top5（白）。中间原帧不动。
-    检测模型（未来）：若有 bbox，标签贴框边（cv2.rectangle + 框上方小字），不走全局边条。
-    ActionVisualizer 检查 'pred_labels'（复数）但 inference_recognizer 返回 pred_label（单数）→
-    画不了；且 GT 标签空间不匹配。故改 cv2 手动画在边条。
+    cv2 写 mp4v → ffmpeg 转码 H.264（浏览器可播）。
     """
     import cv2
     import numpy as np
@@ -59,15 +81,15 @@ def _annotate_video_cv2(video: str, out_path: str, gt_label: str | None,
     fps = cap.get(cv2.CAP_PROP_FPS) or 25
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    # 字号适中，按短边自适应；边条高度容纳文字即可
     scale = max(0.4, min(w, h) / 700.0)
     thick = max(1, int(round(scale * 2)))
     line_h = max(18, int(24 * scale))
-    top_h = max(30, line_h + 14)                       # 上边条：一行 GT + pred
-    bottom_h = max(40, len(top5[:5]) * line_h + 12)    # 下边条：top5
+    top_h = max(30, line_h + 14)
+    bottom_h = max(40, len(top5[:5]) * line_h + 12)
     canvas_h = h + top_h + bottom_h
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(out_path, fourcc, fps, (w, canvas_h))
+    tmp_path = out_path + ".tmp.mp4v"
+    writer = cv2.VideoWriter(tmp_path, fourcc, fps, (w, canvas_h))
     font = cv2.FONT_HERSHEY_SIMPLEX
 
     gt_text = f"GT: {gt_label}" if gt_label else "GT: (none)"
@@ -77,21 +99,21 @@ def _annotate_video_cv2(video: str, out_path: str, gt_label: str | None,
         ok, frame = cap.read()
         if not ok:
             break
-        canvas = np.zeros((canvas_h, w, 3), dtype=np.uint8)  # 黑边条
-        canvas[top_h:top_h + h] = frame                       # 帧居中
-        # 上边条：GT + pred 同一行
+        canvas = np.zeros((canvas_h, w, 3), dtype=np.uint8)
+        canvas[top_h:top_h + h] = frame
         ty = top_h // 2 + line_h // 3
-        cv2.putText(canvas, gt_text, (10, ty), font, scale, (0, 255, 0), thick, cv2.LINE_AA)   # 绿
+        cv2.putText(canvas, gt_text, (10, ty), font, scale, (0, 255, 0), thick, cv2.LINE_AA)
         (gw, _), _ = cv2.getTextSize(gt_text, font, scale, thick)
-        cv2.putText(canvas, pred_text, (10 + gw + 20, ty), font, scale, (0, 255, 255), thick, cv2.LINE_AA)  # 黄
-        # 下边条：top5
+        cv2.putText(canvas, pred_text, (10 + gw + 20, ty), font, scale, (0, 255, 255), thick, cv2.LINE_AA)
         by = top_h + h + line_h
         for i, (lbl, sc) in enumerate(top5[:5]):
             cv2.putText(canvas, f"{i+1}. {lbl} {sc:.2f}", (10, by + i * line_h),
-                        font, scale * 0.8, (255, 255, 255), max(1, thick - 1), cv2.LINE_AA)  # 白
+                        font, scale * 0.8, (255, 255, 255), max(1, thick - 1), cv2.LINE_AA)
         writer.write(canvas)
     cap.release()
     writer.release()
+    # cv2 写的是 mp4v → 转码 H.264 让浏览器能播
+    _transcode_h264(tmp_path, out_path)
 
 
 def infer_and_annotate(
