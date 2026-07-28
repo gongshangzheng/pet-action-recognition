@@ -35,7 +35,7 @@
 
       <n-spin :show="loading">
         <n-grid v-if="filteredResults.length" cols="3 600:2 900:3 1200:4" :x-gap="12" :y-gap="12" responsive="screen">
-          <n-gi v-for="r in filteredResults" :key="r.id">
+          <n-gi v-for="r in pagedResults" :key="r.id">
             <div class="video-card" @click="playVideo(r)">
               <div class="thumb">
                 <n-icon size="36"><PlayCircleOutline /></n-icon>
@@ -66,7 +66,15 @@
             </div>
           </n-gi>
         </n-grid>
-        <EmptyState v-else description="暂无结果视频。展开下方「运行设置」启动一次 speed run。" />
+        <n-pagination
+          v-if="filteredResults.length > pageSize"
+          v-model:page="page"
+          :page-count="pageCount"
+          :page-size="pageSize"
+          size="small"
+          style="margin-top: 12px; justify-content: center"
+        />
+        <EmptyState v-else-if="!filteredResults.length" description="暂无结果视频。展开下方「运行设置」启动一次 speed run。" />
       </n-spin>
     </n-card>
 
@@ -122,7 +130,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
-  NCard, NSpin, NSpace, NSelect, NButton, NTag, NGrid, NGi, NIcon,
+  NCard, NSpin, NSpace, NSelect, NButton, NTag, NGrid, NGi, NIcon, NPagination,
   NForm, NFormItem, NInput, NRadioGroup, NRadio, NCheckbox, NCollapse, NCollapseItem,
 } from 'naive-ui'
 import { PlayCircleOutline } from '@vicons/ionicons5'
@@ -180,6 +188,15 @@ const accuracy = computed(() => {
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0
   return { correct, total, pct }
 })
+
+const page = ref(1)
+const pageSize = 20
+const pageCount = computed(() => Math.ceil(filteredResults.value.length / pageSize))
+const pagedResults = computed(() => {
+  const start = (page.value - 1) * pageSize
+  return filteredResults.value.slice(start, start + pageSize)
+})
+watch([filterModel, filterVideo], () => { page.value = 1 })
 
 function videoStem(path) {
   return path.split('/').pop()
