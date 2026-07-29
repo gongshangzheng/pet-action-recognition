@@ -1,8 +1,8 @@
 ---
 name: design-principles
 description: |
-  UI/UX 设计原则与公约。用于新建页面、列表页、结果展示等场景时遵循统一的设计规范。
-  触发场景：(1) 创建新的列表/结果页，(2) 设计分页逻辑，(3) 选择组件布局方案，(4) review UI 改动
+  UI/UX 设计原则与公约。用于新建页面、列表页、结果展示、轮询、可视化等场景时遵循统一的设计规范。
+  触发场景：(1) 创建新的列表/结果页，(2) 设计分页逻辑，(3) 选择组件布局方案，(4) review UI 改动，(5) 实时轮询/曲线，(6) 封面图/缩略图，(7) 卡片布局
 ---
 
 # UI/UX 设计原则
@@ -44,6 +44,9 @@ GET /api/xxx?offset=0&limit=50
 - 只在有"进行中"任务时才启动轮询（如训练运行、评测执行）。
 - 轮询时只 fetch 当前页，不要每次重新拉全量。
 - 任务全部完成后停止轮询。
+- 训练曲线轮询：详情页 `getTrainRunDetail(runId)` 3s 轮询；后端 status=running 时实时读 `work_dir/vis_data/scalars.json` 补 `loss_series`，训练中曲线随 epoch 增长。
+- 可视化样本轮询：同一轮询周期内 `listVisSamples(runId)` 拉取最新 epoch 分组卡片，新 epoch 完成后卡片自动出现。
+- 进程列表页轮询：`getTrainRuns()` 3s 轮询，只刷当前页数据；全部进程结束后停轮询 + 补刷一次。
 
 **缓存**：
 - 后端：对频繁读取的文件（results.json、metrics.json）加 mtime-aware TTL 缓存，文件没变就不重新解析。
@@ -124,6 +127,24 @@ GET /api/xxx?offset=0&limit=50
 - 缩略图用压缩版（< 100KB/张），原图只在详情页加载。
 - 视频封面用 `<video preload="metadata">` 只加载首帧，不要 `preload="auto"` 预载整个视频。
 - 大图（> 1MB）加 loading 提示或骨架屏，不要让用户看着空白区域猜。
+- **视频封面图（cover）**：视频文件用中间帧 JPG 作封面（`_extract_cover` / `_annotate_video_cv2`），`<img loading="lazy">` 展示；点击才加载视频（`<video preload="none">` 或 VideoModal）。同一视频的封面图跨模型复用（`results/speedrun/covers/<video_stem>.jpg`）。
+- **数据集浏览器封面**：`GET /api/datasets/{id}/thumb?path=video.avi` 按需提取中间帧 + 缓存到 `datasets/.thumbs/`，后续请求直接返回缓存 JPG。
+
+**卡片/网格布局**：
+- 卡片网格用 CSS `grid-template-columns: repeat(auto-fill, minmax(140px, 1fr))` 自适应列数。
+- 卡片内不嵌套 Naive UI 主题变量（`var(--n-color)` / `var(--n-color-target)` 等）——这些是 Naive UI 主题色（可能为紫/靛蓝），会导致卡片渲染成主题色。卡片 CSS 用固定色值（`rgba(128,128,128,0.2)` 等中性灰）。
+- 卡片信息区（`.card-body`）扁平布局：model + pred + stats + video-name 四行，无嵌套 flex 行。
+- 状态标记用纯色字（`.st-ok` 绿 / `.st-err` 红）而非 `<n-tag>`（n-tag 受主题色影响）。
+
+**标注视频（margin 边条）**：
+- cv2 叠字不要画在帧上（覆盖画面内容），改用 **margin 边条**：pad 画布，上边条放 GT(绿)+pred(黄/红)，下边条放 top5，中间原帧不动。
+- cv2 不支持 Unicode（✓/✗ 显示 ???）——用颜色区分对错（绿=对，红=错），不用 Unicode 符号。
+- 标注视频必须 H.264（`avc1`）编码——浏览器 `<video>` 不支持 mp4v（cv2.VideoWriter 默认）。用 ffmpeg 转码（imageio_ffmpeg 自带 libx264）。
+
+**可视化样本（训练 Hook）**：
+- 训练中用 mmengine Hook（`VisSamplesHook`）每 N epoch 生成 6 张 val 样本预测图。
+- 按 epoch 分组存 `vis_samples/epoch_N/sample_K.jpg + meta.json`。
+- 详情页按 epoch 分卡片，组内左右箭头 + 缩略图条切换。
 
 **API 调用**：
 - 并发请求用 `Promise.all`，不要串行 await（3 个请求串行 = 3 倍延迟）。
