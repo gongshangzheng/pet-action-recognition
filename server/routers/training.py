@@ -851,22 +851,26 @@ async def get_run_detail(run_id: str):
 
 @router.get("/runs/{run_id}/vis")
 async def list_vis_samples(run_id: str):
-    """列出训练 run 的可视化样本图（训练后自动生成的 5-6 张 val 样本预测图）。"""
+    """列出训练 run 的可视化样本图，按 epoch 分组。"""
     import glob as _glob
-    vis_dir = os.path.join(TRAINING_WORK_DIR, run_id, "vis_samples")
-    if not os.path.isdir(vis_dir):
-        return {"samples": []}
-    meta_path = os.path.join(vis_dir, "meta.json")
-    meta = _read_json_meta(meta_path) or {"samples": []}
-    samples = []
-    for s in (meta.get("samples") or []):
-        jpg = os.path.join(vis_dir, s["file"])
-        samples.append({
-            **s,
-            "url": f"/api/training/outputs/work_dirs/{run_id}/vis_samples/{s['file']}",
-            "exists": os.path.isfile(jpg),
-        })
-    return {"samples": samples}
+    work_dir = os.path.join(TRAINING_WORK_DIR, run_id, "vis_samples")
+    if not os.path.isdir(work_dir):
+        return {"groups": []}
+    groups = []
+    for epoch_dir in sorted(_glob.glob(os.path.join(work_dir, "epoch_*")), key=lambda p: int(os.path.basename(p).split("_")[1])):
+        meta_path = os.path.join(epoch_dir, "meta.json")
+        meta = _read_json_meta(meta_path) or {"samples": []}
+        epoch = os.path.basename(epoch_dir).split("_")[1]
+        samples = []
+        for s in (meta.get("samples") or []):
+            jpg = os.path.join(epoch_dir, s["file"])
+            samples.append({
+                **s,
+                "url": f"/api/training/outputs/work_dirs/{run_id}/vis_samples/epoch_{epoch}/{s['file']}",
+                "exists": os.path.isfile(jpg),
+            })
+        groups.append({"epoch": int(epoch), "samples": samples})
+    return {"groups": groups}
 
 
 # ---- checkpoints ------------------------------------------------------- #

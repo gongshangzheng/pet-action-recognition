@@ -198,6 +198,15 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     if getattr(args, "from_scratch", False):
         cfg_options.append("model.backbone.init_cfg=None")
 
+    # VisSamplesHook 路径覆盖（hook 本身在 config 里注册）
+    if ann_val:
+        ds_root = os.path.dirname(os.path.dirname(ann_val))
+        vis_interval = getattr(args, "vis_interval", 10)
+        cfg_options.append(f"custom_hooks.0.interval={vis_interval}")
+        cfg_options.append(f"custom_hooks.0.ann_file={ann_val}")
+        cfg_options.append(f"custom_hooks.0.data_root={videos_val or videos_train}")
+        cfg_options.append(f"custom_hooks.0.dataset_root={ds_root}")
+
     if cfg_options:
         cmd += ["--cfg-options"] + cfg_options
     if args.extra_args:
@@ -378,11 +387,12 @@ def _epoch_of_file(path: str) -> int:
 def _generate_vis_samples(
     work_dir: str, cfg_path: str, ckpt_path: str,
     ann_file: str, data_root: str, num_samples: int = 6,
+    epoch: int = 0,
 ):
-    """训练后对 val 样本生成可视化图（中间帧 + GT + pred 叠字），存 work_dir/vis_samples/。"""
+    """训练中/后对 val 样本生成可视化图（中间帧 + margin GT+pred+top5），存 work_dir/vis_samples/epoch_N/。"""
     import cv2
     try:
-        from mmaction.apis import init_recognizer, inference_recognizer
+        from mmaction.apis import init_recognizer, inference_recognognizer
         from mmengine.config import Config
     except ImportError:
         log("", "[vis] mmaction 不可用，跳过可视化")
@@ -413,7 +423,8 @@ def _generate_vis_samples(
                 labels = [ln.strip() for ln in f if ln.strip()]
             break
 
-    os.makedirs(os.path.join(work_dir, "vis_samples"), exist_ok=True)
+    vis_dir = os.path.join(work_dir, "vis_samples", f"epoch_{epoch}")
+    os.makedirs(vis_dir, exist_ok=True)
     cfg = Config.fromfile(cfg_path)
     model = init_recognizer(cfg, ckpt_path, device="cuda")
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -422,7 +433,6 @@ def _generate_vis_samples(
     for idx, (rel_path, gt_label) in enumerate(picked):
         video_path = os.path.join(data_root, rel_path) if not os.path.isabs(rel_path) else rel_path
         if not os.path.isfile(video_path):
-            # data_root 可能已经包含 rel_path 的前缀
             video_path = os.path.join(os.path.dirname(data_root), rel_path)
         if not os.path.isfile(video_path):
             continue
@@ -452,8 +462,7 @@ def _generate_vis_samples(
             order = sorted(range(len(scores)), key=lambda i: float(scores[i]), reverse=True)
             top5 = [(labels[i] if i < len(labels) else str(i), float(scores[i])) for i in order[:5]]
 
-            # margin 布局（跟 _annotate_video_cv2 一样：上边条 GT+pred，下边条 top5）
-            import numpy as np
+            # margin 布局
             h, w = frame.shape[:2]
             scale = max(0.4, min(w, h) / 700.0)
             thick = max(1, int(round(scale * 2)))
@@ -478,7 +487,7 @@ def _generate_vis_samples(
                 cv2.putText(canvas, f"{i+1}. {lbl} {sc:.2f}", (10, by + i * line_h),
                             font, scale * 0.8, (255, 255, 255), max(1, thick - 1), cv2.LINE_AA)
 
-            jpg_path = os.path.join(work_dir, "vis_samples", f"sample_{idx}.jpg")
+            jpg_path = os.path.join(vis_dir, f"sample_{idx}.jpg")
             cv2.imwrite(jpg_path, canvas, [cv2.IMWRITE_JPEG_QUALITY, 85])
             results_meta.append({
                 "idx": idx, "file": f"sample_{idx}.jpg",
@@ -490,10 +499,10 @@ def _generate_vis_samples(
 
     # 存元数据
     if results_meta:
-        meta_path = os.path.join(work_dir, "vis_samples", "meta.json")
+        meta_path = os.path.join(vis_dir, "meta.json")
         with open(meta_path, "w") as f:
-            json.dump({"samples": results_meta}, f, ensure_ascii=False, indent=2)
-        log("", f"[vis] 生成 {len(results_meta)} 张可视化样本 → vis_samples/")
+            json.dump({"epoch": epoch, "samples": results_meta}, f, ensure_ascii=False, indent=2)
+        log("", f"[vis] epoch {epoch}: 生成 {len(results_meta)} 张可视化样本 → vis_samples/epoch_{epoch}/")
 
     return results_meta
 
@@ -513,6 +522,7 @@ def main() -> int:
     parser.add_argument("-l", "--load-from", default=None, help="load checkpoint weights (path or run_id) — 只引入参数作为预训练权重，epoch=0 从头训练")
     parser.add_argument("-p", "--pretrained", default=None, help="backbone pretrained weights URL or local path (e.g. mmaction2 model zoo) — finetune")
     parser.add_argument("-s", "--from-scratch", action="store_true", help="train from random init, disable any pretrained weights in config")
+    parser.add_argument("--vis-interval", type=int, default=10, help="可视化样本生成间隔（每 N epoch）")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--work-dir", default=None)
     parser.add_argument("--extra-args", default="")
