@@ -41,7 +41,7 @@ ssh -o ConnectTimeout=10 "$SSH_ALIAS" \
     --run-id $RUN_ID \
     $(printf '%q ' \"${PASS_THROUGH[@]}\") \
     > /tmp/train-${RUN_ID}.log 2>&1 < /dev/null & \
-   echo 'started pid '$!"
+   echo started"
 
 echo "=== 训练已启动（后台）==="
 echo "  run_id: $RUN_ID"
