@@ -144,14 +144,15 @@ def resolve_dataset_paths(dataset_id: str):
     videos_train = root / "videos_train"
     videos_val = root / "videos_val"
     # fallback: pet_action_mammal_v0 pattern: annotation/{train,val}_public.txt + dataset/video/
+    # 注意：ann_file 里路径是 dataset/video/XXX.mp4（相对数据集根），所以 data_prefix = 根目录
     if not ann_train.is_file():
         ann_train = root / "annotation" / "train_public.txt"
     if not ann_val.is_file():
         ann_val = root / "annotation" / "val_public.txt"
     if not videos_train.is_dir():
-        videos_train = root / "dataset" / "video"
+        videos_train = root  # 数据集根目录（ann_file 的相对路径已含 dataset/video/）
     if not videos_val.is_dir():
-        videos_val = root / "dataset" / "video"
+        videos_val = root
     return (
         str(ann_train) if ann_train.is_file() else "",
         str(videos_train) if videos_train.is_dir() else "",
