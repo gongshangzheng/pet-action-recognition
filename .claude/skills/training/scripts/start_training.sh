@@ -39,7 +39,7 @@ echo "[cmd] train_model.py ${PASS_THROUGH[*]} --run-id $RUN_ID"
 ssh -o ConnectTimeout=10 "$SSH_ALIAS" \
   "cd $REPO && nohup $PYTHON scripts/train_model.py \
     --run-id $RUN_ID \
-    $(printf '%q ' \"${PASS_THROUGH[@]}\") \
+    ${PASS_THROUGH[*]} \
     > /tmp/train-${RUN_ID}.log 2>&1 < /dev/null & \
    echo started"
 
