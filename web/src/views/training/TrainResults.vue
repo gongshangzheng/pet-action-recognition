@@ -34,14 +34,6 @@
         <EmptyState v-else description="暂无训练 run。在「训练运行」页启动训练后，run 列表 + loss 曲线在此。" />
       </n-spin>
     </n-card>
-
-    <!-- checkpoint 文件列表 -->
-    <n-card size="small" title="checkpoint 文件（trained .pth）" style="margin-top: 12px">
-      <n-spin :show="cpLoading">
-        <n-data-table v-if="checkpoints.length" :columns="cpColumns" :data="checkpoints" :bordered="false" size="small" striped />
-        <EmptyState v-else description="暂无 trained checkpoint。训练产物在 results/training/checkpoints/。" />
-      </n-spin>
-    </n-card>
   </div>
 </template>
 
@@ -55,16 +47,14 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import EmptyState from '../../components/common/EmptyState.vue'
-import { getTrainRuns, listCheckpoints, getTrainOutputUrl } from '../../api/training'
+import { getTrainRuns, getTrainOutputUrl } from '../../api/training'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
 const router = useRouter()
 const message = useMessage()
 const loading = ref(false)
-const cpLoading = ref(false)
 const runs = ref([])
-const checkpoints = ref([])
 const filters = ref({ model: null, dataset: null, status: null })
 const currentRun = ref(null)
 const currentRunId = ref(null)
@@ -101,12 +91,14 @@ function syncCurrent() {
   if (r) currentRun.value = r
 }
 
-async function refreshCheckpoints() {
-  cpLoading.value = true
+async function refreshRuns() {
+  loading.value = true
   try {
-    const cps = await listCheckpoints().catch(() => ({ checkpoints: [] }))
-    checkpoints.value = cps?.checkpoints || []
-  } finally { cpLoading.value = false }
+    const res = await getTrainRuns()
+    runs.value = sortRuns(res.runs || [])
+    syncCurrent()
+  } catch { message.error('加载训练 run 列表失败') }
+  loading.value = false
 }
 
 function startPolling() {
@@ -117,10 +109,9 @@ function startPolling() {
       runs.value = sortRuns(res.runs)
       syncCurrent()
     }
-    // 全部 run 结束：补刷一次 checkpoints（拿新 .pth），停轮询
+    // 全部 run 结束 → 停轮询
     if (!runs.value.some(isRunning)) {
       stopPolling()
-      refreshCheckpoints()
     }
   }, 3000)
 }
@@ -185,8 +176,17 @@ const runColumns = computed(() => [
   { title: '状态', key: 'status', width: 80 },
   { title: '时间', key: 'started_at', render: (r) => r.started_at?.split('T')[0] || '-' },
   {
-    title: '操作', key: 'actions', width: 110,
-    render: (r) => h(NButton, { size: 'small', type: 'primary', secondary: true, onClick: () => selectRun(r) }, { default: () => '看曲线' }),
+    title: 'Checkpoint', key: 'checkpoint', width: 140,
+    render: (r) => {
+      const links = []
+      if (r.checkpoint_path) {
+        links.push(h('a', { href: getTrainOutputUrl(r.checkpoint_path), style: 'color: #2563eb; text-decoration: none; margin-right: 8px', title: '下载 latest' }, 'latest'))
+      }
+      if (r.best_checkpoint_path) {
+        links.push(h('a', { href: getTrainOutputUrl(r.best_checkpoint_path), style: 'color: #18a058; text-decoration: none', title: '下载 best' }, 'best'))
+      }
+      return links.length ? h('span', {}, links) : h('span', { style: 'color: #ccc' }, '—')
+    },
   },
 ])
 
@@ -201,6 +201,8 @@ const cpColumns = [
     ]),
   },
 ]
+
+// cpColumns removed — checkpoint links now in run list directly
 
 function fmt(v) { return (v == null || isNaN(v)) ? '-' : Number(v).toFixed(4) }
 function fmtSize(b) {
