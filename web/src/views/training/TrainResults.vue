@@ -167,7 +167,7 @@ const curveOption = computed(() => {
 })
 
 const runColumns = computed(() => [
-  { title: 'ID', key: 'id', width: 150, render: (r) => h('a', { style: 'color: #2563eb; cursor: pointer; text-decoration: none', onClick: () => router.push(`/training/runs/${r.id}`) }, r.id) },
+  { title: '名称', key: 'name', width: 150, render: (r) => h('a', { style: 'color: #2563eb; cursor: pointer; text-decoration: none', onClick: () => router.push(`/training/runs/${r.id}`), title: r.description || r.id }, r.name || r.id) },
   { title: '模型', key: 'model' },
   { title: '数据集', key: 'dataset' },
   { title: 'epochs', key: 'epochs', width: 70 },

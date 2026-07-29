@@ -839,12 +839,55 @@ async def get_runs(model: str = None, dataset: str = None, status: str = None):
 
 @router.get("/runs/{run_id}")
 async def get_run_detail(run_id: str):
-    """单条训练 run（含 loss_series）。"""
+    """单条训练进程（含 loss_series）。训练中实时读 scalars.json。"""
     data = _load_metrics()
     for r in data.get("runs", []):
         if r.get("id") == run_id:
+            # 训练中：实时从 work_dir 读 scalars.json 补 loss_series
+            if r.get("status") in ("running", "started"):
+                scalars_path = os.path.join(TRAINING_WORK_DIR, run_id, "vis_data", "scalars.json")
+                if os.path.isfile(scalars_path):
+                    r["loss_series"] = _parse_scalars_live(scalars_path)
             return r
     return {"detail": "Run not found"}, 404
+
+
+def _parse_scalars_live(path: str) -> list:
+    """实时读 scalars.json（训练中每行一条 JSON）。"""
+    import json as _json
+    series = []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = _json.loads(line)
+                except _json.JSONDecodeError:
+                    continue
+                epoch = obj.get("epoch")
+                if epoch is None:
+                    continue
+                rec = {"epoch": epoch}
+                if "loss" in obj:
+                    rec["loss"] = float(obj["loss"])
+                if "top1_acc" in obj:
+                    rec["top1_acc"] = float(obj["top1_acc"])
+                if "top5_acc" in obj:
+                    rec["top5_acc"] = float(obj["top5_acc"])
+                if "lr" in obj:
+                    rec["lr"] = float(obj["lr"])
+                # merge by epoch
+                existing = next((x for x in series if x["epoch"] == epoch), None)
+                if existing:
+                    existing.update(rec)
+                else:
+                    series.append(rec)
+        series.sort(key=lambda x: x["epoch"])
+    except Exception:
+        pass
+    return series
 
 
 # ---- run 可视化样本 ------------------------------------------------------- #

@@ -512,6 +512,8 @@ def main() -> int:
     parser.add_argument("--model-id", required=True)
     parser.add_argument("--dataset-id", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--name", default=None, help="进程名称（快速标识用途）")
+    parser.add_argument("--description", default=None, help="进程描述（备注）")
     parser.add_argument("--mmaction2-config", required=True)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -554,6 +556,8 @@ def main() -> int:
 
     run = {
         "id": args.run_id,
+        "name": args.name or args.run_id,
+        "description": args.description or "",
         "model": args.model_id,
         "dataset": args.dataset_id,
         "status": "running",
