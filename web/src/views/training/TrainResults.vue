@@ -190,18 +190,6 @@ const runColumns = computed(() => [
   },
 ])
 
-const cpColumns = [
-  { title: 'checkpoint', key: 'name' },
-  { title: '大小', key: 'size_bytes', width: 100, render: (r) => fmtSize(r.size_bytes) },
-  {
-    title: '操作', key: 'actions', width: 160,
-    render: (r) => h('div', { style: 'display:flex;gap:6px' }, [
-      h(NButton, { size: 'small', secondary: true, onClick: () => copyUrl(r) }, { default: () => '复制路径' }),
-      h(NButton, { size: 'small', type: 'primary', secondary: true, onClick: () => download(r) }, { default: () => '下载' }),
-    ]),
-  },
-]
-
 // cpColumns removed — checkpoint links now in run list directly
 
 function fmt(v) { return (v == null || isNaN(v)) ? '-' : Number(v).toFixed(4) }
@@ -220,29 +208,11 @@ function selectRun(r) {
   if (isRunning(r)) startPolling()
 }
 
-function copyUrl(cp) {
-  const url = getTrainOutputUrl(cp.path)
-  navigator.clipboard?.writeText(url)
-  message.success(`已复制 checkpoint 服务路径: ${url}`)
-}
-
-function download(cp) {
-  const a = document.createElement('a')
-  a.href = getTrainOutputUrl(cp.path)
-  a.download = cp.name
-  a.click()
-}
-
 async function load() {
   loading.value = true
-  cpLoading.value = true
   try {
-    const [runsRes, cps] = await Promise.all([
-      getTrainRuns().catch(() => ({ runs: [] })),
-      listCheckpoints().catch(() => ({ checkpoints: [] })),
-    ])
+    const runsRes = await getTrainRuns().catch(() => ({ runs: [] }))
     runs.value = sortRuns(runsRes?.runs || [])
-    checkpoints.value = cps?.checkpoints || []
     // 自动选中最新一条 run（开页面即可看到正在跑的曲线）
     if (!currentRunId.value && runs.value.length) {
       selectRun(runs.value[0])
@@ -252,7 +222,6 @@ async function load() {
     if (runs.value.some(isRunning)) startPolling()
   } catch (e) { message.error('加载失败') }
   loading.value = false
-  cpLoading.value = false
 }
 
 onMounted(load)
