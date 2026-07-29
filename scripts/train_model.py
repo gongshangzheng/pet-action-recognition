@@ -700,23 +700,25 @@ def main() -> int:
     if ret == 0:
         run["status"] = "completed"
         log(args.run_id, "[done] 训练完成")
-        # 训练后生成可视化样本
+        # 训练后生成可视化样本（补生成；训练中 Hook 已按 vis_interval 生成）
         best_ckpt = os.path.join(work_dir, "best_acc_top1_epoch_*.pth")
         import glob
         best_files = sorted(glob.glob(best_ckpt))
         vis_ckpt = best_files[-1] if best_files else (latest or "")
         if vis_ckpt:
-            log(args.run_id, f"[vis] 生成可视化样本 (ckpt={vis_ckpt})...")
-            # 解析 ann_val + data_root 用于可视化
+            log(args.run_id, f"[vis] 训练后补生成可视化样本 (ckpt={vis_ckpt})...")
             vis_ann, vis_data = ann_val, videos_val
             if not vis_ann and args.dataset_id != QUADRUPED_DATASET_NAME:
                 root = REPO / "datasets" / args.dataset_id
                 vis_ann = str(root / "annotation" / "val_public.txt") if (root / "annotation" / "val_public.txt").is_file() else ""
                 vis_data = str(root)
             if vis_ann and vis_data:
-                _generate_vis_samples(work_dir, cfg_path, vis_ckpt, vis_ann, vis_data)
+                try:
+                    _generate_vis_samples(work_dir, resolve_mmaction2_config(args.mmaction2_config), vis_ckpt, vis_ann, vis_data, epoch=args.epochs)
+                except Exception as e:
+                    log(args.run_id, f"[vis] 训练后补生成失败（Hook 可能已生成）: {e}")
             else:
-                log(args.run_id, "[vis] 无 val 标注文件，跳过可视化")
+                log(args.run_id, "[vis] 无 val 标注文件，跳过")
     else:
         run["status"] = "error"
         run["metrics"]["returncode"] = ret
