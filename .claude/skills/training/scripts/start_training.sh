@@ -18,12 +18,16 @@ SSH_ALIAS="${PET_ALIAS:-pet}"
 PYTHON="~/miniconda3/envs/pet/bin/python"
 REPO="~/pet-action-recognition"
 
-# 解析 --run-id（如果没给，自动生成）
+# 解析 --run-id / --name / --description（如果没给，自动生成）
 RUN_ID=""
+RUN_NAME=""
+RUN_DESC=""
 PASS_THROUGH=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --run-id) RUN_ID="$2"; shift 2 ;;
+    --name) RUN_NAME="$2"; shift 2 ;;
+    --description) RUN_DESC="$2"; shift 2 ;;
     *) PASS_THROUGH+=("$1"); shift ;;
   esac
 done
@@ -33,12 +37,21 @@ if [ -z "$RUN_ID" ]; then
   echo "[info] 自动生成 run_id: $RUN_ID"
 fi
 
+NAME_FLAG=""
+if [ -n "$RUN_NAME" ]; then
+  NAME_FLAG="--name \"$RUN_NAME\""
+fi
+DESC_FLAG=""
+if [ -n "$RUN_DESC" ]; then
+  DESC_FLAG="--description \"$RUN_DESC\""
+fi
+
 echo "=== 启动训练: $RUN_ID ==="
 echo "[cmd] train_model.py ${PASS_THROUGH[*]} --run-id $RUN_ID"
 
 ssh -o ConnectTimeout=10 "$SSH_ALIAS" \
   "cd $REPO && nohup $PYTHON scripts/train_model.py \
-    --run-id $RUN_ID \
+    --run-id $RUN_ID $NAME_FLAG $DESC_FLAG \
     ${PASS_THROUGH[*]} \
     > /tmp/train-${RUN_ID}.log 2>&1 < /dev/null & \
    echo started"
