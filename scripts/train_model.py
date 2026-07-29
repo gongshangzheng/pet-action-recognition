@@ -465,8 +465,7 @@ def _generate_vis_samples(
             canvas[top_h:top_h + h] = frame
 
             gt_text = f"GT: {gt_name}"
-            correct = "✓" if top1_idx == gt_label else "✗"
-            pred_text = f"{correct} {top1_label} ({top1_score:.2f})"
+            pred_text = f"pred: {top1_label} ({top1_score:.2f})"
             pred_color = (0, 255, 0) if top1_idx == gt_label else (0, 0, 255)
 
             ty = top_h // 2 + line_h // 3
@@ -510,10 +509,10 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
     parser.add_argument("--num-classes", type=int, default=None)
-    parser.add_argument("--resume", default=None, help="resume from checkpoint path or 'auto'")
-    parser.add_argument("--load-from", default=None, help="load our checkpoint weights (path or run_id); starts from epoch 0")
-    parser.add_argument("--pretrained", default=None, help="backbone pretrained weights URL or local path (e.g. mmaction2 model zoo)")
-    parser.add_argument("--from-scratch", action="store_true", help="train from random init, disable any pretrained weights in config")
+    parser.add_argument("-r", "--resume", default=None, help="resume from checkpoint path or 'auto' — 直接接入原 run 进程，恢复 epoch/optimizer/scheduler，继续跑完")
+    parser.add_argument("-l", "--load-from", default=None, help="load checkpoint weights (path or run_id) — 只引入参数作为预训练权重，epoch=0 从头训练")
+    parser.add_argument("-p", "--pretrained", default=None, help="backbone pretrained weights URL or local path (e.g. mmaction2 model zoo) — finetune")
+    parser.add_argument("-s", "--from-scratch", action="store_true", help="train from random init, disable any pretrained weights in config")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--work-dir", default=None)
     parser.add_argument("--extra-args", default="")
