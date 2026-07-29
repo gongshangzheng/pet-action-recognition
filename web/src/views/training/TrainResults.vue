@@ -18,13 +18,13 @@
       <template #header>
         <div class="flex-between">
           <h3>训练曲线</h3>
-          <span class="hint">{{ curveTitle || '选择下方一条 run 查看其 loss/指标曲线' }}</span>
+          <span class="hint">点击下方进程名称进入详情页，查看曲线 + 可视化</span>
         </div>
       </template>
       <div v-if="curveOption" class="curve-wrap">
         <v-chart class="curve" :option="curveOption" autoresize />
       </div>
-      <div v-else class="curve-placeholder">选择下方任意一条训练 run，loss/指标曲线将在此处显示</div>
+      <div v-else class="curve-placeholder">点击下方进程名称进入详情页，查看 loss/指标曲线</div>
     </n-card>
 
     <!-- 训练进程列表 -->

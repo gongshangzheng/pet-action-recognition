@@ -845,9 +845,16 @@ async def get_run_detail(run_id: str):
         if r.get("id") == run_id:
             # 训练中：实时从 work_dir 读 scalars.json 补 loss_series
             if r.get("status") in ("running", "started"):
-                scalars_path = os.path.join(TRAINING_WORK_DIR, run_id, "vis_data", "scalars.json")
-                if os.path.isfile(scalars_path):
-                    r["loss_series"] = _parse_scalars_live(scalars_path)
+                # 训练中：实时从 work_dir 读 scalars.json
+                # scalars.json 可能在 work_dir/vis_data/ 或 work_dir/<timestamp>/vis_data/
+                import glob as _glob
+                work_dir = os.path.join(TRAINING_WORK_DIR, run_id)
+                scalars_candidates = _glob.glob(os.path.join(work_dir, "*/vis_data/scalars.json"))
+                scalars_candidates += _glob.glob(os.path.join(work_dir, "vis_data/scalars.json"))
+                for scalars_path in scalars_candidates:
+                    if os.path.isfile(scalars_path):
+                        r["loss_series"] = _parse_scalars_live(scalars_path)
+                        break
             return r
     return {"detail": "Run not found"}, 404
 
