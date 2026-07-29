@@ -317,6 +317,7 @@ def write_checkpoint_meta(
 ) -> str:
     dst_dir = _ckpt_dir(model_id)
     meta = {
+        "name": f"{model_id} ({dataset_id}, epoch {epoch})" if dataset_id else f"{model_id} (epoch {epoch})",
         "run_id": run_id,
         "model_id": model_id,
         "dataset": dataset_id,

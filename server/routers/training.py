@@ -851,7 +851,7 @@ async def get_run_detail(run_id: str):
 
 @router.get("/checkpoints")
 async def list_checkpoints():
-    """列出所有 checkpoint，优先读 JSON 元数据；对旧 .pth 降级。"""
+    """列出训练产出的 checkpoint（latest/best），不含下载的 pretrained。"""
     if not os.path.isdir(CHECKPOINTS_DIR):
         return {"checkpoints": []}
     out = []
@@ -867,10 +867,12 @@ async def list_checkpoints():
             meta = _read_json_meta(os.path.join(sub, fn))
             if meta is None:
                 continue
+            # 只展示训练产物（latest/best），不展示下载的 pretrained
+            if meta.get("type") == "pretrained":
+                continue
             cp = meta.get("checkpoint_path", "")
             if cp:
                 seen_paths.add(cp)
-            # resolve actual file size
             pth_path = os.path.join(sub, fn.replace(".json", ".pth"))
             size = os.path.getsize(pth_path) if os.path.isfile(pth_path) else None
             out.append({
