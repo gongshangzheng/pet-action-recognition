@@ -448,14 +448,39 @@ def _generate_vis_samples(
             if not ok or frame is None:
                 continue
 
-            # 叠字（GT 绿 + pred 黄 + score）
-            cv2.putText(frame, f"GT: {gt_name}", (8, 24), font, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+            # 取 top5
+            order = sorted(range(len(scores)), key=lambda i: float(scores[i]), reverse=True)
+            top5 = [(labels[i] if i < len(labels) else str(i), float(scores[i])) for i in order[:5]]
+
+            # margin 布局（跟 _annotate_video_cv2 一样：上边条 GT+pred，下边条 top5）
+            import numpy as np
+            h, w = frame.shape[:2]
+            scale = max(0.4, min(w, h) / 700.0)
+            thick = max(1, int(round(scale * 2)))
+            line_h = max(18, int(24 * scale))
+            top_h = max(30, line_h + 14)
+            bottom_h = max(40, len(top5[:5]) * line_h + 12)
+            canvas_h = h + top_h + bottom_h
+            canvas = np.zeros((canvas_h, w, 3), dtype=np.uint8)
+            canvas[top_h:top_h + h] = frame
+
+            gt_text = f"GT: {gt_name}"
             correct = "✓" if top1_idx == gt_label else "✗"
-            color = (0, 255, 0) if top1_idx == gt_label else (0, 0, 255)
-            cv2.putText(frame, f"{correct} {top1_label} ({top1_score:.2f})", (8, 52), font, 0.7, color, 2, cv2.LINE_AA)
+            pred_text = f"{correct} {top1_label} ({top1_score:.2f})"
+            pred_color = (0, 255, 0) if top1_idx == gt_label else (0, 0, 255)
+
+            ty = top_h // 2 + line_h // 3
+            cv2.putText(canvas, gt_text, (10, ty), font, scale, (0, 255, 0), thick, cv2.LINE_AA)
+            (gw, _), _ = cv2.getTextSize(gt_text, font, scale, thick)
+            cv2.putText(canvas, pred_text, (10 + gw + 20, ty), font, scale, pred_color, thick, cv2.LINE_AA)
+
+            by = top_h + h + line_h
+            for i, (lbl, sc) in enumerate(top5[:5]):
+                cv2.putText(canvas, f"{i+1}. {lbl} {sc:.2f}", (10, by + i * line_h),
+                            font, scale * 0.8, (255, 255, 255), max(1, thick - 1), cv2.LINE_AA)
 
             jpg_path = os.path.join(work_dir, "vis_samples", f"sample_{idx}.jpg")
-            cv2.imwrite(jpg_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            cv2.imwrite(jpg_path, canvas, [cv2.IMWRITE_JPEG_QUALITY, 85])
             results_meta.append({
                 "idx": idx, "file": f"sample_{idx}.jpg",
                 "gt_label": gt_name, "pred_label": top1_label,
