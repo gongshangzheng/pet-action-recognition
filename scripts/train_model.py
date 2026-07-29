@@ -392,7 +392,7 @@ def _generate_vis_samples(
     """训练中/后对 val 样本生成可视化图（中间帧 + margin GT+pred+top5），存 work_dir/vis_samples/epoch_N/。"""
     import cv2
     try:
-        from mmaction.apis import init_recognizer, inference_recognognizer
+        from mmaction.apis import init_recognizer, inference_recognizer
         from mmengine.config import Config
     except ImportError:
         log("", "[vis] mmaction 不可用，跳过可视化")
