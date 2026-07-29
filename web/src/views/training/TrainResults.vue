@@ -47,6 +47,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, h, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { NCard, NSpin, NSpace, NSelect, NButton, NDataTable, useMessage } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -58,6 +59,7 @@ import { getTrainRuns, listCheckpoints, getTrainOutputUrl } from '../../api/trai
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
+const router = useRouter()
 const message = useMessage()
 const loading = ref(false)
 const cpLoading = ref(false)
@@ -174,7 +176,7 @@ const curveOption = computed(() => {
 })
 
 const runColumns = computed(() => [
-  { title: 'ID', key: 'id', width: 150 },
+  { title: 'ID', key: 'id', width: 150, render: (r) => h('a', { style: 'color: #2563eb; cursor: pointer; text-decoration: none', onClick: () => router.push(`/training/runs/${r.id}`) }, r.id) },
   { title: '模型', key: 'model' },
   { title: '数据集', key: 'dataset' },
   { title: 'epochs', key: 'epochs', width: 70 },

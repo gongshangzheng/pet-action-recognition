@@ -187,6 +187,12 @@ const routes = [
         meta: { title: '训练结果', module: 'training' },
       },
       {
+        path: 'training/runs/:run_id',
+        name: 'TrainRunDetail',
+        component: () => import('../views/training/TrainRunDetail.vue'),
+        meta: { title: 'Run 详情', module: 'training' },
+      },
+      {
         path: 'training/models',
         name: 'TrainModelManage',
         component: () => import('../views/training/TrainModelManage.vue'),
