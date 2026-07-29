@@ -7,6 +7,14 @@ description: |
 
 # Training — mmaction2 训练操作指南
 
+## 辅助脚本（`.claude/skills/training/scripts/`）
+
+| 脚本 | 用途 |
+|------|------|
+| `start_training.sh` | 启动新训练 run（自动生成 run_id，后台运行） |
+| `resume_training.sh` | 断点续训已有 run（找 latest checkpoint，`-r auto`） |
+| `delete_run.sh` | 删除旧 run（work_dir + logs + checkpoints + metrics 记录）；`--list` 列出现有 run |
+
 ## 1. Overview
 
 训练流程：`POST /api/training/run`（或 CLI `scripts/train_model.py`）→ 包装 `models/mmaction2/tools/train.py` → 产出 **checkpoint**（`latest.pth` + `best.pth`，软链到 `checkpoints/<model_id>/`）+ **指标**（`results/training/metrics.json`，含 `loss_series`）。
