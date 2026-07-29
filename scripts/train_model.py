@@ -387,7 +387,7 @@ def _epoch_of_file(path: str) -> int:
 def _generate_vis_samples(
     work_dir: str, cfg_path: str, ckpt_path: str,
     ann_file: str, data_root: str, num_samples: int = 6,
-    epoch: int = 0,
+    epoch: int = 0, num_classes: int = None,
 ):
     """训练中/后对 val 样本生成可视化图（中间帧 + margin GT+pred+top5），存 work_dir/vis_samples/epoch_N/。"""
     import cv2
@@ -426,6 +426,8 @@ def _generate_vis_samples(
     vis_dir = os.path.join(work_dir, "vis_samples", f"epoch_{epoch}")
     os.makedirs(vis_dir, exist_ok=True)
     cfg = Config.fromfile(cfg_path)
+    if num_classes is not None:
+        cfg.model.cls_head.num_classes = num_classes
     model = init_recognizer(cfg, ckpt_path, device="cuda")
     font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -714,7 +716,7 @@ def main() -> int:
                 vis_data = str(root)
             if vis_ann and vis_data:
                 try:
-                    _generate_vis_samples(work_dir, resolve_mmaction2_config(args.mmaction2_config), vis_ckpt, vis_ann, vis_data, epoch=args.epochs)
+                    _generate_vis_samples(work_dir, resolve_mmaction2_config(args.mmaction2_config), vis_ckpt, vis_ann, vis_data, epoch=args.epochs, num_classes=args.num_classes)
                 except Exception as e:
                     log(args.run_id, f"[vis] 训练后补生成失败（Hook 可能已生成）: {e}")
             else:
