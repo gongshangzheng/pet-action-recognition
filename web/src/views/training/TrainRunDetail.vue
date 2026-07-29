@@ -78,7 +78,7 @@
       <div class="vis-card-inner">
         <button class="vis-nav vis-prev" :disabled="visIndex[group.epoch] === 0" @click="switchVis(group.epoch, -1)">◀</button>
         <div class="vis-main" v-if="group.samples[visIndex[group.epoch]]">
-          <img :src="getVisSampleUrl(group.samples[visIndex[group.epoch]].url)" class="vis-big-img" loading="lazy" />
+          <img :src="group.samples[visIndex[group.epoch]].url" class="vis-big-img" loading="lazy" />
           <div class="vis-info">
             <span :class="group.samples[visIndex[group.epoch]].correct ? 'vis-ok' : 'vis-err'">{{ group.samples[visIndex[group.epoch]].correct ? 'OK' : 'WRONG' }}</span>
             <span class="vis-gt">GT: {{ group.samples[visIndex[group.epoch]].gt_label }}</span>
@@ -95,7 +95,7 @@
           :class="['vis-thumb', { active: i === visIndex[group.epoch] }]"
           @click="visIndex[group.epoch] = i"
         >
-          <img :src="getVisSampleUrl(s.url)" loading="lazy" />
+          <img :src="s.url" loading="lazy" />
         </div>
       </div>
     </n-card>
