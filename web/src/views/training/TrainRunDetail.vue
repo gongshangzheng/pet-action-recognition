@@ -67,20 +67,39 @@
         <v-chart class="chart" :option="lrChart" autoresize />
       </div>
     </n-card>
+
+    <!-- 可视化样本 -->
+    <n-card v-if="visSamples.length" size="small" style="margin-top: 12px" title="可视化样本（val 预测）">
+      <div class="vis-grid">
+        <div v-for="s in visSamples" :key="s.idx" class="vis-item" @click="previewVis(s)">
+          <img :src="getVisSampleUrl('work_dirs/' + runId + '/vis_samples/' + s.file)" class="vis-img" loading="lazy" />
+          <div class="vis-meta">
+            <span :class="s.correct ? 'vis-ok' : 'vis-err'">{{ s.correct ? '✓' : '✗' }}</span>
+            <span class="vis-gt">GT: {{ s.gt_label }}</span>
+            <span class="vis-pred">pred: {{ s.pred_label }} ({{ s.score }})</span>
+          </div>
+        </div>
+      </div>
+    </n-card>
+
+    <!-- 大图预览 -->
+    <n-modal v-model:show="visPreviewShow" preset="card" :title="visPreviewTitle" style="max-width: 600px">
+      <img :src="visPreviewSrc" style="width: 100%" />
+    </n-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { NCard, NSpin, NSpace, NButton, NTag, NDescriptions, NDescriptionsItem } from 'naive-ui'
+import { NCard, NSpin, NSpace, NButton, NTag, NDescriptions, NDescriptionsItem, NModal } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent } from 'echarts/components'
 import EmptyState from '../../components/common/EmptyState.vue'
-import { getTrainRunDetail } from '../../api/training'
+import { getTrainRunDetail, listVisSamples, getVisSampleUrl } from '../../api/training'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent])
 
@@ -88,7 +107,18 @@ const route = useRoute()
 const runId = route.params.run_id
 const loading = ref(false)
 const run = ref(null)
+const visSamples = ref([])
 let pollTimer = null
+
+const visPreviewShow = ref(false)
+const visPreviewSrc = ref('')
+const visPreviewTitle = ref('')
+
+function previewVis(s) {
+  visPreviewSrc.value = getVisSampleUrl('work_dirs/' + runId + '/vis_samples/' + s.file)
+  visPreviewTitle.value = `${s.correct ? '✓' : '✗'} GT: ${s.gt_label} → pred: ${s.pred_label} (${s.score})`
+  visPreviewShow.value = true
+}
 
 const isRunning = computed(() => ['running', 'started'].includes(run.value?.status))
 const statusType = computed(() => {
@@ -165,15 +195,24 @@ async function load() {
   loading.value = true
   try { run.value = await getTrainRunDetail(runId) } catch { run.value = null }
   loading.value = false
+  loadVis()
   if (isRunning.value) startPoll()
   else stopPoll()
+}
+
+async function loadVis() {
+  try {
+    const d = await listVisSamples(runId)
+    visSamples.value = d.samples || []
+  } catch { visSamples.value = [] }
 }
 
 function startPoll() {
   stopPoll()
   pollTimer = setInterval(async () => {
     try { run.value = await getTrainRunDetail(runId) } catch {}
-    if (!isRunning.value) stopPoll()
+    if (!isRunning.value) { stopPoll(); loadVis() }
+    else loadVis()
   }, 3000)
 }
 function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
@@ -189,4 +228,13 @@ onUnmounted(stopPoll)
 .chart-block:last-child { margin-bottom: 0; }
 .chart-title { font-weight: 600; font-size: 13px; color: #6b7280; margin-bottom: 4px; }
 .chart { height: 200px; width: 100%; }
+.vis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.vis-item { border: 1px solid rgba(128,128,128,0.2); border-radius: 6px; overflow: hidden; cursor: pointer; }
+.vis-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.vis-img { width: 100%; height: 140px; object-fit: cover; display: block; }
+.vis-meta { padding: 4px 6px; font-size: 11px; display: flex; flex-direction: column; gap: 1px; }
+.vis-ok { color: #18a058; font-weight: bold; }
+.vis-err { color: #d03050; font-weight: bold; }
+.vis-gt { color: #6b7280; }
+.vis-pred { color: #9ca3af; }
 </style>

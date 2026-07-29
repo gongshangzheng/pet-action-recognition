@@ -375,6 +375,105 @@ def _epoch_of_file(path: str) -> int:
     return int(m.group(1)) if m else 0
 
 
+def _generate_vis_samples(
+    work_dir: str, cfg_path: str, ckpt_path: str,
+    ann_file: str, data_root: str, num_samples: int = 6,
+):
+    """训练后对 val 样本生成可视化图（中间帧 + GT + pred 叠字），存 work_dir/vis_samples/。"""
+    import cv2
+    try:
+        from mmaction.apis import init_recognizer, inference_recognizer
+        from mmengine.config import Config
+    except ImportError:
+        log("", "[vis] mmaction 不可用，跳过可视化")
+        return
+
+    if not os.path.isfile(ann_file):
+        return
+    # 读 val 样本
+    samples = []
+    with open(ann_file, "r") as f:
+        for ln in f:
+            parts = ln.strip().split()
+            if len(parts) >= 2:
+                samples.append((parts[0], int(parts[1])))
+    if not samples:
+        return
+    # 取前 N + 均匀采样
+    step = max(1, len(samples) // num_samples)
+    picked = samples[::step][:num_samples]
+
+    # 读 label_map
+    labels = []
+    base = os.path.dirname(os.path.dirname(ann_file))  # dataset root
+    for lm in [os.path.join(base, "annotation", "labels.txt"),
+               os.path.join(base, "classes.txt")]:
+        if os.path.isfile(lm):
+            with open(lm) as f:
+                labels = [ln.strip() for ln in f if ln.strip()]
+            break
+
+    os.makedirs(os.path.join(work_dir, "vis_samples"), exist_ok=True)
+    cfg = Config.fromfile(cfg_path)
+    model = init_recognizer(cfg, ckpt_path, device="cuda")
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    results_meta = []
+    for idx, (rel_path, gt_label) in enumerate(picked):
+        video_path = os.path.join(data_root, rel_path) if not os.path.isabs(rel_path) else rel_path
+        if not os.path.isfile(video_path):
+            # data_root 可能已经包含 rel_path 的前缀
+            video_path = os.path.join(os.path.dirname(data_root), rel_path)
+        if not os.path.isfile(video_path):
+            continue
+        try:
+            result = inference_recognizer(model, video_path)
+            scores = result.pred_score
+            if hasattr(scores, "detach"):
+                scores = scores.detach().cpu().numpy()
+            import numpy as np
+            scores = np.asarray(scores)
+            top1_idx = int(scores.argmax())
+            top1_score = float(scores[top1_idx])
+            top1_label = labels[top1_idx] if top1_idx < len(labels) else str(top1_idx)
+            gt_name = labels[gt_label] if gt_label < len(labels) else str(gt_label)
+
+            # 取中间帧
+            cap = cv2.VideoCapture(video_path)
+            total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            if total > 2:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, total // 2)
+            ok, frame = cap.read()
+            cap.release()
+            if not ok or frame is None:
+                continue
+
+            # 叠字（GT 绿 + pred 黄 + score）
+            cv2.putText(frame, f"GT: {gt_name}", (8, 24), font, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+            correct = "✓" if top1_idx == gt_label else "✗"
+            color = (0, 255, 0) if top1_idx == gt_label else (0, 0, 255)
+            cv2.putText(frame, f"{correct} {top1_label} ({top1_score:.2f})", (8, 52), font, 0.7, color, 2, cv2.LINE_AA)
+
+            jpg_path = os.path.join(work_dir, "vis_samples", f"sample_{idx}.jpg")
+            cv2.imwrite(jpg_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            results_meta.append({
+                "idx": idx, "file": f"sample_{idx}.jpg",
+                "gt_label": gt_name, "pred_label": top1_label,
+                "score": round(top1_score, 3), "correct": top1_idx == gt_label,
+            })
+        except Exception as e:
+            log("", f"[vis] sample {idx} 失败: {e}")
+
+    # 存元数据
+    if results_meta:
+        meta_path = os.path.join(work_dir, "vis_samples", "meta.json")
+        with open(meta_path, "w") as f:
+            json.dump({"samples": results_meta}, f, ensure_ascii=False, indent=2)
+        log("", f"[vis] 生成 {len(results_meta)} 张可视化样本 → vis_samples/")
+
+    return results_meta
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="mmaction2 training wrapper for pet-action-recognition")
     parser.add_argument("--model-id", required=True)
@@ -563,6 +662,23 @@ def main() -> int:
     if ret == 0:
         run["status"] = "completed"
         log(args.run_id, "[done] 训练完成")
+        # 训练后生成可视化样本
+        best_ckpt = os.path.join(work_dir, "best_acc_top1_epoch_*.pth")
+        import glob
+        best_files = sorted(glob.glob(best_ckpt))
+        vis_ckpt = best_files[-1] if best_files else (latest or "")
+        if vis_ckpt:
+            log(args.run_id, f"[vis] 生成可视化样本 (ckpt={vis_ckpt})...")
+            # 解析 ann_val + data_root 用于可视化
+            vis_ann, vis_data = ann_val, videos_val
+            if not vis_ann and args.dataset_id != QUADRUPED_DATASET_NAME:
+                root = REPO / "datasets" / args.dataset_id
+                vis_ann = str(root / "annotation" / "val_public.txt") if (root / "annotation" / "val_public.txt").is_file() else ""
+                vis_data = str(root)
+            if vis_ann and vis_data:
+                _generate_vis_samples(work_dir, cfg_path, vis_ckpt, vis_ann, vis_data)
+            else:
+                log(args.run_id, "[vis] 无 val 标注文件，跳过可视化")
     else:
         run["status"] = "error"
         run["metrics"]["returncode"] = ret

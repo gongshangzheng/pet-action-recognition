@@ -36,3 +36,7 @@ export const getSpeedrunStatus = () => request.get('/speedrun/status')
 export const getSpeedrunResults = () => request.get('/speedrun/results')
 export const listSpeedrunOutputs = () => request.get('/speedrun/outputs')
 export const getSpeedrunOutputUrl = (path) => `/api/speedrun/outputs/${path}`
+
+// 训练 run 可视化样本
+export const listVisSamples = (runId) => request.get(`/training/runs/${runId}/vis`)
+export const getVisSampleUrl = (path) => `/api/training/outputs/${path}`

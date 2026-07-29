@@ -847,6 +847,28 @@ async def get_run_detail(run_id: str):
     return {"detail": "Run not found"}, 404
 
 
+# ---- run 可视化样本 ------------------------------------------------------- #
+
+@router.get("/runs/{run_id}/vis")
+async def list_vis_samples(run_id: str):
+    """列出训练 run 的可视化样本图（训练后自动生成的 5-6 张 val 样本预测图）。"""
+    import glob as _glob
+    vis_dir = os.path.join(TRAINING_WORK_DIR, run_id, "vis_samples")
+    if not os.path.isdir(vis_dir):
+        return {"samples": []}
+    meta_path = os.path.join(vis_dir, "meta.json")
+    meta = _read_json_meta(meta_path) or {"samples": []}
+    samples = []
+    for s in (meta.get("samples") or []):
+        jpg = os.path.join(vis_dir, s["file"])
+        samples.append({
+            **s,
+            "url": f"/api/training/outputs/work_dirs/{run_id}/vis_samples/{s['file']}",
+            "exists": os.path.isfile(jpg),
+        })
+    return {"samples": samples}
+
+
 # ---- checkpoints ------------------------------------------------------- #
 
 @router.get("/checkpoints")
