@@ -27,11 +27,11 @@
       <div v-else class="curve-placeholder">选择下方任意一条训练 run，loss/指标曲线将在此处显示</div>
     </n-card>
 
-    <!-- 训练 run 列表 -->
-    <n-card size="small" title="训练 run 列表" style="margin-top: 12px">
+    <!-- 训练进程列表 -->
+    <n-card size="small" title="训练进程列表" style="margin-top: 12px">
       <n-spin :show="loading">
         <n-data-table v-if="filteredRuns.length" :columns="runColumns" :data="filteredRuns" :bordered="false" size="small" striped />
-        <EmptyState v-else description="暂无训练 run。在「训练运行」页启动训练后，run 列表 + loss 曲线在此。" />
+        <EmptyState v-else description="暂无训练进程。在「训练运行」页启动训练后，进程列表 + loss 曲线在此。" />
       </n-spin>
     </n-card>
   </div>
@@ -97,7 +97,7 @@ async function refreshRuns() {
     const res = await getTrainRuns()
     runs.value = sortRuns(res.runs || [])
     syncCurrent()
-  } catch { message.error('加载训练 run 列表失败') }
+  } catch { message.error('加载训练进程列表失败') }
   loading.value = false
 }
 

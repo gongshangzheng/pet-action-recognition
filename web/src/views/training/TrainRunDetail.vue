@@ -5,7 +5,7 @@
         <div class="flex-between">
           <n-space align="center" size="small">
             <n-button size="small" quaternary @click="$router.push('/training/results')">← 返回</n-button>
-            <h3>{{ run?.id || 'Run 详情' }}</h3>
+            <h3>{{ run?.id || '进程详情' }}</h3>
             <n-tag v-if="run" :type="statusType" size="small">{{ run.status }}</n-tag>
             <n-tag v-if="isRunning" type="info" size="small">实时刷新中…</n-tag>
           </n-space>

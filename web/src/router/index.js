@@ -190,7 +190,7 @@ const routes = [
         path: 'training/runs/:run_id',
         name: 'TrainRunDetail',
         component: () => import('../views/training/TrainRunDetail.vue'),
-        meta: { title: 'Run 详情', module: 'training' },
+        meta: { title: '进程详情', module: 'training' },
       },
       {
         path: 'training/models',
