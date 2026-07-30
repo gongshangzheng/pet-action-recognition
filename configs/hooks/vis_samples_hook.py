@@ -87,10 +87,11 @@ class VisSamplesHook(Hook):
         self.dataset_root = dataset_root
         self.samples: list[tuple[str, int]] = []
         self.labels: list[str] = []
+        self.test_pipeline = None
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self._initialized = False
 
-    def _lazy_init(self):
+    def _lazy_init(self, runner):
         """延迟初始化（在 runner 启动后，work_dir 已确定时）。"""
         if self._initialized:
             return
@@ -107,6 +108,16 @@ class VisSamplesHook(Hook):
             self.labels = _read_labels(self.dataset_root)
         elif self.data_root:
             self.labels = _read_labels(os.path.dirname(self.data_root))
+        # 构建 test pipeline（inference_recognizer 默认读 model.cfg，但 runner 构建的
+        # model 不带 .cfg，故从 runner.cfg 显式取 test_pipeline 构造 Compose 传入）
+        try:
+            from mmengine.dataset.base_dataset import Compose
+            tp = getattr(runner.cfg, "test_pipeline", None) or getattr(runner.cfg, "val_pipeline", None)
+            if tp:
+                self.test_pipeline = Compose(tp)
+        except Exception as e:
+            print(f"[VisSamplesHook] test pipeline build failed: {e}")
+            self.test_pipeline = None
         if self.samples:
             print(f"[VisSamplesHook] loaded {len(self.samples)} samples, {len(self.labels)} labels, interval={self.interval}")
 
@@ -114,7 +125,7 @@ class VisSamplesHook(Hook):
         epoch = runner.epoch + 1  # mmengine epoch 从 0 开始
         if epoch % self.interval != 0:
             return
-        self._lazy_init()
+        self._lazy_init(runner)
         if not self.samples:
             return
 
@@ -163,7 +174,7 @@ class VisSamplesHook(Hook):
     def _gen_one(self, model, video_path, gt_label, idx, vis_dir, epoch, torch):
         from mmaction.apis import inference_recognizer
 
-        result = inference_recognizer(model, video_path)
+        result = inference_recognizer(model, video_path, self.test_pipeline)
         scores = result.pred_score
         if hasattr(scores, "detach"):
             scores = scores.detach().cpu().numpy()
