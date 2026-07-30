@@ -45,9 +45,9 @@
                   </n-form-item>
                 </div>
                 <n-form-item label="override 片段（Python）" label-placement="top" :show-feedback="false">
-                  <n-input v-model:value="form.override_snippet" type="textarea" :rows="3" placeholder="param_scheduler = [dict(type='LinearLR', start_factor=0.1, by_epoch=True, begin=0, end=5)]&#10;model.cls_head.dropout = 0.5&#10;每行 verbatim 追加到 override config（可写任意 dict 值）" />
+                  <n-input v-model:value="form.override_snippet" type="textarea" :rows="3" placeholder="param_scheduler = [dict(type='LinearLR', start_factor=0.1, by_epoch=True, begin=0, end=5)]&#10;model = dict(cls_head=dict(dropout=0.5))&#10;用 key = ... 赋值（不能用 a.b.c = 点路径）；dict/list 原生写法" />
                 </n-form-item>
-                <p class="hint">weight_decay/backbone_lr_mult/label_smoothing/片段走 override 文件（mmengine cfg-options 不支持 {} 字典）；num_clips_val 走 cfg-options。最终命令见训练日志 [cmd] 行。</p>
+                <p class="hint">weight_decay/backbone_lr_mult/label_smoothing/片段走 override 文件（mmengine cfg-options 不支持 {} 字典）；num_clips_val 走 cfg-options。片段在文件末尾，与命名字段同 key 时以片段为准。最终命令见训练日志 [cmd] 行。</p>
               </n-collapse-item>
             </n-collapse>
           </n-form-item>
