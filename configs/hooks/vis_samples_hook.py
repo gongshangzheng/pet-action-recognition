@@ -31,14 +31,30 @@ def _read_samples(ann_file: str, num_samples: int):
 
 
 def _read_labels(dataset_root: str):
-    """从 dataset_root 下找 label_map 文件。"""
+    """从 dataset_root 下找 label_map 文件。
+
+    支持两种格式：
+      - 每行一个类名：``locomotion``
+      - ``<索引> <类名>``：``0 locomotion``（pet_mammal labels.txt 即此格式）
+    """
     for lm in [
         os.path.join(dataset_root, "annotation", "labels.txt"),
         os.path.join(dataset_root, "classes.txt"),
     ]:
         if os.path.isfile(lm):
+            out = []
             with open(lm) as f:
-                return [ln.strip() for ln in f if ln.strip()]
+                for ln in f:
+                    ln = ln.strip()
+                    if not ln:
+                        continue
+                    parts = ln.split(None, 1)
+                    # 首段是纯数字索引 → 取剩余部分作为类名
+                    if len(parts) == 2 and parts[0].isdigit():
+                        out.append(parts[1].strip())
+                    else:
+                        out.append(parts[0] if parts else ln)
+            return out
     return []
 
 
@@ -94,7 +110,7 @@ class VisSamplesHook(Hook):
         if self.samples:
             print(f"[VisSamplesHook] loaded {len(self.samples)} samples, {len(self.labels)} labels, interval={self.interval}")
 
-    def after_epoch(self, runner) -> None:
+    def after_train_epoch(self, runner) -> None:
         epoch = runner.epoch + 1  # mmengine epoch 从 0 开始
         if epoch % self.interval != 0:
             return

@@ -243,14 +243,16 @@ def parse_scalars(work_dir: str) -> list[dict]:
                     series.append(rec)
                 if "loss" in obj:
                     rec["loss"] = float(obj["loss"])
-                if "top1_acc" in obj:
-                    rec["top1_acc"] = float(obj["top1_acc"])
-                if "top5_acc" in obj:
-                    rec["top5_acc"] = float(obj["top5_acc"])
+                # train 迭代级 batch top1/top5 存为 train_*（批量级，非验证精度）
+                if "top1_acc" in obj and "acc/top1" not in obj:
+                    rec.setdefault("train_top1_acc", float(obj["top1_acc"]))
+                if "top5_acc" in obj and "acc/top5" not in obj:
+                    rec.setdefault("train_top5_acc", float(obj["top5_acc"]))
+                # 验证级 acc/top1 → 权威 top1_acc（覆盖 batch 级，反映真实泛化精度）
                 if "acc/top1" in obj:
-                    rec.setdefault("top1_acc", float(obj["acc/top1"]))
+                    rec["top1_acc"] = float(obj["acc/top1"])
                 if "acc/top5" in obj:
-                    rec.setdefault("top5_acc", float(obj["acc/top5"]))
+                    rec["top5_acc"] = float(obj["acc/top5"])
                 if "lr" in obj:
                     rec["lr"] = float(obj["lr"])
         series.sort(key=lambda x: x["epoch"])
