@@ -62,42 +62,55 @@
       </div>
     </n-card>
 
-    <!-- 可视化样本：按 epoch 分组卡片，组内左右切换 -->
-    <n-card
-      v-for="group in visGroups"
-      :key="group.epoch"
-      size="small"
-      style="margin-top: 12px"
-    >
-      <template #header>
-        <div class="flex-between">
-          <span>Epoch {{ group.epoch }} <span :class="visGroupCorrect(group) === group.samples.length ? 'vis-all-ok' : ''">({{ visGroupCorrect(group) }}/{{ group.samples.length }} correct)</span></span>
-        </div>
-      </template>
-
-      <div class="vis-card-inner">
-        <button class="vis-nav vis-prev" :disabled="visIndex[group.epoch] === 0" @click="switchVis(group.epoch, -1)">◀</button>
-        <div class="vis-main" v-if="group.samples[visIndex[group.epoch]]">
-          <img :src="group.samples[visIndex[group.epoch]].url" class="vis-big-img" loading="lazy" />
-          <div class="vis-info">
-            <span :class="group.samples[visIndex[group.epoch]].correct ? 'vis-ok' : 'vis-err'">{{ group.samples[visIndex[group.epoch]].correct ? 'OK' : 'WRONG' }}</span>
-            <span class="vis-gt">GT: {{ group.samples[visIndex[group.epoch]].gt_label }}</span>
-            <span class="vis-pred">pred: {{ group.samples[visIndex[group.epoch]].pred_label }} ({{ group.samples[visIndex[group.epoch]].score }})</span>
-            <span class="vis-idx">{{ visIndex[group.epoch] + 1 }}/{{ group.samples.length }}</span>
+    <!-- 可视化样本：epoch 网格 + 点击展开详情 -->
+    <n-card v-if="visGroups.length" size="small" style="margin-top: 12px" title="可视化样本">
+      <div class="epoch-grid">
+        <div
+          v-for="group in visGroups"
+          :key="group.epoch"
+          :class="['epoch-cell', { active: selectedEpoch === group.epoch }]"
+          @click="selectedEpoch = group.epoch"
+        >
+          <div class="epoch-cell-thumb">
+            <img v-if="group.samples[0]" :src="group.samples[0].url" loading="lazy" />
+          </div>
+          <div class="epoch-cell-meta">
+            <span class="epoch-num">Ep {{ group.epoch }}</span>
+            <span :class="visGroupCorrect(group) === group.samples.length ? 'vis-all-ok' : ''">{{ visGroupCorrect(group) }}/{{ group.samples.length }}</span>
           </div>
         </div>
-        <button class="vis-nav vis-next" :disabled="visIndex[group.epoch] >= group.samples.length - 1" @click="switchVis(group.epoch, 1)">▶</button>
       </div>
-      <div class="vis-thumbs">
-        <div
-          v-for="(s, i) in group.samples"
-          :key="s.idx"
-          :class="['vis-thumb', { active: i === visIndex[group.epoch] }]"
-          @click="visIndex[group.epoch] = i"
-        >
-          <img :src="s.url" loading="lazy" />
+
+      <!-- 选中 epoch 的详情（左右切换） -->
+      <n-card v-if="selectedEpoch !== null && selectedGroup" size="small" :bordered="true" style="margin-top: 12px">
+        <template #header>
+          Epoch {{ selectedEpoch }}
+          ({{ visGroupCorrect(selectedGroup) }}/{{ selectedGroup.samples.length }} correct)
+        </template>
+        <div class="vis-card-inner">
+          <button class="vis-nav vis-prev" :disabled="visIndex[selectedEpoch] === 0" @click="switchVis(selectedEpoch, -1)">◀</button>
+          <div class="vis-main" v-if="selectedGroup.samples[visIndex[selectedEpoch]]">
+            <img :src="selectedGroup.samples[visIndex[selectedEpoch]].url" class="vis-big-img" loading="lazy" />
+            <div class="vis-info">
+              <span :class="selectedGroup.samples[visIndex[selectedEpoch]].correct ? 'vis-ok' : 'vis-err'">{{ selectedGroup.samples[visIndex[selectedEpoch]].correct ? 'OK' : 'WRONG' }}</span>
+              <span class="vis-gt">GT: {{ selectedGroup.samples[visIndex[selectedEpoch]].gt_label }}</span>
+              <span class="vis-pred">pred: {{ selectedGroup.samples[visIndex[selectedEpoch]].pred_label }} ({{ selectedGroup.samples[visIndex[selectedEpoch]].score }})</span>
+              <span class="vis-idx">{{ visIndex[selectedEpoch] + 1 }}/{{ selectedGroup.samples.length }}</span>
+            </div>
+          </div>
+          <button class="vis-nav vis-next" :disabled="visIndex[selectedEpoch] >= selectedGroup.samples.length - 1" @click="switchVis(selectedEpoch, 1)">▶</button>
         </div>
-      </div>
+        <div class="vis-thumbs">
+          <div
+            v-for="(s, i) in selectedGroup.samples"
+            :key="s.idx"
+            :class="['vis-thumb', { active: i === visIndex[selectedEpoch] }]"
+            @click="visIndex[selectedEpoch] = i"
+          >
+            <img :src="s.url" loading="lazy" />
+          </div>
+        </div>
+      </n-card>
     </n-card>
   </div>
 </template>
@@ -121,8 +134,11 @@ const runId = route.params.run_id
 const loading = ref(false)
 const run = ref(null)
 const visGroups = ref([])
-const visIndex = reactive({})  // {epoch: current_index}
+const visIndex = reactive({})
+const selectedEpoch = ref(null)
 let pollTimer = null
+
+const selectedGroup = computed(() => visGroups.value.find(g => g.epoch === selectedEpoch.value) || null)
 
 const isRunning = computed(() => ['running', 'started'].includes(run.value?.status))
 const statusType = computed(() => {
@@ -205,6 +221,9 @@ async function loadVis() {
     const d = await listVisSamples(runId)
     visGroups.value = d.groups || []
     visGroups.value.forEach(g => { if (visIndex[g.epoch] == null) visIndex[g.epoch] = 0 })
+    if (selectedEpoch.value === null && visGroups.value.length) {
+      selectedEpoch.value = visGroups.value[0].epoch
+    }
   } catch { visGroups.value = [] }
 }
 
@@ -246,4 +265,12 @@ onUnmounted(stopPoll)
 .vis-thumb { width: 60px; height: 45px; border: 2px solid transparent; border-radius: 4px; overflow: hidden; cursor: pointer; flex-shrink: 0; }
 .vis-thumb.active { border-color: #2563eb; }
 .vis-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.epoch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+.epoch-cell { border: 2px solid transparent; border-radius: 6px; overflow: hidden; cursor: pointer; background: rgba(128,128,128,0.06); }
+.epoch-cell:hover { background: rgba(128,128,128,0.12); }
+.epoch-cell.active { border-color: #2563eb; }
+.epoch-cell-thumb { height: 60px; overflow: hidden; }
+.epoch-cell-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.epoch-cell-meta { padding: 3px 4px; font-size: 11px; display: flex; justify-content: space-between; color: #6b7280; }
+.epoch-num { font-weight: 600; }
 </style>
