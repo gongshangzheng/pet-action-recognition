@@ -33,6 +33,9 @@
             </n-descriptions-item>
             <n-descriptions-item v-if="run.final_loss != null" label="Final Loss">{{ fmt(run.final_loss) }}</n-descriptions-item>
             <n-descriptions-item v-if="run.best_metric != null" label="Best Metric">{{ fmt(run.best_metric) }}</n-descriptions-item>
+            <n-descriptions-item v-if="run.advanced" label="高级超参">
+              <span style="font-size: 12px; color: #9ca3af">{{ JSON.stringify(run.advanced) }}</span>
+            </n-descriptions-item>
           </n-descriptions>
 
           <div v-if="run.checkpoint_path || run.best_checkpoint_path" style="margin-top: 12px">

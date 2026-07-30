@@ -27,6 +27,30 @@
               <n-radio value="cpu">CPU</n-radio>
             </n-radio-group>
           </n-form-item>
+          <n-form-item label=" ">
+            <n-collapse :default-expanded-names="[]" style="width: 100%">
+              <n-collapse-item title="高级超参（可选，覆盖 config）" name="adv">
+                <div class="adv-grid">
+                  <n-form-item label="weight_decay" label-placement="top" :show-feedback="false">
+                    <n-input-number v-model:value="form.weight_decay" :step="0.01" :min="0" placeholder="config 默认" />
+                  </n-form-item>
+                  <n-form-item label="backbone_lr_mult" label-placement="top" :show-feedback="false">
+                    <n-input-number v-model:value="form.backbone_lr_mult" :step="0.05" :min="0" :max="1" placeholder="config 默认" />
+                  </n-form-item>
+                  <n-form-item label="label_smoothing" label-placement="top" :show-feedback="false">
+                    <n-input-number v-model:value="form.label_smoothing" :step="0.05" :min="0" :max="1" placeholder="0=关" />
+                  </n-form-item>
+                  <n-form-item label="num_clips_val" label-placement="top" :show-feedback="false">
+                    <n-input-number v-model:value="form.num_clips_val" :step="1" :min="1" :max="10" placeholder="config 默认" />
+                  </n-form-item>
+                </div>
+                <n-form-item label="override 片段（Python）" label-placement="top" :show-feedback="false">
+                  <n-input v-model:value="form.override_snippet" type="textarea" :rows="3" placeholder="param_scheduler = [dict(type='LinearLR', start_factor=0.1, by_epoch=True, begin=0, end=5)]&#10;model.cls_head.dropout = 0.5&#10;每行 verbatim 追加到 override config（可写任意 dict 值）" />
+                </n-form-item>
+                <p class="hint">weight_decay/backbone_lr_mult/label_smoothing/片段走 override 文件（mmengine cfg-options 不支持 {} 字典）；num_clips_val 走 cfg-options。最终命令见训练日志 [cmd] 行。</p>
+              </n-collapse-item>
+            </n-collapse>
+          </n-form-item>
           <n-form-item label="额外参数">
             <n-input v-model:value="form.extra_args" type="textarea" :rows="2" placeholder="--scheduler cosine --num_workers 4" />
           </n-form-item>
@@ -52,7 +76,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { NCard, NSpin, NForm, NFormItem, NSelect, NInputNumber, NRadioGroup, NRadio, NInput, NButton, NAlert, NCode, useMessage } from 'naive-ui'
+import { NCard, NSpin, NForm, NFormItem, NSelect, NInputNumber, NRadioGroup, NRadio, NInput, NButton, NAlert, NCode, NCollapse, NCollapseItem, useMessage } from 'naive-ui'
 import { getTrainModels, getTrainDatasets, getTrainConfigs, runTraining } from '../../api/training'
 
 const message = useMessage()
@@ -62,7 +86,7 @@ const models = ref([])
 const datasets = ref([])
 const configs = ref([])
 const runResult = ref(null)
-const form = ref({ model_id: null, dataset_id: null, config_id: null, epochs: 100, lr: 1e-4, batch_size: 16, device: 'cuda', extra_args: '' })
+const form = ref({ model_id: null, dataset_id: null, config_id: null, epochs: 100, lr: 1e-4, batch_size: 16, device: 'cuda', extra_args: '', weight_decay: null, backbone_lr_mult: null, label_smoothing: 0, num_clips_val: null, override_snippet: '' })
 
 // 下拉框跨浏览器刷新(F5)持久化（不清空）
 const FORM_STORE_KEY = 'projflow:train-run'
@@ -138,4 +162,5 @@ onMounted(async () => {
 
 <style scoped>
 .hint { font-size: 12px; color: var(--color-text-dim); margin-top: 4px; }
+.adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
 </style>

@@ -645,6 +645,13 @@ async def run_training(data: dict = Body(...)):
         run["pretrained"] = pretrained
     if from_scratch:
         run["from_scratch"] = True
+    # 高级超参（可选，便于复现/详情页展示）
+    adv = {}
+    for k in ("weight_decay", "backbone_lr_mult", "label_smoothing", "num_clips_val", "override_snippet", "vis_interval"):
+        if data.get(k) not in (None, "", 0):
+            adv[k] = data.get(k)
+    if adv:
+        run["advanced"] = adv
     _upsert_run(run)
 
     args = [
@@ -670,6 +677,18 @@ async def run_training(data: dict = Body(...)):
         args += [f"--pretrained={pretrained}"]
     if from_scratch:
         args += ["--from-scratch"]
+    if data.get("vis_interval") is not None:
+        args += ["--vis-interval", str(data["vis_interval"])]
+    if data.get("weight_decay") is not None:
+        args += ["--weight-decay", str(data["weight_decay"])]
+    if data.get("backbone_lr_mult") is not None:
+        args += ["--backbone-lr-mult", str(data["backbone_lr_mult"])]
+    if data.get("label_smoothing"):
+        args += ["--label-smoothing", str(data["label_smoothing"])]
+    if data.get("num_clips_val"):
+        args += ["--num-clips-val", str(data["num_clips_val"])]
+    if data.get("override_snippet"):
+        args += [f"--override-snippet={str(data['override_snippet'])}"]
     if data.get("extra_args"):
         args += [f"--extra-args={str(data['extra_args'])}"]
 
