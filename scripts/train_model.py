@@ -224,6 +224,7 @@ def parse_scalars(work_dir: str) -> list[dict]:
         else:
             return []
     series: list[dict] = []
+    last_epoch = None  # val 记录无 epoch 字段，需附属于前一个 train 记录的 epoch
     try:
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
@@ -234,9 +235,13 @@ def parse_scalars(work_dir: str) -> list[dict]:
                     obj = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                is_val = "acc/top1" in obj
                 epoch = obj.get("epoch")
+                if epoch is None and is_val and last_epoch is not None:
+                    epoch = last_epoch
                 if epoch is None:
                     continue
+                last_epoch = epoch
                 rec = next((r for r in series if r["epoch"] == epoch), None)
                 if rec is None:
                     rec = {"epoch": epoch}
@@ -244,9 +249,9 @@ def parse_scalars(work_dir: str) -> list[dict]:
                 if "loss" in obj:
                     rec["loss"] = float(obj["loss"])
                 # train 迭代级 batch top1/top5 存为 train_*（批量级，非验证精度）
-                if "top1_acc" in obj and "acc/top1" not in obj:
+                if "top1_acc" in obj and not is_val:
                     rec.setdefault("train_top1_acc", float(obj["top1_acc"]))
-                if "top5_acc" in obj and "acc/top5" not in obj:
+                if "top5_acc" in obj and not is_val:
                     rec.setdefault("train_top5_acc", float(obj["top5_acc"]))
                 # 验证级 acc/top1 → 权威 top1_acc（覆盖 batch 级，反映真实泛化精度）
                 if "acc/top1" in obj:
