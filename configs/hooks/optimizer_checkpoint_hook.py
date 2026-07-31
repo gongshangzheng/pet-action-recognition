@@ -77,7 +77,6 @@ class OptimizerCheckpointHook(Hook):
         self.interval = interval
         self.max_keep_ckpts = max_keep_ckpts
         self.meta_fields = dict(meta_fields or {})
-        self._kept: list[int] = []  # 已存 optim 的 epoch 列表（升序），用于裁剪
 
     def _should_save(self, runner, epoch: int) -> bool:
         if epoch % self.interval == 0:
@@ -85,6 +84,35 @@ class OptimizerCheckpointHook(Hook):
         # 最后一 epoch 也要存（与主 hook 的 save_last 对齐）
         max_ep = getattr(runner, "max_epochs", None)
         return max_ep is not None and epoch >= max_ep
+
+    def _prune(self, work_dir: str) -> None:
+        """无状态裁剪：扫 work_dir 的 epoch_*_optim.pth，只留最新 max_keep 个（含同名 .json）。
+
+        用扫描而非内存计数：resume 时本 hook 是新实例，内存计数会丢、旧 _optim 残留。
+        主 CheckpointHook 靠 message_hub 持久化 keep_ckpt_ids，本 hook 无此机制故扫盘。
+        """
+        if self.max_keep_ckpts <= 0:
+            return
+        import glob
+        import re
+        optims = glob.glob(os.path.join(work_dir, "epoch_*_optim.pth"))
+
+        def _ep(p: str) -> int:
+            m = re.search(r"epoch_(\d+)_optim\.pth$", os.path.basename(p))
+            return int(m.group(1)) if m else 0
+
+        optims.sort(key=_ep, reverse=True)  # newest first
+        for p in optims[self.max_keep_ckpts:]:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+            jp = p[: -len("_optim.pth")] + ".json"  # epoch_N_optim.pth → epoch_N.json
+            if os.path.isfile(jp):
+                try:
+                    os.remove(jp)
+                except OSError:
+                    pass
 
     def after_train_epoch(self, runner) -> None:
         epoch = runner.epoch + 1
@@ -119,12 +147,5 @@ class OptimizerCheckpointHook(Hook):
             json.dump(sidecar, f, ensure_ascii=False, indent=2)
         os.replace(tmp, json_path)
 
-        # --- prune（与主 hook 同 max_keep_ckpts）---
-        self._kept.append(epoch)
-        if self.max_keep_ckpts > 0:
-            while len(self._kept) > self.max_keep_ckpts:
-                old = self._kept.pop(0)
-                for suffix in (f"epoch_{old}_optim.pth", f"epoch_{old}.json"):
-                    p = os.path.join(work_dir, suffix)
-                    if os.path.isfile(p):
-                        os.remove(p)
+        # --- 无状态裁剪（resume 安全）---
+        self._prune(work_dir)

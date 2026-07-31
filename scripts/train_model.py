@@ -782,6 +782,14 @@ def main() -> int:
         upsert_run(run)
         return 1
 
+    # 清理 resume 重建的临时完整 .pth（仅 --resume 时生成；mmengine 已加载完）
+    _combined_tmp = os.path.join(work_dir, "_resume_combined.pth")
+    if os.path.isfile(_combined_tmp):
+        try:
+            os.remove(_combined_tmp)
+        except OSError:
+            pass
+
     # 解析产物
     series = parse_scalars(work_dir)
     run["loss_series"] = series
