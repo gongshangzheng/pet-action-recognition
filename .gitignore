@@ -56,3 +56,4 @@ server/__pycache__/
 server/**/__pycache__/
 server/.venv/
 *.egg-info/
+.playwright-mcp/
