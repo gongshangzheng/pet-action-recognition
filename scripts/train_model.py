@@ -187,6 +187,9 @@ def _maybe_write_override(args, cfg_path: str, n_cls) -> str | None:
         f'_base_ = ["{os.path.abspath(cfg_path)}"]',
         "",
     ]
+    # label_smoothing 需 LabelSmoothLoss（本环境 mmaction 无此类）→ import 注册
+    if has_ls:
+        lines.append("import configs.hooks.label_smooth_loss  # noqa: 注册 LabelSmoothLoss")
     # optim_wrapper：weight_decay + backbone_lr_mult 合并到同一 dict（mmengine 深合并）
     ow = []
     if has_wd:
