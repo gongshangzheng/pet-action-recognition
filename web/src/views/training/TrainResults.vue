@@ -88,7 +88,13 @@ function sortRuns(list) {
 function syncCurrent() {
   if (!currentRunId.value) return
   const r = runs.value.find(x => x.id === currentRunId.value)
-  if (r) currentRun.value = r
+  if (r) {
+    currentRun.value = r
+  } else {
+    // 持久化的 run 已不存在（被删）→ 清掉选中，交由 load() 回退到最新 run
+    currentRunId.value = null
+    currentRun.value = null
+  }
 }
 
 async function refreshRuns() {
@@ -213,11 +219,10 @@ async function load() {
   try {
     const runsRes = await getTrainRuns().catch(() => ({ runs: [] }))
     runs.value = sortRuns(runsRes?.runs || [])
-    // 自动选中最新一条 run（开页面即可看到正在跑的曲线）
-    if (!currentRunId.value && runs.value.length) {
+    // 选中：优先持久化的 currentRunId；若该 run 已被删（stale）→ 回退到最新一条
+    if (currentRunId.value) syncCurrent()
+    if (!currentRun.value && runs.value.length) {
       selectRun(runs.value[0])
-    } else {
-      syncCurrent()
     }
     if (runs.value.some(isRunning)) startPolling()
   } catch (e) { message.error('加载失败') }

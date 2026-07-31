@@ -1,0 +1,82 @@
+- generic [ref=e5]:
+  - complementary [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]: 宠物动作识别
+      - menu [ref=e10]:
+        - menuitem "首页" [ref=e11]
+        - menu [ref=e17] [cursor=pointer]:
+          - menuitem "项目管理" [ref=e18]
+        - menu [ref=e28] [cursor=pointer]:
+          - menuitem "论文搜集" [ref=e29]
+        - menu [ref=e37] [cursor=pointer]:
+          - menuitem "评测体系" [ref=e38]
+        - menu [ref=e45] [cursor=pointer]:
+          - menuitem "数据集" [ref=e46]
+        - menu [ref=e55] [cursor=pointer]:
+          - menuitem "训练体系" [ref=e56]
+  - generic [ref=e70]:
+    - generic [ref=e71]:
+      - navigation "Breadcrumb" [ref=e73]:
+        - list [ref=e74]:
+          - listitem [ref=e75]:
+            - generic [ref=e76] [cursor=pointer]: 首页
+            - generic [ref=e77]: /
+          - listitem [ref=e78]:
+            - generic [ref=e79] [cursor=pointer]: 训练体系
+            - generic [ref=e80]: /
+          - listitem [ref=e81]:
+            - generic [ref=e82]: 训练结果
+      - generic [ref=e83]:
+        - generic [ref=e84]: 2026年7月31日 星期五
+        - button [ref=e85] [cursor=pointer]
+    - generic [ref=e91]:
+      - generic [ref=e92]:
+        - text: 模型
+        - generic [ref=e95] [cursor=pointer]:
+          - generic: 全部
+          - img "loading" [ref=e96]
+        - text: 数据集
+        - generic [ref=e105] [cursor=pointer]:
+          - generic: 全部
+          - img "loading" [ref=e106]
+        - text: 状态
+        - generic [ref=e115] [cursor=pointer]:
+          - generic: 全部
+          - img "loading" [ref=e116]
+        - button "刷新" [ref=e123] [cursor=pointer]
+      - heading [ref=e126]:
+        - heading "训练曲线 点击下方进程名称进入详情页，查看曲线 + 可视化" [ref=e127]:
+          - generic [ref=e128]:
+            - heading "训练曲线" [level=3] [ref=e129]
+            - generic [ref=e130]: 点击下方进程名称进入详情页，查看曲线 + 可视化
+      - generic [ref=e135]:
+        - heading [ref=e136]:
+          - heading "训练进程列表" [ref=e137]
+        - table [ref=e143]:
+          - rowgroup [ref=e154]:
+            - row [ref=e155]:
+              - columnheader "名称" [ref=e156]
+              - columnheader "模型" [ref=e159]
+              - columnheader "数据集" [ref=e162]
+              - columnheader "epochs" [ref=e165]
+              - columnheader "final_loss" [ref=e168]
+              - columnheader "best_metric" [ref=e171]
+              - columnheader "状态" [ref=e174]
+              - columnheader "时间" [ref=e177]
+              - columnheader "Checkpoint" [ref=e180]
+          - rowgroup [ref=e183]:
+            - row [ref=e184]:
+              - cell "VideoMAEv2 best3 (ls+wd+blr+5clip)" [ref=e185]
+              - cell "videomaev2-base" [ref=e186]
+              - cell "pet_action_mammal_v0" [ref=e187]
+              - cell "15" [ref=e188]
+              - cell "0.4553" [ref=e189]
+              - cell "0.8657" [ref=e190]
+              - cell "completed" [ref=e191]
+              - cell "2026-07-31" [ref=e192]
+              - cell [ref=e193]:
+                - generic [ref=e194]:
+                  - link "latest" [ref=e195] [cursor=pointer]:
+                    - /url: /api/training/outputs/checkpoints/videomaev2-base/train-20260731-144610-vmaev2-best3_latest.pth
+                  - link "best" [ref=e196] [cursor=pointer]:
+                    - /url: /api/training/outputs/checkpoints/videomaev2-base/train-20260731-144610-vmaev2-best3_best.pth

@@ -1,0 +1,107 @@
+- generic [ref=f1e5]:
+  - complementary [ref=f1e6]:
+    - generic [ref=f1e7]:
+      - generic [ref=f1e8]: 宠物动作识别
+      - menu [ref=f1e10]:
+        - menuitem "首页" [ref=f1e11]
+        - menu [ref=f1e17] [cursor=pointer]:
+          - menuitem "项目管理" [ref=f1e18]
+        - menu [ref=f1e28] [cursor=pointer]:
+          - menuitem "论文搜集" [ref=f1e29]
+        - menu [ref=f1e37] [cursor=pointer]:
+          - menuitem "评测体系" [ref=f1e38]
+        - menu [ref=f1e45] [cursor=pointer]:
+          - menuitem "数据集" [ref=f1e46]
+        - menu [ref=f1e55] [cursor=pointer]:
+          - menuitem "训练体系" [ref=f1e56]
+  - generic [ref=f1e70]:
+    - generic [ref=f1e71]:
+      - navigation "Breadcrumb" [ref=f1e73]:
+        - list [ref=f1e74]:
+          - listitem [ref=f1e75]:
+            - generic [ref=f1e76] [cursor=pointer]: 首页
+            - generic [ref=f1e77]: /
+          - listitem [ref=f1e78]:
+            - generic [ref=f1e79] [cursor=pointer]: 训练体系
+            - generic [ref=f1e80]: /
+          - listitem [ref=f1e81]:
+            - generic [ref=f1e82]: 进程详情
+      - generic [ref=f1e83]:
+        - generic [ref=f1e84]: 2026年7月31日 星期五
+        - button [ref=f1e85] [cursor=pointer]
+    - generic [ref=f1e91]:
+      - generic [ref=f1e92]:
+        - heading [ref=f1e93]:
+          - heading "← 返回 VideoMAEv2 best3 (ls+wd+blr+5clip) 15ep; lr1e-4; wd0.05; label_smooth0.1; backbone_lr_mult0.2; num_clips_val5; 3warmup+12cosine completed 刷新" [ref=f1e94]:
+            - generic [ref=f1e95]:
+              - button "← 返回" [ref=f1e96] [cursor=pointer]
+              - heading "VideoMAEv2 best3 (ls+wd+blr+5clip)" [level=3] [ref=f1e98]
+              - text: 15ep; lr1e-4; wd0.05; label_smooth0.1; backbone_lr_mult0.2; num_clips_val5; 3warmup+12cosine
+              - generic [ref=f1e99]: completed
+              - button "刷新" [ref=f1e101] [cursor=pointer]
+        - generic [ref=f1e105]:
+          - table [ref=f1e108]:
+            - rowgroup [ref=f1e109]:
+              - row [ref=f1e110]:
+                - rowheader "模型" [ref=f1e111]
+                - cell "videomaev2-base" [ref=f1e112]
+                - rowheader "数据集" [ref=f1e113]
+                - cell "pet_action_mammal_v0" [ref=f1e114]
+                - rowheader "Epochs" [ref=f1e115]
+                - cell "15" [ref=f1e116]
+                - rowheader "LR" [ref=f1e117]
+                - cell "0.0001" [ref=f1e118]
+              - row [ref=f1e119]:
+                - rowheader "Batch Size" [ref=f1e120]
+                - cell "4" [ref=f1e121]
+                - rowheader "Device" [ref=f1e122]
+                - cell "cuda" [ref=f1e123]
+                - rowheader "开始" [ref=f1e124]
+                - cell "2026-07-31 06:46:10" [ref=f1e125]
+                - rowheader "模式" [ref=f1e126]
+                - cell "default" [ref=f1e127]
+              - row [ref=f1e128]:
+                - rowheader "Final Loss" [ref=f1e129]
+                - cell "0.4553" [ref=f1e130]
+                - rowheader "Best Metric" [ref=f1e131]
+                - cell "0.8657" [ref=f1e132]
+          - generic [ref=f1e133]:
+            - heading "Checkpoint" [level=4] [ref=f1e134]
+            - generic [ref=f1e135]: "latest: checkpoints/videomaev2-base/train-20260731-144610-vmaev2-best3_latest.pth"
+            - generic [ref=f1e137]: "best: checkpoints/videomaev2-base/train-20260731-144610-vmaev2-best3_best.pth"
+      - generic [ref=f1e139]:
+        - heading [ref=f1e140]:
+          - heading "训练曲线" [ref=f1e141]
+        - generic [ref=f1e142]: Loss
+        - generic [ref=f1e147]: Accuracy
+        - generic [ref=f1e152]: Learning Rate
+      - generic [ref=f1e157]:
+        - heading [ref=f1e158]:
+          - heading "可视化样本" [ref=f1e159]
+        - generic [ref=f1e160]:
+          - generic [ref=f1e164] [cursor=pointer]:
+            - generic [ref=f1e165]: Ep 3
+            - generic [ref=f1e166]: 6/6
+          - generic [ref=f1e170] [cursor=pointer]:
+            - generic [ref=f1e171]: Ep 6
+            - generic [ref=f1e172]: 6/6
+          - generic [ref=f1e176] [cursor=pointer]:
+            - generic [ref=f1e177]: Ep 9
+            - generic [ref=f1e178]: 6/6
+          - generic [ref=f1e182] [cursor=pointer]:
+            - generic [ref=f1e183]: Ep 12
+            - generic [ref=f1e184]: 6/6
+          - generic [ref=f1e188] [cursor=pointer]:
+            - generic [ref=f1e189]: Ep 15
+            - generic [ref=f1e190]: 6/6
+        - generic [ref=f1e191]:
+          - heading [ref=f1e192]:
+            - heading "Epoch 3 (6/6 correct)" [ref=f1e193]
+          - generic [ref=f1e194]:
+            - button "◀" [disabled] [ref=f1e195]
+            - generic [ref=f1e198]:
+              - generic [ref=f1e199]: OK
+              - generic [ref=f1e200]: "GT: locomotion"
+              - generic [ref=f1e201]: "pred: locomotion (0.918)"
+              - generic [ref=f1e202]: 1/6
+            - button "▶" [ref=f1e203] [cursor=pointer]
