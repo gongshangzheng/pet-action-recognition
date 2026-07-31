@@ -217,6 +217,47 @@ def _maybe_write_override(args, cfg_path: str, n_cls) -> str | None:
     return out
 
 
+def _optim_hook_idx(cfg_path: str) -> int | None:
+    """返回 OptimizerCheckpointHook 在 custom_hooks 列表中的下标（无则 None）。"""
+    try:
+        from mmengine.config import Config
+        cfg = Config.fromfile(cfg_path)
+        for i, h in enumerate(cfg.get("custom_hooks", []) or []):
+            if isinstance(h, dict) and h.get("type") == "OptimizerCheckpointHook":
+                return i
+    except Exception:
+        pass
+    return None
+
+
+def _reconstruct_resume_ckpt(work_dir: str | None, explicit: str | None = None) -> str | None:
+    """把拆分的 weights + optim 合并成 mmengine resume 用的完整 .pth。
+
+    主 CheckpointHook 设 save_optimizer=False → epoch_N.pth 只有 weights，直接 --resume 会丢
+    optimizer/scheduler/message_hub。本函数找同名 epoch_N_optim.pth 合并成 _resume_combined.pth。
+
+    - explicit 给定：若其同名 _optim.pth 存在则合并，否则原样返回（兼容旧全量 ckpt）。
+    - 否则从 work_dir 找最新 epoch_N.pth。
+    """
+    import torch
+    weights = explicit
+    if weights is None and work_dir:
+        weights = find_latest_checkpoint(work_dir)
+    if not weights or not os.path.isfile(weights):
+        return None
+    optim = weights[:-4] + "_optim.pth"  # epoch_N.pth → epoch_N_optim.pth
+    if not os.path.isfile(optim):
+        return weights  # 无拆分 optim，原文件即可 resume（旧/全量 ckpt）
+    combined = os.path.join(os.path.dirname(weights), "_resume_combined.pth")
+    ck = torch.load(weights, map_location="cpu", weights_only=False)
+    opt = torch.load(optim, map_location="cpu", weights_only=False)
+    for k in ("optimizer", "param_scheduler", "message_hub"):
+        if k in opt and k not in ck:
+            ck[k] = opt[k]
+    torch.save(ck, combined)
+    return combined
+
+
 def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, videos_val: str) -> list[str]:
     cfg_path = args.mmaction2_config
     if not os.path.isabs(cfg_path):
@@ -229,8 +270,18 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     cmd = [sys.executable, TRAIN_PY, cfg_path, "--work-dir", args.work_dir, "--launcher", "none"]
     if args.seed is not None:
         cmd += ["--seed", str(args.seed)]
+    # resume：主 hook save_optimizer=False → epoch_N.pth 仅 weights，必须合并 _optim.pth
+    # 才能 resume optimizer/scheduler/message_hub；mmengine 内部 --resume auto 会拿到 weights-only 丢 optim。
     if args.resume:
-        cmd += ["--resume", args.resume if args.resume != "auto" else "auto"]
+        if args.resume == "auto":
+            resume_target = _reconstruct_resume_ckpt(args.work_dir)
+        else:
+            resume_target = _reconstruct_resume_ckpt(None, args.resume)
+        if resume_target:
+            cmd += ["--resume", resume_target]
+            log(args.run_id, f"[resume] {args.resume} → {resume_target}")
+        else:
+            log(args.run_id, f"[resume] {args.resume} 未找到 checkpoint，从头训练")
 
     cfg_options = [
         f"train_cfg.max_epochs={args.epochs}",
@@ -269,6 +320,28 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
         cfg_options.append(f"custom_hooks.0.ann_file={ann_val}")
         cfg_options.append(f"custom_hooks.0.data_root={videos_val or videos_train}")
         cfg_options.append(f"custom_hooks.0.dataset_root={ds_root}")
+
+    # OptimizerCheckpointHook meta_fields（写进 epoch_N.json sidecar 的训练元信息）
+    oi = _optim_hook_idx(cfg_path)
+    if oi is not None:
+        mf = {
+            "run_id": args.run_id,
+            "model_id": args.model_id,
+            "dataset_id": args.dataset_id,
+            "mmaction2_config": args.mmaction2_config,
+            "total_epochs": args.epochs,
+            "lr": args.lr,
+            "batch_size": args.batch_size,
+            "seed": args.seed,
+        }
+        for k in ("weight_decay", "backbone_lr_mult", "label_smoothing", "num_clips_val"):
+            v = getattr(args, k, None)
+            if v not in (None, 0, ""):
+                mf[k] = v
+        if override:
+            mf["override_config"] = os.path.relpath(override, str(REPO)) if os.path.isabs(override) else override
+        for k, v in mf.items():
+            cfg_options.append(f"custom_hooks.{oi}.meta_fields.{k}={v}")
 
     if cfg_options:
         cmd += ["--cfg-options"] + cfg_options

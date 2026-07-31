@@ -89,12 +89,24 @@ model = dict(
 )
 
 # 每 epoch 都保存，方便脚本找 latest checkpoint
-default_hooks = dict(checkpoint=dict(interval=1, max_keep_ckpts=3))
+# checkpoint 拆分：weights-only 主文件（save_optimizer=False），optimizer/scheduler/message_hub
+# 由 OptimizerCheckpointHook 单独存到 epoch_N_optim.pth；max_keep_ckpts=1 只留最新。
+default_hooks = dict(
+    checkpoint=dict(
+        interval=1,
+        max_keep_ckpts=1,
+        save_optimizer=False,
+        save_param_scheduler=False,
+    )
+)
 auto_scale_lr = dict(enable=False, base_batch_size=256)
 
 # 训练中定期可视化（每 N epoch 对 val 样本生成预测图）
 # paths 由 train_model.py --cfg-options 覆盖
-custom_imports = dict(imports=["configs.hooks.vis_samples_hook"], allow_failed_imports=True)
+custom_imports = dict(
+    imports=["configs.hooks.vis_samples_hook", "configs.hooks.optimizer_checkpoint_hook"],
+    allow_failed_imports=True,
+)
 custom_hooks = [
     dict(
         type="VisSamplesHook",
@@ -103,5 +115,11 @@ custom_hooks = [
         ann_file="",
         data_root="",
         dataset_root="",
-    )
+    ),
+    dict(
+        type="OptimizerCheckpointHook",
+        interval=1,
+        max_keep_ckpts=1,
+        meta_fields=dict(),
+    ),
 ]

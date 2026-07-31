@@ -85,11 +85,22 @@ model = dict(
     cls_head=dict(num_classes=num_classes),
 )
 
-# checkpoint + 可视化 Hook
-default_hooks = dict(checkpoint=dict(interval=10, max_keep_ckpts=3))
+# checkpoint 拆分：weights-only 主文件（save_optimizer=False），optimizer/scheduler/message_hub
+# 由 OptimizerCheckpointHook 单独存到 epoch_N_optim.pth；max_keep_ckpts=1 只留最新。
+default_hooks = dict(
+    checkpoint=dict(
+        interval=10,
+        max_keep_ckpts=1,
+        save_optimizer=False,
+        save_param_scheduler=False,
+    )
+)
 auto_scale_lr = dict(enable=False, base_batch_size=256)
 
-custom_imports = dict(imports=["configs.hooks.vis_samples_hook"], allow_failed_imports=True)
+custom_imports = dict(
+    imports=["configs.hooks.vis_samples_hook", "configs.hooks.optimizer_checkpoint_hook"],
+    allow_failed_imports=True,
+)
 custom_hooks = [
     dict(
         type="VisSamplesHook",
@@ -98,5 +109,11 @@ custom_hooks = [
         ann_file="",
         data_root="",
         dataset_root="",
-    )
+    ),
+    dict(
+        type="OptimizerCheckpointHook",
+        interval=10,
+        max_keep_ckpts=1,
+        meta_fields=dict(),
+    ),
 ]

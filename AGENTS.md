@@ -75,12 +75,16 @@ pet-action-recognition/
 ├── data/                    # 运行时数据
 │   ├── extracted_papers.json   # 从博客提取的论文列表（导入源）
 │   └── papers.db               # 论文 SQLite 数据库
+├── configs/                 # mmaction2 训练 config（含 hooks/ 自定义 hook）
+├── models/
+│   └── mmaction2/           # vendored mmaction2 快照（只读，勿直接改）
+├── datasets/                # 数据集（当前仅 quadruped_action/ 合成清单）
 ├── scripts/
 │   └── import_papers.py     # 论文导入脚本（从 arXiv API 获取元数据写入本地 DB）
 ├── management/              # 团队管理 Markdown 文件
-├── papers/                  # 论文相关资料
-├── evaluation/              # 模型评估
-└── docs/                    # 文档
+├── papers/                  # 论文相关资料（config/docs/scripts 目前为空壳，仅 .gitkeep）
+├── evaluation/              # 模型评估（空壳脚手架，仅 .gitkeep；真实评测走 training/run_test 流水线）
+└── docs/                    # 文档（plans/ 设计文档、repo-overview.md 仓库全景）
 ```
 
 ## 论文模块架构
@@ -144,7 +148,7 @@ paper_id, category, confidence
 - 框架：FastAPI，路由在 `server/routers/`
 - 配置：`server/config.py`（端口、CORS、数据库路径）
 - 数据库模块：`server/db.py`（直接操作 SQLite，不依赖外部服务）
-- Python 版本：3.9（不支持 `str | None` 语法，需用 `Optional[str]`）
+- Python 版本：本机 `python3` 为 3.13；路由中使用 `str | None` 等新语法时需加 `from __future__ import annotations`（现有 router 均如此）
 - 管理路由直接读写 Markdown 文件
 
 ### Skill 管理
@@ -158,12 +162,18 @@ paper_id, category, confidence
 | Skill | 路径 | 用途 |
 |-------|------|------|
 | repo-structure | `.claude/skills/repo-structure/` | 仓库文件组织 / 目录结构 / 模块路由（导航入口） |
-| using-mmaction2 | `.claude/skills/using-mmaction2/` | mmaction2 安装、训练、推理、config 系统 |
-| evaluation | `.claude/skills/evaluation/` | LLM 评测模块 |
-| papers | `.claude/skills/papers/` | 论文收集模块 |
-| management | `.claude/skills/management/` | 项目管理 CRUD |
-| web | `.claude/skills/web/` | Web 全栈开发 |
+| datasets | `.claude/skills/datasets/` | 数据集与预训练权重的下载、组织、label_map、ann_file 格式 |
+| design-principles | `.claude/skills/design-principles/` | UI/UX 设计原则与公约（页面、列表、轮询、可视化） |
+| documentation | `.claude/skills/documentation/` | 文档写作指南（Wiki、Mermaid、技术文档） |
+| evaluation | `.claude/skills/evaluation/` | 评测体系模块（模型/数据集/评测配置/结果对比） |
+| management | `.claude/skills/management/` | 项目管理 CRUD（团队、报表、任务、里程碑、会议） |
+| papers | `.claude/skills/papers/` | 论文收集模块（导入、分类、笔记、搜索筛选） |
+| remote-servers | `.claude/skills/remote-servers/` | 远程训练/推理服务器（pet、A100）使用指南 |
+| testing | `.claude/skills/testing/` | 测试 / speed run / 单视频推理操作指南 |
+| training | `.claude/skills/training/` | 训练 mmaction2 模型（训练模式、checkpoint、超参） |
 | upstream-sync | `.claude/skills/upstream-sync/` | 上下游仓库同步 |
+| using-mmaction2 | `.claude/skills/using-mmaction2/` | mmaction2 安装、训练、推理、config 系统 |
+| web | `.claude/skills/web/` | Web 全栈开发（前后端、启动、调试） |
 
 ### macOS 后台进程
 
@@ -189,8 +199,8 @@ macOS 上 nohup 进程需要 `</dev/null` 重定向 stdin，否则终端关闭�
 ### 论文列表为空
 检查后端（port 8788）是否在运行，`data/papers.db` 是否存在且有数据。
 
-### Python 3.9 类型注解兼容
-本项目运行在 Python 3.9 上，不支持 `str | None` 语法。FastAPI 路由参数需用 `Optional[str]`，普通函数可用 `from __future__ import annotations`。
+### Python 类型注解兼容
+本机 `python3` 为 3.13（已实测），不再有 3.9 的 `str | None` 限制。现有 router 在使用新语法处统一加了 `from __future__ import annotations`，新增代码沿用此约定即可。
 
 ### 论文导入后 API 报 500
 检查 `authors` 字段是否为 JSON 数组格式（`["A", "B"]`），`published_at` 为空时必须设为 `NULL` 而非空字符串。

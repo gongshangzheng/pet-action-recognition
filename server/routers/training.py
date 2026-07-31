@@ -615,11 +615,10 @@ async def run_training(data: dict = Body(...)):
 
     if resume_from:
         run_id = resume_from
-        resume_path = os.path.join(CHECKPOINTS_DIR, model_id, f"{resume_from}_latest.pth")
-        if os.path.isfile(resume_path):
-            resume_path = os.path.realpath(resume_path)
-        else:
-            resume_path = "auto"
+        # 统一交给 train_model.py 处理：它会把 work_dir 里拆分的 weights(epoch_N.pth) +
+        # optim(epoch_N_optim.pth) 合并成完整 resume .pth（主 hook save_optimizer=False，
+        # 直接 --resume 软链接会丢 optimizer）。auto 让 train_model 自己找最新。
+        resume_path = "auto"
     else:
         run_id = f"train-{model_id}-{dataset_id}-{int(time.time())}"
         resume_path = None
