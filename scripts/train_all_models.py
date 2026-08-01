@@ -67,14 +67,31 @@ def resolve_cfg(mid: str, builtin: str) -> str:
     return cfg if os.path.isabs(cfg) else resolve_mmaction2_config(cfg)
 
 
-def read_best(run_id: str) -> float | None:
+def read_run_metrics(run_id: str) -> dict:
+    """从 metrics.json 读 best_metric + speed（train_model.py 训练后记录）。"""
+    mp = REPO / "results" / "training" / "metrics.json"
+    if not mp.is_file():
+        return {}
+    try:
+        d = json.load(open(mp))
+        r = next((x for x in d.get("runs", []) if x.get("id") == run_id), None)
+        if not r:
+            return {}
+        m = r.get("metrics", {}) or {}
+        return {"best_metric": r.get("best_metric"), "speed": m.get("speed")}
+    except Exception:
+        return {}
+
+
+def find_trainall_run(mid: str) -> str | None:
+    """找该 model 最新的 trainall-<mid>-* run_id。"""
     mp = REPO / "results" / "training" / "metrics.json"
     if not mp.is_file():
         return None
     try:
         d = json.load(open(mp))
-        r = next((x for x in d.get("runs", []) if x.get("id") == run_id), None)
-        return r.get("best_metric") if r else None
+        ids = [r["id"] for r in d.get("runs", []) if r.get("id", "").startswith(f"trainall-{mid}-")]
+        return ids[-1] if ids else None
     except Exception:
         return None
 
@@ -87,7 +104,42 @@ def save_summary(summary: list[dict]) -> None:
     os.replace(tmp, SUMMARY_JSON)
 
 
+def benchmark_only() -> int:
+    """对已训练的 trainall-* checkpoint 补测速度 + 大小（不重训）。"""
+    from scripts.benchmark_speed import benchmark, _resolve_ckpt
+    models = real_models()
+    log(f"benchmark-only: {len(models)} 个模型，对已有 checkpoint 补测速度+大小")
+    out: list[dict] = []
+    BENCH_JSON = REPO / "results" / "training" / "train_all_benchmark.json"
+    for i, m in enumerate(models):
+        mid = m["id"]
+        run_id = find_trainall_run(mid)
+        ckpt = _resolve_ckpt(mid, run_id) if run_id else _resolve_ckpt(mid, None)
+        cfg_abs = resolve_cfg(mid, m["mmaction2_config"])
+        ann = str(REPO / "datasets" / "pet_action_mammal_v0" / "annotation" / "val_public.txt")
+        data_root = str(REPO / "datasets" / "pet_action_mammal_v0")
+        if not ckpt:
+            log(f"[{i+1}/{len(models)}] {mid}: 无 checkpoint，跳过")
+            continue
+        log(f"[{i+1}/{len(models)}] {mid}: bench ckpt={os.path.basename(ckpt)}")
+        try:
+            b = benchmark(cfg_abs, ckpt, ann, data_root, num_videos=5, device=f"cuda:{GPU}")
+            b.update({"model": mid, "run_id": run_id})
+            out.append(b)
+            log(f"  {mid}: latency={b.get('latency_ms')}ms fps={b.get('fps')} rtf={b.get('rtf')} params={b.get('param_count_m')}M ckpt={b.get('ckpt_size_mb')}MB")
+        except Exception as e:
+            out.append({"model": mid, "run_id": run_id, "error": str(e)})
+            log(f"  {mid}: 失败 {e}")
+        BENCH_JSON.parent.mkdir(parents=True, exist_ok=True)
+        with open(str(BENCH_JSON) + ".tmp", "w") as f:
+            json.dump(out, f, ensure_ascii=False, indent=2)
+        os.replace(str(BENCH_JSON) + ".tmp", BENCH_JSON)
+    return 0
+
+
 def main() -> int:
+    if "--benchmark-only" in sys.argv:
+        return benchmark_only()
     models = real_models()
     log(f"共 {len(models)} 个模型，GPU{GPU} 串行，{EPOCHS}ep bs≤{BATCH}")
     summary: list[dict] = []
@@ -122,14 +174,20 @@ def main() -> int:
             rc = -1
             err_tail = "TIMEOUT"
         dt = time.time() - t0
-        best = read_best(run_id)
-        summary.append({
+        rm = read_run_metrics(run_id)
+        best = rm.get("best_metric")
+        speed = rm.get("speed")
+        entry = {
             "model": mid, "run_id": run_id, "exit": rc, "best_metric": best,
             "duration_sec": round(dt), "lr": lr, "batch_size": bs,
             "error_tail": err_tail.strip() if rc != 0 else "",
-        })
+        }
+        if speed:
+            entry["speed"] = speed
+        summary.append(entry)
         save_summary(summary)
-        log(f"  {mid}: exit={rc} best={best} {dt:.0f}s")
+        sp = f" latency={speed.get('latency_ms')}ms fps={speed.get('fps')}" if speed else ""
+        log(f"  {mid}: exit={rc} best={best}{sp} {dt:.0f}s")
     # 汇总排序
     done = [s for s in summary if s["best_metric"] is not None]
     done.sort(key=lambda s: s["best_metric"], reverse=True)

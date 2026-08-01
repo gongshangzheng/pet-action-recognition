@@ -888,6 +888,25 @@ def main() -> int:
         run["metrics"]["returncode"] = ret
         log(args.run_id, f"[error] 训练进程退出码 {ret}")
 
+    # 推理速度 + 模型大小基准（成功才测；约 10-20s）
+    if ret == 0 and (run.get("best_checkpoint_path") or run.get("checkpoint_path")):
+        try:
+            from scripts.benchmark_speed import benchmark, _resolve_ckpt
+            # 优先 best ckpt（run 的 best/latest 是 checkpoints/ 下的软链接）
+            ckpt = _resolve_ckpt(args.model_id, args.run_id) or (latest or "")
+            if ckpt and os.path.isfile(ckpt) and ann_val and (videos_val or videos_train):
+                cfg_for_bench = resolve_mmaction2_config(args.mmaction2_config)
+                dev = "cuda:0" if args.device == "cuda" else "cpu"
+                log(args.run_id, f"[bench] 测推理速度 + 模型大小 (ckpt={ckpt})...")
+                b = benchmark(cfg_for_bench, ckpt, ann_val, videos_val or videos_train, num_videos=5, device=dev)
+                if "error" not in b:
+                    run["metrics"]["speed"] = b
+                    log(args.run_id, f"[bench] latency={b.get('latency_ms')}ms fps={b.get('fps')} rtf={b.get('rtf')} gpu={b.get('gpu_mem_mb')}MB params={b.get('param_count_m')}M ckpt={b.get('ckpt_size_mb')}MB")
+                else:
+                    log(args.run_id, f"[bench] 失败: {b.get('error')}")
+        except Exception as e:
+            log(args.run_id, f"[bench] 异常: {e}")
+
     upsert_run(run)
     return ret
 

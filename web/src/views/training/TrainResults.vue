@@ -185,6 +185,8 @@ const runColumns = computed(() => [
   { title: 'epochs', key: 'epochs', width: 70 },
   { title: 'final_loss', key: 'final_loss', width: 90, render: (r) => fmt(r.final_loss) },
   { title: 'best_metric', key: 'best_metric', width: 100, render: (r) => fmt(r.best_metric) },
+  { title: '模型大小', key: 'size', width: 110, render: (r) => fmtModelSize(r) },
+  { title: '速度', key: 'speed', width: 120, render: (r) => fmtSpeed(r) },
   { title: '状态', key: 'status', width: 80 },
   { title: '时间', key: 'started_at', render: (r) => r.started_at?.split('T')[0] || '-' },
   {
@@ -205,6 +207,24 @@ const runColumns = computed(() => [
 // cpColumns removed — checkpoint links now in run list directly
 
 function fmt(v) { return (v == null || isNaN(v)) ? '-' : Number(v).toFixed(4) }
+// 模型大小：参数量(M) / checkpoint 文件大小(MB)
+function fmtModelSize(r) {
+  const s = r?.metrics?.speed
+  if (!s) return '-'
+  const parts = []
+  if (s.param_count_m != null) parts.push(`${s.param_count_m}M`)
+  if (s.ckpt_size_mb != null) parts.push(`${s.ckpt_size_mb}MB`)
+  return parts.join(' / ') || '-'
+}
+// 速度：latency(ms) / fps；hover 显示 rtf + gpu 显存
+function fmtSpeed(r) {
+  const s = r?.metrics?.speed
+  if (!s) return '-'
+  const lat = s.latency_ms != null ? `${s.latency_ms}ms` : ''
+  const fps = s.fps != null ? `${s.fps}fps` : ''
+  const title = `rtf=${s.rtf} · gpu=${s.gpu_mem_mb}MB`
+  return h('span', { title, style: 'color: #6b7280' }, [lat, fps].filter(Boolean).join(' / ') || '-')
+}
 function fmtSize(b) {
   if (!b) return '-'
   const u = ['B', 'KB', 'MB', 'GB']; let i = 0, v = b
