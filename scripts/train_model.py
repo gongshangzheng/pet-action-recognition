@@ -217,17 +217,22 @@ def _maybe_write_override(args, cfg_path: str, n_cls) -> str | None:
     return out
 
 
-def _optim_hook_idx(cfg_path: str) -> int | None:
-    """返回 OptimizerCheckpointHook 在 custom_hooks 列表中的下标（无则 None）。"""
+def _hook_idx(cfg_path: str, hook_type: str) -> int | None:
+    """返回某 hook 类型在 custom_hooks 列表中的下标（无则 None）。"""
     try:
         from mmengine.config import Config
         cfg = Config.fromfile(cfg_path)
         for i, h in enumerate(cfg.get("custom_hooks", []) or []):
-            if isinstance(h, dict) and h.get("type") == "OptimizerCheckpointHook":
+            if isinstance(h, dict) and h.get("type") == hook_type:
                 return i
     except Exception:
         pass
     return None
+
+
+def _optim_hook_idx(cfg_path: str) -> int | None:
+    """返回 OptimizerCheckpointHook 在 custom_hooks 列表中的下标（无则 None）。"""
+    return _hook_idx(cfg_path, "OptimizerCheckpointHook")
 
 
 def _reconstruct_resume_ckpt(work_dir: str | None, explicit: str | None = None) -> str | None:
@@ -312,14 +317,15 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     if getattr(args, "from_scratch", False):
         cfg_options.append("model.backbone.init_cfg=None")
 
-    # VisSamplesHook 路径覆盖（hook 本身在 config 里注册）
-    if ann_val:
+    # VisSamplesHook 路径覆盖（仅当 config 注册了该 hook；内置 config 无 custom_hooks 时跳过）
+    vi = _hook_idx(cfg_path, "VisSamplesHook")
+    if ann_val and vi is not None:
         ds_root = os.path.dirname(os.path.dirname(ann_val))
         vis_interval = getattr(args, "vis_interval", 10)
-        cfg_options.append(f"custom_hooks.0.interval={vis_interval}")
-        cfg_options.append(f"custom_hooks.0.ann_file={ann_val}")
-        cfg_options.append(f"custom_hooks.0.data_root={videos_val or videos_train}")
-        cfg_options.append(f"custom_hooks.0.dataset_root={ds_root}")
+        cfg_options.append(f"custom_hooks.{vi}.interval={vis_interval}")
+        cfg_options.append(f"custom_hooks.{vi}.ann_file={ann_val}")
+        cfg_options.append(f"custom_hooks.{vi}.data_root={videos_val or videos_train}")
+        cfg_options.append(f"custom_hooks.{vi}.dataset_root={ds_root}")
 
     # OptimizerCheckpointHook meta_fields（写进 epoch_N.json sidecar 的训练元信息）
     oi = _optim_hook_idx(cfg_path)
