@@ -105,12 +105,33 @@ def save_summary(summary: list[dict]) -> None:
 
 
 def benchmark_only() -> int:
-    """对已训练的 trainall-* checkpoint 补测速度 + 大小（不重训）。"""
+    """对已训练的 trainall-* checkpoint 补测速度 + 大小（不重训）。
+
+    结果写到 train_all_benchmark.json + 回填 metrics.json 的 run.metrics.speed
+    （前端 TrainResults 的 模型大小/速度 列才能显示）。
+    """
     from scripts.benchmark_speed import benchmark, _resolve_ckpt
     models = real_models()
     log(f"benchmark-only: {len(models)} 个模型，对已有 checkpoint 补测速度+大小")
     out: list[dict] = []
     BENCH_JSON = REPO / "results" / "training" / "train_all_benchmark.json"
+    MP = REPO / "results" / "training" / "metrics.json"
+
+    def upsert_speed(run_id: str, speed: dict) -> None:
+        """把 speed 回填到 metrics.json 的 run.metrics.speed。"""
+        if not run_id or not MP.is_file():
+            return
+        d = json.load(open(MP))
+        r = next((x for x in d.get("runs", []) if x.get("id") == run_id), None)
+        if not r:
+            return
+        r.setdefault("metrics", {})
+        r["metrics"]["speed"] = speed
+        tmp = str(MP) + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(d, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, MP)
+
     for i, m in enumerate(models):
         mid = m["id"]
         run_id = find_trainall_run(mid)
@@ -126,6 +147,7 @@ def benchmark_only() -> int:
             b = benchmark(cfg_abs, ckpt, ann, data_root, num_videos=5, device=f"cuda:{GPU}")
             b.update({"model": mid, "run_id": run_id})
             out.append(b)
+            upsert_speed(run_id, {k: b[k] for k in ("latency_ms", "fps", "rtf", "gpu_mem_mb", "param_count_m", "ckpt_size_mb", "num_videos", "device") if k in b})
             log(f"  {mid}: latency={b.get('latency_ms')}ms fps={b.get('fps')} rtf={b.get('rtf')} params={b.get('param_count_m')}M ckpt={b.get('ckpt_size_mb')}MB")
         except Exception as e:
             out.append({"model": mid, "run_id": run_id, "error": str(e)})
