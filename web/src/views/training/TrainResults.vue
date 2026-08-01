@@ -13,18 +13,21 @@
       </n-space>
     </n-card>
 
-    <!-- 常驻 loss 曲线区（选 run -> 显示其 loss_series） -->
+    <!-- 多模型曲线叠加区（所有 run 的同一指标叠在一张图对比） -->
     <n-card size="small" class="curve-card">
       <template #header>
         <div class="flex-between">
-          <h3>训练曲线</h3>
-          <span class="hint">点击下方进程名称进入详情页，查看曲线 + 可视化</span>
+          <h3>训练曲线（多模型叠加）</h3>
+          <n-space align="center" size="small">
+            <span class="hint">指标</span>
+            <n-select v-model:value="curveMetric" :options="metricOptions" size="small" style="width: 150px" />
+          </n-space>
         </div>
       </template>
-      <div v-if="curveOption" class="curve-wrap">
-        <v-chart class="curve" :option="curveOption" autoresize />
+      <div v-if="compareOption" class="curve-wrap">
+        <v-chart class="curve" :option="compareOption" autoresize />
       </div>
-      <div v-else class="curve-placeholder">点击下方进程名称进入详情页，查看 loss/指标曲线</div>
+      <div v-else class="curve-placeholder">暂无曲线数据（训练跑出 epoch 后自动出现，下方筛选同步生效）</div>
     </n-card>
 
     <!-- 训练进程列表 -->
@@ -144,30 +147,33 @@ const filteredRuns = computed(() => {
   return list
 })
 
-const curveTitle = computed(() => {
-  const r = currentRun.value
-  if (!r) return ''
-  const tail = isRunning(r) ? ' · 训练中，实时刷新…' : ''
-  return `${r.model} · ${r.dataset} · ${r.id}${tail}`
-})
-
-// 曲线 series 数据驱动：loss_series 里含哪个指标就画哪条
-// （通用训练可能只有 loss；率失真等下游可能含 psnr/bpp）。
-const curveOption = computed(() => {
-  const r = currentRun.value
-  if (!r || !r.loss_series?.length) return null
-  const epochs = r.loss_series.map(p => p.epoch)
-  const build = (key) => r.loss_series.map(p => p[key])
-  const series = []
-  if (r.loss_series.some(p => p.loss != null)) series.push({ name: 'loss', type: 'line', data: build('loss'), smooth: true })
-  if (r.loss_series.some(p => p.psnr != null)) series.push({ name: 'PSNR(dB)', type: 'line', data: build('psnr'), smooth: true, yAxisIndex: 1 })
-  if (r.loss_series.some(p => p.bpp != null)) series.push({ name: 'bpp', type: 'line', data: build('bpp'), smooth: true, yAxisIndex: 1 })
-  if (!series.length) return null
+// 多模型曲线叠加：所有 filteredRuns 的同一指标叠在一张图，逐 run 一条线
+const curveMetric = ref('top1_acc')
+const metricOptions = [
+  { label: 'val top1 acc', value: 'top1_acc' },
+  { label: 'val top5 acc', value: 'top5_acc' },
+  { label: 'train loss', value: 'loss' },
+  { label: 'learning rate', value: 'lr' },
+]
+const compareOption = computed(() => {
+  const metric = curveMetric.value
+  const runs = filteredRuns.value.filter(r => r.loss_series?.some(p => p[metric] != null))
+  if (!runs.length) return null
+  const series = runs.map(r => ({
+    name: r.name || r.model || r.id,
+    type: 'line',
+    data: r.loss_series.filter(p => p[metric] != null).map(p => [p.epoch, p[metric]]),
+    showSymbol: true,
+    symbolSize: 4,
+    smooth: true,
+  }))
   return {
     tooltip: { trigger: 'axis' },
-    legend: { data: series.map(s => s.name) },
-    xAxis: { type: 'category', data: epochs, name: 'epoch' },
-    yAxis: [{ type: 'value', name: 'loss' }, { type: 'value', name: '指标' }],
+    legend: { data: series.map(s => s.name), top: 0, type: 'scroll' },
+    grid: { top: 40, left: 55, right: 20, bottom: 40 },
+    xAxis: { type: 'value', name: 'epoch', minInterval: 1 },
+    yAxis: { type: 'value', name: metric },
+    dataZoom: [{ type: 'inside' }, { type: 'slider', height: 16, bottom: 8 }],
     series,
   }
 })
