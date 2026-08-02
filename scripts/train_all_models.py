@@ -162,7 +162,14 @@ def benchmark_only() -> int:
 def main() -> int:
     if "--benchmark-only" in sys.argv:
         return benchmark_only()
+    # --only a,b,c 只跑指定模型（补跑失败项）
+    only = None
+    for a in sys.argv[1:]:
+        if a.startswith("--only="):
+            only = set(a.split("=", 1)[1].split(","))
     models = real_models()
+    if only:
+        models = [m for m in models if m["id"] in only]
     log(f"共 {len(models)} 个模型，GPU{GPU} 串行，{EPOCHS}ep bs≤{BATCH}")
     summary: list[dict] = []
     for i, m in enumerate(models):

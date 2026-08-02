@@ -162,8 +162,8 @@ def resolve_dataset_paths(dataset_id: str):
     )
 
 
-def _maybe_write_override(args, cfg_path: str, n_cls) -> str | None:
-    """如有高级超参（需 dict 值），生成临时 override config（_base_ 用户 config）。
+def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | None = None) -> str | None:
+    """如有高级超参（需 dict 值）或 extra_lines，生成临时 override config（_base_ 用户 config）。
 
     为什么用文件而不是 --cfg-options：mmengine DictAction 只解析标量/列表索引，
     不支持 {} 字典字面量（会被当成字符串或按逗号拆成 list），故 loss_cls /
@@ -171,12 +171,14 @@ def _maybe_write_override(args, cfg_path: str, n_cls) -> str | None:
     本可直接走 cfg-options，但为保持单一来源也放进 override 文件）。
 
     num_clips_val 是列表索引覆盖，仍走 cfg-options（DictAction 支持）。
+    extra_lines：额外 Python 赋值行（如 val_cfg = dict(type='ValLoop')），verbatim 追加。
     """
     has_wd = getattr(args, "weight_decay", None) is not None
     has_blr = getattr(args, "backbone_lr_mult", None) is not None
     has_ls = bool(getattr(args, "label_smoothing", 0)) and args.label_smoothing > 0
     snippet = (getattr(args, "override_snippet", "") or "").strip()
-    if not (has_wd or has_blr or has_ls or snippet):
+    extra_lines = extra_lines or []
+    if not (has_wd or has_blr or has_ls or snippet or extra_lines):
         return None
 
     os.makedirs(OVERRIDES_DIR, exist_ok=True)
@@ -210,6 +212,10 @@ def _maybe_write_override(args, cfg_path: str, n_cls) -> str | None:
         lines.append("")
         lines.append("# === 用户原始 Python 片段（verbatim）===")
         lines.append(snippet)
+    if extra_lines:
+        lines.append("")
+        lines.append("# === 自动补齐（如缺 val_cfg）===")
+        lines.extend(extra_lines)
 
     with open(out, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
@@ -268,8 +274,19 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     if not os.path.isabs(cfg_path):
         cfg_path = resolve_mmaction2_config(cfg_path)
     n_cls = args.num_classes if args.num_classes is not None else num_classes_for(args.dataset_id)
-    # 高级超参（dict 值）→ 临时 override config；标量/列表索引仍走 cfg-options
-    override = _maybe_write_override(args, cfg_path, n_cls)
+    # 检测 config 是否缺 val_cfg（x3d/uniformer 等 builtin 无 val_cfg → mmengine 报
+    # val_dataloader/val_cfg/val_evaluator 三者必须同 None/同有）。缺则用 override 补 ValLoop。
+    extra = []
+    try:
+        from mmengine.config import Config
+        _cfg = Config.fromfile(cfg_path)
+        if not _cfg.get("val_cfg") and _cfg.get("val_dataloader"):
+            extra.append("val_cfg = dict(type='ValLoop')")
+    except Exception:
+        pass
+
+    # 高级超参（dict 值）或 extra → 临时 override config；标量/列表索引仍走 cfg-options
+    override = _maybe_write_override(args, cfg_path, n_cls, extra_lines=extra)
     if override:
         cfg_path = override
     cmd = [sys.executable, TRAIN_PY, cfg_path, "--work-dir", args.work_dir, "--launcher", "none"]
