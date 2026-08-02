@@ -309,7 +309,7 @@
           "title": "Phase 1：checkpoint 下载脚本 + 修 tsn 路径 bug",
           "status": "completed",
           "assignee": "郑鑫裕",
-          "description": "新建 checkpoint 下载脚本并修 tsn 硬编码路径。\n\n• scripts/download_checkpoint.py：按 model_id 下 pretrained 到缓存\n• openmmlab 直链失败走镜像/重试；HF 权重用 hf-mirror\n• 修 tsn-resnet50-quadruped 的 /Users/tangwen 绝对路径为相对路径",
+          "description": "新建 checkpoint 下载脚本并修 tsn 硬编码路径。\n\n• scripts/download_checkpoint.py：按 model_id 下 pretrained 到缓存\n• openmmlab 直链失败走镜像/重试；HF 权重用 hf-mirror\n• 修 tsn-resnet50-quadruped 的硬编码绝对路径为相对路径",
           "children": [],
           "progress": [
             {
