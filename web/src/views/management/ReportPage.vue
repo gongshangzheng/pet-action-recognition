@@ -117,6 +117,8 @@ import EmptyState from '../../components/common/EmptyState.vue'
 import { getDailyList, getDailyDetail, getWeeklyList, getWeeklyDetail, getMonthlyList, getMonthlyDetail } from '../../api/management'
 import { extractToc } from '../../utils/markdown'
 
+defineOptions({ name: 'ReportPage' })
+
 const route = useRoute()
 const router = useRouter()
 

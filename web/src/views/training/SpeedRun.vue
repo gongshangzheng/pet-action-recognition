@@ -260,10 +260,16 @@ async function refreshStatus() {
     status.results_count = s.results_count ?? 0
   } catch {}
 }
+let lastResultsJson = ''
 async function refreshResults() {
   try {
     const d = await getSpeedrunResults()
-    results.value = d.results || []
+    // 数据没变 → 跳过响应式更新，避免卡片网格每 3s 重渲染
+    const json = JSON.stringify(d.results || [])
+    if (json !== lastResultsJson) {
+      lastResultsJson = json
+      results.value = d.results || []
+    }
   } catch {}
 }
 

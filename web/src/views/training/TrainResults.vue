@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, h, watch } from 'vue'
+import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, h, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { NCard, NSpin, NSpace, NSelect, NButton, NDataTable, useMessage } from 'naive-ui'
 import VChart from 'vue-echarts'
@@ -51,6 +51,8 @@ import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent } from 'echarts/components'
 import EmptyState from '../../components/common/EmptyState.vue'
 import { getTrainRuns, getTrainOutputUrl } from '../../api/training'
+
+defineOptions({ name: 'TrainResults' })
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent])
 
@@ -82,6 +84,7 @@ restoreState()
 // 实时曲线：3s 轮询 getTrainRuns，同步选中 run 的 loss_series（曲线随 epoch 增长）
 const RUNNING = new Set(['running', 'started'])
 let pollTimer = null
+let lastRunsJson = ''
 const isRunning = (r) => !!r && RUNNING.has(r.status)
 
 function sortRuns(list) {
@@ -104,6 +107,7 @@ async function refreshRuns() {
   loading.value = true
   try {
     const res = await getTrainRuns()
+    lastRunsJson = JSON.stringify(res.runs || [])
     runs.value = sortRuns(res.runs || [])
     syncCurrent()
   } catch { message.error('加载训练进程列表失败') }
@@ -115,8 +119,13 @@ function startPolling() {
   pollTimer = setInterval(async () => {
     const res = await getTrainRuns().catch(() => null)
     if (res?.runs) {
-      runs.value = sortRuns(res.runs)
-      syncCurrent()
+      // 数据没变 → 跳过响应式更新，避免表格/图表每 3s 全量重渲染
+      const json = JSON.stringify(res.runs)
+      if (json !== lastRunsJson) {
+        lastRunsJson = json
+        runs.value = sortRuns(res.runs)
+        syncCurrent()
+      }
     }
     // 全部 run 结束 → 停轮询
     if (!runs.value.some(isRunning)) {
@@ -257,6 +266,9 @@ async function load() {
 
 onMounted(load)
 onUnmounted(stopPolling)
+// keep-alive 下切走/切回：暂停/恢复轮询（避免后台空转）
+onDeactivated(stopPolling)
+onActivated(() => { if (runs.value.some(isRunning)) startPolling() })
 </script>
 
 <style scoped lang="scss">

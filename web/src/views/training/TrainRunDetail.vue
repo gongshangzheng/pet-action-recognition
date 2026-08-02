@@ -212,7 +212,11 @@ const lrChart = computed(() => {
 
 async function load() {
   loading.value = true
-  try { run.value = await getTrainRunDetail(runId) } catch { run.value = null }
+  try {
+    const d = await getTrainRunDetail(runId)
+    lastRunJson = JSON.stringify(d)
+    run.value = d
+  } catch { run.value = null }
   loading.value = false
   loadVis()
   if (isRunning.value) startPoll()
@@ -230,10 +234,19 @@ async function loadVis() {
   } catch { visGroups.value = [] }
 }
 
+let lastRunJson = ''
 function startPoll() {
   stopPoll()
   pollTimer = setInterval(async () => {
-    try { run.value = await getTrainRunDetail(runId) } catch {}
+    try {
+      const d = await getTrainRunDetail(runId)
+      // 数据没变 → 跳过响应式更新，避免详情面板/曲线每 3s 重渲染
+      const json = JSON.stringify(d)
+      if (json !== lastRunJson) {
+        lastRunJson = json
+        run.value = d
+      }
+    } catch {}
     if (!isRunning.value) { stopPoll(); loadVis() }
     else loadVis()
   }, 3000)

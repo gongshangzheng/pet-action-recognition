@@ -92,6 +92,8 @@ import { FolderOpenOutline, FolderOutline, DocumentOutline } from '@vicons/ionic
 import EmptyState from '../../components/common/EmptyState.vue'
 import { listDatasets, browseDataset, getDatasetFileUrl, getDatasetThumbUrl } from '../../api/datasets'
 
+defineOptions({ name: 'DatasetBrowser' })
+
 const loading = ref(false)
 const datasets = ref([])
 const currentDataset = ref(null)

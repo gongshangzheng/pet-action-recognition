@@ -8,7 +8,6 @@ import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import checkbox from 'markdown-it-task-checkbox'
 import { slugify } from '../../utils/markdown'
-import mermaid from 'mermaid'
 import { useThemeStore } from '../../stores/theme'
 
 const props = defineProps({
@@ -103,6 +102,8 @@ async function renderMermaid() {
   }
 
   try {
+    // mermaid 体积大，按需动态加载（仅页面含 mermaid 图时才下载）
+    const mermaid = (await import('mermaid')).default
     mermaid.initialize({
       startOnLoad: false,
       theme: themeStore.isDark ? 'dark' : 'default',

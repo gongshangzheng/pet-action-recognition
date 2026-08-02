@@ -113,23 +113,20 @@ const techRoutes = [
 onMounted(async () => {
   loadingMilestones.value = true
   loadingModels.value = true
-  try {
-    const team = await getTeamList().catch(() => [])
-    stats.value.teamCount = team?.length || 0
-  } catch {}
-  try {
-    const paperStats = await getPaperStats().catch(() => ({ total: 0 }))
-    stats.value.paperCount = paperStats?.total || 0
-  } catch {}
-  try {
-    const ms = await getMilestones().catch(() => [])
-    milestones.value = ms || []
-  } catch {} finally { loadingMilestones.value = false }
-  try {
-    const mdls = await getModels().catch(() => [])
-    models.value = mdls || []
-    stats.value.modelCount = mdls?.length || 0
-  } catch {} finally { loadingModels.value = false }
+  // 并发请求，各自兜底，互不影响
+  const [team, paperStats, ms, mdls] = await Promise.allSettled([
+    getTeamList(),
+    getPaperStats(),
+    getMilestones(),
+    getModels(),
+  ])
+  stats.value.teamCount = team.status === 'fulfilled' ? (team.value?.length || 0) : 0
+  stats.value.paperCount = paperStats.status === 'fulfilled' ? (paperStats.value?.total || 0) : 0
+  milestones.value = ms.status === 'fulfilled' ? (ms.value || []) : []
+  models.value = mdls.status === 'fulfilled' ? (mdls.value || []) : []
+  stats.value.modelCount = models.value.length
+  loadingMilestones.value = false
+  loadingModels.value = false
 })
 </script>
 

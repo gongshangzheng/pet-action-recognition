@@ -51,6 +51,8 @@ GET /api/xxx?offset=0&limit=50
 **缓存**：
 - 后端：对频繁读取的文件（results.json、metrics.json）加 mtime-aware TTL 缓存，文件没变就不重新解析。
 - 前端：列表页用 `keep-alive` 或本地缓存，切换回来时不重新 fetch（除非用户主动刷新）。
+- **keep-alive 现状**（`MainLayout.vue`）：缓存 `PaperList / TrainResults / DatasetBrowser / ReportPage` 四个重列表页（组件需 `defineOptions({ name })` 与 include 列表一致）。被缓存的轮询页必须 `onDeactivated` 停轮询、`onActivated` 恢复（参考 TrainResults）；PaperList 的滚动监听同样在 deactivated/activated 摘下/挂回。
+- **轮询 diff**：所有定时轮询（TrainResults / TrainRunDetail / SpeedRun）先 `JSON.stringify` 对比快照，数据没变就跳过响应式赋值，避免表格/图表每 3s 全量重渲染。
 
 **例外**：
 - 数据量固定且很小（< 10 条），如里程碑列表、项目树根节点。

@@ -218,7 +218,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard, NSpin, NSpace, NInput, NSelect, NTag, NButton, NButtonGroup, NIcon, NDivider,
@@ -228,6 +228,8 @@ import { AddOutline } from '@vicons/ionicons5'
 import EmptyState from '../../components/common/EmptyState.vue'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import { getPaperList, getPaperStats, getThumbnailUrl, fetchPaper, starPaper, pinPaper, getPaperDetail, getPaperNote, savePaperNote, setPaperBlog, summarizePaper } from '../../api/papers'
+
+defineOptions({ name: 'PaperList' })
 
 const router = useRouter()
 const message = useMessage()
@@ -462,14 +464,29 @@ function onScroll() {
     if (_scrollEl) sessionStorage.setItem('paperList:scrollY', String(_scrollEl.scrollTop))
   }, 200)
 }
-nextTick(() => {
+function attachScroll() {
   _scrollEl = document.querySelector('.app-content .n-scrollbar-container')
   if (_scrollEl) _scrollEl.addEventListener('scroll', onScroll, { passive: true })
-})
-
-onUnmounted(() => {
+}
+function detachScroll() {
   if (_scrollEl) _scrollEl.removeEventListener('scroll', onScroll)
-})
+  _scrollEl = null
+}
+function restoreScroll() {
+  const savedScroll = sessionStorage.getItem('paperList:scrollY')
+  if (!savedScroll) return
+  requestAnimationFrame(() => {
+    const el = document.querySelector('.app-content .n-scrollbar-container')
+    if (el) el.scrollTop = parseInt(savedScroll)
+  })
+}
+nextTick(attachScroll)
+
+// keep-alive 下切走/切回：摘下/挂回监听，并恢复本页滚动位置
+onDeactivated(detachScroll)
+onActivated(() => { attachScroll(); restoreScroll() })
+
+onUnmounted(detachScroll)
 
 // ---- 详情浮窗功能 ----
 function openDetail(id) {

@@ -59,7 +59,13 @@
 
       <!-- 内容区 -->
       <n-layout-content class="app-content" :native-scrollbar="false">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <transition name="fade-slide" mode="out-in">
+            <keep-alive :include="['PaperList', 'TrainResults', 'DatasetBrowser', 'ReportPage']">
+              <component :is="Component" />
+            </keep-alive>
+          </transition>
+        </router-view>
       </n-layout-content>
     </n-layout>
   </n-layout>
@@ -234,8 +240,8 @@ const today = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid #2a2a3e;
-  color: #fff;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-heading);
   font-weight: 700;
 
   .logo-text {
