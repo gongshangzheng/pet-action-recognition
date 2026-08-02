@@ -54,13 +54,21 @@ const filteredResults = computed(() => {
 })
 
 const pct = (v) => (v == null ? '-' : (v * 100).toFixed(2) + '%')
+const fmtNum = (v, d = 1) => (v == null ? '-' : Number(v).toFixed(d))
 
 const columns = computed(() => [
   { title: '模型', key: 'model', minWidth: 220, ellipsis: { tooltip: true } },
   { title: '数据集', key: 'dataset', width: 140 },
   { title: 'Split', key: 'split', width: 80 },
-  { title: 'Top-1', key: 'top1', width: 90, render: (r) => pct(r.metrics?.top1_acc) },
-  { title: 'Top-5', key: 'top5', width: 90, render: (r) => pct(r.metrics?.top5_acc) },
+  { title: 'Top-1', key: 'top1', width: 80, render: (r) => pct(r.metrics?.top1_acc) },
+  { title: 'Top-5', key: 'top5', width: 80, render: (r) => pct(r.metrics?.top5_acc) },
+  { title: 'Mean-1', key: 'mean1', width: 85, render: (r) => pct(r.metrics?.mean1_acc), title: 'per-class 平均 top1' },
+  { title: '延迟(ms)', key: 'lat', width: 85, render: (r) => fmtNum(r.metrics?.speed?.latency_ms) },
+  { title: 'FPS', key: 'fps', width: 70, render: (r) => fmtNum(r.metrics?.speed?.fps) },
+  { title: 'RTF', key: 'rtf', width: 65, render: (r) => fmtNum(r.metrics?.speed?.rtf, 3) },
+  { title: 'GPU(MB)', key: 'gpumem', width: 85, render: (r) => fmtNum(r.metrics?.speed?.gpu_mem_mb) },
+  { title: '参数(M)', key: 'params', width: 80, render: (r) => fmtNum(r.metrics?.speed?.param_count_m) },
+  { title: 'ckpt(MB)', key: 'ckpt', width: 85, render: (r) => fmtNum(r.metrics?.speed?.ckpt_size_mb) },
   {
     title: '状态', key: 'status', width: 100,
     render: (r) => r.status === 'completed' ? '✓ 完成' : r.status === 'error' ? '✗ 错误' : r.status,

@@ -102,6 +102,13 @@ def parse_metrics(stdout: str) -> dict:
         m = re.search(r"acc/top5\s*[:=]?\s*([0-9.]+)", line)
         if m:
             metrics["top5_acc"] = float(m.group(1))
+        # mean class accuracy（per-class 平均，抗类别不均衡；mmengine AccMetric 输出 acc/mean1）
+        m = re.search(r"acc/mean1\s*[:=]?\s*([0-9.]+)", line)
+        if m:
+            metrics["mean1_acc"] = float(m.group(1))
+        m = re.search(r"acc/mean5\s*[:=]?\s*([0-9.]+)", line)
+        if m:
+            metrics["mean5_acc"] = float(m.group(1))
     return metrics
 
 
@@ -115,6 +122,8 @@ def main() -> int:
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
     parser.add_argument("--num-classes", type=int, default=None)
     parser.add_argument("--work-dir", default=None)
+    parser.add_argument("--ann-file", default=None, help="覆盖 ann_file 路径（K400 等非默认命名数据集用）")
+    parser.add_argument("--data-root", default=None, help="覆盖 data_prefix.video 路径")
     parser.add_argument("--extra-args", default="")
     args = parser.parse_args()
 
@@ -130,7 +139,12 @@ def main() -> int:
     work_dir = args.work_dir or os.path.join(TRAINING_WORK_DIR, f"test_{args.run_id}")
     os.makedirs(work_dir, exist_ok=True)
 
-    ann, videos = resolve_test_paths(args.dataset_id, args.split)
+    ann = args.ann_file or None
+    videos = args.data_root or None
+    if not ann or not videos:
+        ann2, videos2 = resolve_test_paths(args.dataset_id, args.split)
+        ann = ann or ann2
+        videos = videos or videos2
     if not ann:
         err = f"测试标注不存在：{args.dataset_id}/{args.split}"
         print(f"[error] {err}")
@@ -199,6 +213,22 @@ def main() -> int:
     print(proc.stdout)
 
     metrics = parse_metrics(proc.stdout)
+
+    # 速度 + 大小维度：test 成功后跑 benchmark_speed（latency/fps/rtf/gpu_mem/param/ckpt_size）
+    if proc.returncode == 0 and ann and videos:
+        try:
+            from scripts.benchmark_speed import benchmark
+            dev = "cuda:0" if args.device == "cuda" else "cpu"
+            b = benchmark(args.mmaction2_config, checkpoint, ann, videos, num_videos=5, device=dev)
+            if "error" not in b:
+                metrics["speed"] = {k: b[k] for k in
+                                    ("latency_ms", "fps", "rtf", "gpu_mem_mb", "param_count_m", "ckpt_size_mb")
+                                    if k in b}
+                print(f"[bench] latency={b.get('latency_ms')}ms fps={b.get('fps')} rtf={b.get('rtf')} "
+                      f"gpu={b.get('gpu_mem_mb')}MB params={b.get('param_count_m')}M ckpt={b.get('ckpt_size_mb')}MB")
+        except Exception as e:
+            print(f"[bench] 失败: {e}")
+
     result = {
         "id": args.run_id,
         "model": os.path.basename(args.mmaction2_config),
