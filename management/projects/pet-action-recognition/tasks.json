@@ -380,6 +380,22 @@
           "note": "[进展] UCF101 speed run 完成：20 分类模型 + 5 AVA 检测模型注册（slowonly/slowfast/videomae/acrn/lfb AVA）+ 93% 准确率 + H.264 标注视频 + 封面图 + GPU 显存/耗时。6 个 skill 就绪（training/testing/datasets/remote-servers/using-mmaction2/repo-structure）。四足 pilot 仍 paused（等真实数据）。下一步：GPU avg util + RTF 采集；card UI 优化；检测模型 skill 文档。"
         }
       ]
+    },
+    {
+      "id": "t10",
+      "title": "骨架提取与基于骨架的动作识别（DeepLabCut + PoseC3D）",
+      "status": "active",
+      "assignee": "郑鑫裕",
+      "startDate": "2026-08-02",
+      "description": "搭建 DeepLabCut 骨架提取管线并验证关键点质量，为 PoseC3D 骨架动作识别基线做准备\\n\\n• 范围：在 pet 远程机部署 DeepLabCut，用 SuperAnimal-Quadruped 零样本模型提取 39 关键点\\n• 对 pet_action_mammal_v0（2234 段视频、7 类动作）批量推理并人工抽检取点质量\\n• 验收：关键点序列可转 mmaction2 skeleton 格式，支撑后续 PoseC3D 从头训练\\n• 非目标：本阶段不训练 PoseC3D、不做 two-stream 融合；AP-10K 17 点方案仅作备选",
+      "priority": "P1",
+      "children": [],
+      "progress": [
+        {
+          "date": "2026-08-02 16:17",
+          "note": "开始第一阶段：pet 上新建 conda env dlc（py3.11 + deeplabcut[modelzoo]），安装进行中；计划用 SuperAnimal-Quadruped 零样本提取 39 关键点"
+        }
+      ]
     }
   ]
 }
