@@ -86,7 +86,7 @@ def main() -> int:
             "--num-classes", "400",
             "--ann-file", ANN,
             "--data-root", DATA_ROOT,
-            "--test-batch-size", "8",
+            "--test-batch-size", "4",
             "--device", "cuda",
         ]
         env = os.environ.copy()
