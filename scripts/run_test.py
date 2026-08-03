@@ -121,6 +121,7 @@ def main() -> int:
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
     parser.add_argument("--num-classes", type=int, default=None)
+    parser.add_argument("--test-batch-size", type=int, default=8, help="test_dataloader.batch_size 提速（默认 8）")
     parser.add_argument("--work-dir", default=None)
     parser.add_argument("--ann-file", default=None, help="覆盖 ann_file 路径（K400 等非默认命名数据集用）")
     parser.add_argument("--data-root", default=None, help="覆盖 data_prefix.video 路径")
@@ -184,6 +185,10 @@ def main() -> int:
     cfg_options = [
         f"test_dataloader.dataset.ann_file={ann}",
     ]
+    # test batch 提速（默认 config 常为 1，太慢；注入更大 batch + workers）
+    if getattr(args, "test_batch_size", None):
+        cfg_options.append(f"test_dataloader.batch_size={args.test_batch_size}")
+        cfg_options.append(f"test_dataloader.num_workers=4")
     if videos:
         cfg_options.append(f"test_dataloader.dataset.data_prefix.video={videos}")
     if args.num_classes is not None:
