@@ -389,8 +389,27 @@
       "startDate": "2026-08-02",
       "description": "搭建 DeepLabCut 骨架提取管线并验证关键点质量，为 PoseC3D 骨架动作识别基线做准备\\n\\n• 范围：在 pet 远程机部署 DeepLabCut，用 SuperAnimal-Quadruped 零样本模型提取 39 关键点\\n• 对 pet_action_mammal_v0（2234 段视频、7 类动作）批量推理并人工抽检取点质量\\n• 验收：关键点序列可转 mmaction2 skeleton 格式，支撑后续 PoseC3D 从头训练\\n• 非目标：本阶段不训练 PoseC3D、不做 two-stream 融合；AP-10K 17 点方案仅作备选",
       "priority": "P1",
-      "children": [],
+      "children": [
+        {
+          "id": "t10-1",
+          "title": "MMPose AP-10K 对照实验",
+          "status": "active",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-08-03",
+          "description": "用 MMPose AP-10K 预训练模型重跑抽检骨架提取，与 DLC 零样本结果人工对比，判断是否值得全量替换\\n\\n• 在 pet 服务器安装 mmpose，下载 RTMPose-m AP-10K 权重和 RTMDet 动物检测器\\n• 在与 t10 相同的 4 段抽检视频上生成标注对比视频，人工评判是否优于 DLC 零样本\\n• 验收：明确三类系统性失败（逆光漏检、多动物身份切换、静物误检）是否缓解\\n• 注意 COCO 检测器可能不覆盖水獭/啮齿类，检测环节或仍是瓶颈\\n• 非目标：本阶段不做全量提取、不训练 PoseC3D",
+          "priority": "P1",
+          "children": []
+        }
+      ],
       "progress": [
+        {
+          "date": "2026-08-03 20:16",
+          "note": "[完成] 零样本骨架提取全量完成（2234/2234），但人工抽检确认三类系统性失败（漏检/身份切换/误检），结论：不能当 GT。实验记录与抽检视频见笔记 notes/t10-dlc-skeleton.md，后续方向（AP-10K 对照/子集过滤/人工标注微调/放弃）待决策"
+        },
+        {
+          "date": "2026-08-03 19:52",
+          "note": "全量提取完成：2234/2234 npz（train 1801/val 216/test 217）。质量：83.8% 视频 det_rate≥0.5 可用，6.6% det_rate<0.1 基本不可用，80 段零帧（需重编码才能救，下游直接过滤）。DLC 阶段目标达成，下一步转 mmaction2 skeleton 格式 + PoseC3D"
+        },
         {
           "date": "2026-08-03 14:25",
           "note": "首轮批提取 1185/2234；诊断出高层批接口被零检测视频毒化（np.stack 崩溃带崩整个 chunk）。已改低层 API 逐视频隔离推理（模型常驻），验证通过，正在补跑剩余约 1050 段（eta ~40min）"
@@ -407,7 +426,8 @@
           "date": "2026-08-02 16:17",
           "note": "开始第一阶段：pet 上新建 conda env dlc（py3.11 + deeplabcut[modelzoo]），安装进行中；计划用 SuperAnimal-Quadruped 零样本提取 39 关键点"
         }
-      ]
+      ],
+      "notePath": "notes/t10-dlc-skeleton.md"
     }
   ]
 }

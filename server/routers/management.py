@@ -5,6 +5,7 @@ import datetime
 
 import yaml
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from server.config import MANAGEMENT_DIR
 from server.utils.file_utils import read_file, safe_resolve, scan_directory
 from server.parsers.team_parser import parse_team_list, parse_member_profile
@@ -16,6 +17,18 @@ from server.parsers.projects_parser import (
 )
 
 router = APIRouter(prefix="/api/management", tags=["management"])
+
+# 任务笔记静态资源（notes/assets/ 下的图片/视频）MIME
+_ASSET_MIME = {
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+    ".mov": "video/quicktime",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+}
 
 # 日期/作者参数校验（防止路径遍历与非法文件名）
 _DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
@@ -321,3 +334,15 @@ async def get_task_note_route(slug: str, note_path: str):
     if content is None:
         raise HTTPException(status_code=404, detail="Note not found")
     return {'content': content}
+
+
+@router.get("/projects/{slug}/notes-assets/{asset_path:path}")
+async def serve_note_asset(slug: str, asset_path: str):
+    """服务任务笔记的静态资源（notes/assets/ 下的图片/视频），带正确 MIME。"""
+    base = os.path.join(MANAGEMENT_DIR, 'projects', slug, 'notes', 'assets')
+    safe = safe_resolve(base, asset_path)
+    if not safe or not os.path.isfile(safe):
+        raise HTTPException(status_code=404, detail="Asset not found")
+    ext = os.path.splitext(safe)[1].lower()
+    media = _ASSET_MIME.get(ext, "application/octet-stream")
+    return FileResponse(safe, media_type=media, filename=os.path.basename(safe))
