@@ -58,3 +58,4 @@ server/.venv/
 *.egg-info/
 .playwright-mcp/
 third-party/
+*.zip
