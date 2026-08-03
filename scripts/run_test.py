@@ -134,7 +134,12 @@ def main() -> int:
 
     checkpoint = args.checkpoint
     if not os.path.isabs(checkpoint):
-        checkpoint = os.path.join(CHECKPOINTS_DIR, os.path.basename(checkpoint))
+        # 相对路径：先看相对 cwd 是否存在（标准布局 checkpoints/<model>/xxx.pth），
+        # 不存在再退到 CHECKPOINTS_DIR/<basename>
+        if os.path.isfile(checkpoint):
+            checkpoint = os.path.realpath(checkpoint)
+        else:
+            checkpoint = os.path.join(CHECKPOINTS_DIR, os.path.basename(checkpoint))
 
     work_dir = args.work_dir or os.path.join(TRAINING_WORK_DIR, f"test_{args.run_id}")
     os.makedirs(work_dir, exist_ok=True)
