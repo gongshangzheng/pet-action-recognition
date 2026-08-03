@@ -23,9 +23,17 @@ from server.config import resolve_mmaction2_config, CHECKPOINTS_DIR  # noqa: E40
 
 PYTHON = os.path.expanduser("~/miniconda3/envs/pet/bin/python")
 GPU = "0"
-ANN = os.path.expanduser("~/mnt/kinetics400/kinetics400_val_list_videos.txt")
+# 优先用预筛后的 list（decord 预筛剔除坏视频，避免 test loop 崩）；不存在则回退原 list
+_ANN_FILTERED = os.path.expanduser("~/mnt/kinetics400/kinetics400_val_list_filtered.txt")
+ANN = _ANN_FILTERED if os.path.isfile(_ANN_FILTERED) else os.path.expanduser("~/mnt/kinetics400/kinetics400_val_list_videos.txt")
 DATA_ROOT = os.path.expanduser("~/mnt/kinetics400/videos_val")
 SUMMARY_JSON = REPO / "results" / "training" / "k400_eval_summary.json"
+
+# 重模型（3D/ViT，多帧）降 batch 避免 OOM；轻模型 batch 4 提速
+HEAVY_MODELS = {"i3d-resnet50", "csn-ircsn152", "swin-tiny", "slowfast-resnet50",
+                "r2plus1d-resnet34", "tpn-slowonly-r50", "tanet-resnet50",
+                "timesformer-divst", "mvit-small", "videomae-base", "videomaev2-base"}
+BATCH_FOR = lambda mid: 1 if mid in HEAVY_MODELS else 4
 
 
 def log(msg: str) -> None:
@@ -86,7 +94,7 @@ def main() -> int:
             "--num-classes", "400",
             "--ann-file", ANN,
             "--data-root", DATA_ROOT,
-            "--test-batch-size", "4",
+            "--test-batch-size", str(BATCH_FOR(mid)),
             "--device", "cuda",
         ]
         env = os.environ.copy()
