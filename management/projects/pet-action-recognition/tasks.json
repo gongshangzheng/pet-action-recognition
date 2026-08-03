@@ -392,6 +392,14 @@
       "children": [],
       "progress": [
         {
+          "date": "2026-08-03 11:43",
+          "note": "骨架提取脚本 extract_keypoints_dlc.py 已完成并 scp 到 pet（注意：尚未 git 提交）；批任务稳定运行中"
+        },
+        {
+          "date": "2026-08-03 11:36",
+          "note": "样本验证通过：SuperAnimal-Quadruped 对大象/啮齿/水獭头部取点准确；发现检测漏检（剪影）、多动物身份切换、误检三类失败模式。已启动全量 2234 段批量提取（cuda:1，约 3h），每视频记录 det_rate/mean_conf 供质量门槛筛选"
+        },
+        {
           "date": "2026-08-02 16:17",
           "note": "开始第一阶段：pet 上新建 conda env dlc（py3.11 + deeplabcut[modelzoo]），安装进行中；计划用 SuperAnimal-Quadruped 零样本提取 39 关键点"
         }

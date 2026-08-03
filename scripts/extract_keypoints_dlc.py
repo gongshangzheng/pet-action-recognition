@@ -94,13 +94,14 @@ def df_to_arrays(df, max_individuals: int) -> tuple[np.ndarray, np.ndarray, list
                 arr[:, j, i, 1] = sub[(bp, "y")].to_numpy(dtype=np.float32)
                 arr[:, j, i, 2] = sub[(bp, "likelihood")].to_numpy(dtype=np.float32)
 
-    # 选主个体：mean likelihood（NaN 视为 0）
-    mean_conf = np.nan_to_num(arr[..., 2], nan=0.0).mean(axis=2)  # (T, N)
+    # 选主个体：mean likelihood（缺失标记 -1 与 NaN 都视为 0）
+    conf = np.nan_to_num(arr[..., 2], nan=0.0)
+    conf = np.clip(conf, 0.0, 1.0)
+    mean_conf = conf.mean(axis=2)  # (T, N)
     best = mean_conf.argmax(axis=1)  # (T,)
     keypoint = arr[np.arange(T), best][:, :K, :2]
-    scores = arr[np.arange(T), best][:, :K, 2]
+    scores = conf[np.arange(T), best][:, :K]
     keypoint = np.nan_to_num(keypoint, nan=0.0)
-    scores = np.nan_to_num(scores, nan=0.0)
     return keypoint.astype(np.float32), scores.astype(np.float32), bodyparts
 
 
@@ -166,6 +167,11 @@ def main() -> int:
                                    else str(video)),
                 )
                 stats["ok"] += 1
+                stats.setdefault("videos", {})[stem] = {
+                    "frames": int(keypoint.shape[0]),
+                    "det_rate": round(float((scores.max(axis=1) > 0.1).mean()), 3),
+                    "mean_conf": round(float(scores.mean()), 3),
+                }
             except Exception as e:  # noqa: BLE001
                 print(f"[error] 转换失败 {stem}: {e}", flush=True)
                 stats["failed"].append(video)

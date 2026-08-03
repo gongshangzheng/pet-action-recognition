@@ -1,0 +1,6 @@
+{
+  "name": "Remix: 派爪Petra",
+  "description": "A high-fidelity demo of a pet monitoring application featuring AI daily reports, timeline logging, video playback simulation, and pet profile management.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

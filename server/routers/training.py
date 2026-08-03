@@ -262,6 +262,18 @@ _MMACTION2_REGISTRY = [
         "description": "小分辨率、PyAV 后端；可加载 TSN K400 预训练权重做 finetune。",
     },
     {
+        "id": "qwen3-vl-plus",
+        "name": "Qwen3-VL-Plus (VLM)",
+        "family": "VLM",
+        "backbone": "qwen3-vl",
+        "pretrained_source": "Qwen3-VL-Plus (DashScope cloud)",
+        "pretrained_url": "",
+        "mmaction2_config": None,
+        "label_map": "",  # 由调用方按数据集注入
+        "type": "vlm",
+        "description": "提示词驱动的视频 VLM（非训练模型）；走 DashScope 云端，无本地 checkpoint。评测经 scripts/run_test_vlm.py。",
+    },
+    {
         "id": "slowonly-ava-r101",
         "name": "SlowOnly (AVA detection, R101)",
         "family": "AVA",

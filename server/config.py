@@ -63,3 +63,13 @@ CORS_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+
+# Live 模块（pet-videos 迁移：RTSP 采集/直播/片段）
+LIVE_DIR = os.path.join(BASE_DIR, "results", "live")
+LIVE_OUTPUTS_DIR = os.path.join(LIVE_DIR, "clips")          # results/live/clips/<alias>/event_*.mp4
+LIVE_RESULTS_JSON = os.path.join(LIVE_DIR, "results.json")  # 每片产物聚合
+LIVE_CAMERAS_JSON = os.path.join(LIVE_DIR, "cameras.json")  # 注册的摄像头列表
+
+# VLM（Qwen3-VL-Plus via DashScope）——用于把基于提示词的方法接入测试框架对比
+DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY", "")
+
