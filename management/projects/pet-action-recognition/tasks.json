@@ -401,6 +401,10 @@
           "children": [],
           "progress": [
             {
+              "date": "2026-08-04 09:55",
+              "note": "2026-08-04 猫狗域第三轮验证（DLC vs AP-10K 同片对比）：从 meta_public_mammal.csv 选 6 段——Dog×3（EDHHMXGD 行走 / OQQRVXGD 进食双动物 / SMLRJXGD 静止）、Jaguarundi Cat（FRLUTRAC 暗光丛林）、Ocelot（DTFWDRAC 夜视红外）、Fox（CDUOEEBY 雪地跳跃），同跑两方案。结论：① 白天清晰犬科形态 AP-10K 明显优于 DLC——骨架连贯、17 点贴合、conf 0.8~1.0（DLC 同期关键点散乱漂移、部分出体）；② 双动物重叠两者都只能锁一只，AP-10K 姿态略可信；③ 暗光/夜视红外两者都失效（AP-10K 检测器漏检或误检 bear，DLC 关键点打到植被上）。综合三轮：零样本状态下没有任何方案达到 GT 质量；AP-10K 在 COCO 覆盖且光线良好的场景可用作粗标注起点，要上生产仍需人工标注微调（建议单独立项）。产物：pet 上 results/skeleton/ap10k_catdog/ 与 results/skeleton/dlc_catdog/（各 6 段标注视频 + 原始预测）。"
+            },
+            {
               "date": "2026-08-03 20:37",
               "note": "对照实验完成：AP-10K 在 COCO 覆盖物种（大象）上显著优于 DLC（骨架连贯、conf 0.7+ vs 0.37）；但 COCO 未覆盖物种（猴子/啮齿/水獭）检测器是瓶颈——漏检或错标（水獭标成 bird），不优于 DLC。身份切换问题两方案都存在。结论：检测环节的物种覆盖决定上限；对猫狗目标域 AP-10K 路线更优（cat/dog 是 COCO 强类）"
             }
