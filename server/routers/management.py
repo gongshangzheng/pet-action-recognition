@@ -269,7 +269,7 @@ async def get_docs():
                 'slug': slug,
                 'title': meta.get('title', slug),
                 'author': meta.get('author', ''),
-                'date': meta.get('date', ''),
+                'date': _normalize_date(meta.get('date', '')),
                 'tags': meta.get('tags', []),
                 'summary': meta.get('summary', ''),
                 'id': meta.get('id'),
