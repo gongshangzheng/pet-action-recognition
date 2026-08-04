@@ -74,6 +74,7 @@ def save_summary(summary: list[dict]) -> None:
 
 
 def main() -> int:
+    global TIMEOUT
     # --only a,b,c 只跑指定模型（补跑失败项）；--timeout N 覆盖超时
     only = None
     timeout_override = TIMEOUT
@@ -83,7 +84,6 @@ def main() -> int:
             only = set(a.split("=", 1)[1].split(","))
         elif a.startswith("--timeout="):
             timeout_override = int(a.split("=", 1)[1])
-    global TIMEOUT
     TIMEOUT = timeout_override
     models = k400_models()
     if only:
