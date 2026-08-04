@@ -1,6 +1,6 @@
 ---
 name: repo-structure
-description: Use when asked how the pet-action-recognition repo is organized — where a file or feature lives, what each top-level directory does, how frontend/backend/data/training fit together, or before navigating an unfamiliar part of the codebase. Triggers (CN+EN): "文件组织", "目录结构", "项目结构", "这个库怎么搭的", "某文件在哪", "X 放在哪个目录", "codebase layout", "repository structure", "where does X live".
+description: 'Use when asked how the pet-action-recognition repo is organized — where a file or feature lives, what each top-level directory does, how frontend/backend/data/training fit together, or before navigating an unfamiliar part of the codebase. Triggers (CN+EN): "文件组织", "目录结构", "项目结构", "这个库怎么搭的", "某文件在哪", "X 放在哪个目录", "codebase layout", "repository structure", "where does X live".'
 ---
 
 # 仓库结构 / Repo Structure

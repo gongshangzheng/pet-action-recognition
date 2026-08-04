@@ -34,6 +34,7 @@ HEAVY_MODELS = {"i3d-resnet50", "csn-ircsn152", "swin-tiny", "slowfast-resnet50"
                 "r2plus1d-resnet34", "tpn-slowonly-r50", "tanet-resnet50",
                 "timesformer-divst", "mvit-small", "videomae-base", "videomaev2-base"}
 BATCH_FOR = lambda mid: 1 if mid in HEAVY_MODELS else 4
+TIMEOUT = 14400  # 单模型最长 4h（重模型 batch1 慢，给够时间）
 
 
 def log(msg: str) -> None:
@@ -73,8 +74,21 @@ def save_summary(summary: list[dict]) -> None:
 
 
 def main() -> int:
+    # --only a,b,c 只跑指定模型（补跑失败项）；--timeout N 覆盖超时
+    only = None
+    timeout_override = TIMEOUT
+    it = iter(sys.argv[1:])
+    for a in it:
+        if a.startswith("--only="):
+            only = set(a.split("=", 1)[1].split(","))
+        elif a.startswith("--timeout="):
+            timeout_override = int(a.split("=", 1)[1])
+    global TIMEOUT
+    TIMEOUT = timeout_override
     models = k400_models()
-    log(f"K400 评测：{len(models)} 个模型，GPU{GPU}，ann={ANN}")
+    if only:
+        models = [m for m in models if m["id"] in only]
+    log(f"K400 评测：{len(models)} 个模型，GPU{GPU}，ann={ANN}，timeout={TIMEOUT}s")
     summary: list[dict] = []
     for i, m in enumerate(models):
         mid = m["id"]
@@ -100,10 +114,10 @@ def main() -> int:
         env = os.environ.copy()
         env["CUDA_VISIBLE_DEVICES"] = GPU
         env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
-        log(f"[{i+1}/{len(models)}] {mid}: cfg={os.path.basename(cfg)}")
+        log(f"[{i+1}/{len(models)}] {mid}: cfg={os.path.basename(cfg)} batch={BATCH_FOR(mid)}")
         t0 = time.time()
         try:
-            proc = subprocess.run(args, env=env, cwd=str(REPO), capture_output=True, text=True, timeout=7200)
+            proc = subprocess.run(args, env=env, cwd=str(REPO), capture_output=True, text=True, timeout=TIMEOUT)
             rc = proc.returncode
             err_tail = (proc.stderr or proc.stdout or "")[-300:]
         except subprocess.TimeoutExpired:
