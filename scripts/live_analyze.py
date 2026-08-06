@@ -23,37 +23,34 @@ sys.path.insert(0, str(REPO))
 DEFAULT_LABELS = str(REPO / "models" / "mmaction2" / "tools" / "data" / "kinetics" / "label_map_k400.txt")
 
 
-def video_duration(video: str) -> float:
-    """用 cv2 取视频时长（秒）；ffprobe 不可用时的通用回退。"""
-    try:
-        import cv2
-        cap = cv2.VideoCapture(video)
-        n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        fps = cap.get(cv2.CAP_PROP_FPS) or 0.0
-        cap.release()
-        if fps > 0 and n > 0:
-            return n / fps
-    except Exception:
-        pass
-    # ffprobe 兜底
-    try:
-        out = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-             "-of", "default=noprint_wrappers=1:nokey=1", video],
-            capture_output=True, text=True, timeout=15,
-        )
-        return float(out.stdout.strip() or 0)
-    except Exception:
-        return 0.0
+def open_video(video: str):
+    """decord VideoReader + fps + 总帧数。返回 (vr, fps, total_frames)。"""
+    import decord
+    decord.bridge.set_bridge("native")
+    vr = decord.VideoReader(video, num_threads=1)
+    fps = vr.get_avg_fps() or 0.0
+    return vr, fps, len(vr)
 
 
-def ffmpeg_clip(video: str, t_start: float, duration: float, out_path: str) -> bool:
-    """ffmpeg stream copy 切 clip（input seek，快；推理用足够精确）。"""
-    subprocess.run(
-        ["ffmpeg", "-y", "-ss", f"{t_start:.3f}", "-i", video,
-         "-t", f"{duration:.3f}", "-c", "copy", out_path],
-        capture_output=True, timeout=60,
-    )
+def make_clip(vr, fps: float, total: int, t_start: float, duration: float, out_path: str) -> bool:
+    """decord 取 clip 帧 + cv2.VideoWriter 写临时 mp4（不依赖 ffmpeg 二进制）。"""
+    if fps <= 0:
+        return False
+    import cv2
+    import numpy as np
+    f0 = max(0, int(t_start * fps))
+    f1 = min(total, int((t_start + duration) * fps))
+    if f1 <= f0:
+        return False
+    frames = vr.get_batch(list(range(f0, f1))).asnumpy()  # (N,H,W,3) RGB
+    h, w = frames.shape[1], frames.shape[2]
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
+    if not writer.isOpened():
+        return False
+    for fr in frames:
+        writer.write(fr[:, :, ::-1])  # RGB → BGR
+    writer.release()
     return os.path.isfile(out_path) and os.path.getsize(out_path) > 0
 
 
@@ -111,7 +108,12 @@ def main() -> int:
     from scripts._infer import load_labels
     labels = load_labels(args.labels)
 
-    duration = video_duration(args.video)
+    try:
+        vr, fps, total = open_video(args.video)
+    except Exception as e:
+        print(json.dumps({"error": f"open video failed: {e}"}), flush=True)
+        return 1
+    duration = (total / fps) if fps > 0 else 0.0
     if duration <= 0:
         print(json.dumps({"error": "cannot read duration"}), flush=True)
         return 1
@@ -136,8 +138,8 @@ def main() -> int:
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tf:
             clip_path = tf.name
         try:
-            if not ffmpeg_clip(args.video, clip_start, clip_dur, clip_path):
-                print(json.dumps({"error": "ffmpeg clip failed", "t_start": clip_start}), flush=True)
+            if not make_clip(vr, fps, total, clip_start, clip_dur, clip_path):
+                print(json.dumps({"error": "make clip failed", "t_start": clip_start}), flush=True)
                 break
             if args.model_type == "mmaction2":
                 top5 = infer_clip_mmaction2(model, clip_path, labels)
