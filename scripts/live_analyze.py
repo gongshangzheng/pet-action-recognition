@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import sys
 import tempfile
 import time
@@ -37,7 +36,6 @@ def make_clip(vr, fps: float, total: int, t_start: float, duration: float, out_p
     if fps <= 0:
         return False
     import cv2
-    import numpy as np
     f0 = max(0, int(t_start * fps))
     f1 = min(total, int((t_start + duration) * fps))
     if f1 <= f0:
