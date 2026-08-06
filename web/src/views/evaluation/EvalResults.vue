@@ -127,25 +127,36 @@ const getMetricValue = (r, metric) => {
   return m.speed?.[metric]
 }
 
+// 数值列排序器：null 排到最后；点表头三态 升序↔降序↔原序
+const numSorter = (get) => (a, b) => {
+  const va = get(a), vb = get(b)
+  if (va == null && vb == null) return 0
+  if (va == null) return -1
+  if (vb == null) return 1
+  return va - vb
+}
+
 const columns = computed(() => [
   {
     title: '模型', key: 'model', minWidth: 280,
     render: (r) => h('span', { title: r.model }, getModelDisplayName(r.model)),
     ellipsis: { tooltip: true },
+    sorter: (a, b) => getModelDisplayName(a.model).localeCompare(getModelDisplayName(b.model)),
   },
-  { title: '数据集', key: 'dataset', width: 120 },
+  { title: '数据集', key: 'dataset', width: 120, sorter: (a, b) => String(a.dataset).localeCompare(String(b.dataset)) },
   { title: 'Split', key: 'split', width: 70 },
-  { title: 'Top-1', key: 'top1', width: 75, render: (r) => pct(r.metrics?.top1_acc) },
-  { title: 'Top-5', key: 'top5', width: 75, render: (r) => pct(r.metrics?.top5_acc) },
-  { title: 'Mean-1', key: 'mean1', width: 80, render: (r) => pct(r.metrics?.mean1_acc) },
-  { title: '延迟(ms)', key: 'lat', width: 80, render: (r) => fmtNum(r.metrics?.speed?.latency_ms) },
-  { title: 'FPS', key: 'fps', width: 65, render: (r) => fmtNum(r.metrics?.speed?.fps) },
-  { title: 'RTF', key: 'rtf', width: 60, render: (r) => fmtNum(r.metrics?.speed?.rtf, 3) },
-  { title: 'GPU(MB)', key: 'gpumem', width: 80, render: (r) => fmtNum(r.metrics?.speed?.gpu_mem_mb) },
-  { title: '参数(M)', key: 'params', width: 75, render: (r) => fmtNum(r.metrics?.speed?.param_count_m) },
-  { title: 'ckpt(MB)', key: 'ckpt', width: 80, render: (r) => fmtNum(r.metrics?.speed?.ckpt_size_mb) },
+  { title: 'Top-1', key: 'top1', width: 75, render: (r) => pct(r.metrics?.top1_acc), sorter: numSorter(r => r.metrics?.top1_acc) },
+  { title: 'Top-5', key: 'top5', width: 75, render: (r) => pct(r.metrics?.top5_acc), sorter: numSorter(r => r.metrics?.top5_acc) },
+  { title: 'Mean-1', key: 'mean1', width: 80, render: (r) => pct(r.metrics?.mean1_acc), sorter: numSorter(r => r.metrics?.mean1_acc) },
+  { title: '延迟(ms)', key: 'lat', width: 80, render: (r) => fmtNum(r.metrics?.speed?.latency_ms), sorter: numSorter(r => r.metrics?.speed?.latency_ms) },
+  { title: 'FPS', key: 'fps', width: 65, render: (r) => fmtNum(r.metrics?.speed?.fps), sorter: numSorter(r => r.metrics?.speed?.fps) },
+  { title: 'RTF', key: 'rtf', width: 60, render: (r) => fmtNum(r.metrics?.speed?.rtf, 3), sorter: numSorter(r => r.metrics?.speed?.rtf) },
+  { title: 'GPU(MB)', key: 'gpumem', width: 80, render: (r) => fmtNum(r.metrics?.speed?.gpu_mem_mb), sorter: numSorter(r => r.metrics?.speed?.gpu_mem_mb) },
+  { title: '参数(M)', key: 'params', width: 75, render: (r) => fmtNum(r.metrics?.speed?.param_count_m), sorter: numSorter(r => r.metrics?.speed?.param_count_m) },
+  { title: 'ckpt(MB)', key: 'ckpt', width: 80, render: (r) => fmtNum(r.metrics?.speed?.ckpt_size_mb), sorter: numSorter(r => r.metrics?.speed?.ckpt_size_mb) },
   {
     title: '状态', key: 'status', width: 90,
+    sorter: (a, b) => String(a.status).localeCompare(String(b.status)),
     render: (r) => {
       if (r.status === 'completed') return h('span', { style: 'color: #18a058' }, '✓ 完成')
       if (r.status === 'error') {
@@ -158,7 +169,7 @@ const columns = computed(() => [
       return r.status
     },
   },
-  { title: '时间', key: 'finished_at', width: 150, render: (r) => r.finished_at?.replace('T', ' ').slice(0, 19) || '-' },
+  { title: '时间', key: 'finished_at', width: 150, render: (r) => r.finished_at?.replace('T', ' ').slice(0, 19) || '-', sorter: (a, b) => String(a.finished_at || '').localeCompare(String(b.finished_at || '')) },
 ])
 
 const chartOption = computed(() => {
