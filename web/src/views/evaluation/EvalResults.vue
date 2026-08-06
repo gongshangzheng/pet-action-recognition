@@ -42,13 +42,42 @@ import { BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import EmptyState from '../../components/common/EmptyState.vue'
 import { getTrainTestResults } from '../../api/training'
+import { getModels } from '../../api/evaluation'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
 const loading = ref(false)
 const results = ref([])
+const modelRegistry = ref([])  // 模型注册表
 const filters = ref({ model: null, dataset: null })
 const chartMetric = ref('top1_acc')
+
+// 模型名称映射（config 文件名 → 注册的模型名称）
+const modelNameMap = computed(() => {
+  const map = {}
+  modelRegistry.value.forEach(m => {
+    // 用 id 和 name 都做匹配
+    map[m.id] = m.name
+    map[m.name?.toLowerCase()] = m.name
+  })
+  return map
+})
+
+// 获取显示用的模型名称
+const getModelDisplayName = (modelConfig) => {
+  if (!modelConfig) return '-'
+  // 先精确匹配
+  if (modelNameMap.value[modelConfig]) return modelNameMap.value[modelConfig]
+  // 再模糊匹配（看 config 文件名是否包含注册模型 id）
+  const lower = modelConfig.toLowerCase()
+  for (const reg of modelRegistry.value) {
+    if (lower.includes(reg.id.toLowerCase()) || lower.includes(reg.name?.toLowerCase())) {
+      return reg.name
+    }
+  }
+  // 找不到则截取有用部分
+  return modelConfig.replace('.py', '').replace(/_/g, ' ').slice(0, 50)
+}
 
 // 可切换的指标
 const metricOptions = [
@@ -63,12 +92,15 @@ const metricOptions = [
   { label: '模型大小 (MB)', value: 'ckpt_size_mb', unit: 'MB', max: null },
 ]
 
-const modelOptions = computed(() => [...new Set(results.value.map(r => r.model))].map(m => ({ label: m, value: m })))
+const modelOptions = computed(() => {
+  const names = [...new Set(results.value.map(r => getModelDisplayName(r.model)))]
+  return names.map(m => ({ label: m, value: m }))
+})
 const datasetOptions = computed(() => [...new Set(results.value.map(r => r.dataset))].map(d => ({ label: d, value: d })))
 
 const filteredResults = computed(() => {
   let list = results.value
-  if (filters.value.model) list = list.filter(r => r.model === filters.value.model)
+  if (filters.value.model) list = list.filter(r => getModelDisplayName(r.model) === filters.value.model)
   if (filters.value.dataset) list = list.filter(r => r.dataset === filters.value.dataset)
   return list
 })
@@ -102,7 +134,7 @@ const fmtMetric = (v, metric) => {
 }
 
 const columns = computed(() => [
-  { title: '模型', key: 'model', minWidth: 280, ellipsis: { tooltip: true } },
+  { title: '模型', key: 'model', minWidth: 280, render: (r) => getModelDisplayName(r.model), ellipsis: { tooltip: true } },
   { title: '数据集', key: 'dataset', width: 120 },
   { title: 'Split', key: 'split', width: 70 },
   { title: 'Top-1', key: 'top1', width: 75, render: (r) => pct(r.metrics?.top1_acc) },
@@ -133,7 +165,7 @@ const columns = computed(() => [
 
 const chartOption = computed(() => {
   if (!filteredResults.value.length) return null
-  const models = [...new Set(filteredResults.value.map(r => r.model))]
+  const models = [...new Set(filteredResults.value.map(r => getModelDisplayName(r.model)))]
   const datasets = [...new Set(filteredResults.value.map(r => r.dataset))]
   const opt = metricOptions.find(o => o.value === chartMetric.value)
 
@@ -151,7 +183,7 @@ const chartOption = computed(() => {
       name: m,
       type: 'bar',
       data: datasets.map(d => {
-        const r = filteredResults.value.find(x => x.model === m && x.dataset === d)
+        const r = filteredResults.value.find(x => getModelDisplayName(x.model) === m && x.dataset === d)
         const v = r ? getMetricValue(r, chartMetric.value) : null
         return v != null ? (['top1_acc', 'top5_acc', 'mean1_acc'].includes(chartMetric.value) ? +(v * 100).toFixed(2) : +v.toFixed(2)) : 0
       }),
@@ -162,8 +194,12 @@ const chartOption = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const d = await getTrainTestResults()
-    results.value = d.results || []
+    const [testData, modelsData] = await Promise.all([
+      getTrainTestResults(),
+      getModels()
+    ])
+    results.value = testData.results || []
+    modelRegistry.value = modelsData || []
   } catch { results.value = [] }
   loading.value = false
 }
