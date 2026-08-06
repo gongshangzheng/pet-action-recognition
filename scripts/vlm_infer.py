@@ -55,8 +55,8 @@ def _norm_tokens(s: str) -> tuple:
 
 def _build_prompt(labels: list[str], top_k: int = 5) -> str:
     """让 VLM 从 label 列表里选 top-k，输出 JSON。"""
-    sample = "\n".join(f"- {l}" for l in labels[:200])  # 全列太多 token；首 200 类够多数数据集
-    full = "\n".join(f"- {l}" for l in labels) if len(labels) <= 200 else sample
+    # 列全部类名，确保 GT 类在选项里（K400=400 类，截 200 会让后 200 类注定丢分）
+    full = "\n".join(f"- {l}" for l in labels)
     return (
         "Watch this video carefully and identify the main human/pet action happening. "
         f"Choose the {top_k} most likely actions from this list (most likely first):\n{full}\n\n"

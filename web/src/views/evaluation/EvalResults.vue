@@ -25,7 +25,7 @@
 
           <n-divider />
 
-          <n-data-table :columns="columns" :data="filteredResults" :bordered="false" size="small" striped />
+          <n-data-table :columns="columns" :data="filteredResults" :row-props="rowProps" :bordered="false" size="small" striped />
         </template>
         <EmptyState v-else description="暂无评测数值结果；在「训练运行」页跑 POST /api/training/run_test 后这里显示 top1/top5 准确率" />
       </n-spin>
@@ -88,6 +88,35 @@ const getModelDisplayName = (modelConfig) => {
   return tokens.join('-') || modelConfig.replace(/\.py$/, '')
 }
 
+// test_results.model（config 文件名）→ registry entry（含 description/type）
+const getModelEntry = (modelConfig) => {
+  if (!modelConfig) return null
+  const lower = modelConfig.toLowerCase()
+  for (const reg of modelRegistry.value) {
+    const cfg = reg.mmaction2_config
+    if (cfg && lower === cfg.split('/').pop().toLowerCase()) return reg
+  }
+  for (const reg of modelRegistry.value) {
+    if (reg.id && lower.includes(reg.id.toLowerCase())) return reg
+  }
+  return null
+}
+
+// 行悬浮显示模型介绍+备注；VLM 行高亮（云端模型，与其他不同类）
+const rowProps = (row) => {
+  const entry = getModelEntry(row.model)
+  const isVLM = entry?.type === 'vlm'
+  const desc = entry?.description || ''
+  const vlmNote = isVLM
+    ? '\n\n备注：仅评测 200 视频子集（非 17709 全集），走 DashScope 云端 API，与本地权重模型不直接可比。'
+    : ''
+  const title = (desc ? `${entry.name}（${entry.family}）\n${desc}` : '') + vlmNote
+  return {
+    title: title || undefined,
+    style: isVLM ? 'background-color: rgba(208, 48, 80, 0.07);' : undefined,
+  }
+}
+
 // 关键：每个 (模型, 数据集, split) 只保留最新一条
 const dedupedResults = computed(() => {
   const map = new Map()
@@ -116,8 +145,8 @@ const filteredResults = computed(() => {
   return list
 })
 
-const pct = (v) => (v == null ? '-' : (v * 100).toFixed(2) + '%')
-const fmtNum = (v, d = 1) => (v == null ? '-' : Number(v).toFixed(d))
+const pct = (v) => (v == null ? 'N/A' : (v * 100).toFixed(2) + '%')
+const fmtNum = (v, d = 1) => (v == null ? 'N/A' : Number(v).toFixed(d))
 
 const getMetricValue = (r, metric) => {
   const m = r.metrics || {}
@@ -139,7 +168,7 @@ const numSorter = (get) => (a, b) => {
 const columns = computed(() => [
   {
     title: '模型', key: 'model', minWidth: 280,
-    render: (r) => h('span', { title: r.model }, getModelDisplayName(r.model)),
+    render: (r) => h('span', {}, getModelDisplayName(r.model)),
     ellipsis: { tooltip: true },
     sorter: (a, b) => getModelDisplayName(a.model).localeCompare(getModelDisplayName(b.model)),
   },
@@ -177,9 +206,18 @@ const chartOption = computed(() => {
   const models = [...new Set(filteredResults.value.map(r => getModelDisplayName(r.model)))]
   const datasets = [...new Set(filteredResults.value.map(r => r.dataset))]
   const opt = metricOptions.find(o => o.value === chartMetric.value)
+  const isPct = !!opt?.isPct
+  const unit = opt?.unit || ''
 
   return {
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'item',
+      axisPointer: { type: 'shadow' },
+      formatter: (p) => {
+        const val = isPct ? `${p.value}%` : `${p.value} ${unit}`.trim()
+        return `<b>${p.seriesName}</b><br/>${p.name}<br/>${val}`
+      },
+    },
     legend: { data: models, type: 'scroll', left: 10, right: 10, top: 0 },
     grid: { top: 40, left: 50, right: 20, bottom: 30 },
     xAxis: { type: 'category', data: datasets },
@@ -191,11 +229,12 @@ const chartOption = computed(() => {
     series: models.map(m => ({
       name: m,
       type: 'bar',
+      emphasis: { focus: 'self' },
       data: datasets.map(d => {
         const r = filteredResults.value.find(x => getModelDisplayName(x.model) === m && x.dataset === d)
         const v = r ? getMetricValue(r, chartMetric.value) : null
         if (v == null) return 0
-        return opt?.isPct ? +(v * 100).toFixed(2) : +Number(v).toFixed(2)
+        return isPct ? +(v * 100).toFixed(2) : +Number(v).toFixed(2)
       }),
     })),
   }

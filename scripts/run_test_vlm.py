@@ -98,6 +98,7 @@ def main() -> int:
     top1_correct = 0
     top5_correct = 0
     per_class_correct: dict[int, int] = {}
+    per_class_top5_correct: dict[int, int] = {}
     per_class_total: dict[int, int] = {}
     latencies, durations = [], []
     tot_in = tot_out = 0
@@ -110,6 +111,8 @@ def main() -> int:
                           min_pixels=args.min_pixels, model_name=args.model_name)
         if r.get("error") or not r.get("top1_label"):
             print(f"  [{i+1}/{n}] {os.path.basename(vpath)} → ERR {r.get('error','')[:60]}", flush=True)
+            per_class_correct.setdefault(gt_id, 0)
+            per_class_top5_correct.setdefault(gt_id, 0)
             per_class_total[gt_id] = per_class_total.get(gt_id, 0) + 1
             continue
         # top1/top5 对比 GT
@@ -123,6 +126,7 @@ def main() -> int:
         if t5_ok:
             top5_correct += 1
         per_class_correct[gt_id] = per_class_correct.get(gt_id, 0) + (1 if t1_ok else 0)
+        per_class_top5_correct[gt_id] = per_class_top5_correct.get(gt_id, 0) + (1 if t5_ok else 0)
         per_class_total[gt_id] = per_class_total.get(gt_id, 0) + 1
 
         latencies.append(r.get("duration_sec", 0))
@@ -138,17 +142,20 @@ def main() -> int:
 
     top1_acc = top1_correct / n if n else 0
     top5_acc = top5_correct / n if n else 0
-    # mean per-class top1（抗类别不均衡）
+    # mean per-class top1/top5（抗类别不均衡）
     cls_accs = [per_class_correct[c] / per_class_total[c]
                 for c in per_class_total if per_class_total[c] > 0]
     mean1 = sum(cls_accs) / len(cls_accs) if cls_accs else 0
+    cls_top5 = [per_class_top5_correct[c] / per_class_total[c]
+                for c in per_class_total if per_class_total[c] > 0]
+    mean5 = sum(cls_top5) / len(cls_top5) if cls_top5 else 0
 
     total_time = sum(latencies)
     metrics = {
         "top1_acc": round(top1_acc, 4),
         "top5_acc": round(top5_acc, 4),
         "mean1_acc": round(mean1, 4),
-        "mean5_acc": None,
+        "mean5_acc": round(mean5, 4),
         "speed": {
             "latency_ms": round(total_time / n * 1000, 1) if n else None,
             "fps": round(n / total_time, 2) if total_time > 0 else None,
