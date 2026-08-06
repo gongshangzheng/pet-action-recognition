@@ -12,7 +12,7 @@
         </div>
       </template>
       <n-spin :show="loading">
-        <template v-if="results.length">
+        <template v-if="rawResults.length">
           <!-- 图表放最上方 -->
           <n-space vertical :size="12" style="margin-bottom: 16px">
             <n-space align="center">
@@ -35,7 +35,7 @@
 
 <script setup>
 import { ref, onMounted, computed, h } from 'vue'
-import { NCard, NSpin, NSpace, NSelect, NDataTable, NDivider, NButton, NPopover, NTag } from 'naive-ui'
+import { NCard, NSpin, NSpace, NSelect, NDataTable, NDivider, NButton } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -66,14 +66,26 @@ const metricOptions = [
   { label: '模型大小 (MB)', value: 'ckpt_size_mb', unit: 'MB', max: null, isPct: false },
 ]
 
-// config 文件名 → 注册模型名（先精确，再模糊包含，最后回落去 .py 后缀）
+// config 文件名 → 注册模型名；注册表没有则过滤掉训练参数 token，得到模型族名
 const getModelDisplayName = (modelConfig) => {
   if (!modelConfig) return '-'
   const lower = modelConfig.toLowerCase()
   for (const reg of modelRegistry.value) {
     if (reg.id && lower.includes(reg.id.toLowerCase())) return reg.name
   }
-  return modelConfig.replace(/\.py$/, '')
+  // fallback：按 -_ 切成 token，丢掉训练参数（8xb32 / 1x1x3 / 100e / kinetics400 / rgb / imagenet / r50 / pre / k400 ...）
+  const tokens = modelConfig.replace(/\.py$/, '').split(/[-_]+/).filter(t => {
+    if (!t) return false
+    if (/^\d+e$/i.test(t)) return false                 // 100e / 256e
+    if (/^\d+xb\d+/i.test(t)) return false              // 8xb32
+    if (/^\d+x\d+x\d+$/.test(t)) return false           // 1x1x3
+    if (/^\d+x\d+$/.test(t)) return false               // 8x8
+    if (/^\d+$/.test(t)) return false                   // 纯数字 400
+    if (/^(kinetics\w*|rgb|imagenet\w*|in1k\w*|ig65m|pretrained|pre|facebook|divst|dense|amp|k\w*)$/i.test(t)) return false
+    if (/^r\d{2,3}$/i.test(t)) return false             // r50 / r152
+    return true
+  })
+  return tokens.join('-') || modelConfig.replace(/\.py$/, '')
 }
 
 // 关键：每个 (模型, 数据集, split) 只保留最新一条
@@ -137,11 +149,11 @@ const columns = computed(() => [
     render: (r) => {
       if (r.status === 'completed') return h('span', { style: 'color: #18a058' }, '✓ 完成')
       if (r.status === 'error') {
-        const tail = (r.stdout_tail || '无日志').slice(-600)
-        return h(NPopover, { trigger: 'hover', placement: 'left', style: { maxWidth: '480px' } }, {
-          trigger: () => h('span', { style: 'color: #d03050; cursor: help; text-decoration: underline dotted' }, '✗ 错误'),
-          default: () => h('pre', { style: 'max-height: 220px; overflow: auto; font-size: 11px; white-space: pre-wrap; margin: 0' }, tail),
-        })
+        const tail = (r.stdout_tail || '无日志').slice(-500)
+        return h('span', {
+          style: 'color: #d03050; cursor: help; border-bottom: 1px dotted #d03050',
+          title: tail,
+        }, '✗ 错误')
       }
       return r.status
     },
