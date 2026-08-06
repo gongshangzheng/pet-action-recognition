@@ -5,7 +5,7 @@
         <div class="flex-between">
           <h3>评测结果</h3>
           <n-space align="center">
-            <n-select v-model:value="filters.model" :options="modelOptions" placeholder="全部模型" clearable size="small" style="width: 180px" />
+            <n-select v-model:value="filters.model" :options="modelOptions" placeholder="全部模型" clearable size="small" style="width: 200px" />
             <n-select v-model:value="filters.dataset" :options="datasetOptions" placeholder="全部数据集" clearable size="small" style="width: 160px" />
             <n-button size="small" @click="load" :loading="loading">刷新</n-button>
           </n-space>
@@ -17,7 +17,8 @@
           <n-space vertical :size="12" style="margin-bottom: 16px">
             <n-space align="center">
               <span style="font-size: 13px; color: #666">对比指标：</span>
-              <n-select v-model:value="chartMetric" :options="metricOptions" size="small" style="width: 140px" />
+              <n-select v-model:value="chartMetric" :options="metricOptions" size="small" style="width: 160px" />
+              <span style="font-size: 12px; color: #999">（每个模型仅取最新一次评测）</span>
             </n-space>
             <v-chart v-if="chartOption" class="result-chart" :option="chartOption" autoresize />
           </n-space>
@@ -34,7 +35,7 @@
 
 <script setup>
 import { ref, onMounted, computed, h } from 'vue'
-import { NCard, NSpin, NSpace, NSelect, NDataTable, NDivider, NButton } from 'naive-ui'
+import { NCard, NSpin, NSpace, NSelect, NDataTable, NDivider, NButton, NPopover, NTag } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -47,59 +48,57 @@ import { getModels } from '../../api/evaluation'
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
 const loading = ref(false)
-const results = ref([])
-const modelRegistry = ref([])  // 模型注册表
+const rawResults = ref([])          // 原始全部结果（含历史重复）
+const modelRegistry = ref([])        // 模型注册表
 const filters = ref({ model: null, dataset: null })
 const chartMetric = ref('top1_acc')
 
-// 模型名称映射（config 文件名 → 注册的模型名称）
-const modelNameMap = computed(() => {
-  const map = {}
-  modelRegistry.value.forEach(m => {
-    // 用 id 和 name 都做匹配
-    map[m.id] = m.name
-    map[m.name?.toLowerCase()] = m.name
-  })
-  return map
-})
-
-// 获取显示用的模型名称
-const getModelDisplayName = (modelConfig) => {
-  if (!modelConfig) return '-'
-  // 先精确匹配
-  if (modelNameMap.value[modelConfig]) return modelNameMap.value[modelConfig]
-  // 再模糊匹配（看 config 文件名是否包含注册模型 id）
-  const lower = modelConfig.toLowerCase()
-  for (const reg of modelRegistry.value) {
-    if (lower.includes(reg.id.toLowerCase()) || lower.includes(reg.name?.toLowerCase())) {
-      return reg.name
-    }
-  }
-  // 找不到则截取有用部分
-  return modelConfig.replace('.py', '').replace(/_/g, ' ').slice(0, 50)
-}
-
 // 可切换的指标
 const metricOptions = [
-  { label: 'Top-1 Acc', value: 'top1_acc', unit: '%', max: 100 },
-  { label: 'Top-5 Acc', value: 'top5_acc', unit: '%', max: 100 },
-  { label: 'Mean-1 Acc', value: 'mean1_acc', unit: '%', max: 100 },
-  { label: '延迟 (ms)', value: 'latency_ms', unit: 'ms', max: null },
-  { label: 'FPS', value: 'fps', unit: '', max: null },
-  { label: 'RTF', value: 'rtf', unit: '', max: null },
-  { label: 'GPU 显存 (MB)', value: 'gpu_mem_mb', unit: 'MB', max: null },
-  { label: '参数量 (M)', value: 'param_count_m', unit: 'M', max: null },
-  { label: '模型大小 (MB)', value: 'ckpt_size_mb', unit: 'MB', max: null },
+  { label: 'Top-1 Acc', value: 'top1_acc', unit: '%', max: 100, isPct: true },
+  { label: 'Top-5 Acc', value: 'top5_acc', unit: '%', max: 100, isPct: true },
+  { label: 'Mean-1 Acc', value: 'mean1_acc', unit: '%', max: 100, isPct: true },
+  { label: '延迟 (ms)', value: 'latency_ms', unit: 'ms', max: null, isPct: false },
+  { label: 'FPS', value: 'fps', unit: '', max: null, isPct: false },
+  { label: 'RTF', value: 'rtf', unit: '', max: null, isPct: false },
+  { label: 'GPU 显存 (MB)', value: 'gpu_mem_mb', unit: 'MB', max: null, isPct: false },
+  { label: '参数量 (M)', value: 'param_count_m', unit: 'M', max: null, isPct: false },
+  { label: '模型大小 (MB)', value: 'ckpt_size_mb', unit: 'MB', max: null, isPct: false },
 ]
 
-const modelOptions = computed(() => {
-  const names = [...new Set(results.value.map(r => getModelDisplayName(r.model)))]
-  return names.map(m => ({ label: m, value: m }))
+// config 文件名 → 注册模型名（先精确，再模糊包含，最后回落去 .py 后缀）
+const getModelDisplayName = (modelConfig) => {
+  if (!modelConfig) return '-'
+  const lower = modelConfig.toLowerCase()
+  for (const reg of modelRegistry.value) {
+    if (reg.id && lower.includes(reg.id.toLowerCase())) return reg.name
+  }
+  return modelConfig.replace(/\.py$/, '')
+}
+
+// 关键：每个 (模型, 数据集, split) 只保留最新一条
+const dedupedResults = computed(() => {
+  const map = new Map()
+  for (const r of rawResults.value) {
+    const key = `${getModelDisplayName(r.model)}|${r.dataset}|${r.split}`
+    const prev = map.get(key)
+    if (!prev || (r.finished_at || '') > (prev.finished_at || '')) {
+      map.set(key, r)
+    }
+  }
+  return [...map.values()]
 })
-const datasetOptions = computed(() => [...new Set(results.value.map(r => r.dataset))].map(d => ({ label: d, value: d })))
+
+const modelOptions = computed(() =>
+  [...new Set(dedupedResults.value.map(r => getModelDisplayName(r.model)))]
+    .map(m => ({ label: m, value: m }))
+)
+const datasetOptions = computed(() =>
+  [...new Set(dedupedResults.value.map(r => r.dataset))].map(d => ({ label: d, value: d }))
+)
 
 const filteredResults = computed(() => {
-  let list = results.value
+  let list = dedupedResults.value
   if (filters.value.model) list = list.filter(r => getModelDisplayName(r.model) === filters.value.model)
   if (filters.value.dataset) list = list.filter(r => r.dataset === filters.value.dataset)
   return list
@@ -110,31 +109,18 @@ const fmtNum = (v, d = 1) => (v == null ? '-' : Number(v).toFixed(d))
 
 const getMetricValue = (r, metric) => {
   const m = r.metrics || {}
-  switch (metric) {
-    case 'top1_acc': return m.top1_acc
-    case 'top5_acc': return m.top5_acc
-    case 'mean1_acc': return m.mean1_acc
-    case 'latency_ms': return m.speed?.latency_ms
-    case 'fps': return m.speed?.fps
-    case 'rtf': return m.speed?.rtf
-    case 'gpu_mem_mb': return m.speed?.gpu_mem_mb
-    case 'param_count_m': return m.speed?.param_count_m
-    case 'ckpt_size_mb': return m.speed?.ckpt_size_mb
-    default: return null
-  }
-}
-
-const fmtMetric = (v, metric) => {
-  if (v == null) return '-'
-  const opt = metricOptions.find(o => o.value === metric)
-  if (['top1_acc', 'top5_acc', 'mean1_acc'].includes(metric)) {
-    return (v * 100).toFixed(2) + '%'
-  }
-  return Number(v).toFixed(opt?.value.includes('rtf') ? 3 : 1)
+  if (metric === 'top1_acc') return m.top1_acc
+  if (metric === 'top5_acc') return m.top5_acc
+  if (metric === 'mean1_acc') return m.mean1_acc
+  return m.speed?.[metric]
 }
 
 const columns = computed(() => [
-  { title: '模型', key: 'model', minWidth: 280, render: (r) => getModelDisplayName(r.model), ellipsis: { tooltip: true } },
+  {
+    title: '模型', key: 'model', minWidth: 280,
+    render: (r) => h('span', { title: r.model }, getModelDisplayName(r.model)),
+    ellipsis: { tooltip: true },
+  },
   { title: '数据集', key: 'dataset', width: 120 },
   { title: 'Split', key: 'split', width: 70 },
   { title: 'Top-1', key: 'top1', width: 75, render: (r) => pct(r.metrics?.top1_acc) },
@@ -147,18 +133,18 @@ const columns = computed(() => [
   { title: '参数(M)', key: 'params', width: 75, render: (r) => fmtNum(r.metrics?.speed?.param_count_m) },
   { title: 'ckpt(MB)', key: 'ckpt', width: 80, render: (r) => fmtNum(r.metrics?.speed?.ckpt_size_mb) },
   {
-    title: '状态', key: 'status', width: 120,
+    title: '状态', key: 'status', width: 90,
     render: (r) => {
       if (r.status === 'completed') return h('span', { style: 'color: #18a058' }, '✓ 完成')
-      if (r.status === 'error') return h('span', { style: 'color: #d03050' }, [
-        '✗ 错误',
-        r.error ? h('n-tooltip', { style: 'max-width: 300px' }, {
-          default: () => '?',
-          trigger: () => h('n-tag', { size: 'small', type: 'error', style: 'margin-left: 4px' }, { default: () => '详情' })
+      if (r.status === 'error') {
+        const tail = (r.stdout_tail || '无日志').slice(-600)
+        return h(NPopover, { trigger: 'hover', placement: 'left', style: { maxWidth: '480px' } }, {
+          trigger: () => h('span', { style: 'color: #d03050; cursor: help; text-decoration: underline dotted' }, '✗ 错误'),
+          default: () => h('pre', { style: 'max-height: 220px; overflow: auto; font-size: 11px; white-space: pre-wrap; margin: 0' }, tail),
         })
-      ])
+      }
       return r.status
-    }
+    },
   },
   { title: '时间', key: 'finished_at', width: 150, render: (r) => r.finished_at?.replace('T', ' ').slice(0, 19) || '-' },
 ])
@@ -171,13 +157,13 @@ const chartOption = computed(() => {
 
   return {
     tooltip: { trigger: 'axis' },
-    legend: { data: models, type: 'scroll', left: 10, right: 10 },
+    legend: { data: models, type: 'scroll', left: 10, right: 10, top: 0 },
+    grid: { top: 40, left: 50, right: 20, bottom: 30 },
     xAxis: { type: 'category', data: datasets },
     yAxis: {
       type: 'value',
       name: opt?.label || '',
       max: opt?.max || undefined,
-      axisLabel: { formatter: (v) => opt?.unit ? v + opt.unit : v }
     },
     series: models.map(m => ({
       name: m,
@@ -185,7 +171,8 @@ const chartOption = computed(() => {
       data: datasets.map(d => {
         const r = filteredResults.value.find(x => getModelDisplayName(x.model) === m && x.dataset === d)
         const v = r ? getMetricValue(r, chartMetric.value) : null
-        return v != null ? (['top1_acc', 'top5_acc', 'mean1_acc'].includes(chartMetric.value) ? +(v * 100).toFixed(2) : +v.toFixed(2)) : 0
+        if (v == null) return 0
+        return opt?.isPct ? +(v * 100).toFixed(2) : +Number(v).toFixed(2)
       }),
     })),
   }
@@ -196,11 +183,13 @@ async function load() {
   try {
     const [testData, modelsData] = await Promise.all([
       getTrainTestResults(),
-      getModels()
+      getModels(),
     ])
-    results.value = testData.results || []
+    rawResults.value = testData.results || []
     modelRegistry.value = modelsData || []
-  } catch { results.value = [] }
+  } catch {
+    rawResults.value = []
+  }
   loading.value = false
 }
 onMounted(load)
