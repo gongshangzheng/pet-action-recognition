@@ -14,13 +14,16 @@ from __future__ import annotations
 
 import base64
 import os
+import subprocess
+import sys
 from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from server.config import BASE_DIR, LIVE_DIR
 from server.db_live import get_conn, init_db, now_iso
 from server.live.security import decode_stream_token, encode_stream_token
 from server.utils.file_utils import safe_resolve
@@ -30,6 +33,8 @@ router = APIRouter(prefix="/api/live", tags=["live"])
 init_db()
 
 VIDEO_EXTS = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".m4v"}
+
+LIVE_ANALYZE_SCRIPT = os.path.join(BASE_DIR, "scripts", "live_analyze.py")
 
 
 # ---------- 请求模型 ----------
@@ -189,6 +194,65 @@ async def stream_video(token: str = Query(..., description="stream_token")):
     if not safe or not os.path.isfile(safe):
         return {"detail": "File not found"}, 404
     return FileResponse(safe, media_type="video/mp4", filename=filename)
+
+
+# ---------- 实时推理（SSE，同步边播边推）----------
+
+@router.get("/analyze/stream")
+async def analyze_stream(
+    alias: str = Query(...),
+    filename: str = Query(...),
+    model_id: str = Query(...),
+    model_type: str = Query("mmaction2", description="mmaction2 | vlm"),
+    clip_sec: float = Query(1.0, gt=0),
+    stride_sec: float = Query(1.0, gt=0),
+    device: str = Query("cuda:0"),
+):
+    """SSE：逐段推理结果。subprocess 调 scripts/live_analyze.py，stdout 行转 SSE。
+
+    每段 yield: data: {"t_start":..,"t_end":..,"label":..,"score":..,"top5":[..],"model":..}
+    模型加载/状态也以 {"status":..} 推送。
+    """
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT storage_path FROM stream_sources WHERE alias = ? AND is_active = 1",
+            (alias,),
+        ).fetchone()
+    if not row:
+        return {"detail": "Source not found or inactive"}, 404
+    safe = safe_resolve(row["storage_path"], filename)
+    if not safe or not os.path.isfile(safe):
+        return {"detail": "File not found"}, 404
+
+    args = [
+        sys.executable, LIVE_ANALYZE_SCRIPT,
+        "--video", safe, "--model-id", model_id, "--model-type", model_type,
+        "--clip-sec", str(clip_sec), "--stride-sec", str(stride_sec),
+        "--device", device,
+    ]
+    proc = subprocess.Popen(
+        args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, cwd=str(BASE_DIR),
+    )
+
+    def gen():
+        try:
+            for line in proc.stdout:
+                line = line.strip()
+                if line:
+                    yield f"data: {line}\n\n"
+        finally:
+            if proc.poll() is None:
+                proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+    return StreamingResponse(
+        gen(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 def _db_error(e: Exception):

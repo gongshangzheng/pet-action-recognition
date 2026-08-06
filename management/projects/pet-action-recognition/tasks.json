@@ -497,7 +497,7 @@
         {
           "id": "t11-7",
           "title": "t11-7 后端 SSE 实时推理端点（decord滑窗+视频模型forward+VLM切片调vlm_recognize）",
-          "status": "planned",
+          "status": "active",
           "assignee": "郑鑫裕",
           "description": "GET /api/live/analyze/stream SSE。decord VideoReader 滑窗取clip；mmaction2模型forward(复用_infer.py原语+模型缓存)；VLM路径decord取帧→临时mp4→vlm_recognize→删临时。每段emit {t_start,t_end,label,score,model}。详见 wiki live-realtime-inference-plan",
           "children": []
