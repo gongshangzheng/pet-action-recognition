@@ -59,4 +59,4 @@ server/.venv/
 .playwright-mcp/
 third-party/
 *.zip
-live/
+/live/
