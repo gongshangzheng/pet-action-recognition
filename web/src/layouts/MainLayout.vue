@@ -83,7 +83,7 @@ import {
   DocumentTextOutline, GridOutline, FlagOutline, ChatbubblesOutline,
   SearchOutline, SettingsOutline, FlaskOutline, BarChartOutline,
   CubeOutline, LayersOutline, SchoolOutline, FilmOutline, BookOutline,
-  SunnyOutline, MoonOutline,
+  SunnyOutline, MoonOutline, VideocamOutline,
 } from '@vicons/ionicons5'
 import { useThemeStore } from '../stores/theme'
 
@@ -160,6 +160,11 @@ const menuOptions = [
     ],
   },
   {
+    label: '实时视频流',
+    key: '/live',
+    icon: renderIcon(VideocamOutline),
+  },
+  {
     label: '训练体系',
     key: 'training',
     icon: renderIcon(SchoolOutline),
@@ -183,6 +188,7 @@ const activeKey = computed(() => {
     '/management/meetings', '/management/docs', '/papers/list', '/papers/config',
     '/evaluation/run', '/evaluation/speedrun', '/evaluation/results', '/evaluation/outputs', '/evaluation/models', '/evaluation/configs',
     '/datasets',
+    '/live',
     '/training/run', '/training/results', '/training/models', '/training/configs',
   ]
   let best = '/'

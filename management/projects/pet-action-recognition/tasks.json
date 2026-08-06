@@ -457,7 +457,7 @@
         {
           "id": "t11-2",
           "title": "t11-2 前端 Live 页骨架 + 源列表 + 视频流播放",
-          "status": "planned",
+          "status": "completed",
           "assignee": "郑鑫裕",
           "description": "web/src/api/live.js + views/Live.vue + components/live/VideoPlayer.vue，video 用 stream_token url 播放",
           "children": []

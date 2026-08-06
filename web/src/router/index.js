@@ -166,6 +166,13 @@ const routes = [
         component: () => import('../views/datasets/DatasetBrowser.vue'),
         meta: { title: '数据集浏览', module: 'datasets' },
       },
+      // ===== live 实时视频流 =====
+      {
+        path: 'live',
+        name: 'Live',
+        component: () => import('../views/Live.vue'),
+        meta: { title: '实时视频流', module: 'live' },
+      },
       // ===== training 训练体系 =====
       { path: 'training', redirect: '/training/results' },
       {
