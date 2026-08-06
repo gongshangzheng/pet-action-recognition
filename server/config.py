@@ -8,6 +8,9 @@ MANAGEMENT_DIR = os.path.join(BASE_DIR, "management")
 PAPERS_DIR = os.path.join(BASE_DIR, "papers")
 EVALUATION_DIR = os.path.join(BASE_DIR, "evaluation")
 
+# Live 模块（摄像头源 + 截屏，独立 live.db）
+LIVE_DIR = os.path.join(BASE_DIR, "live")
+
 # 评测输出目录（压缩码流 / 重建视频等，供 /api/evaluation/outputs 端点按需服务）
 # 下游库可覆盖：infraredComp 用 results/video/，其它库用 evaluation/outputs/
 OUTPUTS_DIR = os.path.join(EVALUATION_DIR, "outputs")
