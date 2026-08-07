@@ -239,7 +239,7 @@ async def analyze_stream(
         try:
             for line in proc.stdout:
                 line = line.strip()
-                if line:
+                if line.startswith("{"):
                     yield f"data: {line}\n\n"
         finally:
             if proc.poll() is None:

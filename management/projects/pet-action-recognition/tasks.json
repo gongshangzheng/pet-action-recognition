@@ -505,7 +505,7 @@
         {
           "id": "t11-8",
           "title": "t11-8 前端实时叠加（EventSource+时间轴色块+OSD label+段列表）",
-          "status": "planned",
+          "status": "active",
           "assignee": "郑鑫裕",
           "description": "Live.vue 增 EventSource 接 SSE；segments[] push；video.currentTime 落段→OSD显示label+score；进度条画色块；右侧段列表。切换/关闭 close()",
           "children": []
@@ -513,7 +513,7 @@
         {
           "id": "t11-9",
           "title": "t11-9 模型选择 UI（视频模型registry列表+VLM选项+checkpoint选择）",
-          "status": "planned",
+          "status": "active",
           "assignee": "郑鑫裕",
           "description": "选 source+file 后选 model：从 evaluation/models 读 mmaction2 分类模型列表 + Qwen3-VL 选项 + pretrained/trained checkpoint。开始推理按钮触发 SSE",
           "children": []
