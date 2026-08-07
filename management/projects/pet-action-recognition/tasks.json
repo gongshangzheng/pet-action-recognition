@@ -465,7 +465,7 @@
         {
           "id": "t11-3",
           "title": "t11-3 PTZ 虚拟摇杆组件（移植 LiveStreamView）",
-          "status": "planned",
+          "status": "active",
           "assignee": "郑鑫裕",
           "description": "PtzJoystick.vue，十字方向+复位+translate 模拟云台",
           "children": []
@@ -473,7 +473,7 @@
         {
           "id": "t11-4",
           "title": "t11-4 截屏/录像（canvas+下载+上传）",
-          "status": "planned",
+          "status": "active",
           "assignee": "郑鑫裕",
           "description": "ScreenshotGallery.vue，canvas.drawImage→toDataURL→下载+POST 入库，Web Audio 快门声",
           "children": []
@@ -481,7 +481,7 @@
         {
           "id": "t11-5",
           "title": "t11-5 摄像头源管理 UI（增删改查表单）",
-          "status": "planned",
+          "status": "active",
           "assignee": "郑鑫裕",
           "description": "源管理表单 name/stream_url/storage_path/is_active 接 /api/live/sources",
           "children": []

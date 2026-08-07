@@ -277,11 +277,20 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     # 检测 config 是否缺 val_cfg（x3d/uniformer 等 builtin 无 val_cfg → mmengine 报
     # val_dataloader/val_cfg/val_evaluator 三者必须同 None/同有）。缺则用 override 补 ValLoop。
     extra = []
+    blend_augment_indices: list[int] = []
     try:
         from mmengine.config import Config
         _cfg = Config.fromfile(cfg_path)
         if not _cfg.get("val_cfg") and _cfg.get("val_dataloader"):
             extra.append("val_cfg = dict(type='ValLoop')")
+        # mvit 等 blending.augments 的 num_classes 硬编码 K400=400；finetune 小数据集时
+        # cls_head 改 n_cls 但 Mixup/Cutmix one-hot 仍 400 → top_k_accuracy 形状不匹配
+        augments = (_cfg.get("model", {}).get("data_preprocessor", {})
+                    .get("blending", {}).get("augments"))
+        if isinstance(augments, list):
+            for i, a in enumerate(augments):
+                if isinstance(a, dict) and "num_classes" in a:
+                    blend_augment_indices.append(i)
     except Exception:
         pass
 
@@ -316,6 +325,9 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
         # AccMetric topk: avoid meaningless top5 on small datasets (top5 always 1.0 when classes < 5)
         ks = tuple(k for k in (1, 5) if k <= n_cls)  # n_cls=2 → (1,), n_cls=10 → (1,5)
         cfg_options.append(f"val_evaluator.metric_options.top_k_accuracy.topk={ks}")
+        # 覆盖 blending.augments 的 num_classes（mvit Mixup/Cutmix one-hot 维度对齐 n_cls）
+        for i in blend_augment_indices:
+            cfg_options.append(f"model.data_preprocessor.blending.augments.{i}.num_classes={n_cls}")
     # val/test 多 clip（列表索引覆盖，DictAction 支持；默认用 config 值）
     if getattr(args, "num_clips_val", None) is not None:
         cfg_options.append(f"val_dataloader.dataset.pipeline.1.num_clips={args.num_clips_val}")
