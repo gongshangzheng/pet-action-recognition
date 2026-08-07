@@ -187,17 +187,26 @@ const compareOption = computed(() => {
   }
 })
 
+// 数值列排序器：null 排到最后；点表头三态 升序↔降序↔原序
+const numSorter = (get) => (a, b) => {
+  const va = get(a), vb = get(b)
+  if (va == null && vb == null) return 0
+  if (va == null) return -1
+  if (vb == null) return 1
+  return va - vb
+}
+
 const runColumns = computed(() => [
-  { title: '名称', key: 'name', width: 150, render: (r) => h('a', { style: 'color: #2563eb; cursor: pointer; text-decoration: none', onClick: () => router.push(`/training/runs/${r.id}`), title: r.description || r.id }, r.name || r.id) },
-  { title: '模型', key: 'model' },
-  { title: '数据集', key: 'dataset' },
-  { title: 'epochs', key: 'epochs', width: 70 },
-  { title: 'final_loss', key: 'final_loss', width: 90, render: (r) => fmt(r.final_loss) },
-  { title: 'best_metric', key: 'best_metric', width: 100, render: (r) => fmt(r.best_metric) },
-  { title: '模型大小', key: 'size', width: 110, render: (r) => fmtModelSize(r) },
-  { title: '速度', key: 'speed', width: 120, render: (r) => fmtSpeed(r) },
-  { title: '状态', key: 'status', width: 80 },
-  { title: '时间', key: 'started_at', render: (r) => r.started_at?.split('T')[0] || '-' },
+  { title: '名称', key: 'name', width: 150, sorter: (a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)), render: (r) => h('a', { style: 'color: #2563eb; cursor: pointer; text-decoration: none', onClick: () => router.push(`/training/runs/${r.id}`), title: r.description || r.id }, r.name || r.id) },
+  { title: '模型', key: 'model', sorter: (a, b) => String(a.model || '').localeCompare(String(b.model || '')) },
+  { title: '数据集', key: 'dataset', sorter: (a, b) => String(a.dataset || '').localeCompare(String(b.dataset || '')) },
+  { title: 'epochs', key: 'epochs', width: 70, sorter: numSorter(r => r.epochs) },
+  { title: 'final_loss', key: 'final_loss', width: 90, render: (r) => fmt(r.final_loss), sorter: numSorter(r => r.final_loss) },
+  { title: 'best_metric', key: 'best_metric', width: 100, render: (r) => fmt(r.best_metric), sorter: numSorter(r => r.best_metric) },
+  { title: '模型大小', key: 'size', width: 110, render: (r) => fmtModelSize(r), sorter: numSorter(r => r.metrics?.speed?.ckpt_size_mb) },
+  { title: '速度', key: 'speed', width: 120, render: (r) => fmtSpeed(r), sorter: numSorter(r => r.metrics?.speed?.latency_ms) },
+  { title: '状态', key: 'status', width: 80, sorter: (a, b) => String(a.status || '').localeCompare(String(b.status || '')) },
+  { title: '时间', key: 'started_at', render: (r) => r.started_at?.split('T')[0] || '-', sorter: (a, b) => String(a.started_at || '').localeCompare(String(b.started_at || '')) },
   {
     title: 'Checkpoint', key: 'checkpoint', width: 140,
     render: (r) => {
