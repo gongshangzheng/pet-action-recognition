@@ -405,8 +405,9 @@ async def serve_note_asset(slug: str, asset_path: str):
         raise HTTPException(status_code=404, detail="Asset not found")
     ext = os.path.splitext(safe)[1].lower()
     media = _ASSET_MIME.get(ext, "application/octet-stream")
+    no_cache = {"Cache-Control": "no-cache, must-revalidate"}
     if ext in VIDEO_TRANSCODE_EXTS and os.path.isfile(FFMPEG_BIN) and _needs_transcode(safe):
         out = _transcode_to_h264(safe)
         if out:
-            return FileResponse(out, media_type="video/mp4", filename=os.path.basename(safe))
-    return FileResponse(safe, media_type=media, filename=os.path.basename(safe))
+            return FileResponse(out, media_type="video/mp4", filename=os.path.basename(safe), headers=no_cache)
+    return FileResponse(safe, media_type=media, filename=os.path.basename(safe), headers=no_cache)
