@@ -2,6 +2,8 @@
 import os
 import re
 import datetime
+import hashlib
+import subprocess
 
 import yaml
 from fastapi import APIRouter, HTTPException
@@ -23,12 +25,67 @@ _ASSET_MIME = {
     ".mp4": "video/mp4",
     ".webm": "video/webm",
     ".mov": "video/quicktime",
+    ".avi": "video/x-msvideo",
+    ".mkv": "video/x-matroska",
+    ".m4v": "video/x-m4v",
     ".png": "image/png",
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
     ".gif": "image/gif",
     ".webp": "image/webp",
 }
+
+# 视频自动转码：浏览器不支持 mp4v/avi/mov 等 → 转 H.264+faststart，缓存复用
+FFMPEG_BIN = os.path.expanduser("~/bin/ffmpeg")
+FFPROBE_BIN = os.path.expanduser("~/bin/ffprobe")
+VIDEO_TRANSCODE_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".m4v"}
+TRANSCODE_CACHE = "/tmp/transcode_cache"
+
+
+def _needs_transcode(path: str) -> bool:
+    """是否需要转码：avi/mov/mkv/m4v 直接转；mp4 查 codec+moov 位置。"""
+    ext = os.path.splitext(path)[1].lower()
+    if ext in {".avi", ".mov", ".mkv", ".m4v"}:
+        return True
+    if ext == ".mp4":
+        # 查视频流 codec 是否全 h264
+        try:
+            r = subprocess.run(
+                [FFPROBE_BIN, "-v", "error", "-select_streams", "v",
+                 "-show_entries", "stream=codec_name", "-of", "csv=p=0", path],
+                capture_output=True, text=True, timeout=15,
+            )
+            codecs = [c.strip() for c in r.stdout.strip().split("\n") if c.strip()]
+            if not codecs or any(c != "h264" for c in codecs):
+                return True
+        except Exception:
+            return True
+        # 查 moov 是否在文件前部（faststart）
+        try:
+            with open(path, "rb") as f:
+                head = f.read(200000)
+            if b"moov" not in head:
+                return True
+        except Exception:
+            return True
+    return False
+
+
+def _transcode_to_h264(src: str):
+    """转码到 H.264 + faststart，缓存到 /tmp/transcode_cache/，返回缓存路径。"""
+    os.makedirs(TRANSCODE_CACHE, exist_ok=True)
+    key = hashlib.md5(f"{src}:{os.path.getmtime(src)}".encode()).hexdigest()
+    out = os.path.join(TRANSCODE_CACHE, f"{key}.mp4")
+    if os.path.isfile(out) and os.path.getsize(out) > 0:
+        return out  # 缓存命中
+    subprocess.run(
+        [FFMPEG_BIN, "-y", "-i", src, "-c:v", "libx264", "-crf", "23",
+         "-preset", "fast", "-an", "-movflags", "+faststart", out],
+        capture_output=True, timeout=300,
+    )
+    if os.path.isfile(out) and os.path.getsize(out) > 0:
+        return out
+    return None
 
 # 日期/作者参数校验（防止路径遍历与非法文件名）
 _DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
@@ -338,11 +395,18 @@ async def get_task_note_route(slug: str, note_path: str):
 
 @router.get("/projects/{slug}/notes-assets/{asset_path:path}")
 async def serve_note_asset(slug: str, asset_path: str):
-    """服务任务笔记的静态资源（notes/assets/ 下的图片/视频），带正确 MIME。"""
+    """服务任务笔记的静态资源（notes/assets/ 下的图片/视频），带正确 MIME。
+
+    视频若浏览器不可播（mp4v/avi/mov/moov 在尾）自动转 H.264+faststart，缓存复用。
+    """
     base = os.path.join(MANAGEMENT_DIR, 'projects', slug, 'notes', 'assets')
     safe = safe_resolve(base, asset_path)
     if not safe or not os.path.isfile(safe):
         raise HTTPException(status_code=404, detail="Asset not found")
     ext = os.path.splitext(safe)[1].lower()
     media = _ASSET_MIME.get(ext, "application/octet-stream")
+    if ext in VIDEO_TRANSCODE_EXTS and os.path.isfile(FFMPEG_BIN) and _needs_transcode(safe):
+        out = _transcode_to_h264(safe)
+        if out:
+            return FileResponse(out, media_type="video/mp4", filename=os.path.basename(safe))
     return FileResponse(safe, media_type=media, filename=os.path.basename(safe))
