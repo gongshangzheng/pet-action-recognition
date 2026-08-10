@@ -4,7 +4,10 @@
       <template #header>
         <div class="flex-between">
           <h3>实时视频流 + 实时推理（Live）</h3>
-          <n-button size="small" @click="loadSources" :loading="loadingSources">刷新源</n-button>
+          <n-space :size="8">
+            <n-button size="small" @click="loadSources" :loading="loadingSources">刷新源</n-button>
+            <n-button size="small" type="primary" @click="openAddSource">+ 添加源</n-button>
+          </n-space>
         </div>
       </template>
 
@@ -54,6 +57,15 @@
                   <template #description>
                     <n-ellipsis style="font-size: 11px; color: #888">{{ s.alias }} · {{ s.stream_url }}</n-ellipsis>
                   </template>
+                  <template #header-extra>
+                    <n-space :size="4" @click.stop>
+                      <n-button size="tiny" quaternary @click="openEditSource(s)">编辑</n-button>
+                      <n-popconfirm @positive-click="onDeleteSource(s)">
+                        <template #trigger><n-button size="tiny" quaternary type="error">删除</n-button></template>
+                        确认删除源 "{{ s.name }}"？
+                      </n-popconfirm>
+                    </n-space>
+                  </template>
                 </n-thing>
               </n-list-item>
             </n-list>
@@ -80,7 +92,7 @@
 
         <!-- 中：播放器 -->
         <div class="live-right">
-          <VideoPlayer :src="playUrl" :overlay="currentOverlay" @timeupdate="onTime" />
+          <VideoPlayer :src="playUrl" :overlay="currentOverlay" @timeupdate="onTime" @screenshot="onScreenshot" />
           <div v-if="currentSource" class="meta">
             <n-tag size="small" type="info">{{ currentSource.alias }}</n-tag>
             <span v-if="selectedFile" style="margin-left: 8px; font-size: 13px; color: #666">{{ selectedFile }}</span>
@@ -116,14 +128,16 @@
         </div>
       </div>
     </n-card>
+    <SourceManageModal v-model:visible="showSourceModal" :source="editingSource" @saved="loadSources" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue'
-import { NCard, NSpin, NList, NListItem, NThing, NTag, NEmpty, NEllipsis, NText, NButton, NSpace, NSelect, NInputNumber, NScrollbar } from 'naive-ui'
+import { NCard, NSpin, NList, NListItem, NThing, NTag, NEmpty, NEllipsis, NText, NButton, NSpace, NSelect, NInputNumber, NScrollbar, NPopconfirm, useMessage } from 'naive-ui'
 import VideoPlayer from '../components/live/VideoPlayer.vue'
-import { getSources, getSourceFiles, getPlayUrl } from '../api/live'
+import SourceManageModal from '../components/live/SourceManageModal.vue'
+import { getSources, getSourceFiles, getPlayUrl, createScreenshot, deleteSource } from '../api/live'
 import { getTrainModels } from '../api/training'
 
 const sources = ref([])
@@ -264,6 +278,38 @@ function stopInfer() {
 
 function onTime(t) {
   currentTime.value = t
+}
+
+// 源管理 + 截屏
+const showSourceModal = ref(false)
+const editingSource = ref(null)
+const msg = useMessage()
+
+function openAddSource() { editingSource.value = null; showSourceModal.value = true }
+function openEditSource(s) { editingSource.value = s; showSourceModal.value = true }
+async function onDeleteSource(s) {
+  try {
+    await deleteSource(s.id)
+    msg.success('已删除')
+    if (currentSource.value?.id === s.id) { currentSource.value = null; files.value = []; playUrl.value = '' }
+    await loadSources()
+  } catch (e) { msg.error('删除失败') }
+}
+async function onScreenshot(dataUrl) {
+  // 下载到本地
+  const a = document.createElement('a')
+  a.href = dataUrl
+  a.download = `shot-${Date.now()}.png`
+  a.click()
+  // 上传到后端（关联当前源）
+  if (currentSource.value) {
+    try {
+      await createScreenshot({ source_id: currentSource.value.id, filename: `shot-${Date.now()}`, data_url: dataUrl })
+      msg.success('截图已入库')
+    } catch (e) { msg.warning('截图上传失败，本地已保存') }
+  } else {
+    msg.info('截图已下载（无关联源，未入库）')
+  }
 }
 
 onMounted(() => {
