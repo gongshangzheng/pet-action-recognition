@@ -26,6 +26,8 @@ sys.path.insert(0, str(REPO))
 from server.config import TRAINING_DIR  # noqa: E402
 from scripts.run_test import load_results, save_results, resolve_test_paths  # noqa: E402
 from scripts._infer import load_labels  # noqa: E402
+from scripts.vlm_cost import estimate as vlm_estimate, calc_cost_with_breakdown  # noqa: E402
+from scripts.vlm_infer import _build_prompt  # noqa: E402
 from scripts.vlm_infer import vlm_recognize  # noqa: E402
 
 RESULTS_JSON = os.path.join(TRAINING_DIR, "test_results.json")
@@ -88,6 +90,7 @@ def main() -> int:
 
     labels = load_labels(args.label_map)
     val = _read_val_list(ann, videos_root, args.num_videos)
+    prompt_length = max(1, len(_build_prompt(labels, 5)) // 4)  # 英文类名 ~4 char/token
     print(f"[vlm-eval] {len(val)} 视频, {len(labels)} 类, model={args.model_name}", flush=True)
     if not val:
         print("[error] 无视频（ann_file/data_root 不匹配？）")
@@ -103,12 +106,21 @@ def main() -> int:
     latencies, durations = [], []
     tot_in = tot_out = 0
     tot_cost = 0.0
+    est_in_tokens = 0
+    est_cost = 0.0
     responses = []
     t_start = time.time()
 
     for i, (vpath, gt_id) in enumerate(val):
         r = vlm_recognize(vpath, labels, fps=args.fps, max_pixels=args.max_pixels,
                           min_pixels=args.min_pixels, model_name=args.model_name)
+        # 发送后预估（cv2 读视频算 token，对比实际 usage）
+        try:
+            est = vlm_estimate(vpath, args.fps, args.max_pixels, args.min_pixels, prompt_length)
+            est_in_tokens += est["total_input_tokens"]
+            est_cost += est["estimated_cost"]
+        except Exception:
+            pass
         if r.get("error") or not r.get("top1_label"):
             print(f"  [{i+1}/{n}] {os.path.basename(vpath)} → ERR {r.get('error','')[:60]}", flush=True)
             per_class_correct.setdefault(gt_id, 0)
@@ -169,7 +181,16 @@ def main() -> int:
             "output_tokens": tot_out,
             "total_tokens": tot_in + tot_out,
             "cost_cny": round(tot_cost, 4),
+            "breakdown": calc_cost_with_breakdown(tot_in, True)["breakdown"],
             "num_videos": n,
+        },
+        "estimate": {
+            "prompt_length": prompt_length,
+            "total_estimated_input_tokens": est_in_tokens,
+            "per_video_estimated_input": round(est_in_tokens / n, 1) if n else 0,
+            "total_estimated_cost": round(est_cost, 4),
+            "actual_cost": round(tot_cost, 4),
+            "accuracy": round((1 - abs(est_cost - tot_cost) / tot_cost) * 100, 1) if tot_cost else 0,
         },
     }
     result = {

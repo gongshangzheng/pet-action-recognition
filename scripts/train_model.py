@@ -278,11 +278,20 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     # val_dataloader/val_cfg/val_evaluator 三者必须同 None/同有）。缺则用 override 补 ValLoop。
     extra = []
     blend_augment_indices: list[int] = []
+    is_iter_based = False
     try:
         from mmengine.config import Config
         _cfg = Config.fromfile(cfg_path)
-        if not _cfg.get("val_cfg") and _cfg.get("val_dataloader"):
+        # x3d/uniformer 等 builtin 既无 val_cfg 也无 val_dataloader，但 train_model 会通过
+        # --cfg-options 注入 val_dataloader（ann_val 非空时）+ val_evaluator，三者必须同有，
+        # 故缺 val_cfg 就补 ValLoop（条件含 ann_val，覆盖原 config 无 val_dataloader 的情况）
+        if not _cfg.get("val_cfg") and (_cfg.get("val_dataloader") or ann_val):
             extra.append("val_cfg = dict(type='ValLoop')")
+        # iter-based：config 显式 type=IterBasedTrainLoop 或 by_epoch=False
+        # x3d/uniformer 无 train_cfg → 需注入 by_epoch=True 走 EpochBased
+        _tc = _cfg.get("train_cfg") or {}
+        if "Iter" in str(_tc.get("type", "")) or _tc.get("by_epoch", True) is False:
+            is_iter_based = True
         # mvit 等 blending.augments 的 num_classes 硬编码 K400=400；finetune 小数据集时
         # cls_head 改 n_cls 但 Mixup/Cutmix one-hot 仍 400 → top_k_accuracy 形状不匹配
         augments = (_cfg.get("model", {}).get("data_preprocessor", {})
@@ -315,11 +324,16 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
             log(args.run_id, f"[resume] {args.resume} 未找到 checkpoint，从头训练")
 
     cfg_options = [
-        f"train_cfg.max_epochs={args.epochs}",
         f"optim_wrapper.optimizer.lr={args.lr}",
         f"train_dataloader.batch_size={args.batch_size}",
         f"val_dataloader.batch_size={max(1, args.batch_size // 2)}",
     ]
+    # epoch-based：注入 by_epoch=True + max_epochs（x3d/uniformer 无 train_cfg，
+    # 否则 addict pop('by_epoch') 返 None → 走 IterBased 分支 + max_epochs → 崩）
+    # iter-based（显式 type=IterBasedTrainLoop 或 by_epoch=False）用 config 默认 max_iters
+    if not is_iter_based:
+        cfg_options.append("train_cfg.by_epoch=True")
+        cfg_options.append(f"train_cfg.max_epochs={args.epochs}")
     if n_cls is not None:
         cfg_options.append(f"model.cls_head.num_classes={n_cls}")
         # AccMetric topk: avoid meaningless top5 on small datasets (top5 always 1.0 when classes < 5)

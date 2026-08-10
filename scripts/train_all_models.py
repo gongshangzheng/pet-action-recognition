@@ -175,6 +175,18 @@ def main() -> int:
     for i, m in enumerate(models):
         mid = m["id"]
         cfg_abs = resolve_cfg(mid, m["mmaction2_config"])
+        # test-only config（x3d/uniformer 官方只发布 test，无 train_dataloader）跳过训练
+        try:
+            from mmengine.config import Config
+            if not Config.fromfile(cfg_abs).get("train_dataloader"):
+                log(f"[{i+1}/{len(models)}] {mid}: test-only config（无 train_dataloader），跳过训练")
+                summary.append({"model": mid, "run_id": "-", "exit": -1, "best_metric": None,
+                                "duration_sec": 0, "lr": lr_for(mid),
+                                "batch_size": 1 if mid in HEAVY_MODELS else BATCH,
+                                "error_tail": "test-only config, skip training"})
+                continue
+        except Exception:
+            pass
         pretrained = os.path.join(CHECKPOINTS_DIR, mid, f"{mid}_pretrained.pth")
         has_pre = os.path.isfile(pretrained)
         lr = lr_for(mid)

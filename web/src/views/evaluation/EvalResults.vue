@@ -110,7 +110,11 @@ const rowProps = (row) => {
   const vlmNote = isVLM
     ? '\n\n备注：仅评测 200 视频子集（非 17709 全集），走 DashScope 云端 API，与本地权重模型不直接可比。'
     : ''
-  const title = (desc ? `${entry.name}（${entry.family}）\n${desc}` : '') + vlmNote
+  const est = row.metrics?.estimate
+  const costInfo = (isVLM && est)
+    ? `\n\n费用对账：预估 ${est.total_estimated_cost}元 / 实际 ${est.actual_cost}元 / 准确度 ${est.accuracy}%\n预估 input ${est.total_estimated_input_tokens} tok（每视频 ${est.per_video_estimated_input}），prompt ${est.prompt_length} tok`
+    : ''
+  const title = (desc ? `${entry.name}（${entry.family}）\n${desc}` : '') + vlmNote + costInfo
   return {
     title: title || undefined,
     style: isVLM ? 'background-color: rgba(208, 48, 80, 0.07);' : undefined,
@@ -183,6 +187,7 @@ const columns = computed(() => [
   { title: 'GPU(MB)', key: 'gpumem', width: 80, render: (r) => fmtNum(r.metrics?.speed?.gpu_mem_mb), sorter: numSorter(r => r.metrics?.speed?.gpu_mem_mb) },
   { title: '参数(M)', key: 'params', width: 75, render: (r) => fmtNum(r.metrics?.speed?.param_count_m), sorter: numSorter(r => r.metrics?.speed?.param_count_m) },
   { title: 'ckpt(MB)', key: 'ckpt', width: 80, render: (r) => fmtNum(r.metrics?.speed?.ckpt_size_mb), sorter: numSorter(r => r.metrics?.speed?.ckpt_size_mb) },
+  { title: '费用(元)', key: 'cost', width: 80, render: (r) => fmtNum(r.metrics?.cost?.cost_cny, 4), sorter: numSorter(r => r.metrics?.cost?.cost_cny) },
   {
     title: '状态', key: 'status', width: 90,
     sorter: (a, b) => String(a.status).localeCompare(String(b.status)),
