@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Query
 from fastapi.responses import FileResponse
 
 from server.config import (
@@ -777,15 +777,32 @@ async def run_test(data: dict = Body(...)):
 
 
 @router.get("/test_results")
-async def get_test_results():
-    """测试/评估结果列表（读 test_results.json）。"""
+async def get_test_results(
+    model: str = Query(None, description="按模型名模糊筛选"),
+    dataset: str = Query(None, description="按数据集精确筛选"),
+    status: str = Query(None, description="按状态筛选 completed/error"),
+    limit: int = Query(None, ge=1, description="分页大小，不传则全量"),
+    offset: int = Query(0, ge=0),
+):
+    """测试/评估结果列表（读 test_results.json），参考 pet-videos history api 加筛选/分页。"""
     content = read_file(TRAINING_TEST_RESULTS_JSON)
     if not content:
-        return {"generated_at": None, "results": []}
+        return {"generated_at": None, "results": [], "total": 0}
     try:
-        return json.loads(content)
+        d = json.loads(content)
     except json.JSONDecodeError:
         return {"generated_at": None, "results": [], "error": "Invalid test results JSON"}
+    results = d.get("results", []) or []
+    if model:
+        results = [r for r in results if model.lower() in (r.get("model") or "").lower()]
+    if dataset:
+        results = [r for r in results if (r.get("dataset") or "") == dataset]
+    if status:
+        results = [r for r in results if (r.get("status") or "") == status]
+    total = len(results)
+    if limit is not None:
+        results = results[offset:offset + limit]
+    return {**d, "results": results, "total": total, "offset": offset, "limit": limit}
 
 
 # ---- inference（单视频推理）-------------------------------------------- #

@@ -35,6 +35,9 @@ HEAVY_MODELS = {"i3d-resnet50", "csn-ircsn152", "swin-tiny", "slowfast-resnet50"
                 "timesformer-divst", "mvit-small", "videomae-base", "videomaev2-base"}
 BATCH_FOR = lambda mid: 1 if mid in HEAVY_MODELS else 4
 TIMEOUT = 14400  # 单模型最长 4h（重模型 batch1 慢，给够时间）
+# 失败重试指数退避（秒），移植自 third-party/pet-videos llm_worker_service.retry_delays
+# 仅对非 TIMEOUT 失败重试（OOM/decod/偶发 CUDA）；TIMEOUT 同参数仍 TIMEOUT，不重试
+RETRY_DELAYS = [60, 300, 900]
 
 
 def log(msg: str) -> None:
@@ -71,6 +74,29 @@ def save_summary(summary: list[dict]) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
     os.replace(tmp, SUMMARY_JSON)
+
+
+def _run_with_retry(args: list[str], env: dict, mid: str) -> tuple[int, str, float]:
+    """跑单模型评测，非 TIMEOUT 失败按 RETRY_DELAYS 指数退避重试（移植 pet-videos worker 模式）。"""
+    rc, err_tail, total_dt = -1, "", 0.0
+    for attempt in range(len(RETRY_DELAYS) + 1):  # 初试 + 最多 len 次重试
+        t0 = time.time()
+        try:
+            proc = subprocess.run(args, env=env, cwd=str(REPO), capture_output=True, text=True, timeout=TIMEOUT)
+            rc = proc.returncode
+            err_tail = (proc.stderr or proc.stdout or "")[-300:]
+        except subprocess.TimeoutExpired:
+            rc = -1
+            err_tail = "TIMEOUT"
+        total_dt += time.time() - t0
+        if rc == 0 or err_tail == "TIMEOUT":
+            break  # 成功或 TIMEOUT（同参数仍 TIMEOUT）都不重试
+        if attempt < len(RETRY_DELAYS):
+            log(f"  {mid}: 失败 exit={rc}，{RETRY_DELAYS[attempt]}s 后重试（{attempt+1}/{len(RETRY_DELAYS)}）")
+            time.sleep(RETRY_DELAYS[attempt])
+        else:
+            log(f"  {mid}: 重试耗尽，最终 exit={rc}")
+    return rc, err_tail.strip(), total_dt
 
 
 def main() -> int:
@@ -115,15 +141,7 @@ def main() -> int:
         env["CUDA_VISIBLE_DEVICES"] = GPU
         env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
         log(f"[{i+1}/{len(models)}] {mid}: cfg={os.path.basename(cfg)} batch={BATCH_FOR(mid)}")
-        t0 = time.time()
-        try:
-            proc = subprocess.run(args, env=env, cwd=str(REPO), capture_output=True, text=True, timeout=TIMEOUT)
-            rc = proc.returncode
-            err_tail = (proc.stderr or proc.stdout or "")[-300:]
-        except subprocess.TimeoutExpired:
-            rc = -1
-            err_tail = "TIMEOUT"
-        dt = time.time() - t0
+        rc, err_tail, dt = _run_with_retry(args, env, mid)
         r = read_test_result(run_id) or {}
         mt = r.get("metrics", {}) or {}
         entry = {

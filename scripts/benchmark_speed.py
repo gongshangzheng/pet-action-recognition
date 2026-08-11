@@ -46,13 +46,26 @@ def _read_val_videos(ann_file: str, data_root: str, n: int) -> list[tuple[str, i
     return out
 
 
+# 视频时长 mtime 缓存（移植自 pet-videos video_cache；避免重复 cv2 读元信息）
+_DURATION_CACHE: dict[str, tuple[float, float]] = {}
+
+
 def _video_duration(video_path: str) -> float:
-    import cv2
+    import os, cv2
+    try:
+        mtime = os.path.getmtime(video_path)
+    except OSError:
+        mtime = 0
+    cached = _DURATION_CACHE.get(video_path)
+    if cached and cached[0] == mtime:
+        return cached[1]
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 0
     n = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0
     cap.release()
-    return (n / fps) if fps > 0 and n > 0 else 0.0
+    dur = (n / fps) if fps > 0 and n > 0 else 0.0
+    _DURATION_CACHE[video_path] = (mtime, dur)
+    return dur
 
 
 def _param_count(model) -> int:
