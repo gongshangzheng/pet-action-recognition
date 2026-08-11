@@ -106,17 +106,9 @@ def main() -> int:
     from scripts._infer import load_labels
     labels = load_labels(args.labels)
 
-    try:
-        vr, fps, total = open_video(args.video)
-    except Exception as e:
-        print(json.dumps({"error": f"open video failed: {e}"}), flush=True)
-        return 1
-    duration = (total / fps) if fps > 0 else 0.0
-    if duration <= 0:
-        print(json.dumps({"error": "cannot read duration"}), flush=True)
-        return 1
-
     # 加载模型（mmaction2 慢，加载一次复用；vlm 无状态）
+    # 注意：mmaction2 init_recognizer 触发 torch CUDA init，必须在 decord open 之前，
+    # 否则 decord 占用 fd 导致 torch CUDA random_device 读 /dev/urandom 失败
     model = None
     if args.model_type == "mmaction2":
         t0 = time.time()
@@ -127,6 +119,16 @@ def main() -> int:
             print(json.dumps({"error": f"model load failed: {e}"}), flush=True)
             return 1
         print(json.dumps({"status": "model_loaded", "model": args.model_id, "took_sec": round(time.time() - t0, 1)}), flush=True)
+
+    try:
+        vr, fps, total = open_video(args.video)
+    except Exception as e:
+        print(json.dumps({"error": f"open video failed: {e}"}), flush=True)
+        return 1
+    duration = (total / fps) if fps > 0 else 0.0
+    if duration <= 0:
+        print(json.dumps({"error": "cannot read duration"}), flush=True)
+        return 1
 
     t = 0.0
     while t < duration:
