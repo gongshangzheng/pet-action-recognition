@@ -124,13 +124,9 @@
         <div class="live-right">
           <VideoPlayer :src="playUrl" :overlay="currentOverlay" @timeupdate="onTime" @screenshot="onScreenshot" />
           <div class="meta">
-            <n-tag v-if="currentSource" size="small" type="info">{{ currentSource.alias }}</n-tag>
             <n-tag v-if="isDemoMode" size="small" type="warning">🎬 演示</n-tag>
+            <n-tag v-else-if="currentSource" size="small" type="info">{{ currentSource.alias }}</n-tag>
             <span v-if="selectedFile" style="margin-left: 8px; font-size: 13px; color: #666">{{ selectedFile }}</span>
-            <n-text v-if="playUrl" depth="3" style="font-size: 12px; margin-left: 8px">
-              <span v-if="isDemoMode">直接访问，无需 stream_token</span>
-              <span v-else>stream_token 已签名（借鉴 pet-videos 安全方案）</span>
-            </n-text>
           </div>
         </div>
 
