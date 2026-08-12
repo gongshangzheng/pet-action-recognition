@@ -392,6 +392,7 @@ async function onScreenshot(dataUrl) {
 onMounted(() => {
   loadSources()
   loadModels()
+  loadDemoVideos()
 })
 onUnmounted(stopInfer)
 </script>
