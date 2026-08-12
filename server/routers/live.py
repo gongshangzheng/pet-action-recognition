@@ -1,14 +1,15 @@
-"""Live 路由 — 摄像头源管理 + 视频流代理（stream_token）+ 截屏上传。
+"""Live 路由 — 示例视频演示 + 截屏 + 摄像头源管理。
 
-借鉴 third-party/pet-videos 的 sources.py + security.stream_token，适配本项目。
 端点：
-  GET    /api/live/sources              列出所有摄像头源
-  POST   /api/live/sources              新增源
-  PUT    /api/live/sources/{id}         更新源
-  DELETE /api/live/sources/{id}         删除源
-  GET    /api/live/stream?token=...     凭 stream_token 代理视频流
-  GET    /api/live/screenshots          列出截屏（可按 source_id 筛）
+  GET    /api/live/demo/videos          列出演示视频
+  GET    /api/live/demo/video/{name}    流式服务演示视频
+  GET    /api/live/demo/analyze/stream  SSE 演示推理
+  GET    /api/live/screenshots          列出截屏
   POST   /api/live/screenshots          上传截屏（base64）
+  GET    /api/live/sources              列出摄像头源
+  POST   /api/live/sources              添加摄像头源
+  PUT    /api/live/sources/{id}         更新摄像头源
+  DELETE /api/live/sources/{id}         删除摄像头源
 """
 from __future__ import annotations
 
@@ -24,270 +25,93 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from server.config import BASE_DIR, LIVE_DIR, LIVE_DEMO_DIR
-from server.db_live import get_conn, init_db, now_iso
-from server.live.security import decode_stream_token, encode_stream_token
+from server.db_live import (
+    get_conn, init_db, now_iso,
+    get_stream_sources, get_stream_source,
+    create_stream_source, update_stream_source, delete_stream_source,
+)
 from server.utils.file_utils import safe_resolve
 
 router = APIRouter(prefix="/api/live", tags=["live"])
 
-init_db()
-
+# 视频文件扩展名
 VIDEO_EXTS = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".m4v"}
 
 LIVE_ANALYZE_SCRIPT = os.path.join(BASE_DIR, "scripts", "live_analyze.py")
 
+init_db()
+
 
 # ---------- 请求模型 ----------
 
-class SourceCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    alias: str = Field(..., min_length=1, max_length=100)
-    stream_url: str = Field(..., min_length=1, max_length=1000)
-    storage_path: str = Field(..., min_length=1, max_length=1000)
-    is_active: bool = True
-
-
-class SourceUpdate(BaseModel):
-    name: Optional[str] = None
-    stream_url: Optional[str] = None
-    storage_path: Optional[str] = None
-    is_active: Optional[bool] = None
-
-
 class ScreenshotCreate(BaseModel):
-    source_id: Optional[int] = None
     filename: str = Field(..., min_length=1, max_length=200)
     note: Optional[str] = None
     data_url: str = Field(..., description="data:image/png;base64,....")
 
 
-# ---------- 源 CRUD ----------
+# ---------- 截屏 ----------
 
-def _row_to_source(row) -> dict:
-    return {
-        "id": row["id"],
-        "name": row["name"],
-        "alias": row["alias"],
-        "stream_url": row["stream_url"],
-        "storage_path": row["storage_path"],
-        "is_active": bool(row["is_active"]),
-        "created_at": row["created_at"],
-        "updated_at": row["updated_at"],
-    }
+@router.get("/screenshots")
+async def list_screenshots():
+    """列出截屏记录。"""
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM screenshots ORDER BY id DESC").fetchall()
+    return {"screenshots": [dict(r) for r in rows]}
+
+
+# ---------- 摄像头源管理 ----------
+
+class SourceCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    alias: str = ""
+    stream_url: str = Field(..., min_length=1)
+    storage_path: str = ""
+
+
+class SourceUpdate(BaseModel):
+    name: str = ""
+    alias: str = ""
+    stream_url: str = ""
+    storage_path: str = ""
+    is_active: bool = True
 
 
 @router.get("/sources")
 async def list_sources():
-    """列出所有摄像头源。"""
-    with get_conn() as conn:
-        rows = conn.execute("SELECT * FROM stream_sources ORDER BY id").fetchall()
-    return {"sources": [_row_to_source(r) for r in rows]}
+    return {"sources": get_stream_sources()}
 
 
-@router.post("/sources")
-async def create_source(body: SourceCreate):
-    """新增摄像头源。storage_path 不存在则创建目录。"""
-    os.makedirs(body.storage_path, exist_ok=True)
-    ts = now_iso()
-    with get_conn() as conn:
-        try:
-            cur = conn.execute(
-                "INSERT INTO stream_sources (name, alias, stream_url, storage_path, is_active, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (body.name, body.alias, body.stream_url, body.storage_path, int(body.is_active), ts, ts),
-            )
-            conn.commit()
-            row = conn.execute("SELECT * FROM stream_sources WHERE id = ?", (cur.lastrowid,)).fetchone()
-        except Exception as e:
-            raise _db_error(e)
-    return {"source": _row_to_source(row)}
+@router.post("/sources", status_code=201)
+async def add_source(body: SourceCreate):
+    src = create_stream_source(
+        name=body.name,
+        stream_url=body.stream_url,
+        alias=body.alias,
+        storage_path=body.storage_path,
+    )
+    return {"source": src}
 
 
 @router.put("/sources/{source_id}")
-async def update_source(source_id: int, body: SourceUpdate):
-    """更新源（部分字段）。"""
-    with get_conn() as conn:
-        row = conn.execute("SELECT * FROM stream_sources WHERE id = ?", (source_id,)).fetchone()
-        if not row:
-            return {"detail": "Source not found"}, 404
-        fields, vals = [], []
-        for k in ("name", "stream_url", "storage_path"):
-            v = getattr(body, k)
-            if v is not None:
-                fields.append(f"{k} = ?")
-                vals.append(v)
-        if body.is_active is not None:
-            fields.append("is_active = ?")
-            vals.append(int(body.is_active))
-        if not fields:
-            return {"source": _row_to_source(row)}
-        fields.append("updated_at = ?")
-        vals.append(now_iso())
-        vals.append(source_id)
-        conn.execute(f"UPDATE stream_sources SET {', '.join(fields)} WHERE id = ?", vals)
-        conn.commit()
-        row = conn.execute("SELECT * FROM stream_sources WHERE id = ?", (source_id,)).fetchone()
-    return {"source": _row_to_source(row)}
-
-
-@router.delete("/sources/{source_id}")
-async def delete_source(source_id: int):
-    """删除源（不删 storage_path 文件）。"""
-    with get_conn() as conn:
-        cur = conn.execute("DELETE FROM stream_sources WHERE id = ?", (source_id,))
-        conn.commit()
-    if cur.rowcount == 0:
+async def edit_source(source_id: int, body: SourceUpdate):
+    fields = {k: v for k, v in body.model_dump().items() if v}
+    src = update_stream_source(source_id, **fields)
+    if not src:
         return {"detail": "Source not found"}, 404
-    return {"deleted": source_id}
+    return {"source": src}
 
 
-# ---------- 视频流代理 ----------
-
-@router.get("/sources/{source_id}/files")
-async def list_source_files(source_id: int):
-    """列出某源 storage_path 下的视频文件（供前端选择播放）。"""
-    with get_conn() as conn:
-        row = conn.execute("SELECT * FROM stream_sources WHERE id = ?", (source_id,)).fetchone()
-    if not row:
+@router.delete("/sources/{source_id}", status_code=204)
+async def remove_source(source_id: int):
+    ok = delete_stream_source(source_id)
+    if not ok:
         return {"detail": "Source not found"}, 404
-    storage = row["storage_path"]
-    files = []
-    if os.path.isdir(storage):
-        for name in sorted(os.listdir(storage)):
-            if name.startswith("."):
-                continue
-            full = os.path.join(storage, name)
-            if os.path.isfile(full) and os.path.splitext(name)[1].lower() in VIDEO_EXTS:
-                files.append({"name": name, "size": os.path.getsize(full)})
-    return {"alias": row["alias"], "files": files}
-
-
-@router.get("/play_url")
-async def play_url(alias: str = Query(...), filename: str = Query(...)):
-    """给前端生成带 stream_token 的播放 url（secret 不外泄，签名在后端）。"""
-    with get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM stream_sources WHERE alias = ? AND is_active = 1", (alias,)
-        ).fetchone()
-    if not row:
-        return {"detail": "Source not found or inactive"}, 404
-    safe = safe_resolve(row["storage_path"], filename)
-    if not safe or not os.path.isfile(safe):
-        return {"detail": "File not found"}, 404
-    token = encode_stream_token(alias, filename)
-    return {"url": f"/api/live/stream?token={token}", "alias": alias, "filename": filename}
-
-
-@router.get("/stream")
-async def stream_video(token: str = Query(..., description="stream_token")):
-    """凭 stream_token 代理视频文件（支持 Range）。"""
-    alias, filename = decode_stream_token(token)
-    with get_conn() as conn:
-        row = conn.execute(
-            "SELECT storage_path FROM stream_sources WHERE alias = ? AND is_active = 1",
-            (alias,),
-        ).fetchone()
-    if not row:
-        return {"detail": "Source not found or inactive"}, 404
-
-    safe = safe_resolve(row["storage_path"], filename)
-    if not safe or not os.path.isfile(safe):
-        return {"detail": "File not found"}, 404
-    return FileResponse(safe, media_type="video/mp4", filename=filename)
-
-
-# ---------- 实时推理（SSE，同步边播边推）----------
-
-@router.get("/analyze/stream")
-async def analyze_stream(
-    alias: str = Query(...),
-    filename: str = Query(...),
-    model_id: str = Query(...),
-    model_type: str = Query("mmaction2", description="mmaction2 | vlm"),
-    clip_sec: float = Query(1.0, gt=0),
-    stride_sec: float = Query(1.0, gt=0),
-    device: str = Query("cuda:0"),
-):
-    """SSE：逐段推理结果。subprocess 调 scripts/live_analyze.py，stdout 行转 SSE。
-
-    每段 yield: data: {"t_start":..,"t_end":..,"label":..,"score":..,"top5":[..],"model":..}
-    模型加载/状态也以 {"status":..} 推送。
-    """
-    with get_conn() as conn:
-        row = conn.execute(
-            "SELECT storage_path FROM stream_sources WHERE alias = ? AND is_active = 1",
-            (alias,),
-        ).fetchone()
-    if not row:
-        return {"detail": "Source not found or inactive"}, 404
-    safe = safe_resolve(row["storage_path"], filename)
-    if not safe or not os.path.isfile(safe):
-        return {"detail": "File not found"}, 404
-
-    args = [
-        sys.executable, LIVE_ANALYZE_SCRIPT,
-        "--video", safe, "--model-id", model_id, "--model-type", model_type,
-        "--clip-sec", str(clip_sec), "--stride-sec", str(stride_sec),
-        "--device", device,
-    ]
-    proc = subprocess.Popen(
-        args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, cwd=str(BASE_DIR),
-    )
-
-    def gen():
-        try:
-            for line in proc.stdout:
-                line = line.strip()
-                if line.startswith("{"):
-                    yield f"data: {line}\n\n"
-        finally:
-            if proc.poll() is None:
-                proc.terminate()
-            try:
-                proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-
-    return StreamingResponse(
-        gen(), media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
-
-
-def _db_error(e: Exception):
-    """把 sqlite 唯一约束冲突转成 409。"""
-    msg = str(e)
-    if "UNIQUE" in msg.upper():
-        return _http(409, "alias already exists")
-    return _http(500, f"DB error: {e}")
-
-
-def _http(status: int, detail: str):
-    from fastapi import HTTPException
-    return HTTPException(status_code=status, detail=detail)
-
-
-# ---------- 截屏 ----------
-
-@router.get("/screenshots")
-async def list_screenshots(source_id: Optional[int] = None):
-    """列出截屏记录（可按 source_id 筛）。"""
-    sql = "SELECT * FROM screenshots"
-    params: tuple = ()
-    if source_id is not None:
-        sql += " WHERE source_id = ?"
-        params = (source_id,)
-    sql += " ORDER BY id DESC"
-    with get_conn() as conn:
-        rows = conn.execute(sql, params).fetchall()
-    return {"screenshots": [dict(r) for r in rows]}
 
 
 @router.post("/screenshots")
 async def create_screenshot(body: ScreenshotCreate):
-    """上传截屏（base64 data url），存到对应源的 storage_path/screenshots/。"""
-    # 解析 data url
+    """上传截屏（base64 data url），存到 live/screenshots/。"""
     if "," not in body.data_url:
         return {"detail": "data_url must be 'data:image/...;base64,<...>'"}, 400
     _, b64 = body.data_url.split(",", 1)
@@ -296,16 +120,7 @@ async def create_screenshot(body: ScreenshotCreate):
     except Exception:
         return {"detail": "Invalid base64"}, 400
 
-    # 定位源 storage_path；没源则用默认 screenshots 目录
-    from server.config import LIVE_DIR
-    if body.source_id:
-        with get_conn() as conn:
-            row = conn.execute("SELECT storage_path FROM stream_sources WHERE id = ?", (body.source_id,)).fetchone()
-        if not row:
-            return {"detail": "Source not found"}, 404
-        base_dir = os.path.join(row["storage_path"], "screenshots")
-    else:
-        base_dir = os.path.join(LIVE_DIR, "screenshots")
+    base_dir = os.path.join(LIVE_DIR, "screenshots")
     os.makedirs(base_dir, exist_ok=True)
 
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -316,8 +131,8 @@ async def create_screenshot(body: ScreenshotCreate):
 
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO screenshots (source_id, filename, note, created_at) VALUES (?, ?, ?, ?)",
-            (body.source_id, os.path.basename(out), body.note, now_iso()),
+            "INSERT INTO screenshots (filename, note, created_at) VALUES (?, ?, ?)",
+            (os.path.basename(out), body.note, now_iso()),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM screenshots WHERE id = ?", (cur.lastrowid,)).fetchone()
@@ -385,6 +200,67 @@ async def demo_analyze_stream(
         sys.executable, LIVE_ANALYZE_SCRIPT,
         "--video", safe, "--model-id", model_id, "--model-type", model_type,
         "--clip-sec", str(clip_sec), "--stride-sec", str(stride_sec),
+        "--device", device,
+    ]
+    proc = subprocess.Popen(
+        args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, cwd=str(BASE_DIR),
+    )
+
+    def gen():
+        try:
+            for line in proc.stdout:
+                line = line.strip()
+                if line.startswith("{"):
+                    yield f"data: {line}\n\n"
+        finally:
+            if proc.poll() is None:
+                proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+    return StreamingResponse(
+        gen(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ---------- 真直播流（帧级同步：视频帧 + 推理结果走同一条 SSE）----------
+
+LIVE_STREAM_SCRIPT = os.path.join(BASE_DIR, "scripts", "live_stream.py")
+
+
+@router.get("/demo/live_stream")
+async def demo_live_stream(
+    video_name: str = Query(...),
+    model_id: str = Query(...),
+    stride_sec: float = Query(0.5, gt=0),
+    clip_sec: float = Query(1.0, gt=0),
+    device: str = Query("cuda:0"),
+):
+    import logging
+    logger = logging.getLogger("uvicorn.error")
+    logger.warning(f"[live_stream] video={video_name} model={model_id} device={device}")
+    """真直播流：同时推送视频帧（base64 JPEG）和推理结果，帧级同步。
+
+    推送格式（SSE data 行）：
+      {"type": "frame", "t": 0.0, "fps": 30.0, "width": 640, "height": 360, "data_url": "data:image/jpeg;base64,..."}
+      {"type": "result", "t": 0.0, "label": "locomotion", "score": 0.92, ...}
+      {"type": "status", "status": "loading_model", ...}
+      {"type": "done"}
+    """
+    safe = safe_resolve(LIVE_DEMO_DIR, video_name)
+    if not safe or not os.path.isfile(safe):
+        return {"detail": "Video not found"}, 404
+
+    args = [
+        sys.executable, LIVE_STREAM_SCRIPT,
+        "--video", safe,
+        "--model-id", model_id,
+        "--stride-sec", str(stride_sec),
+        "--clip-sec", str(clip_sec),
         "--device", device,
     ]
     proc = subprocess.Popen(

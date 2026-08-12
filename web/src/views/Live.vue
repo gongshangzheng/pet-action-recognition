@@ -3,11 +3,7 @@
     <n-card size="small">
       <template #header>
         <div class="flex-between">
-          <h3>实时视频流 + 实时推理（Live）</h3>
-          <n-space :size="8">
-            <n-button size="small" @click="loadSources" :loading="loadingSources">刷新源</n-button>
-            <n-button size="small" type="primary" @click="openAddSource">+ 添加源</n-button>
-          </n-space>
+          <h3>示例视频演示</h3>
         </div>
       </template>
 
@@ -27,73 +23,23 @@
           <n-input-number v-model:value="strideSec" :min="0.5" :max="10" :step="0.5" size="small" style="width: 110px">
             <template #prefix>步长s</template>
           </n-input-number>
-          <n-button v-if="!inferring" type="primary" size="small" :disabled="!canInfer" @click="startInfer">
+          <button v-if="!inferring" class="n-button n-button--primary-type n-button--small-type" :disabled="!canInfer" @click="startInfer">
             开始推理
-          </n-button>
-          <n-button v-else type="error" size="small" @click="stopInfer">停止</n-button>
+          </button>
+          <button v-else class="n-button n-button--error-type n-button--small-type" @click="stopInfer">停止</button>
           <n-text v-if="inferStatus" :type="inferStatusType" style="font-size: 12px">{{ inferStatus }}</n-text>
         </n-space>
       </div>
 
       <div class="live-layout">
-        <!-- 左：源 + 文件 -->
+        <!-- 左：示例视频列表 -->
         <div class="live-left">
-          <n-tabs v-model:value="leftTab" size="small" type="segment">
-            <n-tab-pane name="sources" tab="摄像头源">
-              <n-spin :show="loadingSources">
-            <n-list v-if="sources.length" hoverable clickable bordered>
-              <n-list-item
-                v-for="s in sources"
-                :key="s.id"
-                :class="{ active: s.id === selectedSourceId }"
-                @click="selectSource(s)"
-              >
-                <n-thing>
-                  <template #header>
-                    <span class="src-name">{{ s.name }}</span>
-                    <n-tag size="tiny" :type="s.is_active ? 'success' : 'default'" style="margin-left: 6px">
-                      {{ s.is_active ? '启用' : '停用' }}
-                    </n-tag>
-                  </template>
-                  <template #description>
-                    <n-ellipsis style="font-size: 11px; color: #888">{{ s.alias }} · {{ s.stream_url }}</n-ellipsis>
-                  </template>
-                  <template #header-extra>
-                    <n-space :size="4" @click.stop>
-                      <n-button size="tiny" quaternary @click="openEditSource(s)">编辑</n-button>
-                      <n-popconfirm @positive-click="onDeleteSource(s)">
-                        <template #trigger><n-button size="tiny" quaternary type="error">删除</n-button></template>
-                        确认删除源 "{{ s.name }}"？
-                      </n-popconfirm>
-                    </n-space>
-                  </template>
-                </n-thing>
-              </n-list-item>
-            </n-list>
-            <n-empty v-else description="无源；先 POST /api/live/sources 添加（源管理 UI 见 t11-5）" style="padding: 20px 0" />
-
-            <div v-if="files.length" class="section-title" style="margin-top: 12px">视频文件</div>
-            <n-spin :show="loadingFiles">
-              <n-list v-if="files.length" hoverable clickable bordered size="small">
-                <n-list-item
-                  v-for="f in files"
-                  :key="f.name"
-                  :class="{ active: f.name === selectedFile }"
-                  @click="selectFile(f)"
-                >
-                  <n-thing>
-                    <template #header>{{ f.name }}</template>
-                    <template #description>{{ (f.size / 1024 / 1024).toFixed(2) }} MB</template>
-                  </n-thing>
-                </n-list-item>
-              </n-list>
-            </n-spin>
-            </n-spin>
-            </n-tab-pane>
-
-            <!-- 演示模式 -->
-            <n-tab-pane name="demo" tab="🎬 演示">
-              <div class="section-title">示例视频</div>
+          <div class="section-title flex-between">
+            <span>视频源</span>
+            <n-button size="tiny" @click="editingSource = null; showSourceModal = true">+ 管理摄像头</n-button>
+          </div>
+          <n-tabs v-model:active="leftTab" type="line" size="small">
+            <n-tab-pane name="demo" title="示例视频">
               <n-spin :show="loadingDemo">
                 <n-list v-if="demoVideos.length" hoverable clickable bordered size="small">
                   <n-list-item
@@ -112,9 +58,29 @@
                   </n-list-item>
                 </n-list>
                 <n-empty v-if="!demoVideos.length && !loadingDemo" description="无演示视频" style="padding: 20px 0" />
-                <n-button v-if="demoVideos.length" type="primary" size="small" block style="margin-top: 12px" @click="playDemo">
-                  ▶ 播放演示
-                </n-button>
+              </n-spin>
+            </n-tab-pane>
+            <n-tab-pane name="source" title="摄像头源">
+              <n-spin :show="loadingSources">
+                <n-list v-if="sources.length" hoverable clickable bordered size="small">
+                  <n-list-item
+                    v-for="s in sources"
+                    :key="s.id"
+                    :class="{ active: currentSource?.id === s.id }"
+                    @click="selectSource(s)"
+                  >
+                    <n-thing>
+                      <template #header>
+                        <n-tag size="tiny" :type="s.is_active ? 'success' : 'default'">
+                          {{ s.is_active ? '在线' : '离线' }}
+                        </n-tag>
+                        <span class="src-name" style="margin-left: 6px">{{ s.alias || s.name }}</span>
+                      </template>
+                      <template #description style="font-size: 11px">{{ s.stream_url }}</template>
+                    </n-thing>
+                  </n-list-item>
+                </n-list>
+                <n-empty v-if="!sources.length && !loadingSources" description="无摄像头源" style="padding: 20px 0" />
               </n-spin>
             </n-tab-pane>
           </n-tabs>
@@ -122,10 +88,18 @@
 
         <!-- 中：播放器 -->
         <div class="live-right">
-          <VideoPlayer :src="playUrl" :overlay="currentOverlay" @timeupdate="onTime" @screenshot="onScreenshot" />
+          <!-- 真直播模式（帧级同步） -->
+          <CanvasPlayer
+            v-if="isDemoMode && liveStreamUrl"
+            :src="liveStreamUrl"
+            @result="onCanvasResult"
+            @done="onCanvasDone"
+            @status="onCanvasStatus"
+          />
+          <!-- 静态视频播放 -->
+          <VideoPlayer v-else :src="playUrl" :overlay="currentOverlay" @timeupdate="onTime" @screenshot="onScreenshot" />
           <div class="meta">
-            <n-tag v-if="isDemoMode" size="small" type="warning">🎬 演示</n-tag>
-            <n-tag v-else-if="currentSource" size="small" type="info">{{ currentSource.alias }}</n-tag>
+            <n-tag v-if="isDemoMode" size="small" type="warning">🎬 直播</n-tag>
             <span v-if="selectedFile" style="margin-left: 8px; font-size: 13px; color: #666">{{ selectedFile }}</span>
           </div>
         </div>
@@ -161,32 +135,32 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from 'vue'
-import { NCard, NSpin, NList, NListItem, NThing, NTag, NEmpty, NEllipsis, NText, NButton, NSpace, NSelect, NInputNumber, NScrollbar, NPopconfirm, useMessage } from 'naive-ui'
+import { ref, onMounted, computed, onUnmounted, watch, nextTick } from 'vue'
+import { NCard, NSpin, NList, NListItem, NThing, NTag, NEmpty, NText, NButton, NSpace, NSelect, NInputNumber, NScrollbar, NTabs, NTabPane, useMessage } from 'naive-ui'
 import VideoPlayer from '../components/live/VideoPlayer.vue'
-import SourceManageModal from '../components/live/SourceManageModal.vue'
-import { getSources, getSourceFiles, getPlayUrl, createScreenshot, deleteSource, getDemoVideos, getDemoVideoUrl } from '../api/live'
+import CanvasPlayer from '../components/live/CanvasPlayer.vue'
+import { createScreenshot, getDemoVideos, getDemoVideoUrl } from '../api/live'
 import { getTrainModels } from '../api/training'
 
-const sources = ref([])
-const files = ref([])
-const selectedSourceId = ref(null)
 const selectedFile = ref('')
 const playUrl = ref('')
-const currentSource = ref(null)
-const loadingSources = ref(false)
-const loadingFiles = ref(false)
-
-// 演示模式
-const leftTab = ref('sources')
 const demoVideos = ref([])
 const demoSelected = ref('')
 const loadingDemo = ref(false)
+const leftTab = ref('demo')  // 'demo' | 'source'
 const isDemoMode = ref(false)
+const liveStreamUrl = ref('')
+const currentSource = ref(null)  // for source mode
+
+// 摄像头源
+const sources = ref([])
+const loadingSources = ref(false)
+const showSourceModal = ref(false)
+const editingSource = ref(null)
 
 // 推理
 const trainModels = ref([])
-const selectedModel = ref(null)
+const selectedModel = ref('mmaction2:tsn-resnet50')  // 默认值，避免等待模型加载
 const device = ref('cpu')
 const strideSec = ref(2)
 const inferring = ref(false)
@@ -195,6 +169,7 @@ const inferStatusType = ref('info')
 const segments = ref([])
 const currentTime = ref(0)
 let es = null
+
 
 const deviceOptions = [
   { label: 'CPU', value: 'cpu' },
@@ -207,7 +182,10 @@ const modelOptions = computed(() => {
   return [...mm, { label: 'Qwen3-VL-Plus (VLM)', value: 'vlm:qwen3-vl-plus' }]
 })
 
-const canInfer = computed(() => (currentSource.value || isDemoMode.value) && selectedFile.value && selectedModel.value)
+const canInfer = computed(() => {
+  const hasSource = leftTab.value === 'demo' && demoSelected.value || leftTab.value === 'source' && currentSource.value
+  return hasSource && selectedModel.value
+})
 
 const currentSegIndex = computed(() => {
   const t = currentTime.value
@@ -233,16 +211,7 @@ function labelTagType(label) {
   return segColor(label)  // 复用同一套颜色逻辑
 }
 
-async function loadSources() {
-  loadingSources.value = true
-  try {
-    const d = await getSources()
-    sources.value = d.sources || []
-    if (sources.value.length && !currentSource.value) selectSource(sources.value[0])
-  } finally {
-    loadingSources.value = false
-  }
-}
+
 
 async function loadModels() {
   try {
@@ -254,39 +223,23 @@ async function loadModels() {
   } catch (e) { trainModels.value = [] }
 }
 
-async function selectSource(s) {
+async function loadSources() {
+  loadingSources.value = true
+  try {
+    const { getStreamSources } = await import('../api/live')
+    sources.value = await getStreamSources()
+  } catch (e) { sources.value = [] }
+  finally { loadingSources.value = false }
+}
+
+function selectSource(s) {
+  leftTab.value = 'source'
   currentSource.value = s
-  selectedSourceId.value = s.id
-  selectedFile.value = ''
+  demoSelected.value = ''
+  selectedFile.value = s.name
   playUrl.value = ''
-  files.value = []
-  loadingFiles.value = true
-  try {
-    const d = await getSourceFiles(s.id)
-    files.value = d.files || []
-    if (files.value.length) selectFile(files.value[0])
-  } finally {
-    loadingFiles.value = false
-  }
 }
 
-async function selectFile(f) {
-  selectedFile.value = f.name
-  playUrl.value = ''
-  if (isDemoMode.value) {
-    playUrl.value = getDemoVideoUrl(f.name)
-    return
-  }
-  if (!currentSource.value) return
-  try {
-    const d = await getPlayUrl(currentSource.value.alias, f.name)
-    playUrl.value = d.url
-  } catch (e) {
-    playUrl.value = ''
-  }
-}
-
-// 演示模式
 async function loadDemoVideos() {
   loadingDemo.value = true
   try {
@@ -297,31 +250,21 @@ async function loadDemoVideos() {
 }
 
 function selectDemo(v) {
+  leftTab.value = 'demo'
   demoSelected.value = v.name
   selectedFile.value = v.name
-  playUrl.value = getDemoVideoUrl(v.name)
-  isDemoMode.value = true
   currentSource.value = null
-}
-
-function playDemo() {
-  if (!demoSelected.value) return
-  const v = demoVideos.value.find(x => x.name === demoSelected.value)
-  if (v) selectDemo(v)
-  startInfer()
+  playUrl.value = getDemoVideoUrl(v.name)
 }
 
 function startInfer() {
-  if (!canInfer.value || !selectedModel.value) return
+  if (!selectedModel.value) selectedModel.value = 'mmaction2:tsn-resnet50'
+  if (!canInfer.value) return
+  // demo 模式走 CanvasPlayer（帧级同步）
+  if (leftTab.value === 'demo') { playDemo(); return }
   const [modelType, modelId] = selectedModel.value.split(':')
   const filename = selectedFile.value
-  let url
-  if (isDemoMode.value) {
-    url = `/api/live/demo/analyze/stream?video_name=${encodeURIComponent(filename)}&model_id=${encodeURIComponent(modelId)}&model_type=${modelType}&clip_sec=1&stride_sec=${strideSec.value}&device=${device.value}`
-  } else {
-    const alias = currentSource.value.alias
-    url = `/api/live/analyze/stream?alias=${encodeURIComponent(alias)}&filename=${encodeURIComponent(filename)}&model_id=${encodeURIComponent(modelId)}&model_type=${modelType}&clip_sec=1&stride_sec=${strideSec.value}&device=${device.value}`
-  }
+  const url = `/api/live/demo/analyze/stream?video_name=${encodeURIComponent(filename)}&model_id=${encodeURIComponent(modelId)}&model_type=${modelType}&clip_sec=1&stride_sec=${strideSec.value}&device=${device.value}`
   segments.value = []
   inferring.value = true
   inferStatus.value = '启动推理…'
@@ -347,48 +290,61 @@ function startInfer() {
 function stopInfer() {
   inferring.value = false
   if (es) { es.close(); es = null }
+  liveStreamUrl.value = ''
+  isDemoMode.value = false
+  es = null
+}
+
+async function playDemo() {
+  const v = demoVideos.value.find(x => x.name === demoSelected.value)
+  if (v) selectDemo(v)
+  segments.value = []
+  const [modelType, modelId] = (selectedModel.value || 'mmaction2:tsn-resnet50').split(':')
+  const url = `/api/live/demo/live_stream?video_name=${encodeURIComponent(selectedFile.value)}&model_id=${encodeURIComponent(modelId)}&stride_sec=${strideSec.value}&clip_sec=1&device=${device.value}`
+  isDemoMode.value = true
+  liveStreamUrl.value = url
+  inferring.value = true
+  inferStatus.value = '加载模型…'
 }
 
 function onTime(t) {
   currentTime.value = t
 }
 
-// 源管理 + 截屏
-const showSourceModal = ref(false)
-const editingSource = ref(null)
+function onCanvasResult(seg) {
+  segments.value.push(seg)
+  inferStatus.value = `推理中…已 ${segments.value.length} 段`
+}
+
+function onCanvasDone() {
+  inferStatus.value = `完成（${segments.value.length} 段）`
+  inferStatusType.value = 'success'
+  inferring.value = false
+}
+
+function onCanvasStatus(msg) {
+  inferStatus.value = msg
+}
+
 const msg = useMessage()
 
-function openAddSource() { editingSource.value = null; showSourceModal.value = true }
-function openEditSource(s) { editingSource.value = s; showSourceModal.value = true }
-async function onDeleteSource(s) {
-  try {
-    await deleteSource(s.id)
-    msg.success('已删除')
-    if (currentSource.value?.id === s.id) { currentSource.value = null; files.value = []; playUrl.value = '' }
-    await loadSources()
-  } catch (e) { msg.error('删除失败') }
-}
 async function onScreenshot(dataUrl) {
   // 下载到本地
   const a = document.createElement('a')
   a.href = dataUrl
   a.download = `shot-${Date.now()}.png`
   a.click()
-  // 上传到后端（关联当前源）
-  if (currentSource.value) {
-    try {
-      await createScreenshot({ source_id: currentSource.value.id, filename: `shot-${Date.now()}`, data_url: dataUrl })
-      msg.success('截图已入库')
-    } catch (e) { msg.warning('截图上传失败，本地已保存') }
-  } else {
-    msg.info('截图已下载（无关联源，未入库）')
-  }
+  // 上传到后端
+  try {
+    await createScreenshot({ filename: `shot-${Date.now()}`, data_url: dataUrl })
+    msg.success('截图已入库')
+  } catch (e) { msg.warning('截图上传失败，本地已保存') }
 }
 
 onMounted(() => {
-  loadSources()
   loadModels()
   loadDemoVideos()
+  loadSources()
 })
 onUnmounted(stopInfer)
 </script>
