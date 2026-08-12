@@ -1,377 +1,295 @@
 ---
 name: evaluation
 description: |
-  评测体系模块操作指南。用于模型管理、数据集管理、评测配置、评测运行、结果对比等操作。
-  触发场景：(1) 添加新模型，(2) 添加新数据集，(3) 配置评测任务，(4) 运行评测，(5) 查看/对比评测结果
+  评测体系模块操作指南。用于 mmaction2 模型评测、Speed Run、VLM 对比、数据集管理。
+  触发场景：(1) 运行正式测试 (2) Speed Run 批量标注 (3) VLM 对比评测 (4) 查看评测结果 (5) 模型性能对比
 ---
 
-# 评测体系模块
+# 评测体系模块 — mmaction2 动作识别评测
 
-本 skill 提供评测体系模块的完整操作指南。
+本 skill 提供评测体系模块的完整操作指南，包括正式测试、Speed Run、VLM 对比、结果管理。
 
 ## 项目结构
 
 ```
-evaluation/
-├── models/      # 模型定义 JSON
-├── datasets/    # 数据集定义 JSON
-├── configs/     # 评测配置 JSON
-├── scripts/     # 评测脚本
-└── results/     # 评测结果 JSON
+evaluation/                    # 评测配置目录
+├── configs/                   # 评测配置 JSON
+├── datasets/                  # 数据集定义 JSON
+├── models/                    # 模型定义 JSON
+├── outputs/                   # 评测产物（gitignore）
+└── scripts/                   # 评测脚本（空壳）
+
+results/
+├── training/
+│   ├── test_results.json      # 正式测试结果
+│   ├── metrics.json           # 训练指标
+│   └── checkpoints/           # 训练 checkpoint
+├── speedrun/
+│   ├── results.json            # Speed Run 聚合结果
+│   └── outputs/               # 标注视频
+└── live/                      # Live 推理结果
 ```
 
-## 启动服务
+## 评测模式
 
-```bash
-# 后端 (8788)
-python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8788
-```
+| 模式 | 脚本 | 产物 | 用途 |
+|------|------|------|------|
+| 正式测试 | `scripts/run_test.py` | `results/training/test_results.json` | top1/top5 准确率 |
+| Speed Run | `scripts/speedrun.py` | `results/speedrun/` | 批量标注视频 + 烟测指标 |
+| VLM 测试 | `scripts/run_test_vlm.py` | JSON | Qwen3-VL-Plus 对比 |
+| 单视频推理 | `scripts/inference.py` | JSON | 单视频预测 |
 
 ---
 
-## 1. 模型管理
+## 1. 正式测试（top1/top5 准确率）
 
-### 模型存储位置
-
-```
-evaluation/models/
-```
-
-### 添加新模型
-
-在 `evaluation/models/` 目录下创建 JSON 文件：
+### API：`POST /api/training/run_test`
 
 ```json
-// evaluation/models/gpt-4.json
 {
-  "id": "gpt-4",
-  "name": "GPT-4",
-  "provider": "OpenAI",
-  "type": "chat",
-  "endpoint": "https://api.openai.com/v1/chat/completions",
-  "parameters": {
-    "model": "gpt-4",
-    "temperature": 0.7,
-    "max_tokens": 4096
-  },
-  "description": "OpenAI GPT-4 model",
-  "enabled": true
+  "model_id": "tsn-resnet50",
+  "checkpoint": "checkpoints/tsn-resnet50/train-1234567890_best.pth",
+  "dataset_id": "quadruped_action",
+  "split": "test",
+  "device": "cuda:0"
 }
 ```
 
-### 模型字段说明
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 模型唯一标识 |
-| name | string | 模型名称 |
-| provider | string | 提供商 (OpenAI, Anthropic, etc.) |
-| type | string | 类型 (chat, completion) |
-| endpoint | string | API 端点 URL |
-| parameters | object | 默认参数 |
-| description | string | 描述 |
-| enabled | boolean | 是否启用 |
-
-### 多个模型文件
-
-```
-evaluation/models/
-├── gpt-4.json
-├── gpt-3.5-turbo.json
-├── claude-3-opus.json
-└── llama-3-70b.json
-```
-
----
-
-## 2. 数据集管理
-
-### 数据集存储位置
-
-```
-evaluation/datasets/
-```
-
-### 添加新数据集
-
-在 `evaluation/datasets/` 目录下创建 JSON 文件：
-
-```json
-// evaluation/datasets/mmlu.json
-{
-  "id": "mmlu",
-  "name": "MMLU",
-  "description": "Massive Multitask Language Understanding",
-  "task_type": "multiple_choice",
-  "metrics": ["accuracy"],
-  "num_samples": 14042,
-  "source": "https://github.com/hendrycks/test",
-  "categories": ["STEM", "Humanities", "Social Sciences", "Other"]
-}
-```
-
-### 数据集字段说明
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 数据集唯一标识 |
-| name | string | 数据集名称 |
-| description | string | 描述 |
-| task_type | string | 任务类型 (multiple_choice, qa, generation) |
-| metrics | array | 评估指标 |
-| num_samples | number | 样本数量 |
-| source | string | 数据来源 |
-| categories | array | 分类 |
-
-### 常用数据集
-
-```
-evaluation/datasets/
-├── mmlu.json
-├── humaneval.json
-├── mmb.json
-├── ceval.json
-└── agieval.json
-```
-
----
-
-## 3. 评测配置
-
-### 配置存储位置
-
-```
-evaluation/configs/
-```
-
-### 创建评测配置
-
-```json
-// evaluation/configs/llm-benchmark.json
-{
-  "id": "llm-benchmark",
-  "name": "LLM Benchmark",
-  "description": "Comprehensive LLM evaluation",
-  "models": ["gpt-4", "gpt-3.5-turbo", "claude-3-opus"],
-  "datasets": ["mmlu", "humaneval", "mmb"],
-  "metrics": {
-    "mmlu": "accuracy",
-    "humaneval": "pass@1",
-    "mmb": "accuracy"
-  },
-  "run_config": {
-    "batch_size": 10,
-    "max_concurrent": 5,
-    "timeout": 300
-  }
-}
-```
-
-### 配置字段说明
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 配置唯一标识 |
-| name | string | 配置名称 |
-| models | array | 参与的模型 ID 列表 |
-| datasets | array | 参与的数据集 ID 列表 |
-| metrics | object | 数据集到指标的映射 |
-| run_config | object | 运行参数 |
-
----
-
-## 4. 运行评测
-
-### API 端点
+### CLI（在 pet 上）
 
 ```bash
-# 获取模型列表
-GET /api/evaluation/models
-
-# 获取数据集列表
-GET /api/evaluation/datasets
-
-# 获取评测配置
-GET /api/evaluation/configs
-
-# 获取评测结果
-GET /api/evaluation/results
-
-# 运行评测（如果实现了）
-POST /api/evaluation/run
-{
-  "config_id": "llm-benchmark"
-}
+python scripts/run_test.py \
+  --run-id test-1234567890 \
+  --mmaction2-config configs/recognition/tsn/tsn_imagenet-pretrained-r50_8xb32-1x1x3-100e_kinetics400-rgb.py \
+  --checkpoint results/training/checkpoints/tsn-resnet50/train-xxx_best.pth \
+  --dataset-id quadruped_action --split test --device cuda:0
 ```
 
-### 手动运行评测
+### 环境变量
 
-创建评测脚本 `evaluation/scripts/run_benchmark.py`：
-
-```python
-#!/usr/bin/env python3
-"""运行评测脚本示例"""
-
-import json
-import os
-import time
-from datetime import datetime
-
-MODELS_DIR = "evaluation/models"
-DATASETS_DIR = "evaluation/datasets"
-RESULTS_DIR = "evaluation/results"
-
-def load_json(filepath):
-    with open(filepath) as f:
-        return json.load(f)
-
-def save_result(config_id, model_id, dataset_id, metrics):
-    """保存评测结果"""
-    result_file = os.path.join(RESULTS_DIR, f"{config_id}_{model_id}_{dataset_id}.json")
-    result = {
-        "config_id": config_id,
-        "model_id": model_id,
-        "dataset_id": dataset_id,
-        "metrics": metrics,
-        "timestamp": datetime.now().isoformat()
-    }
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    with open(result_file, 'w') as f:
-        json.dump(result, f, indent=2)
-    print(f"Result saved: {result_file}")
-
-def run_evaluation(config_id):
-    """运行评测"""
-    # 加载配置
-    config_path = os.path.join("evaluation/configs", f"{config_id}.json")
-    config = load_json(config_path)
-    
-    for model_id in config.get("models", []):
-        for dataset_id in config.get("datasets", []):
-            print(f"Running: {model_id} on {dataset_id}")
-            # TODO: 实现实际的评测逻辑
-            metrics = {"accuracy": 0.85}  # 示例结果
-            save_result(config_id, model_id, dataset_id, metrics)
-    
-    print("Evaluation completed!")
-
-if __name__ == "__main__":
-    import sys
-    config_id = sys.argv[1] if len(sys.argv) > 1 else "llm-benchmark"
-    run_evaluation(config_id)
-```
-
-运行：
 ```bash
-python3 evaluation/scripts/run_benchmark.py llm-benchmark
-```
-
----
-
-## 5. 评测结果
-
-### 结果存储位置
-
-```
-evaluation/results/
+TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1  # PyTorch ≥2.6 需要
+PYTHONPATH=models/mmaction2:repo_root
 ```
 
 ### 结果格式
 
 ```json
-// evaluation/results/llm-benchmark_gpt-4_mmlu.json
 {
-  "config_id": "llm-benchmark",
-  "model_id": "gpt-4",
-  "dataset_id": "mmlu",
+  "run_id": "test-1234567890",
+  "model_id": "tsn-resnet50",
+  "dataset_id": "quadruped_action",
+  "split": "test",
+  "status": "completed",
   "metrics": {
-    "accuracy": 0.86,
-    "f1": 0.84
+    "top1_acc": 0.87,
+    "top5_acc": 0.97
   },
-  "timestamp": "2026-07-10T10:30:00",
-  "details": {
-    "total_samples": 14042,
-    "correct": 12076,
-    "time_taken": 120.5
-  }
+  "stdout_tail": "...",
+  "finished_at": "2026-08-04T12:00:00"
 }
-```
-
-### 查看结果
-
-```bash
-# 列出所有结果
-ls evaluation/results/
-
-# 查看特定结果
-cat evaluation/results/llm-benchmark_gpt-4_mmlu.json
-
-# 批量查看
-ls evaluation/results/ | while read f; do echo "=== $f ==="; cat "evaluation/results/$f"; done
 ```
 
 ---
 
-## 6. 结果对比
+## 2. Speed Run（批量标注视频）
 
-### 对比脚本示例
+### 特点
+
+- **不需要标注文件**：直接喂视频路径，GT 从父目录名派生（仅 UCF101）
+- **产出标注视频**：cv2 叠字版 H.264 mp4
+- **每条结果即时落盘**：防长跑中途丢失
+
+### API：`POST /api/speedrun/run`
+
+```json
+{
+  "videos": ["/path/a.mp4", "/path/b.mp4"],
+  "models": "all",
+  "checkpoint": "pretrained",
+  "device": "cuda:0",
+  "force": false
+}
+```
+
+### CLI（在 pet 上）
+
+```bash
+# 全部模型
+python scripts/speedrun.py --videos a.mp4 b.mp4 --models all --device cuda:0
+
+# 指定模型
+python scripts/speedrun.py --videos a.mp4 --models tsn-resnet50 i3d-resnet50 --device cuda:0
+
+# 强制重跑
+python scripts/speedrun.py --videos a.mp4 --models tsn-resnet50 --force
+```
+
+### 产物
+
+```
+results/speedrun/
+├── results.json              # 聚合所有 (model, video) 结果
+└── outputs/
+    └── <model_id>/
+        └── <video_stem>.mp4  # 标注视频
+```
+
+### 结果字段
+
+```json
+{
+  "id": "speedrun-tsn-resnet50-a",
+  "model_id": "tsn-resnet50",
+  "video": "/path/a.mp4",
+  "checkpoint": "pretrained",
+  "gt_label": "walk_dog",
+  "correct": true,
+  "metrics": {
+    "top1_label": "walk_dog",
+    "top1_score": 0.92,
+    "top5": ["walk_dog", "jogging", "running", "walking", "standing"],
+    "gpu_mem_mb": 2048,
+    "elapsed_s": 1.23
+  },
+  "output_video": "tsn-resnet50/a.mp4",
+  "status": "completed",
+  "finished_at": "2026-08-04T12:00:00"
+}
+```
+
+### 标注视频格式
+
+- 上边条：`GT: <gt>`（绿）+ `pred: <label> (score)`（黄）
+- 下边条：top5 列表
+- 自动 H.264 转码（浏览器 `<video>` 只认 H.264）
+
+### 正确率计算
+
+`_matches(gt_label, top1_label)` 做 token-set 归一化匹配：
+- camelCase 拆分 → lowercase → 排序
+- 相等 → `correct=True`
+- 任一为空 → `None`（不参与统计）
+
+---
+
+## 3. VLM 对比评测
+
+集成 Qwen3-VL-Plus（DashScope API）进行对比评测。
+
+### 脚本
+
+```bash
+python scripts/run_test_vlm.py \
+  --videos /path/to/videos \
+  --dataset-id quadruped_action \
+  --output results/vlm_test.json
+```
+
+### API：`POST /api/training/run_test_vlm`
+
+```json
+{
+  "videos": ["/path/a.mp4"],
+  "dataset_id": "quadruped_action",
+  "device": "cpu"
+}
+```
+
+### 环境变量
+
+```bash
+DASHSCOPE_API_KEY=sk-xxx  # DashScope API Key
+```
+
+---
+
+## 4. 查看评测结果
+
+### API 端点
+
+```bash
+# 正式测试结果
+GET /api/training/test_results
+
+# Speed Run 结果
+GET /api/speedrun/results
+
+# Speed Run 标注视频流
+GET /api/speedrun/outputs/{model_id}/{video_stem}.mp4
+
+# 评测配置
+GET /api/evaluation/configs
+```
+
+### 前端页面
+
+- `/evaluation/results` — 正式测试结果
+- `/evaluation/speedrun` — Speed Run 页面（视频画廊 + accuracy summary）
+- `/training/results` — 训练结果（loss 曲线）
+
+---
+
+## 5. 模型性能对比
+
+### Speed Run per-model 准确率
 
 ```python
-#!/usr/bin/env python3
-"""结果对比脚本"""
+# 从 results.json 聚合
+per_model_correct = {}
+per_model_total = {}
+for r in results:
+    if r['correct'] is not None:
+        per_model_total[r['model_id']] = per_model_total.get(r['model_id'], 0) + 1
+        if r['correct']:
+            per_model_correct[r['model_id']] = per_model_correct.get(r['model_id'], 0) + 1
 
-import json
-import os
-from collections import defaultdict
-
-RESULTS_DIR = "evaluation/results"
-
-def load_results():
-    results = {}
-    for f in os.listdir(RESULTS_DIR):
-        if f.endswith('.json'):
-            with open(os.path.join(RESULTS_DIR, f)) as fp:
-                results[f] = json.load(fp)
-    return results
-
-def compare_models(results, dataset_id):
-    """对比不同模型在同一个数据集上的表现"""
-    comparison = defaultdict(dict)
-    
-    for name, result in results.items():
-        if result.get('dataset_id') == dataset_id:
-            model_id = result['model_id']
-            metrics = result.get('metrics', {})
-            comparison[model_id] = metrics
-    
-    return comparison
-
-if __name__ == "__main__":
-    results = load_results()
-    
-    # 对比 MMLU 数据集
-    print("=== MMLU Results ===")
-    comparison = compare_models(results, "mmlu")
-    for model, metrics in sorted(comparison.items(), 
-                                 key=lambda x: x[1].get('accuracy', 0), 
-                                 reverse=True):
-        print(f"{model}: {metrics}")
+accuracy = {m: per_model_correct[m] / per_model_total[m] for m in per_model_total}
 ```
+
+### Speed Run 烟测指标
+
+| 指标 | 含义 |
+|------|------|
+| `gpu_mem_mb` | 峰值显存 |
+| `elapsed_s` | 单 (model, video) 墙钟时间 |
+| `correct` | 是否正确（token-set 归一化） |
+
+---
+
+## 6. GPU 共享注意
+
+- **pet 是共享机**：跑前先 `nvidia-smi` 看卡
+- `--device cuda:0` 或 `cuda:1` 选空闲卡
+- Speed Run 串行跑，不要并行起多个
 
 ---
 
 ## 7. 常用命令
 
 ```bash
-# 启动服务
-python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8788
+# 查看正式测试结果
+cat results/training/test_results.json
 
-# 查看所有模型
-curl http://localhost:8788/api/evaluation/models
+# 查看 Speed Run 结果
+cat results/speedrun/results.json
 
-# 查看所有数据集
-curl http://localhost:8788/api/evaluation/datasets
+# 过滤某模型结果
+cat results/speedrun/results.json | jq '.[] | select(.model_id == "tsn-resnet50")'
 
-# 查看所有评测结果
-curl http://localhost:8788/api/evaluation/results
+# 查看标注视频
+ls results/speedrun/outputs/
 ```
+
+---
+
+## 8. 与 training skill 的关系
+
+- **正式测试** = 训练完成后的验证（用 test split）
+- **Speed Run** = 快速烟测（用任意视频，不需标注）
+- **VLM 测试** = 基于提示词的方法对比
+
+详见：
+- [[training]] — 训练模型、checkpoint 管理
+- [[testing]] — 测试/speed run 详细指南
+- [[using-mmaction2]] — mmaction2 深度指南
