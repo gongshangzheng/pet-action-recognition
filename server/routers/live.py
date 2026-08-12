@@ -23,7 +23,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from server.config import BASE_DIR, LIVE_DIR
+from server.config import BASE_DIR, LIVE_DIR, LIVE_DEMO_DIR
 from server.db_live import get_conn, init_db, now_iso
 from server.live.security import decode_stream_token, encode_stream_token
 from server.utils.file_utils import safe_resolve
@@ -322,3 +322,91 @@ async def create_screenshot(body: ScreenshotCreate):
         conn.commit()
         row = conn.execute("SELECT * FROM screenshots WHERE id = ?", (cur.lastrowid,)).fetchone()
     return {"screenshot": dict(row)}
+
+
+# ---------- 演示模式（Demo）----------
+
+@router.get("/demo/videos")
+async def list_demo_videos():
+    """列出演示视频（从 live/demos/ 目录）。"""
+    if not os.path.isdir(LIVE_DEMO_DIR):
+        return {"videos": []}
+    videos = []
+    for name in sorted(os.listdir(LIVE_DEMO_DIR)):
+        if name.startswith("."):
+            continue
+        ext = os.path.splitext(name)[1].lower()
+        if ext not in VIDEO_EXTS:
+            continue
+        full = os.path.join(LIVE_DEMO_DIR, name)
+        # 从文件名提取标签（如 locomotion-xxx.mp4 → locomotion）
+        parts = name.replace(ext, "").split("-")
+        label = parts[0] if parts else name
+        videos.append({
+            "name": name,
+            "label": label,
+            "size": os.path.getsize(full),
+        })
+    return {"videos": videos}
+
+
+@router.get("/demo/video/{video_name}")
+async def serve_demo_video(video_name: str):
+    """流式服务演示视频（无需 token）。"""
+    safe = safe_resolve(LIVE_DEMO_DIR, video_name)
+    if not safe or not os.path.isfile(safe):
+        return {"detail": "Video not found"}, 404
+    ext = os.path.splitext(video_name)[1].lower()
+    mime = {
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".mov": "video/quicktime",
+        ".mkv": "video/x-matroska",
+        ".avi": "video/x-msvideo",
+    }.get(ext, "video/mp4")
+    return FileResponse(safe, media_type=mime, filename=video_name)
+
+
+@router.get("/demo/analyze/stream")
+async def demo_analyze_stream(
+    video_name: str = Query(...),
+    model_id: str = Query(...),
+    model_type: str = Query("mmaction2"),
+    clip_sec: float = Query(1.0, gt=0),
+    stride_sec: float = Query(1.0, gt=0),
+    device: str = Query("cuda:0"),
+):
+    """SSE 演示推理：对 demo 视频逐段推理并流式返回结果。"""
+    safe = safe_resolve(LIVE_DEMO_DIR, video_name)
+    if not safe or not os.path.isfile(safe):
+        return {"detail": "Video not found"}, 404
+
+    args = [
+        sys.executable, LIVE_ANALYZE_SCRIPT,
+        "--video", safe, "--model-id", model_id, "--model-type", model_type,
+        "--clip-sec", str(clip_sec), "--stride-sec", str(stride_sec),
+        "--device", device,
+    ]
+    proc = subprocess.Popen(
+        args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, cwd=str(BASE_DIR),
+    )
+
+    def gen():
+        try:
+            for line in proc.stdout:
+                line = line.strip()
+                if line.startswith("{"):
+                    yield f"data: {line}\n\n"
+        finally:
+            if proc.poll() is None:
+                proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+    return StreamingResponse(
+        gen(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

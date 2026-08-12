@@ -38,8 +38,9 @@
       <div class="live-layout">
         <!-- 左：源 + 文件 -->
         <div class="live-left">
-          <n-spin :show="loadingSources">
-            <div class="section-title">摄像头源</div>
+          <n-tabs v-model:value="leftTab" size="small" type="segment">
+            <n-tab-pane name="sources" tab="摄像头源">
+              <n-spin :show="loadingSources">
             <n-list v-if="sources.length" hoverable clickable bordered>
               <n-list-item
                 v-for="s in sources"
@@ -87,17 +88,48 @@
                 </n-list-item>
               </n-list>
             </n-spin>
-          </n-spin>
+            </n-spin>
+            </n-tab-pane>
+
+            <!-- 演示模式 -->
+            <n-tab-pane name="demo" tab="🎬 演示">
+              <div class="section-title">示例视频</div>
+              <n-spin :show="loadingDemo">
+                <n-list v-if="demoVideos.length" hoverable clickable bordered size="small">
+                  <n-list-item
+                    v-for="v in demoVideos"
+                    :key="v.name"
+                    :class="{ active: demoSelected === v.name }"
+                    @click="selectDemo(v)"
+                  >
+                    <n-thing>
+                      <template #header>
+                        <n-tag size="tiny" :type="labelTagType(v.label)">{{ v.label }}</n-tag>
+                        <span style="margin-left: 6px">{{ v.name }}</span>
+                      </template>
+                      <template #description>{{ (v.size / 1024 / 1024).toFixed(1) }} MB</template>
+                    </n-thing>
+                  </n-list-item>
+                </n-list>
+                <n-empty v-if="!demoVideos.length && !loadingDemo" description="无演示视频" style="padding: 20px 0" />
+                <n-button v-if="demoVideos.length" type="primary" size="small" block style="margin-top: 12px" @click="playDemo">
+                  ▶ 播放演示
+                </n-button>
+              </n-spin>
+            </n-tab-pane>
+          </n-tabs>
         </div>
 
         <!-- 中：播放器 -->
         <div class="live-right">
           <VideoPlayer :src="playUrl" :overlay="currentOverlay" @timeupdate="onTime" @screenshot="onScreenshot" />
-          <div v-if="currentSource" class="meta">
-            <n-tag size="small" type="info">{{ currentSource.alias }}</n-tag>
+          <div class="meta">
+            <n-tag v-if="currentSource" size="small" type="info">{{ currentSource.alias }}</n-tag>
+            <n-tag v-if="isDemoMode" size="small" type="warning">🎬 演示</n-tag>
             <span v-if="selectedFile" style="margin-left: 8px; font-size: 13px; color: #666">{{ selectedFile }}</span>
             <n-text v-if="playUrl" depth="3" style="font-size: 12px; margin-left: 8px">
-              stream_token 已签名（借鉴 pet-videos 安全方案）
+              <span v-if="isDemoMode">直接访问，无需 stream_token</span>
+              <span v-else>stream_token 已签名（借鉴 pet-videos 安全方案）</span>
             </n-text>
           </div>
         </div>
@@ -137,7 +169,7 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { NCard, NSpin, NList, NListItem, NThing, NTag, NEmpty, NEllipsis, NText, NButton, NSpace, NSelect, NInputNumber, NScrollbar, NPopconfirm, useMessage } from 'naive-ui'
 import VideoPlayer from '../components/live/VideoPlayer.vue'
 import SourceManageModal from '../components/live/SourceManageModal.vue'
-import { getSources, getSourceFiles, getPlayUrl, createScreenshot, deleteSource } from '../api/live'
+import { getSources, getSourceFiles, getPlayUrl, createScreenshot, deleteSource, getDemoVideos, getDemoVideoUrl } from '../api/live'
 import { getTrainModels } from '../api/training'
 
 const sources = ref([])
@@ -148,6 +180,13 @@ const playUrl = ref('')
 const currentSource = ref(null)
 const loadingSources = ref(false)
 const loadingFiles = ref(false)
+
+// 演示模式
+const leftTab = ref('sources')
+const demoVideos = ref([])
+const demoSelected = ref('')
+const loadingDemo = ref(false)
+const isDemoMode = ref(false)
 
 // 推理
 const trainModels = ref([])
@@ -172,7 +211,7 @@ const modelOptions = computed(() => {
   return [...mm, { label: 'Qwen3-VL-Plus (VLM)', value: 'vlm:qwen3-vl-plus' }]
 })
 
-const canInfer = computed(() => currentSource.value && selectedFile.value && selectedModel.value)
+const canInfer = computed(() => (currentSource.value || isDemoMode.value) && selectedFile.value && selectedModel.value)
 
 const currentSegIndex = computed(() => {
   const t = currentTime.value
@@ -192,6 +231,10 @@ function segColor(label) {
   let h = 0
   for (const c of label) h = (h * 31 + c.charCodeAt(0)) % 1000
   return COLOR_TYPES[h % COLOR_TYPES.length]
+}
+
+function labelTagType(label) {
+  return segColor(label)  // 复用同一套颜色逻辑
 }
 
 async function loadSources() {
@@ -234,6 +277,10 @@ async function selectSource(s) {
 async function selectFile(f) {
   selectedFile.value = f.name
   playUrl.value = ''
+  if (isDemoMode.value) {
+    playUrl.value = getDemoVideoUrl(f.name)
+    return
+  }
   if (!currentSource.value) return
   try {
     const d = await getPlayUrl(currentSource.value.alias, f.name)
@@ -243,12 +290,42 @@ async function selectFile(f) {
   }
 }
 
+// 演示模式
+async function loadDemoVideos() {
+  loadingDemo.value = true
+  try {
+    const d = await getDemoVideos()
+    demoVideos.value = d.videos || []
+  } catch (e) { demoVideos.value = [] }
+  finally { loadingDemo.value = false }
+}
+
+function selectDemo(v) {
+  demoSelected.value = v.name
+  selectedFile.value = v.name
+  playUrl.value = getDemoVideoUrl(v.name)
+  isDemoMode.value = true
+  currentSource.value = null
+}
+
+function playDemo() {
+  if (!demoSelected.value) return
+  const v = demoVideos.value.find(x => x.name === demoSelected.value)
+  if (v) selectDemo(v)
+  startInfer()
+}
+
 function startInfer() {
   if (!canInfer.value || !selectedModel.value) return
   const [modelType, modelId] = selectedModel.value.split(':')
-  const alias = currentSource.value.alias
   const filename = selectedFile.value
-  const url = `/api/live/analyze/stream?alias=${encodeURIComponent(alias)}&filename=${encodeURIComponent(filename)}&model_id=${encodeURIComponent(modelId)}&model_type=${modelType}&clip_sec=1&stride_sec=${strideSec.value}&device=${device.value}`
+  let url
+  if (isDemoMode.value) {
+    url = `/api/live/demo/analyze/stream?video_name=${encodeURIComponent(filename)}&model_id=${encodeURIComponent(modelId)}&model_type=${modelType}&clip_sec=1&stride_sec=${strideSec.value}&device=${device.value}`
+  } else {
+    const alias = currentSource.value.alias
+    url = `/api/live/analyze/stream?alias=${encodeURIComponent(alias)}&filename=${encodeURIComponent(filename)}&model_id=${encodeURIComponent(modelId)}&model_type=${modelType}&clip_sec=1&stride_sec=${strideSec.value}&device=${device.value}`
+  }
   segments.value = []
   inferring.value = true
   inferStatus.value = '启动推理…'

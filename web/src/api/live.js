@@ -17,3 +17,7 @@ export const getPlayUrl = (alias, filename) =>
 export const getScreenshots = (sourceId) =>
   request.get('/live/screenshots', sourceId ? { params: { source_id: sourceId } } : {})
 export const createScreenshot = (data) => request.post('/live/screenshots', data)
+
+// 演示模式
+export const getDemoVideos = () => request.get('/live/demo/videos')
+export const getDemoVideoUrl = (videoName) => `/api/live/demo/video/${videoName}`

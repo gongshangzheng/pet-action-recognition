@@ -73,6 +73,9 @@ LIVE_OUTPUTS_DIR = os.path.join(LIVE_DIR, "clips")          # results/live/clips
 LIVE_RESULTS_JSON = os.path.join(LIVE_DIR, "results.json")  # 每片产物聚合
 LIVE_CAMERAS_JSON = os.path.join(LIVE_DIR, "cameras.json")  # 注册的摄像头列表
 
+# Live 演示模式：示例视频目录
+LIVE_DEMO_DIR = os.path.join(BASE_DIR, "live", "demos")
+
 # VLM（Qwen3-VL-Plus via DashScope）——用于把基于提示词的方法接入测试框架对比
 DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY", "")
 
