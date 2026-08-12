@@ -452,7 +452,8 @@
           "status": "completed",
           "assignee": "郑鑫裕",
           "description": "新建 server/db_live.py + server/live/security.py(stream_token) + server/routers/live.py(源CRUD/流代理/截图)。main.py include_router。curl 测通",
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t11-1.md"
         },
         {
           "id": "t11-2",
@@ -460,7 +461,8 @@
           "status": "completed",
           "assignee": "郑鑫裕",
           "description": "web/src/api/live.js + views/Live.vue + components/live/VideoPlayer.vue，video 用 stream_token url 播放",
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t11-2.md"
         },
         {
           "id": "t11-3",
@@ -468,7 +470,8 @@
           "status": "completed",
           "assignee": "郑鑫裕",
           "description": "PtzJoystick.vue，十字方向+复位+translate 模拟云台",
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t11-3.md"
         },
         {
           "id": "t11-4",
@@ -476,7 +479,8 @@
           "status": "completed",
           "assignee": "郑鑫裕",
           "description": "ScreenshotGallery.vue，canvas.drawImage→toDataURL→下载+POST 入库，Web Audio 快门声",
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t11-4.md"
         },
         {
           "id": "t11-5",
@@ -484,7 +488,8 @@
           "status": "completed",
           "assignee": "郑鑫裕",
           "description": "源管理表单 name/stream_url/storage_path/is_active 接 /api/live/sources",
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t11-5.md"
         },
         {
           "id": "t11-6",
@@ -500,7 +505,8 @@
           "status": "completed",
           "assignee": "郑鑫裕",
           "description": "GET /api/live/analyze/stream SSE。decord VideoReader 滑窗取clip；mmaction2模型forward(复用_infer.py原语+模型缓存)；VLM路径decord取帧→临时mp4→vlm_recognize→删临时。每段emit {t_start,t_end,label,score,model}。详见 wiki live-realtime-inference-plan",
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t11-7.md"
         },
         {
           "id": "t11-8",
@@ -508,7 +514,8 @@
           "status": "completed",
           "assignee": "郑鑫裕",
           "description": "Live.vue 增 EventSource 接 SSE；segments[] push；video.currentTime 落段→OSD显示label+score；进度条画色块；右侧段列表。切换/关闭 close()",
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t11-8.md"
         },
         {
           "id": "t11-9",
@@ -516,7 +523,8 @@
           "status": "completed",
           "assignee": "郑鑫裕",
           "description": "选 source+file 后选 model：从 evaluation/models 读 mmaction2 分类模型列表 + Qwen3-VL 选项 + pretrained/trained checkpoint。开始推理按钮触发 SSE",
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t11-9.md"
         }
       ]
     }
