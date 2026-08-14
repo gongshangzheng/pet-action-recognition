@@ -8,6 +8,7 @@ cats 数据集（79 视频，最长 124s）需要切段后适配现有训练框�
 - **新增切段脚本** `scripts/slice_cats_clips.py`：uniform stride=2s 切段逻辑，生成 mmaction2 兼容的 ann file
 - **新增 dataset class**：规范化 dataset 路径/类目/ann_file 格式，适配现有训练路由
 - **训练 4 个精选模型**：基于现有结果选取 top performer + 快速模型 + 轻量模型
+- **移除不可训练的模型**：VideoMAE 族（`videomae-base`、`videomaev2-base`、`videomae-ava-base`）的 mmaction2 recognition config 缺少训练配置（无 train_dataloader/optim_wrapper/train_cfg），历史上从未成功训练过，从模型注册表中移除
 
 ## Capabilities
 

@@ -90,16 +90,19 @@ QUADRUPED_CATS_CLASSES_FILE = QUADRUPED_CATS_ROOT / "classes.txt"
 | slowonly-resnet50 | 100% | 0.14 | 2098 | 均衡 |
 | timesformer-divst | 100% | 0.22 | 830 | 显存最低 |
 
-### 精选 4 模型
+### 精选模型（最终）
 
 目标：覆盖高精度 + 轻量高速 + 均衡三类
 
-| # | 模型 | 选择理由 |
-|---|------|----------|
-| 1 | **videomaev2-base** | 现有最高精度（0.843），cats 迁移学习首选 |
-| 2 | **tsm-resnet50** | 速度最快（RTF=0.13），轻量，适合实时场景 |
-| 3 | **slowonly-resnet50** | 高精度（0.718）+ 速度快（RTF=0.14）+ 显存合理 |
-| 4 | **timesformer-divst** | 精度尚可（0.731）+ 显存最低（830MB），边缘部署友好 |
+| # | 模型 | cats val top1 | 推理显存 | 选择理由 |
+|---|------|------------|---------|----------|
+| 1 | **slowonly-resnet50** | **67.05%** | 2098MB | 最高精度 |
+| 2 | **tsm-resnet50** | 62.50% | 1057MB | 速度最快，轻量 |
+| 3 | **timesformer-divst** | 59.09% | 735MB | 显存最低，边缘友好 |
+
+**VideoMAE 族移除原因**：
+- `videomaev2-base` / `videomae-base`：recognition config 无 train_dataloader/optim_wrapper/train_cfg，从未成功训练
+- `videomae-ava-base`：检测模型，不是动作识别
 
 **排除**：
 - swin-tiny：精度高但 speedrun acc=0%（模型可能有问题）
@@ -110,10 +113,10 @@ QUADRUPED_CATS_CLASSES_FILE = QUADRUPED_CATS_ROOT / "classes.txt"
 | 参数 | 值 |
 |------|-----|
 | 训练 epochs | 15 |
-| 优化器 | AdamW |
-| 初始 lr | 1e-4（videomaev2）/ 1e-3（其他） |
-| Batch size | 4（videomaev2）/ 8（其他） |
-| Weight decay | 0.05 |
+| 优化器 | SGD（TSM）/ AdamW（SlowOnly/TimeSformer） |
+| 初始 lr | 1e-3 |
+| Batch size | 4（TSM/TimeSformer）/ 8（SlowOnly） |
+| Weight decay | 0.0001 |
 | 验证策略 | best top-1 acc |
 | 断点续训 | 支持（从 latest.pth 恢复） |
 

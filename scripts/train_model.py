@@ -221,7 +221,7 @@ def _read_pipeline_from_config(cfg_path: str) -> tuple[str, str]:
 
 def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | None = None,
                           ann_train: str | None = None, ann_val: str | None = None,
-                          videos_train: str | None = None, videos_val: str | None = None) -> str | None:
+                          videos_train: str | None = None, videos_val: str | None = None) -> tuple[str | None, bool]:
     """生成临时 override config Python 文件。
 
     三类内容均写入 Python 文件（而非 --cfg-options），因为：
@@ -241,14 +241,67 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
     # 自定义数据集 → 必须生成 override（--cfg-options 会丢失 pipeline）
     has_dataset = bool(ann_train or ann_val)
     if not (has_wd or has_blr or has_ls or snippet or extra_lines or has_dataset):
-        return None
+        return None, False
 
     os.makedirs(OVERRIDES_DIR, exist_ok=True)
     out = os.path.join(OVERRIDES_DIR, f"{args.run_id}_override.py")
+    # videomaev2 等模型 config 只有 model/test_dataloader，无 optim_wrapper/train_cfg
+    _sched_lines: list[str] = []
+    try:
+        from mmengine.config import Config as _Config
+        _bc = _Config.fromfile(cfg_path)
+        if not _bc.get("optim_wrapper") and not _bc.get("optimizer"):
+            _backbone_type = str(_bc.get("model", {}).get("backbone", {}).get("type", ""))
+            if "VisionTransformer" in _backbone_type or "ViT" in _backbone_type:
+                _sched_path = os.path.abspath(
+                    os.path.join(os.path.dirname(cfg_path), "../../_base_/schedules/adam_20e.py"))
+            else:
+                _sched_path = os.path.abspath(
+                    os.path.join(os.path.dirname(cfg_path), "../../_base_/schedules/sgd_50e.py"))
+            with open(_sched_path, encoding="utf-8") as _sf:
+                _in_block = 0  # 括号深度，用于跳过多行语句（如 train_cfg = dict(...)\n    ...\n)
+                for _line in _sf:
+                    _stripped = _line.rstrip()
+                    if _in_block > 0:
+                        # 仍在多行语句内 → 计数括号，找结束
+                        _in_block += _stripped.count("(") - _stripped.count(")")
+                        if _in_block <= 0:
+                            _in_block = 0
+                        continue
+                    if _stripped.startswith("test_cfg"):
+                        continue
+                    if _stripped.startswith("_base_"):
+                        continue
+                    if _stripped.startswith("train_cfg"):
+                        # 提取 train_cfg：用用户 epochs 替换 schedule 的 max_epochs
+                        # 保留 type（EpochBasedTrainLoop），跳过 by_epoch 避免冲突
+                        _in_block = _stripped.count("(") - _stripped.count(")")
+                        # 第一行：train_cfg = dict(
+                        _sched_lines.append(
+                            f"train_cfg = dict(type='EpochBasedTrainLoop', "
+                            f"max_epochs={args.epochs}, val_begin=1, val_interval=1)")
+                        continue
+                    if _stripped.startswith("param_scheduler"):
+                        # param_scheduler 需要 max_epochs 来确定 LR 衰减的 end 值
+                        # 用用户指定的 epochs 替换 schedule 的默认值
+                        _sched_lines.append(f"param_scheduler = [")
+                        _sched_lines.append(
+                            f"    dict("
+                            f"type='MultiStepLR', begin=0, end={args.epochs}, "
+                            f"by_epoch=True, milestones=[{(args.epochs * 0.5):.0f}], gamma=0.1)"
+                        )
+                        _sched_lines.append("]")
+                        _in_block = 1  # 跳过 schedule 原有的 param_scheduler
+                        continue
+                    if _stripped:
+                        _sched_lines.append(_stripped)
+            log(args.run_id, f"[override] config 无 optim_wrapper，内联 schedule: {_sched_path}")
+    except Exception:
+        pass
     lines = [
         "# 自动生成的 override config — 高级超参覆盖（dict 值需走 Python 文件）",
         f"# run_id={args.run_id}",
-        f'_base_ = ["{os.path.abspath(cfg_path)}"]',
+        f"_base_ = [{repr(os.path.abspath(cfg_path))}]",
         "",
     ]
     # label_smoothing 需 LabelSmoothLoss（本环境 mmaction 无此类）→ import 注册
@@ -287,8 +340,8 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
             vid_str = repr(videos_train) if videos_train else "None"
             lines.append(f"train_dataloader = dict(")
             lines.append(f"    batch_size={args.batch_size},")
-            lines.append(f"    num_workers=8,")
-            lines.append(f"    persistent_workers=True,")
+            lines.append(f"    num_workers=2,")
+            lines.append(f"    persistent_workers=False,")
             lines.append(f"    sampler=dict(type='DefaultSampler', shuffle=True),")
             lines.append(f"    dataset=dict(")
             lines.append(f"        type='VideoDataset',")
@@ -302,8 +355,8 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
             vid_str = repr(videos_val) if videos_val else "None"
             lines.append(f"val_dataloader = dict(")
             lines.append(f"    batch_size={max(1, args.batch_size // 2)},")
-            lines.append(f"    num_workers=8,")
-            lines.append(f"    persistent_workers=True,")
+            lines.append(f"    num_workers=2,")
+            lines.append(f"    persistent_workers=False,")
             lines.append(f"    sampler=dict(type='DefaultSampler', shuffle=False),")
             lines.append(f"    dataset=dict(")
             lines.append(f"        type='VideoDataset',")
@@ -319,11 +372,18 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
         lines.append("")
         lines.append("# === 自动补齐（如缺 val_cfg）===")
         lines.extend(extra_lines)
+    # 内联 schedule 内容（内联方式避免 test_cfg 重复冲突）
+    if _sched_lines:
+        lines.append("")
+        lines.extend(_sched_lines)
+
+    with open(out, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
 
     with open(out, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     log(args.run_id, f"[override] 生成 {out}")
-    return out
+    return out, bool(_sched_lines)
 
 
 def _hook_idx(cfg_path: str, hook_type: str) -> int | None:
@@ -372,27 +432,19 @@ def _reconstruct_resume_ckpt(work_dir: str | None, explicit: str | None = None) 
     return combined
 
 
-def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, videos_val: str) -> list[str]:
+def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, videos_val: str,
+                        has_inlined_schedule: bool = False) -> list[str]:
     cfg_path = args.mmaction2_config
     if not os.path.isabs(cfg_path):
         cfg_path = resolve_mmaction2_config(cfg_path)
     n_cls = args.num_classes if args.num_classes is not None else num_classes_for(args.dataset_id)
-    # 检测 config 是否缺 val_cfg（x3d/uniformer 等 builtin 无 val_cfg → mmengine 报
-    # val_dataloader/val_cfg/val_evaluator 三者必须同 None/同有）。缺则用 override 补 ValLoop。
-    extra = []
-    blend_augment_indices: list[int] = []
     is_iter_based = False
+    blend_augment_indices: list[int] = []
     _cfg = None
     try:
         from mmengine.config import Config
         _cfg = Config.fromfile(cfg_path)
-        # x3d/uniformer 等 builtin 既无 val_cfg 也无 val_dataloader，但 train_model 会通过
-        # --cfg-options 注入 val_dataloader（ann_val 非空时）+ val_evaluator，三者必须同有，
-        # 故缺 val_cfg 就补 ValLoop（条件含 ann_val，覆盖原 config 无 val_dataloader 的情况）
-        if not _cfg.get("val_cfg") and (_cfg.get("val_dataloader") or ann_val):
-            extra.append("val_cfg = dict(type='ValLoop')")
         # iter-based：config 显式 type=IterBasedTrainLoop 或 by_epoch=False
-        # x3d/uniformer 无 train_cfg → 需注入 by_epoch=True 走 EpochBased
         _tc = _cfg.get("train_cfg") or {}
         if "Iter" in str(_tc.get("type", "")) or _tc.get("by_epoch", True) is False:
             is_iter_based = True
@@ -407,12 +459,7 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     except Exception:
         pass
 
-    # 高级超参（dict 值）或自定义数据集 → 临时 override config；标量/列表索引仍走 cfg-options
-    override = _maybe_write_override(args, cfg_path, n_cls, extra_lines=extra,
-                                      ann_train=ann_train, ann_val=ann_val,
-                                      videos_train=videos_train, videos_val=videos_val)
-    if override:
-        cfg_path = override
+    # Override 已由 main 生成并通过 has_inlined_schedule 传参；此处仅用 cfg_path 构建命令
     cmd = [sys.executable, TRAIN_PY, cfg_path, "--work-dir", args.work_dir, "--launcher", "none"]
     if args.seed is not None:
         cmd += ["--seed", str(args.seed)]
@@ -434,13 +481,16 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
         f"train_dataloader.batch_size={args.batch_size}",
         f"val_dataloader.batch_size={max(1, args.batch_size // 2)}",
     ]
-    # epoch-based：注入 max_epochs（by_epoch 仅当 train_cfg 无 type 时注入，
-    # 否则 base 有 type='EpochBasedTrainLoop' 再加 by_epoch=True 会冲突）
-    # iter-based（显式 type=IterBasedTrainLoop 或 by_epoch=False）用 config 默认 max_iters
+    # epoch-based：注入 max_epochs
+    # 若从 schedule 内联了 optim_wrapper/param_scheduler（train_cfg 已内联），
+    # 则 --cfg-options 只设 max_epochs（内联 schedule 已有 type 和 by_epoch）
     if not is_iter_based:
         cfg_options.append(f"train_cfg.max_epochs={args.epochs}")
-        # 仅当 base train_cfg 没有 type 时才补充（避免 type+by_epoch 冲突）
-        if _cfg is not None and not (_cfg.get("train_cfg") or {}).get("type"):
+        if has_inlined_schedule:
+            # train_cfg 已内联：跳过 type 和 by_epoch（避免冲突）
+            pass
+        elif _cfg is not None and not (_cfg.get("train_cfg") or {}).get("type"):
+            # 原生 config 无 train_cfg.type → 只加 by_epoch
             cfg_options.append("train_cfg.by_epoch=True")
     if n_cls is not None:
         cfg_options.append(f"model.cls_head.num_classes={n_cls}")
@@ -829,6 +879,20 @@ def main() -> int:
     parser.add_argument("--extra-args", default="")
     args = parser.parse_args()
 
+    # GPU 内存限制（共享 GPU 时防止被其他进程挤掉 + 减少碎片）
+    # 在任何 CUDA 操作前设置，且只在 GPU 模式生效
+    if args.device == "cuda":
+        try:
+            import torch as _torch
+            if _torch.cuda.is_available():
+                # 默认最多用 22% = ~5.4GB on 24GB GPU；可通过环境变量覆盖
+                frac = float(os.environ.get("TRAIN_GPU_MEM_FRAC", "0.22"))
+                _torch.cuda.set_per_process_memory_fraction(frac, device=0)
+                _torch.cuda.empty_cache()
+                log(args.run_id, f"[mem] GPU limit: {frac:.0%}")
+        except Exception as ex:
+            log(args.run_id, f"[warn] GPU memory limit 设置失败: {ex}")
+
     modes = [
         ("resume", args.resume),
         ("load_from", args.load_from),
@@ -894,7 +958,29 @@ def main() -> int:
         upsert_run(run)
         return 1
 
-    cmd = build_train_command(args, ann_train, videos_train, ann_val, videos_val)
+    # 检测 config 是否缺 val_cfg（与 build_train_command 内部逻辑相同）
+    extra_main = []
+    _cfg_main = None
+    try:
+        from mmengine.config import Config
+        _cfg_main = Config.fromfile(args.mmaction2_config)
+        if not _cfg_main.get("val_cfg") and (_cfg_main.get("val_dataloader") or ann_val):
+            extra_main.append("val_cfg = dict(type='ValLoop')")
+    except Exception:
+        pass
+    override_main, has_sched = _maybe_write_override(
+        args,
+        os.path.abspath(args.mmaction2_config) if os.path.isabs(args.mmaction2_config)
+        else resolve_mmaction2_config(args.mmaction2_config),
+        args.num_classes if args.num_classes is not None else num_classes_for(args.dataset_id),
+        extra_lines=extra_main,
+        ann_train=ann_train, ann_val=ann_val,
+        videos_train=videos_train, videos_val=videos_val)
+    if override_main:
+        args.mmaction2_config = override_main
+
+    cmd = build_train_command(args, ann_train, videos_train, ann_val, videos_val,
+                              has_inlined_schedule=has_sched)
     log(args.run_id, f"[cmd] {' '.join(cmd)}")
 
     env = os.environ.copy()
