@@ -116,6 +116,14 @@ def upsert_run(run: dict) -> None:
 
 
 def num_classes_for(dataset_id: str) -> int | None:
+    if dataset_id == "quadruped_cats_v1":
+        classes_file = REPO / "datasets" / "cats" / "classes.txt"
+        if classes_file.is_file():
+            with open(classes_file, "r", encoding="utf-8") as f:
+                lines = [ln.strip() for ln in f if ln.strip()]
+            if lines:
+                return len(lines)
+        return 5  # cats v1 has 5 classes
     if os.path.isfile(QUADRUPED_CLASSES_FILE):
         with open(QUADRUPED_CLASSES_FILE, "r", encoding="utf-8") as f:
             lines = [ln.strip() for ln in f if ln.strip()]
@@ -162,23 +170,77 @@ def resolve_dataset_paths(dataset_id: str):
     )
 
 
-def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | None = None) -> str | None:
-    """如有高级超参（需 dict 值）或 extra_lines，生成临时 override config（_base_ 用户 config）。
+def _pipeline_repr(pipeline: list) -> str:
+    """把 pipeline list 转为单行 repr 字符串。"""
+    parts = []
+    for item in pipeline:
+        parts.append(repr(dict(item)))
+    return ", ".join(parts)
 
-    为什么用文件而不是 --cfg-options：mmengine DictAction 只解析标量/列表索引，
-    不支持 {} 字典字面量（会被当成字符串或按逗号拆成 list），故 loss_cls /
-    paramwise_cfg 这类 dict 值必须走 Python config 文件。标量（weight_decay
-    本可直接走 cfg-options，但为保持单一来源也放进 override 文件）。
 
-    num_clips_val 是列表索引覆盖，仍走 cfg-options（DictAction 支持）。
+def _read_pipeline_from_config(cfg_path: str) -> tuple[str, str]:
+    """从 base config 读取 train 和 val pipeline repr 字符串。
+
+    优先用 train_dataloader.pipeline（若有），否则从 test_dataloader.pipeline 派生：
+    - train pipeline: test_mode=False, num_clips 保持
+    - val pipeline: test_mode=True（保持原样）
+
+    Returns:
+        (train_pipeline_repr, val_pipeline_repr)
+    """
+    try:
+        from mmengine.config import Config as _Config
+        cfg = _Config.fromfile(cfg_path)
+        # 优先 train_dataloader（含正确 train pipeline）
+        train_cfg = cfg.get("train_dataloader")
+        test_cfg = cfg.get("test_dataloader")
+        val_cfg = cfg.get("val_dataloader")
+        # 找 val pipeline（val_dataloader 或 test_dataloader）
+        if val_cfg is not None and "dataset" in val_cfg:
+            val_pipeline = val_cfg["dataset"].get("pipeline", [])
+        elif test_cfg is not None and "dataset" in test_cfg:
+            val_pipeline = test_cfg["dataset"].get("pipeline", [])
+        else:
+            val_pipeline = []
+        # 找 train pipeline
+        if train_cfg is not None and "dataset" in train_cfg:
+            train_pipeline = train_cfg["dataset"].get("pipeline", [])
+        else:
+            # 从 val_pipeline 派生：所有 SampleFrames 去掉 test_mode
+            train_pipeline = []
+            for item in val_pipeline:
+                item = dict(item)
+                if item.get("type") == "SampleFrames":
+                    item.pop("test_mode", None)
+                train_pipeline.append(item)
+        return _pipeline_repr(train_pipeline), _pipeline_repr(val_pipeline)
+    except Exception as ex:
+        log("internal", f"[warn] 读取 pipeline 失败，回退空列表: {ex}")
+        return "", ""
+
+
+def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | None = None,
+                          ann_train: str | None = None, ann_val: str | None = None,
+                          videos_train: str | None = None, videos_val: str | None = None) -> str | None:
+    """生成临时 override config Python 文件。
+
+    三类内容均写入 Python 文件（而非 --cfg-options），因为：
+    1. 高级超参（dict 值：weight_decay / backbone_lr_mult / label_smoothing）
+    2. 自定义数据集（ann_train/ann_val）— base config 可能无 train_dataloader，
+       --cfg-options 创建的 dict 丢失 pipeline，导致 VideoDataset.__init__ 报错
+    3. extra_lines（如自动补齐的 val_cfg）
+
     extra_lines：额外 Python 赋值行（如 val_cfg = dict(type='ValLoop')），verbatim 追加。
+    ann_train/ann_val/videos_train/videos_val：dataset 路径，写入完整 train_dataloader / val_dataloader。
     """
     has_wd = getattr(args, "weight_decay", None) is not None
     has_blr = getattr(args, "backbone_lr_mult", None) is not None
     has_ls = bool(getattr(args, "label_smoothing", 0)) and args.label_smoothing > 0
     snippet = (getattr(args, "override_snippet", "") or "").strip()
     extra_lines = extra_lines or []
-    if not (has_wd or has_blr or has_ls or snippet or extra_lines):
+    # 自定义数据集 → 必须生成 override（--cfg-options 会丢失 pipeline）
+    has_dataset = bool(ann_train or ann_val)
+    if not (has_wd or has_blr or has_ls or snippet or extra_lines or has_dataset):
         return None
 
     os.makedirs(OVERRIDES_DIR, exist_ok=True)
@@ -212,6 +274,47 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
         lines.append("")
         lines.append("# === 用户原始 Python 片段（verbatim）===")
         lines.append(snippet)
+
+    # 自定义数据集：写入完整的 train_dataloader / val_dataloader（含 pipeline）
+    # --cfg-options 的 dataset.XXX 只创建空 dict，无法正确传递 pipeline
+    # pipeline 从 base config 读取（train 去掉 test_mode，val 保留 test_mode）
+    if has_dataset:
+        train_pipeline_repr, val_pipeline_repr = _read_pipeline_from_config(cfg_path)
+        lines.append("")
+        lines.append("# === 自定义数据集配置 ===")
+        if ann_train:
+            ann_str = repr(ann_train)
+            vid_str = repr(videos_train) if videos_train else "None"
+            lines.append(f"train_dataloader = dict(")
+            lines.append(f"    batch_size={args.batch_size},")
+            lines.append(f"    num_workers=8,")
+            lines.append(f"    persistent_workers=True,")
+            lines.append(f"    sampler=dict(type='DefaultSampler', shuffle=True),")
+            lines.append(f"    dataset=dict(")
+            lines.append(f"        type='VideoDataset',")
+            lines.append(f"        ann_file={ann_str},")
+            if videos_train:
+                lines.append(f"        data_prefix=dict(video={vid_str}),")
+            lines.append(f"        pipeline=[{train_pipeline_repr}])")
+            lines.append(")")
+        if ann_val:
+            ann_str = repr(ann_val)
+            vid_str = repr(videos_val) if videos_val else "None"
+            lines.append(f"val_dataloader = dict(")
+            lines.append(f"    batch_size={max(1, args.batch_size // 2)},")
+            lines.append(f"    num_workers=8,")
+            lines.append(f"    persistent_workers=True,")
+            lines.append(f"    sampler=dict(type='DefaultSampler', shuffle=False),")
+            lines.append(f"    dataset=dict(")
+            lines.append(f"        type='VideoDataset',")
+            lines.append(f"        ann_file={ann_str},")
+            if videos_val:
+                lines.append(f"        data_prefix=dict(video={vid_str}),")
+            lines.append(f"        pipeline=[{val_pipeline_repr}],")
+            lines.append(f"        test_mode=True,")
+            lines.append(f"    ),")
+            lines.append(")")
+
     if extra_lines:
         lines.append("")
         lines.append("# === 自动补齐（如缺 val_cfg）===")
@@ -279,6 +382,7 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     extra = []
     blend_augment_indices: list[int] = []
     is_iter_based = False
+    _cfg = None
     try:
         from mmengine.config import Config
         _cfg = Config.fromfile(cfg_path)
@@ -303,8 +407,10 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     except Exception:
         pass
 
-    # 高级超参（dict 值）或 extra → 临时 override config；标量/列表索引仍走 cfg-options
-    override = _maybe_write_override(args, cfg_path, n_cls, extra_lines=extra)
+    # 高级超参（dict 值）或自定义数据集 → 临时 override config；标量/列表索引仍走 cfg-options
+    override = _maybe_write_override(args, cfg_path, n_cls, extra_lines=extra,
+                                      ann_train=ann_train, ann_val=ann_val,
+                                      videos_train=videos_train, videos_val=videos_val)
     if override:
         cfg_path = override
     cmd = [sys.executable, TRAIN_PY, cfg_path, "--work-dir", args.work_dir, "--launcher", "none"]
@@ -328,12 +434,14 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
         f"train_dataloader.batch_size={args.batch_size}",
         f"val_dataloader.batch_size={max(1, args.batch_size // 2)}",
     ]
-    # epoch-based：注入 by_epoch=True + max_epochs（x3d/uniformer 无 train_cfg，
-    # 否则 addict pop('by_epoch') 返 None → 走 IterBased 分支 + max_epochs → 崩）
+    # epoch-based：注入 max_epochs（by_epoch 仅当 train_cfg 无 type 时注入，
+    # 否则 base 有 type='EpochBasedTrainLoop' 再加 by_epoch=True 会冲突）
     # iter-based（显式 type=IterBasedTrainLoop 或 by_epoch=False）用 config 默认 max_iters
     if not is_iter_based:
-        cfg_options.append("train_cfg.by_epoch=True")
         cfg_options.append(f"train_cfg.max_epochs={args.epochs}")
+        # 仅当 base train_cfg 没有 type 时才补充（避免 type+by_epoch 冲突）
+        if _cfg is not None and not (_cfg.get("train_cfg") or {}).get("type"):
+            cfg_options.append("train_cfg.by_epoch=True")
     if n_cls is not None:
         cfg_options.append(f"model.cls_head.num_classes={n_cls}")
         # AccMetric topk: avoid meaningless top5 on small datasets (top5 always 1.0 when classes < 5)
@@ -345,14 +453,6 @@ def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, v
     # val/test 多 clip（列表索引覆盖，DictAction 支持；默认用 config 值）
     if getattr(args, "num_clips_val", None) is not None:
         cfg_options.append(f"val_dataloader.dataset.pipeline.1.num_clips={args.num_clips_val}")
-    if ann_train:
-        cfg_options.append(f"train_dataloader.dataset.ann_file={ann_train}")
-    if videos_train:
-        cfg_options.append(f"train_dataloader.dataset.data_prefix.video={videos_train}")
-    if ann_val:
-        cfg_options.append(f"val_dataloader.dataset.ann_file={ann_val}")
-    if videos_val:
-        cfg_options.append(f"val_dataloader.dataset.data_prefix.video={videos_val}")
     if getattr(args, "load_from", None):
         cfg_options.append(f"load_from={args.load_from}")
     if getattr(args, "pretrained", None):
@@ -716,7 +816,7 @@ def main() -> int:
     parser.add_argument("--num-classes", type=int, default=None)
     parser.add_argument("-r", "--resume", default=None, help="resume from checkpoint path or 'auto' — 直接接入原 run 进程，恢复 epoch/optimizer/scheduler，继续跑完")
     parser.add_argument("-l", "--load-from", default=None, help="load checkpoint weights (path or run_id) — 只引入参数作为预训练权重，epoch=0 从头训练")
-    parser.add_argument("-p", "--pretrained", default=None, help="backbone pretrained weights URL or local path (e.g. mmaction2 model zoo) — finetune")
+    parser.add_argument("-p", "--pretrained", action="store_true", help="backbone pretrained weights URL or local path (e.g. mmaction2 model zoo) — finetune")
     parser.add_argument("-s", "--from-scratch", action="store_true", help="train from random init, disable any pretrained weights in config")
     parser.add_argument("--vis-interval", type=int, default=10, help="可视化样本生成间隔（每 N epoch）")
     parser.add_argument("--weight-decay", type=float, default=None, help="optim_wrapper.optimizer.weight_decay 覆盖（走 override 文件）")
@@ -787,11 +887,7 @@ def main() -> int:
 
     ann_train, videos_train, ann_val, videos_val = resolve_dataset_paths(args.dataset_id)
     if not ann_train or not os.path.isfile(ann_train):
-        if args.dataset_id == QUADRUPED_DATASET_NAME:
-            expected = os.path.join(QUADRUPED_DATASET_DIR, f"{QUADRUPED_DATASET_NAME}_train_list.txt")
-        else:
-            expected = os.path.join(str(REPO), "datasets", args.dataset_id, f"{args.dataset_id}_train_list.txt")
-        err = f"训练标注文件不存在：{expected}。请先按 using-mmaction2 skill 准备数据集。"
+        err = f"训练标注文件不存在：{ann_train}。请先按 using-mmaction2 skill 准备数据集。"
         log(args.run_id, f"[error] {err}")
         run["status"] = "error"
         run["metrics"]["error"] = err
@@ -803,6 +899,9 @@ def main() -> int:
 
     env = os.environ.copy()
     env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
+    # 减少 CUDA 内存碎片：在有其他进程占用 GPU 时尤其重要
+    existing = env.get("PYTORCH_CUDA_ALLOC_CONF", "")
+    env["PYTORCH_CUDA_ALLOC_CONF"] = (existing + ",max_split_size_mb:32" if existing else "max_split_size_mb:32")
     ppath = [str(MMACTION2_DIR), str(REPO)]
     if args.device == "cpu":
         env["CUDA_VISIBLE_DEVICES"] = ""

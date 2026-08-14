@@ -372,6 +372,18 @@ DEFAULT_DATASETS = [
         "root_dir": QUADRUPED_DATASET_DIR,
         "description": "猫/狗等四足动物动作识别数据集；名称未定，见 server/config.py QUADRUPED_DATASET_NAME（改一处即全局生效）。",
     },
+    {
+        "id": "quadruped_cats_v1",
+        "name": "Quadruped Cats v1",
+        "splits": ["train", "val", "test"],
+        "num_samples": 717,
+        "num_classes": 5,
+        "modalities": ["rgb"],
+        "status": "ready",
+        "root_dir": os.path.join(BASE_DIR, "datasets", "cats"),
+        "label_map": "classes.txt",
+        "description": "猫视频切段数据集（4s clip, stride=2s; 5 类; 528/88/101 train/val/test clips）",
+    },
 ]
 
 # 动作识别超参 preset
@@ -532,6 +544,12 @@ async def get_datasets():
                         break
             else:
                 row["num_samples"] = 0
+        if d["id"] == "quadruped_cats_v1":
+            cats_root = os.path.join(BASE_DIR, "datasets", "cats")
+            ann_train = os.path.join(cats_root, "annotation", "train_public.txt")
+            if os.path.isfile(ann_train):
+                with open(ann_train, "r", encoding="utf-8") as f:
+                    row["num_samples"] = len([ln for ln in f if ln.strip()])
         out.append(row)
     return out
 
