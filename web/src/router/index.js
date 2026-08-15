@@ -184,7 +184,7 @@ const routes = [
       {
         path: 'evaluation/speedrun',
         name: 'SpeedRun',
-        component: () => import('../views/training/SpeedRun.vue'),
+        component: () => import('../views/evaluation/SpeedRun.vue'),
         meta: { title: 'Speed Run', module: 'evaluation' },
       },
       {

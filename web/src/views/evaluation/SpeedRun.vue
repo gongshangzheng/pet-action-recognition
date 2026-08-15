@@ -6,6 +6,15 @@
           <h3>Speed Run 结果视频</h3>
           <n-space align="center" size="small" wrap>
             <n-select
+              v-model:value="filterRunName"
+              :options="runNameOptions"
+              placeholder="全部批次"
+              clearable
+              size="small"
+              style="width: 200px"
+              filterable
+            />
+            <n-select
               v-model:value="filterModel"
               :options="modelOptions"
               placeholder="全部模型"
@@ -137,12 +146,12 @@ import { PlayCircleOutline } from '@vicons/ionicons5'
 import EmptyState from '../../components/common/EmptyState.vue'
 import VideoModal from '../../components/common/VideoModal.vue'
 import {
-  getTrainModels,
   speedRun,
   getSpeedrunStatus,
   getSpeedrunResults,
   getSpeedrunOutputUrl,
-} from '../../api/training'
+} from '../../api/speedrun'
+import { getTrainModels } from '../../api/training'
 
 const loading = ref(false)
 const running = ref(false)
@@ -151,6 +160,7 @@ const status = reactive({ running: false, results_count: 0 })
 const modelOptionsAll = ref([])
 const filterModel = ref(null)
 const filterVideo = ref(null)
+const filterRunName = ref(null)
 
 const form = reactive({
   videosText: 'datasets/ucf101/PlayingGuitar/v_PlayingGuitar_g01_c01.avi\ndatasets/ucf101/Archery/v_Archery_g01_c01.avi\ndatasets/ucf101/BabyCrawling/v_BabyCrawling_g01_c01.avi',
@@ -174,8 +184,14 @@ const videoOptions = computed(() => {
   return vids.map(v => ({ label: videoStem(v), value: v }))
 })
 
+const runNameOptions = computed(() => {
+  const names = [...new Set(results.value.map(r => r.run_name || 'legacy'))].sort()
+  return names.map(n => ({ label: n, value: n }))
+})
+
 const filteredResults = computed(() => {
   let list = results.value
+  if (filterRunName.value) list = list.filter(r => (r.run_name || 'legacy') === filterRunName.value)
   if (filterModel.value) list = list.filter(r => r.model_id === filterModel.value)
   if (filterVideo.value) list = list.filter(r => r.video === filterVideo.value)
   return list
@@ -196,7 +212,7 @@ const pagedResults = computed(() => {
   const start = (page.value - 1) * pageSize
   return filteredResults.value.slice(start, start + pageSize)
 })
-watch([filterModel, filterVideo], () => { page.value = 1 })
+watch([filterModel, filterVideo, filterRunName], () => { page.value = 1 })
 
 function videoStem(path) {
   return path.split('/').pop()
