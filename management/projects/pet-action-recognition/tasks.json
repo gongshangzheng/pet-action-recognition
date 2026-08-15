@@ -283,7 +283,7 @@
       "status": "active",
       "assignee": "郑鑫裕",
       "startDate": "2026-07-26",
-      "endDate": "2026-08-15",
+      "endDate": "2026-09-15",
       "description": "在 pet 服务器跑通全部 mmaction2 模型并完成评测。\n\n• 含义：下载 pretrained → finetune → test 拿准确率（非直接评预训练头）\n• 区别于 t3：原环境搭在别处，本任务专攻 pet 新算力机\n• 支撑 t7-3-2 四足端到端 / t7-3-3 权重迁移 / t7-5 服务器验证\n• 闭环：本地改码 → push pet → 远程训练/测试/下载",
       "children": [
         {
@@ -372,6 +372,10 @@
       ],
       "progress": [
         {
+          "date": "2026-08-15 17:21",
+          "note": "Phase 4 批量接入继续 opportunistic 推进，优先级让位 t12 精度攻坚"
+        },
+        {
           "date": "2026-07-28 16:04",
           "note": "[进展] #21 card UI 重设计 + #22 GPU util/RTF 指标 + #23 检测模型 skill 文档 全完成。4/5 AVA checkpoint 已下（lfb URL 404 待修）。21 分类 + 5 检测模型注册。"
         },
@@ -442,7 +446,7 @@
     {
       "id": "t11",
       "title": "Live 页：实时视频流与摄像头监控（借鉴 pet-videos）",
-      "status": "planned",
+      "status": "active",
       "assignee": "郑鑫裕",
       "description": "在研究平台开 /live 页，集成 pet-videos 的实时能力：RTSP/视频流实时预览、PTZ 云台控制、截屏录像、摄像头源管理。借鉴 third-party/pet-videos 的 LiveStreamView.tsx（PTZ 摇杆/canvas 截屏）+ Service 层 stream_token 安全方案。详细计划见 wiki: live-page-integration-plan",
       "children": [
@@ -525,6 +529,204 @@
           "description": "选 source+file 后选 model：从 evaluation/models 读 mmaction2 分类模型列表 + Qwen3-VL 选项 + pretrained/trained checkpoint。开始推理按钮触发 SSE",
           "children": [],
           "summaryPath": "summary/t11-9.md"
+        }
+      ],
+      "endDate": "2026-08-31",
+      "progress": [
+        {
+          "date": "2026-08-15 17:21",
+          "note": "8/9 子任务完成（仅 t11-6 收尾），Live 演示模式全链路已通"
+        }
+      ]
+    },
+    {
+      "id": "t12",
+      "title": "cats_v1 精度攻坚：数据修复 + 两阶段预训练（P0）",
+      "status": "active",
+      "assignee": "郑鑫裕",
+      "startDate": "2026-08-16",
+      "endDate": "2026-09-30",
+      "description": "把 cats_v1 识别精度从 67% 提到 75%，覆盖中期验收硬指标。\n\n• 数据审计：split 泄漏检查、drinking 样本补齐或合并\n• pet_action_mammal_v0 中间域预训练，替代 K400 直迁\n• test split 正式评测 top1 ≥75%，漏检率口径对齐",
+      "priority": "P0",
+      "children": [
+        {
+          "id": "t12-1",
+          "title": "t12-1 数据审计与修复（泄漏/drinking/清洗）",
+          "status": "active",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-08-16",
+          "endDate": "2026-08-31",
+          "description": "审计并修复 cats_v1 数据问题，为精度提升打地基。\n\n• 检查 4s/stride2s 切段的 train/val 泄漏，按源视频分组重切\n• drinking 仅 9 条：补采或并入 eating，输出决策记录\n• 清洗模糊遮挡片段，产出 cats_v2 数据集",
+          "priority": "P0",
+          "children": []
+        },
+        {
+          "id": "t12-2",
+          "title": "t12-2 mammal_v0 中间域预训练",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-08-25",
+          "endDate": "2026-09-12",
+          "description": "用哺乳动物数据做中间域预训练，替代 K400 直迁。\n\n• pet_action_mammal_v0（5522 视频 8 类）注册进训练框架\n• SlowOnly/TSM 中间域训练，产出 checkpoint\n• 对比 K400 直迁基线，确认迁移增益",
+          "priority": "P0",
+          "children": []
+        },
+        {
+          "id": "t12-3",
+          "title": "t12-3 cats 两阶段微调与模型选型",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-09-05",
+          "endDate": "2026-09-24",
+          "description": "两阶段微调实验，选出达标模型固化为部署基线。\n\n• 中间域 checkpoint → cats_v2 微调，扫学习率与 epoch\n• test split 正式评测，目标 top1 ≥75%\n• 产出模型对比表与最终选型报告",
+          "priority": "P0",
+          "children": []
+        },
+        {
+          "id": "t12-4",
+          "title": "t12-4 漏检率口径对齐 + speedrun 收尾",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-08-18",
+          "endDate": "2026-09-30",
+          "description": "对齐验收指标口径并完成评测闭环。\n\n• 与验收方确认漏检率定义（事件级漏报还是低置信度）\n• 按口径实现评测脚本，产出验收指标\n• 收尾 speedrun-custom-config T5–T8",
+          "priority": "P0",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "t13",
+      "title": "端侧 pipeline：检测/跟踪/事件引擎（P1）",
+      "status": "planned",
+      "assignee": "吴赟阳",
+      "startDate": "2026-09-01",
+      "endDate": "2026-11-15",
+      "description": "搭建端侧三级 pipeline：检测、跟踪、事件引擎。\n\n• YOLO11 检测猫/食盆/水盆/猫砂盆等关键对象\n• BoT-SORT + ReID 维持多猫身份连续性\n• 规则 + 状态机输出结构化行为事件\n• 先在 GPU 服务器验证，再考虑端侧移植",
+      "priority": "P1",
+      "children": [
+        {
+          "id": "t13-1",
+          "title": "t13-1 YOLO11 宠物场景目标检测",
+          "status": "planned",
+          "assignee": "吴赟阳",
+          "startDate": "2026-09-01",
+          "endDate": "2026-09-30",
+          "description": "YOLO11 宠物场景目标检测微调与评测。\n\n• 类目：猫、人、食盆、水盆、猫砂盆、玩具、门窗\n• 用现有 cats 视频抽帧标注并训练，验证 mAP 可用\n• 产出检测模型与推理封装",
+          "priority": "P1",
+          "children": []
+        },
+        {
+          "id": "t13-2",
+          "title": "t13-2 BoT-SORT + ReID 多猫跟踪",
+          "status": "planned",
+          "assignee": "吴赟阳",
+          "startDate": "2026-09-25",
+          "endDate": "2026-10-24",
+          "description": "BoT-SORT 跟踪器接入，保持多猫身份连续。\n\n• 检测结果串联轨迹，ReID 维持跨帧身份\n• 多猫场景实测 ID 切换率\n• 产出跟踪轨迹流接口",
+          "priority": "P1",
+          "children": []
+        },
+        {
+          "id": "t13-3",
+          "title": "t13-3 区域与时序事件引擎",
+          "status": "planned",
+          "assignee": "吴赟阳",
+          "startDate": "2026-10-15",
+          "endDate": "2026-11-15",
+          "description": "区域与时序事件引擎，轨迹转结构化事件。\n\n• 区域规则（食盆附近即进食候选）+ 时序状态机\n• 输出进食/饮水/如厕/静止/打闹事件时间轴\n• 事件流接入云端 API",
+          "priority": "P1",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "t14",
+      "title": "端侧部署链路：ONNX/RKNN 交付（P2）",
+      "status": "planned",
+      "assignee": "郑鑫裕",
+      "startDate": "2026-11-01",
+      "endDate": "2026-12-31",
+      "description": "打通模型到 RV1126B 的部署链路，降低交付风险。\n\n• 动作模型导出 ONNX，验证数值一致性\n• RKNN 工具链转换冒烟（依赖硬件方提供）\n• 量化后精度损失 ≤3pp\n• 硬件本体由硬件方负责，本任务只交付模型",
+      "priority": "P1",
+      "children": [
+        {
+          "id": "t14-1",
+          "title": "t14-1 动作模型导出 ONNX 验证",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-11-01",
+          "endDate": "2026-11-20",
+          "description": "动作识别模型导出 ONNX 并验证一致性。\n\n• PyTorch 导出 ONNX，固定输入尺寸与预处理\n• ONNX Runtime 与 mmaction2 输出对齐，top1 一致\n• 产出导出脚本与冒烟报告",
+          "priority": "P1",
+          "children": []
+        },
+        {
+          "id": "t14-2",
+          "title": "t14-2 RKNN 转换冒烟（依赖硬件方工具链）",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-11-10",
+          "endDate": "2026-12-05",
+          "description": "RKNN 转换冒烟，确认端侧可跑。\n\n• 向硬件方索取 RV1126B 工具链与算子支持表\n• 转换 + 模拟器推理，记录不兼容算子\n• 发现问题早反馈，倒逼模型结构调整",
+          "priority": "P1",
+          "children": []
+        },
+        {
+          "id": "t14-3",
+          "title": "t14-3 INT8 量化与精度回归",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-12-01",
+          "endDate": "2026-12-31",
+          "description": "INT8 量化与精度回归，产出最终交付模型。\n\n• 校准集量化，端侧精度损失 ≤3pp\n• 耗时与内存评测，输出部署报告\n• 交付最终 RKNN 模型文件",
+          "priority": "P1",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "t15",
+      "title": "中期验收：端云集成演示",
+      "status": "planned",
+      "assignee": "团队",
+      "startDate": "2026-10-01",
+      "endDate": "2026-11-30",
+      "description": "中期验收演示：端云集成功能打通。\n\n• 行为事件上报与统计页（日/周活动总结）\n• 视频回放与亮点抓取\n• 直播复用 Live 模块已有链路\n• 11 月中旬全流程预演一遍",
+      "priority": "P1",
+      "children": [
+        {
+          "id": "t15-1",
+          "title": "t15-1 事件上报与活动统计页",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-10-01",
+          "endDate": "2026-10-31",
+          "description": "接收端侧事件流并可视化活动统计。\n\n• 事件上报 API + 存储（时间/猫ID/行为/置信度）\n• 日/周活动总结视图（时长分布/频次）\n• 数据源接 t13-3 事件引擎输出",
+          "priority": "P2",
+          "children": []
+        },
+        {
+          "id": "t15-2",
+          "title": "t15-2 视频回放与亮点抓取",
+          "status": "planned",
+          "assignee": "郑鑫裕",
+          "startDate": "2026-10-10",
+          "endDate": "2026-11-15",
+          "description": "按事件索引回放视频片段，自动抓取亮点。\n\n• storage_path 录像按事件时间索引切片回放\n• 高分事件自动生成亮点集锦\n• 复用 Live 模块播放器组件",
+          "priority": "P2",
+          "children": []
+        },
+        {
+          "id": "t15-3",
+          "title": "t15-3 验收演示排练与材料",
+          "status": "planned",
+          "assignee": "团队",
+          "startDate": "2026-11-10",
+          "endDate": "2026-11-30",
+          "description": "验收演示排练，指标与材料齐备。\n\n• 全流程预演：识别/上报/统计/直播/回放/亮点\n• 指标报告：top1 ≥75%、漏检率 ≤10%\n• 演示脚本与备用方案（离线备份）",
+          "priority": "P2",
+          "children": []
         }
       ]
     }
