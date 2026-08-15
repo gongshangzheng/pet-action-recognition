@@ -16,17 +16,17 @@ pet-action-recognition 仓库的**导航地图**。定位每个顶层目录的�
 - 决定一个新文件该放哪
 - **不该用**：要在某个模块里做 CRUD / 跑训练 / 开发页面 —— 直接用对应模块 skill（见「模块路由」表）
 
-## 顶层布局（2026-08-04 核实）
+## 顶层布局（2026-08-15 核实）
 
 ```
 pet-action-recognition/
 ├── server/                     # FastAPI 后端（:8788）
-│   ├── main.py                 # 入口，注册 8 个 router
+│   ├── main.py                 # 入口，注册 7 个 router
 │   ├── config.py               # 端口/CORS/路径常量
 │   ├── db.py                   # 论文 SQLite 操作
 │   ├── db_live.py              # Live 模块 SQLite 操作
 │   ├── live/                   # Live 安全模块（stream_token）
-│   ├── routers/                # 8 个路由
+│   ├── routers/                # 7 个路由
 │   │   ├── papers.py           # 论文 CRUD
 │   │   ├── management.py       # 项目管理（只读 Markdown）
 │   │   ├── evaluation.py       # 评测配置
@@ -40,7 +40,7 @@ pet-action-recognition/
 ├── web/                        # Vue3 + Vite + Naive UI（:3000）
 │   ├── vite.config.js          # 端口 3000，代理 /api → 8788
 │   └── src/
-│       ├── api/                # API 请求封装（papers, training, live, datasets, evaluation, management）
+│       ├── api/                # API 封装（papers, training, speedrun, live, datasets, evaluation, management）
 │       ├── layouts/            # MainLayout.vue（侧边栏 + 内容）
 │       ├── router/index.js     # 路由配置
 │       ├── views/
@@ -48,8 +48,8 @@ pet-action-recognition/
 │       │   ├── Live.vue        # 实时视频流 + 推理
 │       │   ├── papers/         # 论文列表、详情、数据源
 │       │   ├── management/     # 团队、报表、任务、里程碑、会议、文档
-│       │   ├── evaluation/    # 评测结果
-│       │   ├── training/      # 训练（7 个组件：SpeedRun, TrainConfig, TrainDataset, TrainModel, TrainRun, TrainRunDetail, TrainResults）
+│       │   ├── evaluation/    # 评测（SpeedRun, EvalResults, EvalRun, EvalOutputs, ModelManage, DatasetManage, ConfigManage）
+│       │   ├── training/      # 训练（6 个组件：TrainConfigManage, TrainDatasetManage, TrainModelManage, TrainRun, TrainRunDetail, TrainResults）
 │       │   └── datasets/      # 数据集管理
 │       └── components/
 │           ├── common/         # 通用组件
@@ -60,7 +60,8 @@ pet-action-recognition/
 ├── models/mmaction2/           # vendored 训练框架（只读快照）
 │
 ├── datasets/                   # 数据集目录（gitignore）
-│   └── quadruped_action/       # 四足动物动作数据集
+│   ├── quadruped_action/       # 四足动物动作数据集
+│   └── cats/                   # 猫动作原始视频（切段成 quadruped_cats_v1）
 │
 ├── scripts/                    # 顶层脚本
 │   ├── train_model.py          # 训练包装入口
@@ -76,6 +77,7 @@ pet-action-recognition/
 │   ├── eval_all_k400.py        # K400 全模型评测
 │   ├── extract_keypoints_dlc.py # DeepLabCut 骨架提取
 │   ├── infer_ap10k_pose.py     # AP-10K 姿态推理
+│   ├── slice_cats_clips.py     # cats 视频切段（生成 quadruped_cats_v1）
 │   └── ...                     # 还有更多
 │
 ├── management/                 # 项目管理 Markdown
@@ -108,9 +110,11 @@ pet-action-recognition/
 │
 ├── docs/                       # 设计文档
 │
+├── openspec/                   # OpenSpec 规范驱动开发（specs/ 主规范 + changes/ 活跃变更与 archive/）
+│
 ├── third-party/               # 第三方集成（pet-videos, remix-petra）
 │
-├── .claude/skills/            # 14 个项目级 skill（随仓库版本管理）
+├── .claude/skills/            # 21 个项目级 skill（15 模块 + 6 openspec-* 工作流，随仓库版本管理）
 └── AGENTS.md                  # 权威架构说明
 ```
 
@@ -134,7 +138,8 @@ pet-action-recognition/
 | 任务 | Skill |
 |------|-------|
 | 训练 / finetune / checkpoint 管理 | [[training]] |
-| 测试 / speed run / 单视频推理 | [[testing]] |
+| 测试 / 单视频推理 | [[testing]] |
+| Speed Run（批量标注/微调模型 --custom/批次 run_name） | [[speedrun]] |
 | mmaction2 安装 / config 系统 / 适配 registry | [[using-mmaction2]] |
 | 数据集 / 预训练权重下载与组织 | [[datasets]] |
 | 远程训练机（pet / A100）使用 | [[remote-servers]] |
@@ -146,6 +151,7 @@ pet-action-recognition/
 | UI/UX 设计规范 | [[design-principles]] |
 | 文档写作规范 | [[documentation]] |
 | 上游 / 下游四库 git 同步 | [[upstream-sync]] |
+| 规范驱动变更（proposal → apply → archive） | [[openspec-propose]] 等 openspec-* |
 
 ## 权威来源
 

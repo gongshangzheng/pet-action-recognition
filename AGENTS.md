@@ -56,12 +56,12 @@ pet-action-recognition/
 ├── README.md                    # 面向人的项目说明
 │
 ├── server/                      # FastAPI 后端（:8788）
-│   ├── main.py                  # 入口，注册 8 个 router
+│   ├── main.py                  # 入口，注册 7 个 router
 │   ├── config.py                # 配置（端口、CORS、路径常量）
 │   ├── db.py                    # 论文 SQLite 操作
 │   ├── db_live.py               # Live 模块 SQLite 操作
 │   ├── live/                    # Live 安全模块（stream_token）
-│   ├── routers/                 # 8 个路由模块
+│   ├── routers/                 # 7 个路由模块
 │   │   ├── papers.py            # 论文路由
 │   │   ├── management.py        # 项目管理路由（只读 Markdown）
 │   │   ├── evaluation.py        # 评测路由
@@ -75,7 +75,7 @@ pet-action-recognition/
 ├── web/                         # Vue 3 前端（:3000，代理 /api → 8788）
 │   ├── vite.config.js           # Vite 配置
 │   └── src/
-│       ├── api/                 # API 请求封装（papers, training, live 等）
+│       ├── api/                 # API 请求封装（papers, training, speedrun, live 等）
 │       ├── layouts/             # 布局组件
 │       ├── router/              # 路由配置
 │       ├── views/
@@ -83,7 +83,7 @@ pet-action-recognition/
 │       │   ├── Live.vue          # 实时视频流 + 推理
 │       │   ├── papers/           # 论文列表、详情、数据源
 │       │   ├── management/       # 团队、报表、任务、里程碑、会议、文档
-│       │   ├── evaluation/       # 评测结果
+│       │   ├── evaluation/       # 评测结果、Speed Run（/evaluation/speedrun）
 │       │   ├── training/         # 训练配置、数据集、模型、运行、结果
 │       │   └── datasets/         # 数据集管理
 │       └── components/
@@ -95,7 +95,8 @@ pet-action-recognition/
 │   └── mmaction2/               # vendored mmaction2 快照（只读，勿直接改）
 │
 ├── datasets/                    # 数据集目录
-│   └── quadruped_action/        # 四足动物动作数据集
+│   ├── quadruped_action/        # 四足动物动作数据集
+│   └── cats/                    # 猫动作原始视频（切段成 quadruped_cats_v1）
 │
 ├── scripts/                    # 顶层脚本
 │   ├── train_model.py           # 训练包装
@@ -107,6 +108,7 @@ pet-action-recognition/
 │   ├── live_analyze.py          # Live SSE 推理
 │   ├── vlm_infer.py             # VLM 推理
 │   ├── run_test_vlm.py          # VLM 测试
+│   ├── slice_cats_clips.py      # cats 视频切段（quadruped_cats_v1）
 │   └── ...
 │
 ├── management/                 # 项目管理 Markdown
@@ -132,9 +134,10 @@ pet-action-recognition/
 ├── live/                        # Live 模块数据（screenshots/）
 ├── checkpoints/                 # 预训练 + 训练 checkpoint（gitignore）
 ├── docs/                        # 设计文档
+├── openspec/                    # OpenSpec 规范驱动开发（specs/ 主规范 + changes/ 变更与归档）
 ├── third-party/                 # 第三方集成（pet-videos, remix-petra）
 ├── .claude/                     # 项目级 skills 和 agents（随仓库版本管理）
-│   └── skills/                  # 14 个 skill
+│   └── skills/                  # 21 个 skill（15 模块 + 6 openspec-*）
 └── package-lock.json
 ```
 
@@ -150,7 +153,7 @@ pet-action-recognition/
 
 - 基于 mmaction2 框架
 - 支持四种训练模式（从头/预训练/加载权重/断点续训）
-- 21 个 mmaction2 模型族注册
+- 28 个模型注册（20 个模型族，含 VLM 条目；VideoMAE 族已移除）
 - 远程服务器执行（pet RTX 4090）
 
 ### 3. 评测模块 (`evaluation/`, `server/routers/evaluation.py`)
@@ -203,6 +206,7 @@ id, source_id, filename, note, created_at
 2. **提交信息格式**：`<type>: <描述>`
 3. **type 取值**：feat（新功能）、fix（修复）、refactor（重构）、style（样式）、docs（文档）、chore（杂项）
 4. **禁止提交**：`node_modules/`、`__pycache__/`、`.venv/`、`*.db`、`data/papers.db`、`results/`、`checkpoints/`、`live/screenshots/`
+5. **较大功能/重构走 OpenSpec**：proposal → tasks → 实现 → archive（`openspec/changes/`，完成后归档至 `archive/`）
 
 ### 前端开发
 
@@ -226,7 +230,7 @@ id, source_id, filename, note, created_at
 - **跨项目通用 skill 放在 `~/.claude/skills/`**
 - `.agents/` 是 `.claude/` 的软链接
 
-### 当前项目 Skill（15 个）
+### 当前项目 Skill（21 个 = 15 模块 + 6 openspec 工作流）
 
 | Skill | 路径 | 用途 |
 |-------|------|------|
@@ -239,12 +243,13 @@ id, source_id, filename, note, created_at
 | management | `.claude/skills/management/` | 项目管理 CRUD |
 | papers | `.claude/skills/papers/` | 论文收集模块 |
 | remote-servers | `.claude/skills/remote-servers/` | 远程服务器使用 |
-| testing | `.claude/skills/testing/` | 测试/speed run/推理 |
+| speedrun | `.claude/skills/speedrun/` | Speed Run 权威指南（--custom 微调模型、--ann-file GT、run_name 批次） |
+| testing | `.claude/skills/testing/` | 正式测试（top1/top5）+ 单视频推理 |
 | training | `.claude/skills/training/` | mmaction2 训练 |
 | upstream-sync | `.claude/skills/upstream-sync/` | 上下游仓库同步 |
 | using-mmaction2 | `.claude/skills/using-mmaction2/` | mmaction2 深度指南 |
 | web | `.claude/skills/web/` | Web 全栈开发 |
-|  |  |  |
+| openspec-*（6 个） | `.claude/skills/openspec-*/` | 规范驱动变更工作流（propose / apply / archive / sync / update / explore） |
 
 ### macOS 后台进程
 
