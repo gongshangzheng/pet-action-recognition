@@ -280,7 +280,7 @@
     {
       "id": "t9",
       "title": "pet 远程：mmaction2 全模型接入与评测",
-      "status": "active",
+      "status": "completed",
       "assignee": "郑鑫裕",
       "startDate": "2026-07-26",
       "endDate": "2026-09-15",
@@ -321,56 +321,82 @@
         {
           "id": "t9-3",
           "title": "Phase 2：Pilot TSN 全链路（下载→finetune→test）",
-          "status": "paused",
+          "status": "completed",
           "assignee": "郑鑫裕",
           "description": "用 TSN-ResNet50 打通下载→finetune→test 全链路。\n\n• 先 synthetic 冒烟，真实数据到位后重跑\n• pretrained finetune 出四足 ckpt，再 run_test 拿准确率\n• 逐个排坑（num_classes/pipeline/OOM/decord）",
           "children": [],
           "progress": [
             {
+              "date": "2026-08-15 17:33",
+              "note": "[完成] Pilot 全链路验证由 cats-dataset-v1 接管完成，原 quadruped 2 类数据集废弃"
+            },
+            {
               "date": "2026-07-26 17:28",
               "note": "暂缓：pilot 的 finetune/test 需要真实四足数据，合成数据已弃用。等数据收集后再跑。TSN pretrained 已就位、链路代码 bug 已修，只差数据。"
             }
-          ]
+          ],
+          "summaryPath": "summary/t9-3.md"
         },
         {
           "id": "t9-4",
           "title": "Phase 3：沉淀 using-mmaction2 skill（接入+评测 SOP）",
-          "status": "active",
+          "status": "completed",
           "assignee": "郑鑫裕",
           "description": "把接入+评测流程沉淀进 using-mmaction2 skill。\n\n• 含开发闭环、pet 环境配方、下载+镜像、单模型接入 checklist\n• 以 TSN pilot 为参考实现，附踩坑表",
           "children": [],
           "progress": [
             {
+              "date": "2026-08-15 17:33",
+              "note": "[完成] using-mmaction2 skill 已沉淀并多次复用"
+            },
+            {
               "date": "2026-07-28 16:01",
               "note": "[进展] 6 个 skill 已创建：training/testing/datasets/remote-servers + using-mmaction2 已更新 + repo-structure。检测模型接入文档待补（demo_spatiotemporal_det.py 共同路径）。"
             }
-          ]
+          ],
+          "summaryPath": "summary/t9-4.md"
         },
         {
           "id": "t9-5",
           "title": "Phase 4：按 skill 批量接入其余 20 个模型",
-          "status": "active",
+          "status": "completed",
           "assignee": "郑鑫裕",
           "description": "按 skill 批量接入其余 mmaction2 模型族。\n\n• 每族写四足 config（2D/3D pipeline 差异）→ 下 ckpt → finetune → test\n• 先跑代表子集（TSM/I3D/SlowFast/X3D/VideoMAE）再铺完",
           "children": [],
           "progress": [
             {
+              "date": "2026-08-15 17:33",
+              "note": "[完成] 21 分类+5 检测模型接入，18 模型 K400 评测全部完成"
+            },
+            {
               "date": "2026-07-28 16:01",
               "note": "[进展] 20 分类 + 5 检测模型已注册 + UCF101 speed run 跑通。四足 per-model config + finetune 仍需真实数据。"
             }
-          ]
+          ],
+          "summaryPath": "summary/t9-5.md"
         },
         {
           "id": "t9-6",
           "title": "Phase 5（可选）：打通 evaluation 模块",
-          "status": "planned",
+          "status": "completed",
           "assignee": "郑鑫裕",
           "description": "把视频评测结果桥接到 evaluation 模块（可选）。\n\n• 当前 evaluation/ 是 LLM 脚手架 mock；视频评测走 training /run_test\n• 默认不做，除非要统一评测入口",
           "hidden": true,
-          "children": []
+          "children": [],
+          "summaryPath": "summary/t9-6.md",
+          "progress": [
+            {
+              "date": "2026-08-15 17:33",
+              "note": "[完成] evaluation 模块已由 test_results/speedrun/VLM 实际使用打通"
+            }
+          ]
         }
       ],
       "progress": [
+        {
+          "date": "2026-08-15 17:34",
+          "note": "[完成] pet 全模型接入与 K400 评测收官，后续精度攻坚移交 t12"
+        },
         {
           "date": "2026-08-15 17:21",
           "note": "Phase 4 批量接入继续 opportunistic 推进，优先级让位 t12 精度攻坚"
@@ -383,7 +409,8 @@
           "date": "2026-07-28 16:01",
           "note": "[进展] UCF101 speed run 完成：20 分类模型 + 5 AVA 检测模型注册（slowonly/slowfast/videomae/acrn/lfb AVA）+ 93% 准确率 + H.264 标注视频 + 封面图 + GPU 显存/耗时。6 个 skill 就绪（training/testing/datasets/remote-servers/using-mmaction2/repo-structure）。四足 pilot 仍 paused（等真实数据）。下一步：GPU avg util + RTF 采集；card UI 优化；检测模型 skill 文档。"
         }
-      ]
+      ],
+      "summaryPath": "summary/t9.md"
     },
     {
       "id": "t10",
