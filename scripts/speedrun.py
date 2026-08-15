@@ -118,6 +118,48 @@ def _models_by_ids(ids: list[str]) -> list[dict]:
     return out
 
 
+def _parse_custom(specs: list[str]) -> dict[str, dict]:
+    """解析 --custom model_id=config_path:ckpt_path（可重复）→ registry 同形条目。"""
+    out: dict[str, dict] = {}
+    for spec in specs or []:
+        try:
+            mid, rest = spec.split("=", 1)
+            config, ckpt = rest.rsplit(":", 1)
+        except ValueError:
+            print(f"[warn] --custom 格式错误（应为 model_id=config:ckpt）：{spec}", file=sys.stderr)
+            continue
+        mid, config, ckpt = mid.strip(), config.strip(), ckpt.strip()
+        if not (mid and config and ckpt):
+            print(f"[warn] --custom 字段不全：{spec}", file=sys.stderr)
+            continue
+        if not os.path.isfile(config):
+            print(f"[warn] --custom config 不存在：{config}（跳过 {mid}）", file=sys.stderr)
+            continue
+        if not os.path.isfile(ckpt):
+            print(f"[warn] --custom checkpoint 不存在：{ckpt}（跳过 {mid}）", file=sys.stderr)
+            continue
+        out[mid] = {"id": mid, "config": config, "checkpoint": ckpt, "label_map": None}
+    return out
+
+
+def _load_ann_gt(ann_file: str, label_map: list[str]) -> dict[str, str]:
+    """ann_file（raw label：<video_path> <label_idx>）→ {video_stem: 类名}。"""
+    gt: dict[str, str] = {}
+    with open(ann_file, encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) < 2:
+                continue
+            stem = Path(parts[0]).stem
+            try:
+                idx = int(parts[1])
+            except ValueError:
+                continue
+            if 0 <= idx < len(label_map):
+                gt[stem] = label_map[idx]
+    return gt
+
+
 def _resolve_models(arg: list[str]) -> list[dict]:
     if not arg or arg == ["all"]:
         return [m for m in _MMACTION2_REGISTRY if not m["id"].endswith(_QUADRUPED_SUFFIX)]
@@ -153,14 +195,21 @@ def _save_results_json(path: str, data: dict) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="mmaction2 speed run：视频×模型 → 标注视频 + 结果")
     parser.add_argument("--videos", nargs="+", required=True, help="视频文件路径（至少一个）")
-    parser.add_argument("--models", nargs="+", default=["all"], help='model_id 列表 或 "all"')
+    parser.add_argument("--models", nargs="+", default=None, help='model_id 列表 或 "all"（默认：有 --custom 时仅跑 custom，否则 all）')
     parser.add_argument("--checkpoint", default="pretrained", help='"pretrained"（默认）或 checkpoint 路径')
     parser.add_argument("--labels", default=_DEFAULT_K400_LABELS, help="label_map 文件（默认 K400）")
     parser.add_argument("--device", default="cuda:0", help="cuda:0 / cpu")
     parser.add_argument("--out-dir", default=SPEEDRUN_OUTPUTS_DIR, help=f"标注视频根目录（默认 {SPEEDRUN_OUTPUTS_DIR}）")
     parser.add_argument("--results-json", default=SPEEDRUN_RESULTS_JSON, help=f"结果 JSON（默认 {SPEEDRUN_RESULTS_JSON}）")
     parser.add_argument("--force", action="store_true", help="重跑已存在的（默认跳过）")
+    parser.add_argument("--run-name", default=None, help="运行批次名（Descriptor），写入每条结果；缺省自动生成 run-{YYYYMMDD-HHmm}")
+    parser.add_argument("--custom", action="append", default=[], metavar="MODEL_ID=CONFIG:CKPT",
+                        help="自定义模型（可重复）：绕过 registry，指定 config+checkpoint（如微调权重）")
+    parser.add_argument("--ann-file", default=None, help="GT 标注文件（raw label：<video_path> <label_idx>），按 stem 匹配")
+    parser.add_argument("--label-map", default=None, help="类名表（配合 --ann-file / --custom，每行一个类名）")
     args = parser.parse_args()
+
+    run_name = args.run_name or f"run-{time.strftime('%Y%m%d-%H%M')}"
 
     # 延迟 import：_infer 依赖 mmaction（只在 pet env 有）
     from scripts._infer import infer_and_annotate, load_labels
@@ -176,14 +225,53 @@ def main() -> int:
             _label_cache[lm] = load_labels(lm)
         return _label_cache[lm]
 
-    models = _resolve_models(args.models)
+    # 类名表：--label-map 优先（供 ann_file 索引 + custom 模型标注），否则回退 K400 默认
+    global_label_map = args.label_map or args.labels
+    if not os.path.isabs(global_label_map):
+        global_label_map = os.path.join(str(REPO), global_label_map)
+
+    # --custom 优先：单独传 --custom（未显式传 --models）时仅跑 custom 模型
+    custom_models = _parse_custom(args.custom)
+    if custom_models and not args.models:
+        models = list(custom_models.values())
+    else:
+        models = _resolve_models(args.models or ["all"])
+    # --custom 与 --models 混用：同名 id 覆盖 registry（warn）
+    for mid, entry in custom_models.items():
+        entry["label_map"] = global_label_map  # custom 模型统一用 --label-map（微调模型类表）
+        dup = [i for i, m in enumerate(models) if m["id"] == mid]
+        if dup:
+            print(f"[warn] --custom {mid} 覆盖同名 registry 模型", file=sys.stderr)
+            models[dup[0]] = entry
+        else:
+            models.append(entry)
     if not models:
         print("[error] 没有可跑的模型", file=sys.stderr)
         return 1
-    missing_ckpts = [m["id"] for m in models if args.checkpoint == "pretrained" and not _pretrained_ckpt(m["id"])]
+    missing_ckpts = [m["id"] for m in models
+                     if args.checkpoint == "pretrained" and "checkpoint" not in m
+                     and not _pretrained_ckpt(m["id"])]
     if missing_ckpts:
         print(f"[warn] 以下模型缺 pretrained checkpoint（跳过）：{missing_ckpts}", file=sys.stderr)
-        models = [m for m in models if not (args.checkpoint == "pretrained" and not _pretrained_ckpt(m["id"]))]
+        models = [m for m in models
+                  if not (args.checkpoint == "pretrained" and "checkpoint" not in m
+                          and not _pretrained_ckpt(m["id"]))]
+
+    # GT：--ann-file 优先（stem → 类名），未命中回退父目录派生（UCF101）
+    ann_gt: dict[str, str] = {}
+    if args.ann_file:
+        af = args.ann_file if os.path.isabs(args.ann_file) else os.path.join(str(REPO), args.ann_file)
+        if not os.path.isfile(af):
+            print(f"[error] --ann-file 不存在: {af}", file=sys.stderr)
+            return 1
+        ann_gt = _load_ann_gt(af, load_labels(global_label_map))
+        print(f"GT from ann_file: {len(ann_gt)} 条 (label_map={os.path.basename(global_label_map)})")
+
+    def _gt_for(video: str):
+        stem = Path(video).stem
+        if stem in ann_gt:
+            return ann_gt[stem]
+        return Path(video).parent.name if "ucf101" in video.lower() else None
 
     print(f"speed run: {len(models)} 模型 × {len(args.videos)} 视频 → {args.out_dir}")
     data = _load_results_json(args.results_json)
@@ -208,8 +296,13 @@ def main() -> int:
 
     for m in models:
         model_id = m["id"]
-        cfg_path = resolve_mmaction2_config(m["mmaction2_config"])
-        ckpt = _pretrained_ckpt(model_id) if args.checkpoint == "pretrained" else args.checkpoint
+        # --custom 模型自带 config/checkpoint；registry 模型走 mmaction2_config + --checkpoint
+        if "config" in m and "checkpoint" in m:
+            cfg_path = m["config"]
+            ckpt = m["checkpoint"]
+        else:
+            cfg_path = resolve_mmaction2_config(m["mmaction2_config"])
+            ckpt = _pretrained_ckpt(model_id) if args.checkpoint == "pretrained" else args.checkpoint
         if not ckpt or not os.path.isfile(ckpt):
             print(f"[{model_id}] checkpoint 缺失：{ckpt}（跳过）")
             continue
@@ -234,8 +327,7 @@ def main() -> int:
                 continue
 
             t0 = time.time()
-            # 真实标签：从视频路径派生（UCF101: 父目录名 = 类名）
-            gt_label = Path(video).parent.name if "ucf101" in video.lower() else None
+            gt_label = _gt_for(video)
             try:
                 if m.get("type") == "detection":
                     # 检测模型：subprocess demo_spatiotemporal_det.py（不走 inference_recognizer）
@@ -270,6 +362,7 @@ def main() -> int:
                     rtf = round(elapsed_s / vdur, 2) if vdur > 0 else None
                     results_by_id[rid] = {
                         "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
+                        "run_name": run_name,
                         "gt_label": gt_label, "correct": None,
                         "metrics": {"type": "detection", "note": "annotated video has person boxes + AVA action labels"},
                         "output_video": rel_video if os.path.isfile(abs_out) else None,
@@ -299,6 +392,7 @@ def main() -> int:
                     rtf = round(elapsed_s / vdur, 2) if vdur > 0 else None
                     results_by_id[rid] = {
                         "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
+                        "run_name": run_name,
                         "gt_label": gt_label,
                         "correct": _matches(gt_label, res["top1_label"]),
                         "metrics": res, "output_video": rel_video, "status": "completed",
@@ -312,6 +406,7 @@ def main() -> int:
             except Exception as e:
                 results_by_id[rid] = {
                     "id": rid, "model_id": model_id, "video": video, "checkpoint": ckpt,
+                    "run_name": run_name,
                     "metrics": {}, "output_video": rel_video if os.path.isfile(out_video) else None,
                     "status": "error", "error": str(e),
                     "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
