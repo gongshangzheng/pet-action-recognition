@@ -1,4 +1,3 @@
-j# CATSUUuuuuuuuu-DATASETuuuuuuuuuuuuu::q
 -v1 Tasks
 
 ## Phase 1：数据集构建
@@ -47,3 +46,12 @@ j# CATSUUuuuuuuuu-DATASETuuuuuuuuuuuuu::q
   | TimeSformer | 75.00% @ ep3 | 64.77% @ ep1 | -10.23pp |
 
   **观察**：TSM 在 cats 上表现更好；SlowOnly 略降；TimeSformer 下降最显著（过拟合快，best 在 ep1）。
+
+- [x] **T4.3** Speed Run（cats 测试集 101 视频，best ckpt 单视频推理）
+  | 模型 | Speed Run top1 | RTF | 主妻误判 |
+  |------|--------------|-----|----------|
+  | TSM | **92.1%** (93/101) | 3.591 | drinking→eating ×6 |
+  | SlowOnly | **91.1%** (92/101) | 3.691 | drinking→eating ×6 |
+  | TimeSformer | **81.2%** (82/101) | 3.772 | drinking→eating ×6, grooming→prolonged_stationary ×6 |
+
+  **观察**：speed run 准确率显著高于训练时 val 指标（TSM 92% vs 75%），因测试集类别分布更均衡且 best ckpt 表现好。`drinking→eating` 混淆是共性难点（喝水与低头进食视觉相似）。详见 `openspec/changes/cats-speedrun/`。
