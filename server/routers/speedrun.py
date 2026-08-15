@@ -58,7 +58,8 @@ async def run_speedrun(data: dict = Body(...)):
 
     body:
       {videos: [<path>...], models: "all" | [<id>...],
-       checkpoint: "pretrained", device: "cuda:0", force: false, labels?: <path>}
+       checkpoint: "pretrained", device: "cuda:0", force: false, labels?: <path>,
+       run_name?: <批次描述符，缺省自动生成 {dataset}-{YYYYMMDD-HHmm}>}
     """
     global _current_proc, _current_started_at
 
@@ -75,6 +76,17 @@ async def run_speedrun(data: dict = Body(...)):
     force = bool(data.get("force", False))
     labels = data.get("labels")
 
+    # run_name：批次描述符；未传时从视频路径推导数据集名 + 时间戳
+    run_name = data.get("run_name")
+    if not run_name:
+        dataset = "run"
+        for v in videos:
+            parts = Path(str(v)).parts
+            if "datasets" in parts:
+                dataset = parts[parts.index("datasets") + 1]
+                break
+        run_name = f"{dataset}-{time.strftime('%Y%m%d-%H%M')}"
+
     run_id = f"speedrun-{int(time.time())}"
     args = [
         sys.executable, SPEEDRUN_SCRIPT,
@@ -87,6 +99,7 @@ async def run_speedrun(data: dict = Body(...)):
         args += ["--labels", str(labels)]
     if force:
         args += ["--force"]
+    args += ["--run-name", run_name]
 
     os.makedirs(SPEEDRUN_DIR, exist_ok=True)
     log_path = os.path.join(SPEEDRUN_DIR, f"{run_id}.log")
@@ -110,20 +123,30 @@ async def run_speedrun(data: dict = Body(...)):
         "models": models_args,
         "device": device,
         "log": f"results/speedrun/{run_id}.log",
+        "run_name": run_name,
         "note": "speed run 后台运行中；进度见 GET /api/speedrun/results（每 (model,video) 跑完即落盘）。",
     }
 
 
 @router.get("/results")
-async def get_results():
-    """读 results/speedrun/results.json（聚合所有 model×video）。"""
+async def get_results(run_name: str = None):
+    """读 results/speedrun/results.json（聚合所有 model×video）。
+
+    - 缺 run_name 的历史记录在内存中补 run_name="legacy"（不回写磁盘）
+    - 支持 ?run_name= 过滤批次
+    """
     content = read_file(SPEEDRUN_RESULTS_JSON)
     if not content:
         return {"generated_at": None, "results": []}
     try:
-        return json.loads(content)
+        data = json.loads(content)
     except json.JSONDecodeError:
         return {"generated_at": None, "results": [], "error": "Invalid JSON"}
+    for r in data.get("results", []):
+        r.setdefault("run_name", "legacy")
+    if run_name:
+        data["results"] = [r for r in data["results"] if r.get("run_name") == run_name]
+    return data
 
 
 @router.get("/status")
