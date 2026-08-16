@@ -643,9 +643,15 @@
           "assignee": "吴赟阳",
           "startDate": "2026-09-01",
           "endDate": "2026-09-30",
-          "description": "YOLO11 宠物场景目标检测微调与评测。\n\n• 类目：猫、人、食盆、水盆、猫砂盆、玩具、门窗\n• 用现有 cats 视频抽帧标注并训练，验证 mAP 可用\n• 产出检测模型与推理封装",
+          "description": "YOLO11 宠物场景目标检测微调与评测。\n\n• 类目：按定稿文档 docs/detection-annotation-taxonomy.md 执行——cat、person、food_bowl、water_bowl、litter_box、toy、door_window、cat_face（新增，支撑中期验收面部暴露占比），预标注中间类 bowl_unspecified 仅机器使用\n• 用现有 cats 视频抽帧标注并训练（zero-shot 体检已产出预标注包：pet results/detection/zeroshot_cats/preannotation/），验证 mAP 可用\n• 产出检测模型与推理封装",
           "priority": "P1",
-          "children": []
+          "children": [],
+          "progress": [
+            {
+              "date": "2026-08-15 19:05",
+              "note": "[准备] 第一阶段准备工作完成（openspec change yolo11-detection-prep）：①标注类目定稿文档 v0.1（含 cat_face 新增类与验收特征映射，待团队评审）；②COCO 预训练 zero-shot 体检（yolo11n/s 对 79 段 cats 全量，昼夜双口径统计，产物 pet results/detection/zeroshot_cats/）；③LabelStudio 预标注包（yolo11s predictions，每 2s 一帧）。排期：检测模型验收后第一周执行骨架复活验证实验（设计见 docs/keypoint-extraction-pitfalls.md 复活条件分析节——门控通过率 + AP-10K conf 分布 + 10 段抽检）"
+            }
+          ]
         },
         {
           "id": "t13-2",
