@@ -5,8 +5,8 @@
 
 ## 2. 标注类目定稿
 
-- [ ] 2.1 撰写 `management/docs/detection-annotation-taxonomy.md`：类目表（cat/person/food_bowl/water_bowl/litter_box/toy/door_window/cat_face + 预标注中间类 bowl_unspecified）、每类边界定义、验收特征映射表；标注版本号与评审状态
-- [ ] 2.2 更新 tasks.json t13-1：description 引用类目文档（含 cat_face），progress 加骨架复活验证实验排期 note（验收后第一周，链接 wiki《复活条件分析》）
+- [x] 2.1 撰写 `management/docs/detection-annotation-taxonomy.md`：类目表（cat/person/food_bowl/water_bowl/litter_box/toy/door_window/cat_face + 预标注中间类 bowl_unspecified）、每类边界定义、验收特征映射表；标注版本号与评审状态
+- [x] 2.2 更新 tasks.json t13-1：description 引用类目文档（含 cat_face），progress 加骨架复活验证实验排期 note（验收后第一周，链接 wiki《复活条件分析》）
 
 ## 3. zero-shot 体检脚本
 
