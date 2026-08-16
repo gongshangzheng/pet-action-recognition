@@ -35,6 +35,9 @@ results/
 # Dataset artifacts (large video files; lists/README may be committed)
 datasets/quadruped_action/videos_*/
 
+# Generated docx from md_to_docx.sh — source md remains tracked, only the rendered docx is ignored
+management/weekly/**/*.docx
+
 # IDE
 .vscode/
 .idea/

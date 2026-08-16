@@ -18,4 +18,4 @@
 
 ## 4. 提交
 
-- [ ] 4.1 git commit（`feat: 周报 md → docx 转换流程（pandoc + reference 模板）`），包含脚本 + 模板 + README
+- [x] 4.1 git commit（`feat: 周报 md → docx 转换流程（pandoc + reference 模板）`），包含脚本 + 模板 + README
