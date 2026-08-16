@@ -279,6 +279,12 @@ python3 $SD/delete_report.py --type weekly  --author zhangsan --year 2026 --week
 python3 $SD/delete_report.py --type monthly --author zhangsan --year 2026 --month 07
 ```
 
+**周报/月报转 docx（与合作方共享）**：用项目内置的 pandoc 脚本，源 md 入库、docx 按需生成（`management/weekly/**/*.docx` 已 gitignore）。详见 documentation skill §5.7：
+
+```bash
+bash scripts/md_to_docx.sh management/weekly/{year}/
+```
+
 ---
 
 ## 4. 会议纪要 CRUD
