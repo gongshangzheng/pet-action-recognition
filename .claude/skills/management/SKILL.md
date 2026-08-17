@@ -261,7 +261,7 @@ python3 $SD/delete_member.py --id zhangsan --keep-profile
 
 ## 3. 报表 CRUD（日报/周报/月报 → 统一"报告"页）
 
-文件路径：daily `YYYY/MM/DD-{author}.md`、weekly `YYYY/W{NN}-{author}.md`、monthly `YYYY/{MM}-{author}.md`。前端通过 `ReportPage.vue` 统一展示（`n-tabs` 切换日报/周报/月报，详情复用同一组件）。
+文件路径：daily `YYYY/MM/DD-{author}.md`、weekly `YYYY/W{NN}-{author}.md` 或双周 `W{NN}-W{NN2}-{author}.md`（项目对合作方用双周报）、monthly `YYYY/{MM}-{author}.md`。前端通过 `ReportPage.vue` 统一展示（`n-tabs` 切换日报/周报/月报，详情复用同一组件）。
 
 ```bash
 # 创建
@@ -279,7 +279,7 @@ python3 $SD/delete_report.py --type weekly  --author zhangsan --year 2026 --week
 python3 $SD/delete_report.py --type monthly --author zhangsan --year 2026 --month 07
 ```
 
-**周报/月报转 docx（与合作方共享）**：用项目内置的 pandoc 脚本，源 md 入库、docx 按需生成（`management/weekly/**/*.docx` 已 gitignore）。详见 documentation skill §5.7：
+**双周报/月报转 docx（与合作方共享）**：用项目内置的 pandoc 脚本，源 md 入库、docx 按需生成（`management/weekly/**/*.docx` 已 gitignore）。详见 documentation skill §5.7：
 
 ```bash
 bash scripts/md_to_docx.sh management/weekly/{year}/
