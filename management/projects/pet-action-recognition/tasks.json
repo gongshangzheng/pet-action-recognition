@@ -609,7 +609,7 @@
           "assignee": "郑鑫裕",
           "startDate": "2026-09-05",
           "endDate": "2026-09-24",
-          "description": "两阶段微调实验，选出达标模型固化为部署基线。\n\n• 中间域 checkpoint → cats_v2 微调，扫学习率与 epoch\n• test split 正式评测，目标 top1 ≥75%\n• 产出模型对比表与最终选型报告",
+          "description": "两阶段微调实验，选出达标模型固化为部署基线。\n\n• 中间域 checkpoint → cats_v2 微调，扫学习率与 epoch\n• test split 正式评测，目标 top1 ≥75%\n• 产出模型对比表与最终选型报告\n• 候选池：TSM（当前 speedrun 92% 最优 + 端侧资源画像最优）、SlowOnly、TimeSformer 对照 + UniFormer 补验（修复训练配置后域内首跑——K400 82.1% 且权重 199MB/显存 690MB 端侧友好，此前因配置问题从未完成域内对比；W33 已核实 CSN/MViT 域内反转垫底，不再入池）",
           "priority": "P0",
           "children": []
         },
