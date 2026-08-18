@@ -232,6 +232,16 @@ _MMACTION2_REGISTRY = [
         "description": "2D 卷积视频基线。",
     },
     {
+        "id": "videomaev2-base",
+        "name": "VideoMAEv2 (ViT-B) — cats finetune",
+        "family": "VideoMAEv2",
+        "backbone": "vit-base-p16",
+        "pretrained_source": "Kinetics-710 (ViT-g 蒸馏)",
+        "pretrained_url": "https://download.openmmlab.com/mmaction/v1.0/recognition/videomaev2/vit-base-p16_videomaev2-vit-g-dist-k710-pre_16x4x1_kinetics-400/vit-base-p16_videomaev2-vit-g-dist-k710-pre_16x4x1_kinetics-400_20230510-3e7f93b2.pth",
+        "mmaction2_config": "configs/cats_videomaev2_base_16x4.py",
+        "description": "K400 复现 top1 84.71%（18 模型之首）。自写 finetune config（mmaction2 官方只有 test 配置）；backbone 权重由 config 内 init_cfg 自动加载——触发训练时勿选 --pretrained 模式（整模加载会 head 形状冲突）。建议 lr=1e-4、batch=2。",
+    },
+    {
         "id": "tsn-resnet50-quadruped",
         "name": "TSN (ResNet-50) — 四足动作本地配置",
         "family": "TSN",
@@ -467,7 +477,17 @@ def _model_config_path(model_id: str) -> str | None:
     return None
 
 
-def _num_classes() -> int | None:
+def _num_classes(dataset_id: str | None = None) -> int | None:
+    # 按 dataset_id 解析；与 scripts/train_model.py 的 num_classes_for 保持一致。
+    # 未指定 dataset_id 时保持旧行为（四足全局默认），兼容既有调用。
+    if dataset_id == "quadruped_cats_v1":
+        cats_cls = os.path.join(BASE_DIR, "datasets", "cats", "classes.txt")
+        if os.path.isfile(cats_cls):
+            with open(cats_cls, "r", encoding="utf-8") as f:
+                lines = [ln.strip() for ln in f if ln.strip()]
+                if lines:
+                    return len(lines)
+        return 5
     if not os.path.isfile(QUADRUPED_CLASSES_FILE):
         return None
     with open(QUADRUPED_CLASSES_FILE, "r", encoding="utf-8") as f:
@@ -661,7 +681,7 @@ async def run_training(data: dict = Body(...)):
         "--device", str(data.get("device", "cuda")),
         "--seed", str(data.get("seed", 42)),
     ]
-    n_cls = _num_classes()
+    n_cls = _num_classes(dataset_id)
     if n_cls is not None:
         args += ["--num-classes", str(n_cls)]
     if resume_path:
@@ -735,7 +755,7 @@ async def run_test(data: dict = Body(...)):
         "--split", split,
         "--device", str(data.get("device", "cuda")),
     ]
-    n_cls = _num_classes()
+    n_cls = _num_classes(dataset_id)
     if n_cls is not None:
         args += ["--num-classes", str(n_cls)]
     if data.get("extra_args"):

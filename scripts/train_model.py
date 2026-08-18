@@ -433,7 +433,7 @@ def _reconstruct_resume_ckpt(work_dir: str | None, explicit: str | None = None) 
 
 
 def build_train_command(args, ann_train: str, videos_train: str, ann_val: str, videos_val: str,
-                        has_inlined_schedule: bool = False) -> list[str]:
+                        has_inlined_schedule: bool = False, override: str | None = None) -> list[str]:
     cfg_path = args.mmaction2_config
     if not os.path.isabs(cfg_path):
         cfg_path = resolve_mmaction2_config(cfg_path)
@@ -980,7 +980,7 @@ def main() -> int:
         args.mmaction2_config = override_main
 
     cmd = build_train_command(args, ann_train, videos_train, ann_val, videos_val,
-                              has_inlined_schedule=has_sched)
+                              has_inlined_schedule=has_sched, override=override_main)
     log(args.run_id, f"[cmd] {' '.join(cmd)}")
 
     env = os.environ.copy()

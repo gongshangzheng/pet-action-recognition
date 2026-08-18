@@ -90,6 +90,11 @@ def resolve_test_paths(dataset_id: str, split: str):
         return None, None
     ann = root / f"{root.name}_{split}_list.txt"
     videos = root / f"videos_{split}"
+    # fallback: cats/mammal pattern — annotation/{split}_public.txt + ann 内路径相对数据集根
+    if not ann.is_file():
+        ann = root / "annotation" / f"{split}_public.txt"
+    if not videos.is_dir():
+        videos = root  # ann_file 路径已含 videos/ 前缀
     return (str(ann) if ann.is_file() else None), (str(videos) if videos.is_dir() else None)
 
 
