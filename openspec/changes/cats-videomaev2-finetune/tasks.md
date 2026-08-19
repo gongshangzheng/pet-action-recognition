@@ -14,6 +14,6 @@
 
 ## 3. 验证与收尾
 
-- [ ] 3.1 训练跑完：确认 `metrics.json` 该 run status=completed、val top1 记录在案；记录 best epoch 与耗时
-- [ ] 3.2 结果对比：val top1 vs SlowOnly 67.05% / TSM 62.5% / TimeSformer 59.09%，写入 t12 任务 progress（结论：VideoMAEv2 路线保留/排除）
-- [ ] 3.3 文档同步：training / using-mmaction2 skill 中"VideoMAE 不可训练"表述更新为"videomaev2-base 已恢复（自写 config，见 configs/cats_videomaev2_base_16x4.py）"
+- [x] 3.1 训练跑完：确认 `metrics.json` 该 run status=completed、val top1 记录在案；记录 best epoch 与耗时（best epoch 4/25，val top1 76.14%；test split 正式评测 top1 81.19% / top5 100%，latency 300ms，gpu 633MB）
+- [x] 3.2 结果对比：val top1 vs SlowOnly 67.05% / TSM 62.5% / TimeSformer 59.09%，写入 t12 任务 progress（结论：VideoMAEv2 路线保留/排除）——已写入 t12 progress：路线确定保留，val 76.14% / test 81.19% 双超验收线
+- [x] 3.3 文档同步：training / using-mmaction2 skill 中"VideoMAE 不可训练"表述更新为"videomaev2-base 已恢复（自写 config，见 configs/cats_videomaev2_base_16x4.py）"（using-mmaction2 §7 模型表已加注；training skill 无相关表述；历史 change 文档保持原样）

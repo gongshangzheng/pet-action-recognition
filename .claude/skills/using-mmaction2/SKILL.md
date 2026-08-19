@@ -231,8 +231,8 @@ web 训练结果页（`web/src/views/training/TrainResults.vue`）读这个 json
 | Swin | `configs/recognition/swin/` | `swin_tiny.py` | 视频 Swin |
 | X3D | `configs/recognition/x3d/` | `x3d.py` | 轻量 3D |
 | Uniformer | `configs/recognition/uniformer/` | — | 统一 Transformer |
-| VideoMAE | `configs/recognition/videomae/` | — | MAE 预训练 |
-| VideoMAEv2 | `configs/recognition/videomaev2/` | — | MAEv2 |
+| VideoMAE | `configs/recognition/videomae/` | — | MAE 预训练；vendored config 仅含 test 段，需自写 train config |
+| VideoMAEv2 | `configs/recognition/videomaev2/` | — | MAEv2；官方仅支持 test。**已恢复可训练**：自写 finetune config（见 `configs/cats_videomaev2_base_16x4.py` 模板，backbone init_cfg 只载 backbone；勿用 --pretrained 模式）；cats 微调实测 test top1 81.19% |
 
 > **不在 mmaction2 的模型**（README 提到但属外部库，需单独集成，非本 skill 范围）：VideoMamba、SkeleTR、PMTNet、InternVideo2。`projects/` 下另有贡献配方（actionclip/ctrgcn/msg3d/umt 等），可选。
 

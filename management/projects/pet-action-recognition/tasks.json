@@ -624,6 +624,12 @@
           "priority": "P0",
           "children": []
         }
+      ],
+      "progress": [
+        {
+          "date": "2026-08-19 10:17",
+          "note": "VideoMAEv2-base cats 微调首战告捷：val top1 76.14%（epoch4）、test top1 81.19%，双超 75% 验收线；远超 SlowOnly 67.05%。t12-3 两阶段路线的主力模型锁定 videomaev2-base"
+        }
       ]
     },
     {

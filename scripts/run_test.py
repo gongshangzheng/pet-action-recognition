@@ -140,10 +140,11 @@ def main() -> int:
 
     checkpoint = args.checkpoint
     if not os.path.isabs(checkpoint):
-        # 相对路径：先看相对 cwd 是否存在（标准布局 checkpoints/<model>/xxx.pth），
-        # 不存在再退到 CHECKPOINTS_DIR/<basename>
-        if os.path.isfile(checkpoint):
-            checkpoint = os.path.realpath(checkpoint)
+        # 相对路径：相对 REPO 根解析（标准布局 checkpoints/<model>/xxx.pth）。
+        # 注意：API 端点以 scripts/ 为 cwd spawn 本脚本，不能用进程 cwd 相对路径。
+        cand = os.path.join(str(REPO), checkpoint)
+        if os.path.isfile(cand):
+            checkpoint = os.path.realpath(cand)
         else:
             checkpoint = os.path.join(CHECKPOINTS_DIR, os.path.basename(checkpoint))
 
