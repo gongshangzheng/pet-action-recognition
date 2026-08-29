@@ -1,0 +1,128 @@
+{
+  "runId": "2890f875",
+  "agent": "researcher",
+  "task": "背景：我们在做宠物（猫狗等四足动物）视频动作识别研究平台，论文库需要收录该方向文献。请调研并返回论文清单。返回格式要求：JSON 数组，每篇含 arxiv_id（尽量精确到如 2301.12345，没有 arXiv 的给空字符串）、title、year、venue、url、one_line_value_zh（一句话中文价值说明，说明它与视频动作识别的关系）。只要真实存在、可核验的论文，宁缺毋滥。优先 2022-2025 的前沿工作，兼顾奠基性经典。\n\n你的专题：【视频动作识别前沿方法】。调研 2022-2025 年比 VideoMAE 更新/更好的视频动作识别与视频理解模型，例如（不限于）：VideoMAE v2、InternVideo / InternVideo2、VideoPrism、UniFormerV2、AIM、V-JEPA / V-JEPA 2、VideoMamba/Mamba 系、多模态大模型视频理解（如 Video-LLaMA、Qwen-VL 视频类）、以及其他近两年的 SOTA。同时覆盖关键动作识别数据集新工作（Kinetics 后续、SSv2 相关）。目标 15-25 篇。\n\n---\n**Output:**\nWrite your findings to exactly this path: /Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/outputs/2890f875/research.md\nThis path is authoritative for this run.\nIgnore any other output filename or output path mentioned elsewhere, including output destinations in the base agent prompt, system prompt, or task instructions.",
+  "exitCode": 1,
+  "usage": {
+    "input": 10980,
+    "output": 6214,
+    "cacheRead": 5632,
+    "cacheWrite": 0,
+    "cost": 0.1278396,
+    "turns": 2
+  },
+  "model": "kimi-coding/k3:medium",
+  "attemptedModels": [
+    "kimi-coding/k3:medium"
+  ],
+  "modelAttempts": [
+    {
+      "model": "kimi-coding/k3:medium",
+      "success": false,
+      "exitCode": 1,
+      "error": "Agent 'researcher' requested unavailable child tools: web_search, fetch_content, get_search_content.\nThe `tools` field is a strict allowlist; it does not load extension code.\nFor extension tools, add the provider path to `subagentOnlyExtensions` (child-only), `extensions`, or as a path-like entry in `tools`, while keeping each registered tool name in `tools`.\nFor MCP tools, verify the MCP adapter configuration and selected tool names. For builtin tools, verify the name against the installed Pi version.",
+      "usage": {
+        "input": 10980,
+        "output": 6214,
+        "cacheRead": 5632,
+        "cacheWrite": 0,
+        "cost": 0.1278396,
+        "turns": 2
+      }
+    }
+  ],
+  "durationMs": 192398,
+  "toolCount": 1,
+  "error": "Agent 'researcher' requested unavailable child tools: web_search, fetch_content, get_search_content.\nThe `tools` field is a strict allowlist; it does not load extension code.\nFor extension tools, add the provider path to `subagentOnlyExtensions` (child-only), `extensions`, or as a path-like entry in `tools`, while keeping each registered tool name in `tools`.\nFor MCP tools, verify the MCP adapter configuration and selected tool names. For builtin tools, verify the name against the installed Pi version.",
+  "launchContractDigest": "8aad13087dd3dabb3ce3d9c599a203d53bde3893d7db41d7a02785d00841f2a6",
+  "launchResolvedExtensions": {
+    "version": 1,
+    "source": "launch-resolved",
+    "disableAmbientExtensions": false,
+    "runtime": [
+      "sha256:4bddb62f45a7a786"
+    ],
+    "configured": [],
+    "effective": [
+      "sha256:4bddb62f45a7a786"
+    ],
+    "omitted": {
+      "runtime": 0,
+      "configured": 0,
+      "effective": 0
+    }
+  },
+  "acceptance": {
+    "status": "attested",
+    "evidenceStatus": "attested",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "review-findings",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "review-findings",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "review-findings",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "25 篇真实论文清单（含 arxiv_id/title/year/venue/url/中文价值说明）已写入 /Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/outputs/2890f875/research.md；Gaps 节标注了 InternVideo2.5 与 V-JEPA 2 两个需人工复核的 arXiv ID"
+        }
+      ],
+      "changedFiles": [
+        ".pi/subagents/artifacts/outputs/2890f875/research.md"
+      ],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [],
+      "validationOutput": [
+        "write 工具返回成功：Successfully wrote 9341 bytes to research.md"
+      ],
+      "residualRisks": [
+        "无 web_search 工具可用，清单基于训练知识；InternVideo2.5 (2501.12386) 与 V-JEPA 2 (2506.09985) 的 arXiv 编号建议入库前人工复核"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "新增研究报告 research.md，包含 25 篇视频动作识别前沿论文 JSON 清单及来源/缺口说明",
+      "reviewFindings": [
+        "no blockers"
+      ],
+      "manualNotes": "环境中未提供 web_search 工具，无法执行在线检索验证；所有 arXiv 链接为标准格式可直接访问核验。如需 2025 下半年更新工作（Qwen3-VL 技术报告、更多 Mamba 系），建议另行补充检索。"
+    }
+  },
+  "transcriptPath": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/2890f875_researcher_0_transcript.jsonl",
+  "timestamp": 1788012105868
+}

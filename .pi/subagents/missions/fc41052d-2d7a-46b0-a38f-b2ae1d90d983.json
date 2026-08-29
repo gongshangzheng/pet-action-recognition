@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "id": "fc41052d-2d7a-46b0-a38f-b2ae1d90d983",
+  "title": "重要环境说明：你没有 web_search 工具，必须用 bash 里的 curl/python3 直接调用公开 API 做真实检索。可用 API：(1) arXiv API: curl 'ht...",
+  "objective": "重要环境说明：你没有 web_search 工具，必须用 bash 里的 curl/python3 直接调用公开 API 做真实检索。可用 API：(1) arXiv API: curl 'http://export.arxiv.org/api/query?search_query=...&max_results=20&sortBy=submittedDate&sortOrder=descending'（每次请求间隔 sleep 3，User-Agent 要带上）；(2) Semantic Scholar Graph API: curl 'https://api.semanticscholar.org/graph/v1/paper/search?query=...&fields=title,year,venue,externalIds,citationCount,abstract&limit=20'（限流时 sleep 重试）；(3) Papers with Code API: https://paperswithcode.com/api/v1/ 。禁止凭记忆编 arXiv ID——每条都必须来自 API 实际返回。返回格式：JSON 数组，字段 arxiv_id/title/year/venue/url/one_line_value_zh（一句话中文价值）。\n\n专题D【2024-2025 动作识别最新前沿】：用 arXiv API 检索 2024 年至今的动作识别/视频理解新工作。建议查询（search_query 可组合 ti/abs/cat）：'action recognition' cat:cs.CV 按日期排序翻 2-3 页；'video foundation model'；'video understanding'；'skeleton action recognition' 2024+；'temporal action detection' 2024+。筛选标准：与视频动作识别直接相关、有一定影响力迹象（机构/引用/后续工作）。再用 Semantic Scholar 对筛出的重点条目查 citationCount 佐证。目标新增 10-20 篇我们清单外的工作（已覆盖：VideoMAE系、InternVideo系、VideoPrism、V-JEPA系、UniFormer系、AIM、VideoMamba、TimeSformer、SlowFast、MViT、Video Swin、Qwen2/2.5-VL、Video-LLaMA/LLaVA/ChatGPT、VILA——不要重复）。",
+  "status": "completed",
+  "createdAt": "2026-08-29T14:18:16.725Z",
+  "updatedAt": "2026-08-29T14:23:36.718Z",
+  "runs": [
+    {
+      "runId": "5f33d3d8-559c-43c4-be92-86fa7b160101",
+      "mode": "workflow",
+      "asyncDir": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/5f33d3d8-559c-43c4-be92-86fa7b160101",
+      "status": "complete",
+      "startedAt": "2026-08-29T14:18:16.728Z",
+      "completedAt": "2026-08-29T14:23:36.718Z"
+    }
+  ],
+  "workflowChildren": [
+    {
+      "workflowRunId": "5f33d3d8-559c-43c4-be92-86fa7b160101",
+      "key": "frontier-web",
+      "status": "failed",
+      "startedAt": "2026-08-29T14:18:16.757Z",
+      "updatedAt": "2026-08-29T14:19:15.792Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-797Z_01a04de2-af5d-7d7f-8cc8-ae68b8f3b13a.jsonl"
+      ],
+      "runId": "8835b944",
+      "agent": "worker",
+      "task": "重要环境说明：你没有 web_search 工具，必须用 bash 里的 curl/python3 直接调用公开 API 做真实检索。可用 API：(1) arXiv API: curl 'http://export.arxiv.org/api/query?search_query=...&max_results=20&sortBy=submittedDate&sortOrder=descending'（每次请求间隔 sleep 3，User-Agent 要带上）；(2) Semantic Scholar Graph API: curl 'https://api.semanticscholar.org/graph/v1/paper/search?query=...&fields=title,year,venue,externalIds,citationCount,abstract&limit=20'（限流时 sleep 重试）；(3) Papers with Code API: https://paperswithcode.com/api/v1/ 。禁止凭记忆编 arXiv ID——每条都必须来自 API 实际返回。返回格式：JSON 数组，字段 arxiv_id/title/year/venue/url/one_line_value_zh（一句话中文价值）。\n\n专题D【2024-2025 动作识别最新前沿】：用 arXiv API 检索 2024 年至今的动作识别/视频理解新工作。建议查询（search_query 可组合 ti/abs/cat）：'action recognition' cat:cs.CV 按日期排序翻 2-3 页；'video foundation model'；'video understanding'；'skeleton action recognition' 2024+；'temporal action detection' 2024+。筛选标准：与视频动作识别直接相关、有一定影响力迹象（机构/引用/后续工作）。再用 Semantic Scholar 对筛出的重点条目查 citationCount 佐证。目标新增 10-20 篇我们清单外的工作（已覆盖：VideoMAE系、InternVideo系、VideoPrism、V-JEPA系、UniFormer系、AIM、VideoMamba、TimeSformer、SlowFast、MViT、Video Swin、Qwen2/2.5-VL、Video-LLaMA/LLaVA/ChatGPT、VILA——不要重复）。",
+      "completedAt": "2026-08-29T14:19:15.792Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-797Z_01a04de2-af5d-7d7f-8cc8-ae68b8f3b13a.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-08-29T14:19:15.792Z",
+        "status": "failed"
+      }
+    },
+    {
+      "workflowRunId": "5f33d3d8-559c-43c4-be92-86fa7b160101",
+      "key": "animal-web",
+      "status": "failed",
+      "startedAt": "2026-08-29T14:18:16.827Z",
+      "updatedAt": "2026-08-29T14:23:01.416Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-841Z_01a04de2-af89-7bce-857c-269557eda179.jsonl"
+      ],
+      "runId": "b670d4de",
+      "agent": "worker",
+      "task": "重要环境说明：你没有 web_search 工具，必须用 bash 里的 curl/python3 直接调用公开 API 做真实检索。可用 API：(1) arXiv API: curl 'http://export.arxiv.org/api/query?search_query=...&max_results=20&sortBy=submittedDate&sortOrder=descending'（每次请求间隔 sleep 3，User-Agent 要带上）；(2) Semantic Scholar Graph API: curl 'https://api.semanticscholar.org/graph/v1/paper/search?query=...&fields=title,year,venue,externalIds,citationCount,abstract&limit=20'（限流时 sleep 重试）；(3) Papers with Code API: https://paperswithcode.com/api/v1/ 。禁止凭记忆编 arXiv ID——每条都必须来自 API 实际返回。返回格式：JSON 数组，字段 arxiv_id/title/year/venue/url/one_line_value_zh（一句话中文价值）。\n\n专题E【动物/宠物动作行为识别——真实检索补全】：用 Semantic Scholar + arXiv API 检索：(1) 'animal behavior recognition video'、(2) 'dog action recognition'、'cat behavior recognition'、'pet action recognition'、(3) 'animal pose estimation' 2024-2025 新作、(4) 'livestock behavior' / 'cattle behavior recognition'（畜牧方向动作识别很活跃，方法可迁移到宠物）、(5) 'animal welfare video monitoring'。对高引条目记录 citationCount。已覆盖不要重复：DeepLabCut、SLEAP、SuperAnimal、AP-10K、APT-36K(2206.05683)、Animal Kingdom、MammalNet(2306.00576)、Keypoint-MoSeq、B-SOiD、A-SOiD、MARS、VAME、DeepEthogram、LabGym、AmadeusGPT、DANNCE、Anipose、AnimalWeb、ATRW、OpenMonkeyStudio/Challenge、JAABA、MotionMapper、MoSeq、Who Let the Dogs Out(1803.10827)、BARC、SMAL(1611.07700)、StanfordExtra。目标新增 10-20 篇。",
+      "completedAt": "2026-08-29T14:23:01.416Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-841Z_01a04de2-af89-7bce-857c-269557eda179.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-08-29T14:23:01.416Z",
+        "status": "failed"
+      }
+    },
+    {
+      "workflowRunId": "5f33d3d8-559c-43c4-be92-86fa7b160101",
+      "key": "transfer-web",
+      "status": "failed",
+      "startedAt": "2026-08-29T14:18:16.857Z",
+      "updatedAt": "2026-08-29T14:23:36.662Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-871Z_01a04de2-afa7-7040-9067-e1b5e439152d.jsonl"
+      ],
+      "runId": "994d62e9",
+      "agent": "worker",
+      "task": "重要环境说明：你没有 web_search 工具，必须用 bash 里的 curl/python3 直接调用公开 API 做真实检索。可用 API：(1) arXiv API: curl 'http://export.arxiv.org/api/query?search_query=...&max_results=20&sortBy=submittedDate&sortOrder=descending'（每次请求间隔 sleep 3，User-Agent 要带上）；(2) Semantic Scholar Graph API: curl 'https://api.semanticscholar.org/graph/v1/paper/search?query=...&fields=title,year,venue,externalIds,citationCount,abstract&limit=20'（限流时 sleep 重试）；(3) Papers with Code API: https://paperswithcode.com/api/v1/ 。禁止凭记忆编 arXiv ID——每条都必须来自 API 实际返回。返回格式：JSON 数组，字段 arxiv_id/title/year/venue/url/one_line_value_zh（一句话中文价值）。\n\n专题F【人类→动物迁移 & 小数据：真实检索补全】：用 Semantic Scholar + arXiv API 检索：(1) 'cross-species pose estimation'、(2) 'domain adaptation animal pose'、(3) 'transfer learning action recognition' 2023+、(4) 'few-shot action recognition' 2024-2025 最新（看 MoLo 之后的进展）、(5) 'self-supervised video pretraining small data'、(6) 'synthetic animal data' / 'animal video generation'（合成数据缓解稀缺）。并核验一篇存疑论文：是否存在名为 PoseBridge 的跨物种姿态估计域适应论文（AAAI/WACV 2022-2023 附近）——用 Semantic Scholar 搜 'PoseBridge'，如实报告找到什么。已覆盖不要重复：MAML、ProtoNet、TARN(1907.09021)、OTAM(1906.11415)、ARN、TRX(2101.06184)、HyRSM(2204.13423)、STRM(2112.05132)、MoLo(2304.00946)、Cao 2019(1908.05206)、RegDA(2103.06175)、ViTPose+、Kinetics。目标新增 8-15 篇 + PoseBridge 核验结论。",
+      "completedAt": "2026-08-29T14:23:36.662Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-871Z_01a04de2-afa7-7040-9067-e1b5e439152d.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-08-29T14:23:36.662Z",
+        "status": "failed"
+      }
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "status",
+      "path": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/5f33d3d8-559c-43c4-be92-86fa7b160101/status.json"
+    },
+    {
+      "kind": "other",
+      "path": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/5f33d3d8-559c-43c4-be92-86fa7b160101/events.jsonl",
+      "description": "Lifecycle events"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-797Z_01a04de2-af5d-7d7f-8cc8-ae68b8f3b13a.jsonl"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-841Z_01a04de2-af89-7bce-857c-269557eda179.jsonl"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T14-18-16-871Z_01a04de2-afa7-7040-9067-e1b5e439152d.jsonl"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/Users/zhengxinyu/pet-action-recognition",
+  "ownerSessionId": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2.jsonl",
+  "summary": "Workflow completed with 3 child run(s). Return: {\n  \"d\": \"\",\n  \"e\": \"\",\n  \"f\": \"\"\n} Trace: 6 event(s)."
+}

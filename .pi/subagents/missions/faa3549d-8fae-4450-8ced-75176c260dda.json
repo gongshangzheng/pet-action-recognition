@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "id": "faa3549d-8fae-4450-8ced-75176c260dda",
+  "title": "背景：我们在做宠物（猫狗等四足动物）视频动作识别研究平台，论文库需要收录该方向文献。请调研并返回论文清单。返回格式要求：JSON 数组，每篇含 arxiv_id（尽量精确到如 2301.1234...",
+  "objective": "背景：我们在做宠物（猫狗等四足动物）视频动作识别研究平台，论文库需要收录该方向文献。请调研并返回论文清单。返回格式要求：JSON 数组，每篇含 arxiv_id（尽量精确到如 2301.12345，没有 arXiv 的给空字符串）、title、year、venue、url、one_line_value_zh（一句话中文价值说明，说明它与视频动作识别的关系）。只要真实存在、可核验的论文，宁缺毋滥。优先 2022-2025 的前沿工作，兼顾奠基性经典。\n\n你的专题：【视频动作识别前沿方法】。调研 2022-2025 年比 VideoMAE 更新/更好的视频动作识别与视频理解模型，例如（不限于）：VideoMAE v2、InternVideo / InternVideo2、VideoPrism、UniFormerV2、AIM、V-JEPA / V-JEPA 2、VideoMamba/Mamba 系、多模态大模型视频理解（如 Video-LLaMA、Qwen-VL 视频类）、以及其他近两年的 SOTA。同时覆盖关键动作识别数据集新工作（Kinetics 后续、SSv2 相关）。目标 15-25 篇。",
+  "status": "completed",
+  "createdAt": "2026-08-29T13:58:33.393Z",
+  "updatedAt": "2026-08-29T14:05:01.237Z",
+  "runs": [
+    {
+      "runId": "0b54518a-a2eb-4423-9a4a-9f90f1ebec7a",
+      "mode": "workflow",
+      "asyncDir": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/0b54518a-a2eb-4423-9a4a-9f90f1ebec7a",
+      "status": "complete",
+      "startedAt": "2026-08-29T13:58:33.398Z",
+      "completedAt": "2026-08-29T14:05:01.234Z"
+    }
+  ],
+  "workflowChildren": [
+    {
+      "workflowRunId": "0b54518a-a2eb-4423-9a4a-9f90f1ebec7a",
+      "key": "action-recognition-frontier",
+      "status": "failed",
+      "startedAt": "2026-08-29T13:58:33.436Z",
+      "updatedAt": "2026-08-29T14:01:45.872Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/2890f875/run-0/session.jsonl"
+      ],
+      "runId": "2890f875",
+      "agent": "researcher",
+      "task": "背景：我们在做宠物（猫狗等四足动物）视频动作识别研究平台，论文库需要收录该方向文献。请调研并返回论文清单。返回格式要求：JSON 数组，每篇含 arxiv_id（尽量精确到如 2301.12345，没有 arXiv 的给空字符串）、title、year、venue、url、one_line_value_zh（一句话中文价值说明，说明它与视频动作识别的关系）。只要真实存在、可核验的论文，宁缺毋滥。优先 2022-2025 的前沿工作，兼顾奠基性经典。\n\n你的专题：【视频动作识别前沿方法】。调研 2022-2025 年比 VideoMAE 更新/更好的视频动作识别与视频理解模型，例如（不限于）：VideoMAE v2、InternVideo / InternVideo2、VideoPrism、UniFormerV2、AIM、V-JEPA / V-JEPA 2、VideoMamba/Mamba 系、多模态大模型视频理解（如 Video-LLaMA、Qwen-VL 视频类）、以及其他近两年的 SOTA。同时覆盖关键动作识别数据集新工作（Kinetics 后续、SSv2 相关）。目标 15-25 篇。",
+      "completedAt": "2026-08-29T14:01:45.872Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/2890f875/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-08-29T14:01:45.872Z",
+        "status": "failed"
+      }
+    },
+    {
+      "workflowRunId": "0b54518a-a2eb-4423-9a4a-9f90f1ebec7a",
+      "key": "animal-pose-behavior",
+      "status": "failed",
+      "startedAt": "2026-08-29T13:58:33.470Z",
+      "updatedAt": "2026-08-29T14:05:01.143Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/8e782009/run-0/session.jsonl"
+      ],
+      "runId": "8e782009",
+      "agent": "researcher",
+      "task": "背景：我们在做宠物（猫狗等四足动物）视频动作识别研究平台，论文库需要收录该方向文献。请调研并返回论文清单。返回格式要求：JSON 数组，每篇含 arxiv_id（尽量精确到如 2301.12345，没有 arXiv 的给空字符串）、title、year、venue、url、one_line_value_zh（一句话中文价值说明，说明它与视频动作识别的关系）。只要真实存在、可核验的论文，宁缺毋滥。优先 2022-2025 的前沿工作，兼顾奠基性经典。\n\n你的专题：【动物姿态估计与动物行为/动作识别】。调研动物方向的代表性论文与最新进展，例如（不限于）：DeepLabCut 及其 SuperAnimal 基础模型、SLEAP、AP-10K、APT-36K、Animal Kingdom 数据集、MammalNet、AnimalWeb、OpenMonkeyChallenge、动物行为识别方法（MARS、B-SOiD、A-SOiD、VAME、DeepEthogram、LabGym、AmadeusGPT）、动物 Re-ID/追踪与动作结合的工作。目标 15-25 篇，重点是有动作/行为识别价值的。",
+      "completedAt": "2026-08-29T14:05:01.143Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/8e782009/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-08-29T14:05:01.143Z",
+        "status": "failed"
+      }
+    },
+    {
+      "workflowRunId": "0b54518a-a2eb-4423-9a4a-9f90f1ebec7a",
+      "key": "core-problems-transfer",
+      "status": "failed",
+      "startedAt": "2026-08-29T13:58:33.493Z",
+      "updatedAt": "2026-08-29T14:03:15.596Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/2a1be89d/run-0/session.jsonl"
+      ],
+      "runId": "2a1be89d",
+      "agent": "researcher",
+      "task": "背景：我们在做宠物（猫狗等四足动物）视频动作识别研究平台，论文库需要收录该方向文献。请调研并返回论文清单。返回格式要求：JSON 数组，每篇含 arxiv_id（尽量精确到如 2301.12345，没有 arXiv 的给空字符串）、title、year、venue、url、one_line_value_zh（一句话中文价值说明，说明它与视频动作识别的关系）。只要真实存在、可核验的论文，宁缺毋滥。优先 2022-2025 的前沿工作，兼顾奠基性经典。\n\n你的专题：【两大核心问题】。(1) 动物动作数据稀缺：few-shot / 小样本动作识别、自监督预训练缓解数据不足、动物数据合成/增广；(2) 人类动作识别能力迁移到动物：cross-domain / cross-species 迁移学习、domain adaptation（人体姿态到动物姿态，如 PoseBridge、跨物种关键点迁移）、用人类视频基础模型微调到动物场景的有效性证据。每个子问题目标 8-15 篇，并在 JSON 之后附 5-10 行中文综合判断：这两条路线哪条更有希望、推荐怎么做。",
+      "completedAt": "2026-08-29T14:03:15.596Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/2a1be89d/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-08-29T14:03:15.596Z",
+        "status": "failed"
+      }
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "status",
+      "path": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/0b54518a-a2eb-4423-9a4a-9f90f1ebec7a/status.json"
+    },
+    {
+      "kind": "other",
+      "path": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/0b54518a-a2eb-4423-9a4a-9f90f1ebec7a/events.jsonl",
+      "description": "Lifecycle events"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/2890f875/run-0/session.jsonl"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/8e782009/run-0/session.jsonl"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/2a1be89d/run-0/session.jsonl"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/Users/zhengxinyu/pet-action-recognition",
+  "ownerSessionId": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2.jsonl",
+  "summary": "Workflow completed with 3 child run(s). Return: {\n  \"a\": \"已完成调研并写入指定路径。\\n\\n**交付物**：`/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/outputs/2890f875/research.md`\\n\\n**清单概要**（25 篇，全部为真实可核验论文）：\\n\\n- **掩码/自监督预训练前沿**：VideoMAE (2203.12602)、VideoMAE V2 (2303.16727)、MaskFeat (2112.09133)、V-JEPA (2404.08471)、V-JEPA 2 (2506.09985)\\n- **视频基座大模型**：InternVideo (2212.03191)、InternVideo2 (2403.15377)、InternVideo2.5 (2501.12386)、VideoPrism (2402.13217)\\n- **图像模型适配视频路线**：UniFormer (2203.04676)、UniFormerV2 (2211.09552)、AIM (2306.13812)\\n- **新架构**：VideoMamba (2403.06977)\\n- **多模态视频理解**：Video-LLaMA、Video-LLaVA、Video-ChatGPT、Qwen2-VL、Qwen2.5-VL、VILA\\n- **经典奠基**：Video Swin Transformer、MViTv2、TimeSformer、SlowFast\\n- **数据集**：Kinetics-700、Something-Something (SSv1/v2)\\n\\n每条均含 `arxiv_id` / `title` / `year` / `venue` / `url` / `one_line_value_zh`。\\n\\n**注意事项**：本环境没有 web_search 工具可用，清单基于训练知识整理；其中 **InternVideo2.5 (2501.12386) 和 V-JEPA 2 (2506.09985)** 两个 arXiv 编号置信度略低，建议入库前人工快速核验。Qwen2.5-VL 与本项目已集成的 Qwen3-VL 路线直接相关，已在价值说明中标注。\",\n  \"b\": \"调研完成。已写 Trace: 6 event(s)."
+}
