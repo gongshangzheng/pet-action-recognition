@@ -18,10 +18,10 @@
 
 - [x] 3.1 rsync 两个修复文件到 pet（工作区脏、push 被阻塞，文件级同步；同步前确认 pet 侧两文件与本地修复前版本 md5 一致）
 - [x] 3.2 pet 上经 API 发起一次真实训练（`device: cuda:N` + `pretrained: true`，选一个轻量模型 1 epoch）确认 run 进入 running 且正常推进；注意避开正在运行的 cats 批量任务占用的卡
-- [ ] 3.3 实测通过后 commit（`fix: 训练/测试 CLI 支持 cuda:N 选卡 + pretrained 带值传参`）并同步 tasks.json 勾选状态
+- [x] 3.3 实测通过后 commit（`fix: 训练/测试 CLI 支持 cuda:N 选卡 + pretrained 带值传参`）并同步 tasks.json 勾选状态
 
 ## 4. 收尾
 
-- [ ] 4.1 更新 testing/training skill 中 `--device` 用法描述（如有过期表述）
-- [ ] 4.2 清理验证产生的 dry/probe run 记录
+- [x] 4.1 更新 testing/training skill 中 `--device` 用法描述（检查后无需改动——skill 文档原本就按目标行为写的，此次是代码对齐文档）
+- [x] 4.2 清理验证产生的 dry/probe run 记录
 - [ ] 4.3 `openspec archive` 归档本 change
