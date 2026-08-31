@@ -76,9 +76,9 @@ def build_annotation(npz_path: Path, label: int, canon: list[str],
     # img_shape：NPZ 未存视频分辨率时给安全默认（PoseCompact 依赖相对比例）
     img_shape = [360, 640]
 
-    # PYSKL 约定：keypoint (K=num_person, T, V, C)，单人数据补第二通道全 0
-    keypoint = np.stack([out.transpose(2, 0, 1), np.zeros_like(out.transpose(2, 0, 1))])
-    keypoint_score = np.stack([out_score, np.zeros_like(out_score)])
+    # mmaction2 PoseDataset 约定：keypoint (T, V, 3)，第三通道 = score；
+    # frame_inds 与 keypoint 逐帧平行（单人轨每帧 1 条）
+    keypoint = np.concatenate([out, out_score[..., None]], axis=2)  # (T, V, 3)
     return {
         "frame_dir": npz_path.stem,
         "label": label,
@@ -86,7 +86,6 @@ def build_annotation(npz_path: Path, label: int, canon: list[str],
         "total_frames": T,
         "frame_inds": list(range(T)),
         "keypoint": keypoint.astype(np.float16),
-        "keypoint_score": keypoint_score.astype(np.float16),
     }
 
 
