@@ -36,12 +36,6 @@ model = dict(
         dropout_ratio=0.5,
         average_clips="prob",
     ),
-    data_preprocessor=dict(
-        type="ActionDataPreprocessor",
-        mean=[0.0, 0.0, 0.0],
-        std=[255.0, 255.0, 255.0],
-        format_shape="NCTHW_Heatmap",
-    ),
 )
 
 # dataset settings（PYSKL pkl 由 convert_keypoints_posec3d.py 生成）
