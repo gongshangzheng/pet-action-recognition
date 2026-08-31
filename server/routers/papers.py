@@ -15,9 +15,19 @@ init_db()
 
 
 @router.get("")
-async def list_papers(limit: int = 100, offset: int = 0, source: Optional[str] = None, category: Optional[str] = None):
-    """获取论文列表。"""
-    papers, total = query_papers(source=source, category=category, limit=limit, offset=offset)
+async def list_papers(
+    limit: int = 100,
+    offset: int = 0,
+    source: Optional[str] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    starred: Optional[bool] = None,
+    pinned: Optional[bool] = None,
+):
+    """获取论文列表。支持 search/starred/pinned 过滤（见 papers skill 文档）。"""
+    papers, total = query_papers(
+        source=source, category=category, search=search,
+        starred=starred, pinned=pinned, limit=limit, offset=offset)
     return {"total": total, "papers": papers}
 
 

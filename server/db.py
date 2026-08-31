@@ -100,6 +100,9 @@ def row_to_dict(row: sqlite3.Row) -> dict:
 def query_papers(
     source: str | None = None,
     category: str | None = None,
+    search: str | None = None,
+    starred: bool | None = None,
+    pinned: bool | None = None,
     limit: int = 100,
     offset: int = 0,
     order_by: str = "published_at DESC",
@@ -119,6 +122,14 @@ def query_papers(
     if category:
         conditions.append("pc.category = ?")
         params.append(category)
+    if search:
+        conditions.append("(LOWER(p.title) LIKE ? OR LOWER(IFNULL(p.abstract, '')) LIKE ?)")
+        like = f"%{search.lower()}%"
+        params.extend([like, like])
+    if starred:
+        conditions.append("p.starred = 1")
+    if pinned:
+        conditions.append("p.pinned = 1")
 
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)

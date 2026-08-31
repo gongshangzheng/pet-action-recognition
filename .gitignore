@@ -63,3 +63,6 @@ server/.venv/
 third-party/
 *.zip
 /live/
+
+# papers db backup files
+data/*.bak*

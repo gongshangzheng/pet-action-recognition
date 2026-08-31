@@ -1,0 +1,27 @@
+{
+  "comment": "核心论文清单。tier: pinned=最重要（置顶展示+收藏）, core=核心收藏。理由写入 papers.note。",
+  "standards": "奠基性/高影响力；与宠物动作识别项目的训练或评测直接相关；动物动作方向代表性工作",
+  "papers": [
+    {"arxiv_id": "2203.12602", "title": "VideoMAE", "tier": "pinned", "reason": "项目预训练训练路线的主力骨干：高掩码率视频自监督，数据效率极高，现有 mmaction2 训练 registry 直接使用"},
+    {"arxiv_id": "1705.07750", "title": "Quo Vadis, Action Recognition? A New Model and the Kinetics Dataset", "tier": "pinned", "reason": "I3D 与 Kinetics 预训练迁移范式源头，'人类动作预训练→下游迁移'的方法论起点，动物迁移路线的理论基础"},
+    {"arxiv_id": "1812.03982", "title": "SlowFast Networks for Video Recognition", "tier": "pinned", "reason": "双路（慢语义+快运动）经典骨干，速度/精度折中的长期基准，宠物实时推理场景的重要参照"},
+    {"arxiv_id": "1406.2199", "title": "Two-Stream Convolutional Networks for Action Recognition in Videos", "tier": "pinned", "reason": "双流（RGB+光流）动作识别奠基作，理解视频时序特征演化的必读起点"},
+    {"arxiv_id": "", "title": "DeepLabCut: markerless pose estimation of user-defined body parts with deep learning", "tier": "pinned", "reason": "动物姿态估计事实标准工具，少量标注即可迁移，姿态桥接辅助线的工程基座"},
+    {"arxiv_id": "2204.08129", "title": "Animal Kingdom: A Large and Diverse Dataset for Animal Behavior Understanding", "tier": "pinned", "reason": "850 物种动物行为理解最大基准（动作识别/姿态/定位三任务），动物版 Kinetics，宠物动作识别的对标数据集"},
+    {"arxiv_id": "2203.07436", "title": "SuperAnimal pretrained pose estimation models for behavioral analysis", "tier": "pinned", "reason": "跨物种预训练姿态基础模型（SuperAnimal-Quadruped 零样本可用），宠物关键点伪标注与骨架路线首选"},
+    {"arxiv_id": "2306.00576", "title": "MammalNet: A Large-scale Video Benchmark for Mammal Recognition and Behavior Understanding", "tier": "pinned", "reason": "直接量化了 Kinetics 人类动作预训练迁移到动物行为识别的效果，是核心问题二的关键证据"},
+
+    {"arxiv_id": "2303.16727", "title": "VideoMAE V2: Scaling Video Masked Autoencoders with Dual Masking", "tier": "core", "reason": "核心问题一主攻方案：在无标注宠物监控视频上做域继续预训练的数据效率最优单点投入"},
+    {"arxiv_id": "2403.15377", "title": "InternVideo2: Scaling Foundation Models for Multimodal Video Understanding", "tier": "core", "reason": "2024 视频基座模型代表，60+ 任务 SOTA，可作为宠物动作识别的强骨干候选"},
+    {"arxiv_id": "2402.13217", "title": "VideoPrism: A foundational visual encoder for video understanding", "tier": "core", "reason": "Google 视频基座编码器，33 基准领先，冻结特征评估对小数据微调场景有吸引力"},
+    {"arxiv_id": "2302.03024", "title": "AIM: Adapting Image Models for Efficient Video Action Recognition", "tier": "core", "reason": "冻结图像 ViT + 少量 Adapter 即达视频 SOTA，参数高效微调是小数据宠物场景的关键技术路线"},
+    {"arxiv_id": "2206.05683", "title": "APT-36K: A Large-scale Benchmark for Animal Pose Estimation and Tracking", "tier": "core", "reason": "首个动物姿态视频追踪基准，实验证明人体预训练姿态模型跨物种迁移显著优于从头训练"},
+    {"arxiv_id": "2108.12617", "title": "AP-10K: A Benchmark for Animal Pose Estimation in the Wild", "tier": "core", "reason": "23 科 54 种跨物种姿态基准，含猫狗关键点，评估姿态模型泛化的标准数据集"},
+    {"arxiv_id": "1906.11415", "title": "Few-Shot Video Classification via Temporal Alignment", "tier": "core", "reason": "OTAM：few-shot 动作识别时序对齐代表，对应宠物稀有动作类别只有几个样本的场景"},
+    {"arxiv_id": "2101.06184", "title": "Temporal-Relational CrossTransformers for Few-Shot Action Recognition", "tier": "core", "reason": "TRX：few-shot 动作识别 SOTA 谱系关键一环，多时序子序列匹配思路适合长短不一的宠物动作片段"},
+    {"arxiv_id": "2407.14744", "title": "A Comprehensive Review of Few-shot Action Recognition", "tier": "core", "reason": "few-shot 动作识别领域全景综述，数据稀缺路线的入门地图"},
+    {"arxiv_id": "2408.00249", "title": "Task-Adapter: Task-specific Adaptation of Image Models for Few-shot Action Recognition", "tier": "core", "reason": "图像基础模型适配 few-shot 动作识别，同时连接'基础模型迁移'与'数据稀缺'两个核心问题"},
+    {"arxiv_id": "2506.01214", "title": "A Review on Coarse to Fine-Grained Animal Action Recognition", "tier": "core", "reason": "动物动作识别方向综述地图，系统梳理粗到细粒度方法谱系，优先阅读"},
+    {"arxiv_id": "", "title": "Keypoint-MoSeq: Parsing Behavior by Linking Point Tracking to Pose Dynamics", "tier": "core", "reason": "姿态驱动无监督行为分割当前 SOTA 范式，动物动作自动发现（无需穷举标注类别）的代表"}
+  ]
+}

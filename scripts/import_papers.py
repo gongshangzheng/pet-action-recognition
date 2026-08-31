@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""从博客提取的论文列表导入到本地论文数据库。
+"""从论文候选 JSON 导入到本地论文数据库（幂等，可重复执行）。
 
-1. 清空现有论文
-2. 从 arXiv API 批量获取论文元数据
-3. 写入本地 SQLite 数据库（data/papers.db）
+1. 读取候选 JSON（默认 data/extracted_papers.json，可用 --input 指定）
+2. 从 arXiv API 批量获取论文元数据（失败重试，仍失败则降级 manual 通道）
+3. 幂等写入 SQLite（data/papers.db）：
+   - 新记录：INSERT 完整字段
+   - 已有记录：仅更新派生元数据字段，保留 starred/pinned/note/blog_url 等用户数据
 """
+import argparse
+import hashlib
 import json
+import re
 import sqlite3
 import sys
 import time
@@ -20,17 +25,25 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from server.db import init_db
 
 DB_PATH = Path(__file__).parent.parent / "data" / "papers.db"
-PAPERS_JSON = Path(__file__).parent.parent / "data" / "extracted_papers.json"
+DEFAULT_INPUT = Path(__file__).parent.parent / "data" / "extracted_papers.json"
 ARXIV_API = "http://export.arxiv.org/api/query"
+ARXIV_ID_RE = re.compile(r"^\d{4}\.\d{4,5}$")
 
 # arXiv API namespace
 NS = {"atom": "http://www.w3.org/2005/Atom"}
 
 
-def fetch_arxiv_batch(arxiv_ids: list[str]) -> dict:
-    """从 arXiv API 批量获取论文元数据。"""
+def stable_manual_id(title: str) -> str:
+    """按标题生成稳定 ID（Python 内建 hash 跨进程随机，不能用于幂等去重）。"""
+    normalized = " ".join(title.lower().split())
+    digest = hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:12]
+    return f"manual-{digest}"
+
+
+def fetch_arxiv_batch(arxiv_ids: list, max_retries: int = 2) -> tuple:
+    """从 arXiv API 批量获取论文元数据；单批失败重试后放弃该批（调用方降级处理）。"""
     results = {}
-    # arXiv API 限制每次最多 100 个，我们分批
+    failed_batches = []
     batch_size = 50
     for i in range(0, len(arxiv_ids), batch_size):
         batch = arxiv_ids[i:i + batch_size]
@@ -42,9 +55,22 @@ def fetch_arxiv_batch(arxiv_ids: list[str]) -> dict:
         url = f"{ARXIV_API}?{params}"
         print(f"  Fetching arXiv batch {i//batch_size + 1}: {len(batch)} papers...")
 
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            xml_data = resp.read().decode("utf-8")
+        xml_data = None
+        for attempt in range(max_retries + 1):
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    xml_data = resp.read().decode("utf-8")
+                break
+            except Exception as exc:
+                print(f"    attempt {attempt + 1} failed: {exc}")
+                if attempt < max_retries:
+                    time.sleep(5)
+        if xml_data is None:
+            print(f"    WARNING: batch {i//batch_size + 1} failed after retries, "
+                  f"{len(batch)} ids fall back to manual channel")
+            failed_batches.extend(batch)
+            continue
 
         root = ET.fromstring(xml_data)
         for entry in root.findall("atom:entry", NS):
@@ -102,79 +128,107 @@ def fetch_arxiv_batch(arxiv_ids: list[str]) -> dict:
         if i + batch_size < len(arxiv_ids):
             time.sleep(3)
 
-    return results
+    return results, failed_batches
 
 
-def generate_paper_id(arxiv_id: str) -> str:
-    """生成论文 ID。"""
-    return f"arxiv-{arxiv_id}"
+def build_paper_id(arxiv_id: str, title: str) -> str:
+    """有合法 arXiv ID 用 arxiv-<id>，否则用稳定 manual ID。"""
+    if arxiv_id and ARXIV_ID_RE.match(arxiv_id):
+        return f"arxiv-{arxiv_id}"
+    return stable_manual_id(title)
 
 
-def insert_paper(conn, paper_data: dict, extracted: dict):
-    """插入一篇论文到数据库。"""
+def normalize_authors(authors_raw) -> str:
+    """authors 必须是 JSON 数组格式（db.py row_to_dict 用 json.loads 解析）。"""
+    if isinstance(authors_raw, list):
+        return json.dumps(authors_raw, ensure_ascii=False)
+    if authors_raw and isinstance(authors_raw, str) and authors_raw.startswith("["):
+        return authors_raw  # 已经是 JSON 数组字符串
+    if authors_raw:
+        author_list = [a.strip() for a in authors_raw.split(",") if a.strip()]
+        return json.dumps(author_list, ensure_ascii=False)
+    return json.dumps(["Unknown"])
+
+
+def upsert_paper(conn, paper_data: dict, extracted: dict):
+    """幂等写入一篇论文：新记录 INSERT，已有记录仅更新派生元数据。"""
     arxiv_id = extracted.get("arxiv_id", "")
-    paper_id = generate_paper_id(arxiv_id) if arxiv_id else f"manual-{hash(extracted['title']) % 10**12}"
+    if arxiv_id and not ARXIV_ID_RE.match(arxiv_id):
+        print(f"    WARNING: invalid arxiv_id format '{arxiv_id}', treat as manual: "
+              f"{extracted['title'][:50]}")
+        arxiv_id = ""
+    paper_id = build_paper_id(arxiv_id, extracted["title"])
 
     title = paper_data.get("title", extracted["title"])
     abstract = paper_data.get("abstract", "")
-    # authors 必须是 JSON 数组格式（db.py row_to_dict 用 json.loads 解析）
-    authors_raw = paper_data.get("authors", "")
-    if authors_raw and isinstance(authors_raw, str) and authors_raw.startswith("["):
-        authors = authors_raw  # 已经是 JSON 数组字符串
-    elif authors_raw:
-        # 逗号分隔的字符串，转为 JSON 数组
-        author_list = [a.strip() for a in authors_raw.split(",") if a.strip()]
-        authors = json.dumps(author_list, ensure_ascii=False)
-    else:
-        authors = json.dumps(["Unknown"])
-    # published_at 必须是有效的 ISO 日期或 None
-    published_at = paper_data.get("published_at", "")
-    if not published_at:
-        published_at = None
+    authors = normalize_authors(paper_data.get("authors", ""))
+    published_at = paper_data.get("published_at", "") or None
     pdf_url = paper_data.get("pdf_url", "")
     url = paper_data.get("url", extracted.get("url", ""))
     categories = paper_data.get("categories", [])
+    now = datetime.now().isoformat()
 
     # 映射 arXiv 分类到我们的分类体系
     our_categories = map_categories(categories, extracted)
+    # 候选 JSON 可显式指定分类（调研论文按专题分组）
+    explicit_category = extracted.get("category")
+    if explicit_category and explicit_category not in our_categories:
+        our_categories = [explicit_category] + our_categories
 
     external_ids = json.dumps({"arxiv": arxiv_id}) if arxiv_id else "{}"
-    now = datetime.now().isoformat()
+    metadata = json.dumps({
+        "source_article": extracted.get("source_article", ""),
+        "role": extracted.get("role", ""),
+    }, ensure_ascii=False)
 
-    conn.execute(
-        """INSERT OR REPLACE INTO papers
-           (id, title, title_zh, abstract, abstract_zh, authors,
-            published_at, crawled_at, url, pdf_url, source, external_ids,
-            summary_zh, relevance_score, llm_classification, metadata,
-            arxiv_categories, starred, pinned)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)""",
-        (
-            paper_id,
-            title,
-            extracted.get("title_zh", ""),
-            abstract,
-            "",  # abstract_zh
-            authors,
-            published_at,
-            now,
-            url,
-            pdf_url,
-            "arxiv" if arxiv_id else "manual",
-            external_ids,
-            "",  # summary_zh
-            0.5,  # relevance_score
-            json.dumps(our_categories),  # llm_classification
-            json.dumps({"source_article": extracted.get("source_article", ""), "role": extracted.get("role", "")}),
-            json.dumps(categories),
+    existing = conn.execute(
+        "SELECT id FROM papers WHERE id = ?", (paper_id,)).fetchone()
+    if existing:
+        # 仅更新派生元数据；保留 title_zh/abstract_zh/summary_zh/relevance_score/
+        # llm_classification/starred/pinned/blog_url/note 等用户或已有数据
+        conn.execute(
+            """UPDATE papers SET
+               title = ?, abstract = ?, authors = ?, published_at = ?,
+               crawled_at = ?, url = ?, pdf_url = ?, source = ?,
+               external_ids = ?, metadata = ?, arxiv_categories = ?
+               WHERE id = ?""",
+            (title, abstract, authors, published_at, now, url, pdf_url,
+             "arxiv" if arxiv_id else "manual", external_ids, metadata,
+             json.dumps(categories), paper_id))
+    else:
+        conn.execute(
+            """INSERT INTO papers
+               (id, title, title_zh, abstract, abstract_zh, authors,
+                published_at, crawled_at, url, pdf_url, source, external_ids,
+                summary_zh, relevance_score, llm_classification, metadata,
+                arxiv_categories, starred, pinned)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)""",
+            (
+                paper_id,
+                title,
+                extracted.get("title_zh", ""),
+                abstract,
+                "",  # abstract_zh
+                authors,
+                published_at,
+                now,
+                url,
+                pdf_url,
+                "arxiv" if arxiv_id else "manual",
+                external_ids,
+                "",  # summary_zh
+                0.5,  # relevance_score
+                json.dumps(our_categories),  # llm_classification
+                metadata,
+                json.dumps(categories),
+            )
         )
-    )
 
     # 插入分类关联
     for cat in our_categories:
         conn.execute(
             "INSERT OR IGNORE INTO paper_categories (paper_id, category) VALUES (?, ?)",
-            (paper_id, cat),
-        )
+            (paper_id, cat))
 
 
 def map_categories(arxiv_categories: list, extracted: dict) -> list:
@@ -225,27 +279,41 @@ def map_categories(arxiv_categories: list, extracted: dict) -> list:
 
 
 def main():
-    # 1. 读取提取的论文
-    print(f"Reading {PAPERS_JSON}...")
-    with open(PAPERS_JSON) as f:
+    parser = argparse.ArgumentParser(description="导入论文候选 JSON 到 papers.db（幂等）")
+    parser.add_argument("--input", type=Path, default=DEFAULT_INPUT,
+                        help=f"候选 JSON 文件（默认 {DEFAULT_INPUT.name}）")
+    args = parser.parse_args()
+
+    # 1. 读取候选论文
+    print(f"Reading {args.input}...")
+    with open(args.input) as f:
         extracted_papers = json.load(f)
     print(f"  Found {len(extracted_papers)} papers")
 
-    papers_with_arxiv = [p for p in extracted_papers if p.get("arxiv_id")]
+    # arXiv ID 合法性校验：非法 ID 直接走 manual 通道
+    papers_with_arxiv = [p for p in extracted_papers
+                         if p.get("arxiv_id") and ARXIV_ID_RE.match(p["arxiv_id"])]
+    invalid_id_papers = [p for p in extracted_papers
+                         if p.get("arxiv_id") and not ARXIV_ID_RE.match(p["arxiv_id"])]
     papers_without_arxiv = [p for p in extracted_papers if not p.get("arxiv_id")]
-    print(f"  With arXiv ID: {len(papers_with_arxiv)}")
+    print(f"  With valid arXiv ID: {len(papers_with_arxiv)}")
     print(f"  Without arXiv ID: {len(papers_without_arxiv)}")
+    if invalid_id_papers:
+        print(f"  Invalid arXiv ID (fallback to manual): {len(invalid_id_papers)}")
 
     # 2. 从 arXiv API 获取元数据
     arxiv_ids = [p["arxiv_id"] for p in papers_with_arxiv]
     print(f"\nFetching metadata from arXiv API for {len(arxiv_ids)} papers...")
-    arxiv_metadata = fetch_arxiv_batch(arxiv_ids)
+    arxiv_metadata, failed_ids = fetch_arxiv_batch(arxiv_ids)
+    if failed_ids:
+        print(f"  WARNING: {len(failed_ids)} ids failed (network), fall back to manual channel")
     print(f"  Got metadata for {len(arxiv_metadata)} papers")
 
-    # 检查哪些没获取到
-    missing = [aid for aid in arxiv_ids if aid not in arxiv_metadata]
+    # 检查哪些没获取到（ID 错误或撤稿等）
+    missing = [aid for aid in arxiv_ids
+               if aid not in arxiv_metadata and aid not in failed_ids]
     if missing:
-        print(f"  WARNING: {len(missing)} papers not found on arXiv API:")
+        print(f"  WARNING: {len(missing)} papers not found on arXiv API (fall back to manual):")
         for aid in missing:
             print(f"    - {aid}")
 
@@ -253,43 +321,43 @@ def main():
     init_db()  # 创建表结构（如果不存在）
     print(f"\nConnecting to {DB_PATH}...")
     conn = sqlite3.connect(str(DB_PATH))
+    before = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
+    print(f"  Papers in DB before: {before}")
 
-    # 4. 清空现有论文
-    print("Clearing existing papers...")
-    conn.execute("DELETE FROM paper_categories")
-    conn.execute("DELETE FROM papers")
-    conn.commit()
-    print("  Done")
-
-    # 5. 插入有 arXiv ID 的论文
-    print(f"\nInserting {len(papers_with_arxiv)} papers with arXiv ID...")
-    inserted = 0
+    # 4. 幂等写入有 arXiv ID 的论文（元数据缺失的降级 manual 通道）
+    print(f"\nUpserting {len(papers_with_arxiv)} papers with arXiv ID...")
+    upserted = 0
+    skipped = []
     for extracted in papers_with_arxiv:
         arxiv_id = extracted["arxiv_id"]
         metadata = arxiv_metadata.get(arxiv_id, {})
         if not metadata:
-            print(f"  SKIP (no arXiv metadata): {arxiv_id} - {extracted['title'][:50]}")
-            continue
-        insert_paper(conn, metadata, extracted)
-        inserted += 1
+            # arXiv 查不到：降级 manual 入库（保留条目本身，不丢弃）
+            skipped.append((arxiv_id, extracted["title"]))
+            metadata = {
+                "title": extracted["title"],
+                "abstract": "",
+                "authors": extracted.get("authors", ""),
+                "published_at": "",
+                "pdf_url": "",
+                "url": extracted.get("url", ""),
+                "categories": [],
+            }
+            print(f"  FALLBACK manual (no arXiv metadata): {arxiv_id} - {extracted['title'][:50]}")
+        upsert_paper(conn, metadata, extracted)
+        upserted += 1
     conn.commit()
-    print(f"  Inserted: {inserted}")
+    print(f"  Processed: {upserted} (fallback: {len(skipped)})")
 
-    # 6. 插入没有 arXiv ID 的论文
-    print(f"\nInserting {len(papers_without_arxiv)} papers without arXiv ID...")
-    for extracted in papers_without_arxiv:
-        # 构造基本元数据
-        # authors 转为 JSON 数组格式
-        raw_authors = extracted.get("authors", "Unknown")
-        if raw_authors and isinstance(raw_authors, str):
-            author_list = [a.strip() for a in raw_authors.split(",") if a.strip()]
-            authors_json = json.dumps(author_list, ensure_ascii=False)
-        else:
-            authors_json = json.dumps(["Unknown"])
+    # 5. 写入没有 arXiv ID 的论文
+    print(f"\nUpserting {len(papers_without_arxiv) + len(invalid_id_papers)} papers without arXiv ID...")
+    for extracted in papers_without_arxiv + invalid_id_papers:
+        extracted = dict(extracted)
+        extracted["arxiv_id"] = ""  # 强制 manual 通道
         metadata = {
             "title": extracted["title"],
             "abstract": "",
-            "authors": authors_json,
+            "authors": extracted.get("authors", ""),
             "published_at": "",
             "pdf_url": "",
             "url": extracted.get("url", ""),
@@ -298,18 +366,18 @@ def main():
         # 如果有 DOI，构造 DOI URL
         if extracted.get("doi"):
             metadata["url"] = f"https://doi.org/{extracted['doi']}"
-        insert_paper(conn, metadata, extracted)
+        upsert_paper(conn, metadata, extracted)
     conn.commit()
-    print(f"  Inserted: {len(papers_without_arxiv)}")
 
-    # 7. 统计
+    # 6. 统计
     cursor = conn.execute("SELECT COUNT(*) FROM papers")
     total = cursor.fetchone()[0]
-    cursor = conn.execute("SELECT category, COUNT(*) FROM paper_categories GROUP BY category ORDER BY COUNT(*) DESC")
+    cursor = conn.execute(
+        "SELECT category, COUNT(*) FROM paper_categories GROUP BY category ORDER BY COUNT(*) DESC")
     cat_stats = cursor.fetchall()
 
     print(f"\n=== Import Complete ===")
-    print(f"Total papers in database: {total}")
+    print(f"Papers in database: {before} -> {total}")
     print(f"\nCategory distribution:")
     for cat, count in cat_stats:
         print(f"  {cat}: {count}")
