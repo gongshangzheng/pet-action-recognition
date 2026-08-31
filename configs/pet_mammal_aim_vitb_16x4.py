@@ -26,7 +26,7 @@ model = dict(
         qkv_bias=True,
         num_frames=16,
         norm_cfg=dict(type="LN", eps=1e-6),
-        adapter_reduction=64,
+        adapter_reduction=12,  # bottleneck = 768/12 = 64（AdaptFormer 惯例）
         freeze_backbone=True,
         init_cfg=dict(type="Pretrained", checkpoint=PRETRAINED, prefix="backbone."),
     ),
