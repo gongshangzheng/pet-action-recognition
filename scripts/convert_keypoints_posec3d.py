@@ -83,6 +83,8 @@ def build_annotation(npz_path: Path, label: int, canon: list[str],
         "frame_dir": npz_path.stem,
         "label": label,
         "img_shape": img_shape,
+        "total_frames": T,
+        "frame_inds": list(range(T)),
         "keypoint": keypoint.astype(np.float16),
         "keypoint_score": keypoint_score.astype(np.float16),
     }
