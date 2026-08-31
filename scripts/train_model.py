@@ -862,11 +862,13 @@ def main() -> int:
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
+    parser.add_argument("--device", default="cuda",
+                        help="cpu / cuda / cuda:N（N=物理卡号，经 CUDA_VISIBLE_DEVICES 注入实现选卡）")
     parser.add_argument("--num-classes", type=int, default=None)
     parser.add_argument("-r", "--resume", default=None, help="resume from checkpoint path or 'auto' — 直接接入原 run 进程，恢复 epoch/optimizer/scheduler，继续跑完")
     parser.add_argument("-l", "--load-from", default=None, help="load checkpoint weights (path or run_id) — 只引入参数作为预训练权重，epoch=0 从头训练")
-    parser.add_argument("-p", "--pretrained", action="store_true", help="backbone pretrained weights URL or local path (e.g. mmaction2 model zoo) — finetune")
+    parser.add_argument("-p", "--pretrained", metavar="URL_OR_PATH", default=None,
+                        help="预训练权重 URL 或本地路径 —— 语义同 --load-from（整模权重初始化，epoch=0 开始 finetune）")
     parser.add_argument("-s", "--from-scratch", action="store_true", help="train from random init, disable any pretrained weights in config")
     parser.add_argument("--vis-interval", type=int, default=10, help="可视化样本生成间隔（每 N epoch）")
     parser.add_argument("--weight-decay", type=float, default=None, help="optim_wrapper.optimizer.weight_decay 覆盖（走 override 文件）")
@@ -879,9 +881,17 @@ def main() -> int:
     parser.add_argument("--extra-args", default="")
     args = parser.parse_args()
 
+    # --device 取值校验 + cuda:N 选卡（尽早注入，父进程 torch 与子进程共享同一卡视图）
+    _dev_m = re.fullmatch(r"(cpu|cuda)(?::(\d+))?", args.device)
+    if not _dev_m:
+        parser.error(f"--device 非法取值: {args.device!r}（合法: cpu / cuda / cuda:N，N 为物理卡号）")
+    device_kind, device_idx = _dev_m.group(1), _dev_m.group(2)
+    if device_kind == "cuda" and device_idx is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = device_idx
+
     # GPU 内存限制（共享 GPU 时防止被其他进程挤掉 + 减少碎片）
     # 在任何 CUDA 操作前设置，且只在 GPU 模式生效
-    if args.device == "cuda":
+    if device_kind == "cuda":
         try:
             import torch as _torch
             if _torch.cuda.is_available():
@@ -989,7 +999,7 @@ def main() -> int:
     existing = env.get("PYTORCH_CUDA_ALLOC_CONF", "")
     env["PYTORCH_CUDA_ALLOC_CONF"] = (existing + ",max_split_size_mb:32" if existing else "max_split_size_mb:32")
     ppath = [str(MMACTION2_DIR), str(REPO)]
-    if args.device == "cpu":
+    if device_kind == "cpu":
         env["CUDA_VISIBLE_DEVICES"] = ""
         ppath.insert(0, _cpu_patch_dir())
     if env.get("PYTHONPATH"):
@@ -1124,7 +1134,7 @@ def main() -> int:
             ckpt = _resolve_ckpt(args.model_id, args.run_id) or (latest or "")
             if ckpt and os.path.isfile(ckpt) and ann_val and (videos_val or videos_train):
                 cfg_for_bench = resolve_mmaction2_config(args.mmaction2_config)
-                dev = "cuda:0" if args.device == "cuda" else "cpu"
+                dev = "cuda:0" if device_kind == "cuda" else "cpu"
                 log(args.run_id, f"[bench] 测推理速度 + 模型大小 (ckpt={ckpt})...")
                 b = benchmark(cfg_for_bench, ckpt, ann_val, videos_val or videos_train, num_videos=5, device=dev)
                 if "error" not in b:

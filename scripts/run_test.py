@@ -124,7 +124,8 @@ def main() -> int:
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--dataset-id", default="quadruped_action")
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
-    parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
+    parser.add_argument("--device", default="cuda",
+                        help="cpu / cuda / cuda:N（N=物理卡号，经 CUDA_VISIBLE_DEVICES 注入实现选卡）")
     parser.add_argument("--num-classes", type=int, default=None)
     parser.add_argument("--test-batch-size", type=int, default=8, help="test_dataloader.batch_size 提速（默认 8）")
     parser.add_argument("--work-dir", default=None)
@@ -132,6 +133,14 @@ def main() -> int:
     parser.add_argument("--data-root", default=None, help="覆盖 data_prefix.video 路径")
     parser.add_argument("--extra-args", default="")
     args = parser.parse_args()
+
+    # --device 取值校验 + cuda:N 选卡（经 CUDA_VISIBLE_DEVICES 注入）
+    _dev_m = re.fullmatch(r"(cpu|cuda)(?::(\d+))?", args.device)
+    if not _dev_m:
+        parser.error(f"--device 非法取值: {args.device!r}（合法: cpu / cuda / cuda:N，N 为物理卡号）")
+    device_kind, device_idx = _dev_m.group(1), _dev_m.group(2)
+    if device_kind == "cuda" and device_idx is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = device_idx
 
     ensure_dirs()
     cfg_path = args.mmaction2_config
@@ -211,7 +220,7 @@ def main() -> int:
     env = os.environ.copy()
     env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
     ppath = [str(MMACTION2_DIR), str(REPO)]
-    if args.device == "cpu":
+    if device_kind == "cpu":
         env["CUDA_VISIBLE_DEVICES"] = ""
         ppath.insert(0, _cpu_patch_dir())
     if env.get("PYTHONPATH"):
@@ -234,7 +243,7 @@ def main() -> int:
     if proc.returncode == 0 and ann and videos:
         try:
             from scripts.benchmark_speed import benchmark
-            dev = "cuda:0" if args.device == "cuda" else "cpu"
+            dev = "cuda:0" if device_kind == "cuda" else "cpu"
             b = benchmark(args.mmaction2_config, checkpoint, ann, videos, num_videos=5, device=dev)
             if "error" not in b:
                 metrics["speed"] = {k: b[k] for k in
