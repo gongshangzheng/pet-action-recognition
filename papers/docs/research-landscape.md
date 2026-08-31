@@ -149,7 +149,47 @@ DeepLabCut → SLEAP → SuperAnimal    MARS/B-SOiD/A-SOiD    MoSeq/Keypoint-MoS
 
 ---
 
-## 四、论文索引与检索
+## 四、接入路线图落地状态（integrate-frontier-models）
+
+| 路线 | 状态 | registry id / 入口 |
+|---|---|---|
+| VideoMAE v1（K400 掩码预训练口径） | ✅ 已接入 | `videomae-v1` · `configs/pet_mammal_videomae_v1_base_16x4.py` |
+| UniFormerV2（CLIP+K710） | ✅ 已接入 | `uniformerv2-base` · `configs/pet_mammal_uniformerv2_base_8x8.py` |
+| AIM Adapter 参数高效微调 | ✅ 已接入（简化版：LSA 未移植） | `aim-vitb-adapter` · `configs/pet_mammal_aim_vitb_16x4.py` + `configs/aim_modules/` |
+| 姿态桥接（SuperAnimal→骨架） | ✅ 脚本/config 就绪，待装 deeplabcut | `posec3d-quadruped` · `configs/pet_mammal_posec3d_slowonly_quadruped.py` |
+| V2 域继续预训练 | ⏳ 二期（另开 change） | — |
+| VideoMamba / MS-Temba | 👀 观察（生态未熟） | — |
+
+### 远端操作（pet，conda env `pet`）
+
+```bash
+# 权重下载（registry 驱动）
+python3 scripts/download_checkpoint.py --model-id videomae-v1
+python3 scripts/download_checkpoint.py --model-id uniformerv2-base
+# aim-vitb-adapter 复用 videomae-v1 的权重路径，无需单独下载
+
+# AIM 冻结校验（应打印 <10% 可训练 + PASS）
+python3 scripts/assert_aim_frozen.py
+
+# 姿态桥接（需 deeplabcut）
+python3 scripts/extract_superanimal_keypoints.py --list-points   # 先核对关键点名
+python3 scripts/extract_superanimal_keypoints.py --input <视频目录>
+python3 scripts/convert_keypoints_posec3d.py                    # NPZ → PYSKL pkl
+python3 scripts/visualize_keypoints.py --npz <npz> --video <mp4> # 人工抽查映射
+
+# 冒烟训练（示例，1 epoch）
+python3 models/mmaction2/tools/train.py configs/pet_mammal_videomae_v1_base_16x4.py \
+    --cfg-options train_cfg.max_epochs=1 default_hooks.checkpoint.interval=1
+```
+
+### 已知坑与偏差
+- VideoMAEv2/v1/v2 条目均勿选 `--pretrained` 模式（整模加载 head 形状冲突），backbone 由 config init_cfg 加载
+- UniFormerV2 本地管线用常规 RandomResizedCrop 替代 vendor 的 PytorchVideoWrapper（避免 pytorchvideo 依赖）
+- AIM 为简化移植：逐 block 并行 Adapter（零初始化 up 投影），论文 LSA 未移植；冻结校验 `<10%` 可训练参数
+- STGCN++ 需要注册自定义骨骼 layout（vendor 只读不可改）→ 暂缓，骨架主路线用 SlowOnly-keypoint(17点 heatmap)
+- SuperAnimal→17 点映射表 `scripts/keypoint_mapping_quadruped.json` 首次使用前务必 `--list-points` 核对点名
+
+## 五、论文索引与检索
 
 - **核心 20 篇（pinned 8 + core 12）**：[[core-papers]] · `papers/config/core_papers.json`
 - **全量 212 篇**：`GET /api/papers?search=<关键词>` · 前端 http://localhost:3000
