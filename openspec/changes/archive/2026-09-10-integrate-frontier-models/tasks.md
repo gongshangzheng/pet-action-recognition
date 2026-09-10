@@ -35,4 +35,4 @@
 
 - [x] 5.1 更新 `papers/docs/research-landscape.md` 附录「接入路线图落地状态」；训练操作说明（含各接入项远端触发命令与已知坑）
 - [x] 5.2 验证训练前端正确渲染 4 个新 registry 条目（本地起服务抽查）
-- [ ] 5.3 提交（feat: 前缀；config/scripts/registry/文档）
+- [x] 5.3 提交（feat: 前缀；config/scripts/registry/文档）
