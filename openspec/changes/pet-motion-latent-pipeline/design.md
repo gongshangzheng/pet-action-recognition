@@ -33,25 +33,16 @@
 
 关卡 0 = 双候选对比实验：同 5 段白天抽帧跑两套，比①置信度分布 ②关键点时序抖动（相邻帧位移方差）③可视化人工抽检 ④各自关键点训隐空间后的 5 类线性探针 top1。决策标准：探针 top1 为主、抖动与抽检为辅；平手则取 SuperAnimal（DLC 生态与现有脚本兼容）。接口做成可插拔（统一输出 NPZ schema），落选者保留为备选。
 
-### D2b: HQSAM 的定位——显式消融实验，不是默默砍掉
+### D2b: HQSAM 的定位——它是什么、能干什么、为什么不在主链
 
-mask 在「关键点隐空间」主链上不被消费，因此不进主链；但「mask 清洗背景后的 crop」可能缓解白天背景捷径学习——这是一个待验证假设，不是可以忽略的工程细节。故列 3.5 消融任务：mask-cleaned crop vs 原始 crop 各训线性探针对比。HQSAM 另一个保留用途：体型/毛色分析（二期）。
+**HQSAM 是什么**：Segment Anything（SAM）的高质量变体——可提示分割基础模型。输入一个框（来自 GroundingDINO），输出**像素级动物轮廓 mask**（精确到毛发边缘，SAM 在细边界上会糊，HQ-SAM 用高质量输出 token + 早晚特征融合修正）。与检测器的区别：检测给"框"（含 60–80% 背景），HQSAM 给"轮廓"（只含动物像素）。
 
-### D6: 可替换模块架构（petlib 接口层）
+**它在管线里的三个潜在用途**：
+1. **mask 清洗 crop（消融实验 3.5）**：把裁剪帧中背景像素抹掉/模糊，只留猫——对抗白天背景捷径学习（模型靠猫砂盆/家具位置猜动作）。是否有效未知，故为消融实验而非主链
+2. **体型/毛色分析（二期）**：轮廓面积/脊柱曲率可服务健康监测（消瘦检测），毛色区域可辅助个体识别
+3. **关键点质量辅助（弱）**：理论上 mask 可限制关键点搜索区域，但 SuperAnimal 全图推理已够用，收益不明确
 
-管线代码只依赖抽象接口，具体实现经注册表工厂 + 配置选择——换跟踪器/检测器/关键点提取器 = 改一行配置。
-
-```
-petlib/
-├── schemas.py      # dataclass: Detection(box,conf,cls) / Track(id,boxes,conf,interp_flags) / KeypointSequence(kp,score,frame_inds,total_frames)
-├── detection/      # base.py: Detector.detect(frame)->list[Detection]；grounding_dino.py、yolo11.py
-├── tracking/       # base.py: Tracker.update(dets)->list[Track]；byte_track.py、oc_sort.py、bot_sort.py、deep_sort.py
-├── keypoints/      # base.py: KeypointExtractor.extract(crop_seq)->KeypointSequence；superanimal.py、vitpose_ap10k.py
-├── registry.py     # create_detector/tracker/extractor(name, **cfg)
-└── contract_tests.py
-```
-
-三条规则：① 管线编排（followcam/spot_check）只 import base 抽象类；② 所有实现输出统一 schema（关键点 NPZ = (T,V,3)+frame_inds 口径，沿用踩坑结论）；③ 契约测试——每个新实现注册后必须通过统一冒烟（fixture 帧→接口调用→schema 校验）。跟踪器/关键点提取器的选型实验（关卡 0 与 1.2b）即在此接口上运行。
+**为什么不在主链**：关键点隐空间只消费坐标 (T,V,3)，mask 是像素级资产，主链没有消费者；且 HQSAM 每帧 ~150-250ms，挂主链白白拖慢管线。结论：主链 = 检测→跟踪→关键点；HQSAM 独立成可选阶段（按需开启），消融实验决定 mask-cleaned crop 是否成为训练数据的默认形态。
 
 ### D3: 隐空间架构（FLOAT/Keypoint-MoSeq 杂交，数字人工具 + 行为学目标）
 
@@ -92,3 +83,19 @@ GroundingDINO/HQSAM/ViTPose 依赖重且与 mmaction2 的 mmcv 约束冲突风�
 ## Open Questions
 
 - 夜视二期所需的 YOLO11 微调版何时就绪（依赖 9 月标注）→ 不阻塞本 change（白天范围）
+
+### D6: 可替换模块架构（petlib 接口层）
+
+管线代码只依赖抽象接口，具体实现经注册表工厂 + 配置选择——换跟踪器/检测器/关键点提取器 = 改一行配置。
+
+```
+petlib/
+├── schemas.py      # dataclass: Detection(box,conf,cls) / Track(id,boxes,conf,interp_flags) / KeypointSequence(kp,score,frame_inds,total_frames)
+├── detection/      # base.py: Detector.detect(frame)->list[Detection]；grounding_dino.py、yolo11.py
+├── tracking/       # base.py: Tracker.update(dets)->list[Track]；byte_track.py、oc_sort.py、bot_sort.py、deep_sort.py
+├── keypoints/      # base.py: KeypointExtractor.extract(crop_seq)->KeypointSequence；superanimal.py、vitpose_ap10k.py
+├── registry.py     # create_detector/tracker/extractor(name, **cfg)
+└── contract_tests.py
+```
+
+三条规则：① 管线编排（followcam/spot_check）只 import base 抽象类；② 所有实现输出统一 schema（关键点 NPZ = (T,V,3)+frame_inds 口径，沿用踩坑结论）；③ 契约测试——每个新实现注册后必须通过统一冒烟（fixture 帧→接口调用→schema 校验）。跟踪器/关键点提取器的选型实验（关卡 0 与 1.2b）即在此接口上运行。
