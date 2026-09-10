@@ -37,6 +37,22 @@
 
 mask 在「关键点隐空间」主链上不被消费，因此不进主链；但「mask 清洗背景后的 crop」可能缓解白天背景捷径学习——这是一个待验证假设，不是可以忽略的工程细节。故列 3.5 消融任务：mask-cleaned crop vs 原始 crop 各训线性探针对比。HQSAM 另一个保留用途：体型/毛色分析（二期）。
 
+### D6: 可替换模块架构（petlib 接口层）
+
+管线代码只依赖抽象接口，具体实现经注册表工厂 + 配置选择——换跟踪器/检测器/关键点提取器 = 改一行配置。
+
+```
+petlib/
+├── schemas.py      # dataclass: Detection(box,conf,cls) / Track(id,boxes,conf,interp_flags) / KeypointSequence(kp,score,frame_inds,total_frames)
+├── detection/      # base.py: Detector.detect(frame)->list[Detection]；grounding_dino.py、yolo11.py
+├── tracking/       # base.py: Tracker.update(dets)->list[Track]；byte_track.py、oc_sort.py、bot_sort.py、deep_sort.py
+├── keypoints/      # base.py: KeypointExtractor.extract(crop_seq)->KeypointSequence；superanimal.py、vitpose_ap10k.py
+├── registry.py     # create_detector/tracker/extractor(name, **cfg)
+└── contract_tests.py
+```
+
+三条规则：① 管线编排（followcam/spot_check）只 import base 抽象类；② 所有实现输出统一 schema（关键点 NPZ = (T,V,3)+frame_inds 口径，沿用踩坑结论）；③ 契约测试——每个新实现注册后必须通过统一冒烟（fixture 帧→接口调用→schema 校验）。跟踪器/关键点提取器的选型实验（关卡 0 与 1.2b）即在此接口上运行。
+
 ### D3: 隐空间架构（FLOAT/Keypoint-MoSeq 杂交，数字人工具 + 行为学目标）
 
 ```

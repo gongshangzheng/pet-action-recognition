@@ -6,7 +6,14 @@
 - [ ] 0.2 出质量报告：置信度分布、点位合理性人工判定（通过 → 白天段全量进关键点路线）
 - [ ] 0.3 范围备忘：夜间红外 45 段本 change 不处理（二期，需 YOLO11 夜视微调 + IR 关键点验证）
 
-## 1. 离线猫居中预处理管线
+## 1. 接口骨架 + 离线猫居中预处理管线
+
+> 1.6–1.9 为接口骨架，**先于 1.1–1.5 执行**；1.1–1.5 的具体实现全部落位在 petlib 接口之下。
+
+- [ ] 1.6 建 `petlib/` 包：schemas.py（Detection/Track/KeypointSequence dataclass + NPZ schema 常量）
+- [ ] 1.7 三类抽象接口 base.py（Detector/Tracker/KeypointExtractor）+ registry.py 工厂 + YAML 配置选择
+- [ ] 1.8 现有实现落位：grounding_dino.py、byte_track.py、oc_sort.py、bot_sort.py、deep_sort.py、superanimal.py、vitpose_ap10k.py（占位实现可先行，逐个补齐）
+- [ ] 1.9 `contract_tests.py`：契约冒烟测试（fixture 帧→schema 校验），接入 pytest
 
 - [ ] 1.1 pet 新建 conda env `plf`（GroundingDINO/HQSAM/ViTPose 依赖，锁版本 README）
 - [ ] 1.2 `scripts/plf_detect_track.py`：检测+跟踪管线，跟踪器可插拔（统一输入输出接口：检测 JSON → 轨迹 JSON）

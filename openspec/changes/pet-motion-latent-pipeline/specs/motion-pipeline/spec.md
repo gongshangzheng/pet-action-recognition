@@ -4,6 +4,20 @@
 
 ## ADDED Requirements
 
+### Requirement: 可替换模块接口
+
+检测、跟踪、关键点提取三类模块 SHALL 以抽象接口（ABC/Protocol）+ 注册表工厂形式实现于独立包（petlib）：管线编排代码只依赖抽象接口与统一数据结构（Detection/Track/KeypointSequence）；切换任一模块实现 MUST 仅需修改配置，不需要修改管线代码；每个注册实现 MUST 通过统一契约测试（接口冒烟 + 输出 schema 校验）。
+
+#### Scenario: 仅改配置切换跟踪器
+
+- **WHEN** 将配置中的跟踪器由 byte_track 改为 oc_sort 后运行管线
+- **THEN** 管线正常产出轨迹，且管线编排代码无任何改动
+
+#### Scenario: 新实现过契约测试
+
+- **WHEN** 新增一个检测/跟踪/关键点实现并注册
+- **THEN** 契约测试统一冒烟通过（fixture 输入→输出符合 schema），方可参与选型实验
+
 ### Requirement: 离线猫居中预处理管线（仅白天段）
 
 系统 SHALL 提供离线批处理管线（GroundingDINO 检测 + 跟踪 + HQSAM/ViTPose 可选），处理范围为**白天段**（夜间红外段二期处理），将输入视频转换为：① 每猫轨迹的猫居中稳定裁剪视频；② 逐帧关键点序列（含置信度）；③ 伪标注框包。跟踪 MUST 提供身份连续（track_id）、漏检帧插值补全、轨迹平滑三项能力。
