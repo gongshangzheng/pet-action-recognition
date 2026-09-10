@@ -198,6 +198,19 @@ id, name, alias, stream_url, storage_path, is_active, created_at, updated_at
 id, source_id, filename, note, created_at
 ```
 
+## 工作纪律：三阶段流程（Plan → Review → Apply）【最高优先级】
+
+所有工作（代码、脚本、数据管线、服务器配置、文档之外的任何**执行性动作**）一律分为三个阶段：
+
+1. **Plan（Agent 做）**：先写 OpenSpec change（proposal/specs/design/tasks），把"要做什么、怎么做、验收标准"完整落到 plan 里。
+2. **Review（用户做）**：用户审核 change。**未获得用户明确批准前，不得执行任何实施性动作**（包括：装环境、下载数据/权重、改代码、改配置、操作远程服务器）。
+3. **Apply（Agent 做）**：用户批准后（如 `/openspec-apply-change` 或明确指示）才开工，实施中按 tasks 勾选进度。
+
+**禁止事项**：
+- 禁止"先斩后奏"：任何探索性操作（临时环境、clone/下载、跑 demo）若属于计划内工作的一部分，也必须先写入 change 并获批准。
+- 纯只读调研（读代码、查论文、搜索 API）不受此限制，但其**结论必须沉淀回 plan**，不允许基于未沉淀的结论直接开工。
+- 用户聊天中的口头想法 ≠ 批准；只有对 change 的明确批准（"开始"/"apply"/"批准"）才可进入 Apply。
+
 ## 开发规范
 
 ### Git 工作流
