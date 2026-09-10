@@ -6,7 +6,7 @@
 
 ### Requirement: 可替换模块接口
 
-检测、跟踪、关键点提取三类模块 SHALL 以抽象接口（ABC/Protocol）+ 注册表工厂形式实现于独立包（petlib）：管线编排代码只依赖抽象接口与统一数据结构（Detection/Track/KeypointSequence）；切换任一模块实现 MUST 仅需修改配置，不需要修改管线代码；每个注册实现 MUST 通过统一契约测试（接口冒烟 + 输出 schema 校验）。
+检测、跟踪、关键点提取、动作分类四类模块 SHALL 以抽象接口（ABC/Protocol）+ 注册表工厂形式实现于独立包（petlib）：管线编排代码只依赖抽象接口与统一数据结构（Detection/Track/KeypointSequence）；切换任一模块实现 MUST 仅需修改配置，不需要修改管线代码；每个注册实现 MUST 通过统一契约测试（接口冒烟 + 输出 schema 校验）。
 
 #### Scenario: 仅改配置切换跟踪器
 
@@ -41,6 +41,11 @@
 
 - **WHEN** 关卡 0 在同一批白天抽帧上分别运行 SuperAnimal-Quadruped 与 ViTPose+（AP-10K 变体）
 - **THEN** 输出对比报告（置信度分布/时序抖动/可视化抽检/下游线性探针 top1），选型结论与判定标准一并记录，接口为可插拔实现
+
+#### Scenario: 动作分类头可切换
+
+- **WHEN** 抽查管线配置中的 ActionClassifier 由 motion_latent_probe 切换为 mmaction2_model
+- **THEN** 动作报告格式不变，管线编排代码无改动
 
 #### Scenario: 漏检帧补全
 

@@ -39,7 +39,9 @@
 
 ## 4. 抽查式推理 CLI
 
-- [ ] 4.1 `scripts/spot_check_actions.py`：输入摄像头+时间段 → 预处理 → 隐码 → 动作报告（JSON/Markdown：标签/起止秒/track_id/置信度/疑似新动作提示/猫在场率）
+- [ ] 4.0 `petlib/actions/`：ActionClassifier 接口 + 两个实现（motion_latent_probe / mmaction2_model 包装现有 checkpoint），抽查管线动作头可配置切换
+- [ ] 4.1 `scripts/spot_check_actions.py`：输入摄像头+时间段 → 预处理 → 隐码 → 动作报告（JSON/Markdown：标签/起止秒/track_id/**登记身份（哪只猫）**/置信度/疑似新动作提示/猫在场率）
+- [ ] 4.1b `scripts/register_cats.py`：猫个体档案登记（每猫 3–5 张清晰 crop → 特征 embedding 入库）+ 检索识别函数（供 4.1 调用），标注未登记个体为「未知猫 #N」
 - [ ] 4.2 端到端联调：抽 3 个真实时段（含 1 个无猫时段）出报告
 - [ ] 4.3 L2 边界误差抽查：滑窗粒度 ±1.5s 内验证
 

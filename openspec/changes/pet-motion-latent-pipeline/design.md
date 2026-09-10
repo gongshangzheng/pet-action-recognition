@@ -52,7 +52,7 @@ x ─E_id(池化+MLP)─► s(64)
 L = L1(x,x̂) + 1.0·L1(Δx,Δx̂) + L_vq + 0.1·InfoNCE(s) + 0.01·‖Δz‖²
 ```
 - VQ 码本 K=512：离散 token 是 L3 聚类/直方图的基础；码本利用率 <50% 触发重置（防塌缩）
-- 身份码对比学习：监督信号 = 源视频 ID（免费）
+- 身份码对比学习：监督信号 = **track 级 ID**（跟踪器输出；单猫视频退化为源视频 ID）。注意：不能用视频级 ID 监督多猫段（会把不同猫拉进同一身份码）
 - 窗口 48 帧 stride 24；参数量目标 <10M；单卡 4090 训练 ≤4h
 - 与 Keypoint-MoSeq 的差异：HMM → VQ-VAE/Transformer；实验室小鼠 → 家庭宠物监控；且产出离散 token 便于 L2 切分与统计
 
@@ -94,8 +94,23 @@ petlib/
 ├── detection/      # base.py: Detector.detect(frame)->list[Detection]；grounding_dino.py、yolo11.py
 ├── tracking/       # base.py: Tracker.update(dets)->list[Track]；byte_track.py、oc_sort.py、bot_sort.py、deep_sort.py
 ├── keypoints/      # base.py: KeypointExtractor.extract(crop_seq)->KeypointSequence；superanimal.py、vitpose_ap10k.py
-├── registry.py     # create_detector/tracker/extractor(name, **cfg)
+├── actions/        # base.py: ActionClassifier.classify(clip)->list[Action]；motion_latent_probe.py（隐码+线性头）、mmaction2_model.py（包装 mmaction2 推理）
+├── registry.py     # create_detector/tracker/extractor/classifier(name, **cfg)
 └── contract_tests.py
 ```
 
+**与 mmaction2 的关系**：mmaction2 是 vendored 的 PyTorch 训练/推理框架（OpenMMLab 生态，非 PaddlePaddle），保持 `models/mmaction2/` 只读不动。petlib 不重新实现动作模型，而是通过 `actions/mmaction2_model.py` 把现有 checkpoint（VideoMAEv2/SlowFast 等）包装为 ActionClassifier 实现——mmaction2 是被接口包装的引擎，不是被迁移的对象。
+
 三条规则：① 管线编排（followcam/spot_check）只 import base 抽象类；② 所有实现输出统一 schema（关键点 NPZ = (T,V,3)+frame_inds 口径，沿用踩坑结论）；③ 契约测试——每个新实现注册后必须通过统一冒烟（fixture 帧→接口调用→schema 校验）。跟踪器/关键点提取器的选型实验（关卡 0 与 1.2b）即在此接口上运行。
+
+### D7: 身份体系——"这是哪只猫"的三层答案
+
+| 层 | 时间范围 | 负责者 | 原理 |
+|---|---|---|---|
+| 帧内 | 单帧 | 检测器（GroundingDINO/YOLO11） | 检出几只猫、各在什么位置 |
+| 轨迹内（秒~分钟） | 连续段 | 跟踪器 track_id（ByteTrack 等） | 外观+运动关联，保证序列内是同一只；无学习 |
+| 跨段/跨天（真·识别） | 永久 | **猫个体档案 + 检索式 Re-ID** | 登记照（每猫 3–5 张清晰图）→ 特征（DINOv2/SuperAnimal 外观特征）→ 度量学习 embedding → 新 crop 最近邻检索 |
+
+**借鉴来源（畜牧已验证）**：BMCTrack-d（`2609.03463`，猪背花纹 Re-ID——猫花纹更独特，天然适配）；Label a Herd in Minutes（`2204.10905`，自监督+度量学习+主动学习，10 分钟标注全场）；AutoCattloger（`2508.15945`，登记档案+流式检索）；ReCowGnition（`2607.22071`，封闭群脸识别基准）。
+
+**关键洞察**：家庭是**极端 closed-set**（2–5 只，远小于牧场几十头）——识别是"小规模检索"而非开放集分类，登记照+最近邻已足够；z_id（隐空间身份码）只作与视觉 Re-ID 融合互验的辅助信号，不作主依据（其判别性无保证，见 D3）。
