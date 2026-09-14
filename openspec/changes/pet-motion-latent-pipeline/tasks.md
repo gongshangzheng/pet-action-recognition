@@ -1,12 +1,13 @@
 # Tasks: pet-motion-latent-pipeline
 
-> **依赖**：本 change 依赖 `provision-a100-server`（plf 环境 + A100 算力）。依赖完成前：仅 §1 接口骨架（本地纯代码）可先行；§2/§3/§4 的执行类任务（需 plf 环境/A100）不得开工。
+> **依赖与执行机**：本 change 在 **pet** 上执行（plf 独立 conda 环境，与 mmaction2 的 pet 环境隔离；不依赖 A100——A100 已降级为备用算力）。**每次使用 GPU 前必须先 `nvidia-smi` 检查占用**：两卡都被占则等待或与占用者协调，禁止抢占；选空闲卡以 `CUDA_VISIBLE_DEVICES=cuda:N` 指定。依赖完成前：仅 §1 接口骨架（本地纯代码）可先行；§2–§4 执行类任务不得开工。
 >
 > **约定**：NPZ 关键点 schema = `keypoints (T,V,3) float16 + frame_inds + total_frames`（score 内嵌第三通道）；轨迹 JSON = `{track_id, boxes:[{frame,x1,y1,x2,y2,conf,interpolated}]}`；示例视频 = `event_20260806_120311.mp4`（2880×1620@15fps，384 帧，白天）。
 
 ## 0. 关卡 0A：猫居中预处理 Demo（用户验收点，先行）
 
-- [ ] 0.1 示例视频传输：scp 至 A100 `~/data/cats/`，ffprobe 校验帧数/分辨率
+- [ ] 0.0 pet 建 plf 环境：`conda create -n plf --clone pet` → `pip install transformers accelerate`（隔离安装，验证 pet 环境 mmcv 不受影响）+ `nvidia-smi` 检查占用选卡
+- [ ] 0.1 示例视频就位：pet 本地/NAS 已有（`~/mnt/cats/dataset_崔/`），ffprobe 校验帧数/分辨率
 - [ ] 0.2 GroundingDINO 权重就位：plf 环境经 hf-mirror 下载 `IDEA-Research/grounding-dino-tiny`，单帧推理冒烟
 - [ ] 0.3 抽样检测：每 10 帧跑 GroundingDINO（prompt=`"cat."`，box_threshold=0.3）→ 39 帧检测框
 - [ ] 0.4 轨迹关联：IoU>0.3 逐帧关联 → 主轨迹（累计置信度最高）；跨帧断链用 IoU 插值续接
@@ -63,7 +64,7 @@
 - [ ] 5.3 可命名率报告：导出各簇代表帧，人工抽 30 簇判定「能说出猫在干嘛」的占比
 - [ ] 5.4（条件）`configs/motion_latent/`：模型定义 E_mot(1D CNN+Transformer, 48×34→12×32) / E_id(池化+MLP→64) / VQ 码本(K=512,d=32) / G 解码器；损失 = L1 重建 + 速度 L1 + VQ + InfoNCE(s, **track 级监督**) + 0.01‖Δz‖² 平滑
 - [ ] 5.5（条件）训练数据生成：cats + pet_action_mammal_v0 + live 录像关键点窗口（48/24 滑窗，**按源视频分组切分**，目标 ≥15 万窗口）
-- [ ] 5.6（条件）A100 单卡训练至收敛（≤4h），码本利用率 ≥50%（否则重置机制），保存 checkpoint + 曲线
+- [ ] 5.6（条件）pet 空闲卡训练至收敛（≤4h，开跑前 nvidia-smi 查占用），码本利用率 ≥50%（否则重置机制），保存 checkpoint + 曲线
 
 ## 6. 评测：L3 发现 + L1 探针
 
@@ -83,6 +84,6 @@
 
 ## 8. 收尾
 
-- [ ] 8.1 文档：管线架构图 + 各脚本用法 + 多环境（pet/plf/A100/live）说明，补进 `papers/docs/animal-action-survey.md` §4.4 附录
+- [ ] 8.1 文档：管线架构图 + 各脚本用法 + 双环境（pet 的 mmaction2 env / plf）说明，补进 `papers/docs/animal-action-survey.md` §4.4 附录
 - [ ] 8.2 向用户汇报：隐空间聚类发现的行为簇结果 + 线性探针指标
 - [ ] 8.3 提交（feat: 前缀；脚本/config/文档；数据资产不入库）

@@ -1,5 +1,7 @@
 # Proposal: provision-a100-server
 
+> **状态：已废弃（superseded）**——用户决定（2026-09-10）：管线执行尽量用 pet（plf 环境隔离 + GPU 占用检查），A100 降级为备用算力。A100 上已装的 miniconda/repo 暂保留不删（备用），清理二期另议。本 change 不再执行；pet 侧 plf 环境任务已移入 pet-motion-latent-pipeline 任务 0.0。
+
 ## Why
 
 pet 是共享训练机（mmcv 版本被 mmaction2 钉死、GPU 常被占用），而 pet-motion-latent-pipeline 需要一套与 mmcv 约束冲突的重依赖环境（GroundingDINO/HQSAM/ViTPose）。团队持有闲置的 **A100 服务器**（4× A100-80GB，794G 空闲磁盘，已 ssh 免密），应将其启用为管线专用服务器，实现环境隔离与算力保障。

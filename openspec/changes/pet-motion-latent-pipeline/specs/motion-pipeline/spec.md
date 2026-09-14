@@ -47,6 +47,11 @@
 - **WHEN** 抽查管线配置中的 ActionClassifier 由 motion_latent_probe 切换为 mmaction2_model
 - **THEN** 动作报告格式不变，管线编排代码无改动
 
+#### Scenario: GPU 使用前占用检查
+
+- **WHEN** 任一 GPU 任务（检测/关键点/训练）启动前
+- **THEN** 先运行 nvidia-smi 检查占用，选择空闲卡并以 CUDA_VISIBLE_DEVICES 指定；两卡均忙时等待或告警，不得抢占
+
 #### Scenario: 漏检帧补全
 
 - **WHEN** 检测器在某帧未检出猫（如夜视漏检）
