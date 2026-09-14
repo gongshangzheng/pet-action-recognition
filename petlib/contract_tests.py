@@ -81,7 +81,7 @@ TRACKER_NAMES = ["byte_track", "oc_sort", "bot_sort", "deep_sort"]
 
 
 @pytest.mark.parametrize("name", TRACKER_NAMES)
-def test_tracker_contract(name, moving_cat_detections):
+def test_tracker_contract(name, moving_cat_detections, synthetic_frame):
     tracker = create("tracker", name)
     for fi, dets in enumerate(moving_cat_detections):
         tracks = tracker.update(dets, frame_idx=fi, frame=synthetic_frame)
