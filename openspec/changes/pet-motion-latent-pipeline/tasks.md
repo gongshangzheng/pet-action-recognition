@@ -9,12 +9,12 @@
 ## 1. petlib 接口骨架（本地纯代码）
 
 - [x] 1.1 pet 建 plf 环境：clone pet 环境（torch 2.1.2+cu121）+ pip install transformers==4.49.0 accelerate；验证 pet 环境 mmcv 2.1.0 不受影响；GPU 占用检查纪律生效
-- [ ] 1.2 `petlib/schemas.py`：dataclass `Detection(frame,box,conf,cls)` / `Track(track_id,boxes,...)` / `KeypointSequence(kp,score,frame_inds,total_frames,source)` + NPZ/轨迹 JSON schema 常量；验收 = `import petlib` 零重依赖 + pytest -k schemas 通过
-- [ ] 1.3 `petlib/detection/base.py`：`Detector(ABC).detect(img_bgr, classes) -> list[Detection]`；`grounding_dino.py`（transformers 懒加载实现）
-- [ ] 1.4 `petlib/tracking/base.py`：`Tracker(ABC).update(dets, frame_idx) -> list[Track]` + `finalize()`；`byte_track.py / oc_sort.py / bot_sort.py / deep_sort.py` 四个适配实现
-- [ ] 1.5 `petlib/keypoints/base.py`：`KeypointExtractor(ABC).extract(crop_seq) -> KeypointSequence`；`superanimal.py`、`vitpose_ap10k.py` 实现
-- [ ] 1.6 `petlib/registry.py`：`create(kind, name, **cfg)` 工厂 + `pipeline.yaml` 配置选择；验收 = `create('tracker','byte_track')` 返回实例
-- [ ] 1.7 `petlib/contract_tests.py`：契约冒烟测试（fixture 帧 → 接口调用 → schema 校验），pytest 参数化
+- [x] 1.2 `petlib/schemas.py`：dataclass `Detection(frame,box,conf,cls)` / `Track(track_id,boxes,...)` / `KeypointSequence(kp,score,frame_inds,total_frames,source)` + NPZ/轨迹 JSON schema 常量；验收 = `import petlib` 零重依赖 + pytest -k schemas 通过
+- [x] 1.3 `petlib/detection/base.py`：`Detector(ABC).detect(img_bgr, classes) -> list[Detection]`；`grounding_dino.py`（transformers 懒加载实现）
+- [x] 1.4 `petlib/tracking/base.py`：`Tracker(ABC).update(dets, frame_idx) -> list[Track]` + `finalize()`；`byte_track.py / oc_sort.py / bot_sort.py / deep_sort.py` 四个适配实现
+- [x] 1.5 `petlib/keypoints/base.py`：`KeypointExtractor(ABC).extract(crop_seq) -> KeypointSequence`；`superanimal.py`、`vitpose_ap10k.py` 实现
+- [x] 1.6 `petlib/registry.py`：`create(kind, name, **cfg)` 工厂 + `pipeline.yaml` 配置选择；验收 = `create('tracker','byte_track')` 返回实例
+- [x] 1.7 `petlib/contract_tests.py`：契约冒烟测试（fixture 帧 → 接口调用 → schema 校验），pytest 参数化
 
 ## 2. GatedTracker：修复沙发误检漂移（074451 段事故，design D1b）
 
