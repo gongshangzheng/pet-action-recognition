@@ -16,20 +16,24 @@
 - [x] 1.6 `petlib/registry.py`：`create(kind, name, **cfg)` 工厂 + `pipeline.yaml` 配置选择；验收 = `create('tracker','byte_track')` 返回实例
 - [x] 1.7 `petlib/contract_tests.py`：契约冒烟测试（fixture 帧 → 接口调用 → schema 校验），pytest 参数化
 
-## 2. GatedTracker：修复沙发误检漂移（074451 段事故，design D1b）
+## 2. 跟踪器对比选型实验（四候选：ByteTrack/OC-SORT/BoT-SORT/DeepSORT，BoxMOT 官方实现）
 
-- [ ] 2.1 `petlib/tracking/gated_wrapper.py`：GatedTracker 门控包装层——全候选评分（score = conf × (0.3+0.7·IoU) × gate）、尺寸门（side/med_side ∈ (0.25,4.0)）、运动门（max|b−pred| < 3×med_side，pred = last+EMA速度）、拒绝=coast 插值、rejected 检测全量落盘
-- [ ] 2.2 轨迹后处理：漏检线性插值 → scipy 中值滤波（窗 5，修复 /tmp 版索引 bug）→ 滑动平均（窗 5）
-- [ ] 2.3 074451 段复跑：验证沙发误检被 rejected 日志捕获、followcam 末尾不再漂移；契约测试通过
+> 沙发误检漂移的抑制已由渲染层的尺寸离群过滤实现（side > 1.8×中位 → 剔除+插值，见 6.2）；检测门控方案经评审否决（design D1b 记录）。
+
+- [ ] 2.1 GT 制作：抽 3–5 段白天视频（含 1 段多猫），人工核对/修正 track_id，形成小样本 GT
+- [ ] 2.2 固定检测源：同一份 GroundingDINO 白天检出缓存作为所有候选的共同输入（排除检测变量）
+- [ ] 2.3 运行四候选，逐段产出轨迹
+- [ ] 2.4 指标计算：IDF1（主）、IDSW、轨迹碎片数、框平滑度（相邻帧中心位移方差）
+- [ ] 2.5 选型报告：对比表 + 判定标准（IDF1 优先，碎片/抖动为辅）+ 结论（决定 §6 CLI 默认跟踪器）
 
 ## 3. 跟踪器对比选型（五候选同台）
 
 - [ ] 3.1 GT 制作：抽 3–5 段白天视频（含 1 段多猫），人工核对/修正 track_id，形成小样本 GT
 - [ ] 3.2 固定检测源：同一份 GroundingDINO 白天检出缓存作为所有候选的共同输入（排除检测变量）
-- [ ] 3.3 运行五候选（GatedTracker + ByteTrack/OC-SORT/BoT-SORT/DeepSORT），逐段产出轨迹
+- [ ] 3.3 运行四候选，逐段产出轨迹
 - [ ] 3.4 指标计算：IDF1（主）、IDSW、轨迹碎片数、框平滑度（相邻帧中心位移方差）
-- [ ] 3.4b 检测器侧误报抑制消融（GatedTracker 的根本竞争者）：阈值扫描 0.3/0.4/0.5 × prompt 变体（"cat." / "cat. sofa." 负提示实验），画漏检率 vs 误报率权衡曲线
-- [ ] 3.5 选型报告：五候选 + 检测器侧扫描同台对比表 + 判定标准（IDF1 优先，碎片/抖动为辅）+ 结论（决定 §6 CLI 默认跟踪器；GatedTracker 无优势则删除）
+- [ ] 3.4b 检测器侧误报抑制消融：阈值扫描 0.3/0.4/0.5 × prompt 变体（"cat." / "cat. sofa." 负提示实验），画漏检率 vs 误报率权衡曲线（已预跑：阈值无法抑制沙发超宽框——见会话记录，沙发漂移由渲染层尺寸离群过滤兜底）
+- [ ] 3.5 选型报告：四候选 + 检测器侧扫描同台对比表 + 判定标准（IDF1 优先，碎片/抖动为辅）+ 结论（决定 §6 CLI 默认跟踪器）
 
 ## 4. 猫居中 Demo 重做 + 用户验收（硬关卡）
 
