@@ -12,7 +12,7 @@
 - [ ] 0.3 抽样检测：每 10 帧跑 GroundingDINO（prompt=`"cat."`，box_threshold=0.3）→ 39 帧检测框
 - [ ] 0.4 轨迹关联：IoU>0.3 逐帧关联 → 主轨迹（累计置信度最高）；跨帧断链用 IoU 插值续接
 - [ ] 0.5 轨迹插值到全帧 + 滑动平均（窗口 5）平滑 → 平滑轨迹 JSON
-- [ ] 0.6 虚拟摄像机渲染：尺寸锁定策略（前 N 次检出框 P75×1.2，实测约 1234px）+ 防裁切保护（实际框>窗口×0.9 临时放大并记录）→ `followcam.mp4`
+- [ ] 0.6 虚拟摄像机渲染（**follow_adaptive**，先行默认）：逐帧以检测框中心裁剪、边长=框最大边×1.2（随框变化，不锁定）→ `followcam.mp4`；尺寸锁定版留作 6.6 消融对照
 - [ ] 0.7 并排对比视频（左原图+框叠加，右跟随视角）+ 检测框接触表 JPG
 - [ ] 0.8 产物回传本地，交用户观看
 - [ ] 0.9 **用户验收**：猫始终居中、无跳切抖动；不通过则方案重评（阻塞后续）
@@ -50,7 +50,7 @@
 ## 4. 离线猫居中预处理管线（全量白天段）
 
 - [ ] 4.1 `scripts/plf_detect_track.py` CLI 编排（petlib 组装：检测→跟踪→插值→平滑→轨迹 JSON + 处理报告检出率/插值率）
-- [ ] 4.2 `scripts/make_followcam.py`：轨迹 JSON + 原视频 → followcam.mp4（CameraPolicy 可配置，默认 follow_locked，design D1）+ 并排对比视频
+- [ ] 4.2 `scripts/make_followcam.py`：轨迹 JSON + 原视频 → followcam.mp4（CameraPolicy 可配置，**默认 follow_adaptive**，design D1）+ 并排对比视频
 - [ ] 4.3 `scripts/extract_keypoints_from_tracks.py`：轨迹 + 原视频 → 每轨迹关键点 NPZ（默认关卡 0B 胜出提取器）
 - [ ] 4.4 全量批处理白天段（34/79）：循环 4.1–4.3，产出 `datasets/cats/followcam/`、`keypoints/`、伪标注框包（YOLO 训练格式）
 - [ ] 4.5 批处理报告：逐段检出率/插值率/时长覆盖表；插值率 >30% 的异常段告警清单
@@ -73,7 +73,7 @@
 - [ ] 6.3 `scripts/train_linear_probe.py`：冻结编码器线性探针（5 类），top1 + 与 VideoMAEv2 基线差值；判定：≥ 基线 80% 则路线成立
 - [ ] 6.4 可遍历性检查：隐码插值序列渲染抽查
 - [ ] 6.5 HQSAM 消融实验（可选阶段）：mask 清洗 crop vs 原始 crop 各训线性探针对比，决定 mask 是否进入主链
-- [ ] 6.6 虚拟摄像机策略消融：fixed / follow_locked / follow_adaptive 三种 CameraPolicy 各产出跟随视频，各训线性探针对比 top1 + 人工观感抽查，定主用策略
+- [ ] 6.6 虚拟摄像机策略消融：follow_adaptive（先行已出结果）vs follow_locked vs fixed 各产出跟随视频，各训线性探针对比 top1 + 人工观感抽查——**检验「尺寸锁定保留距离线索」假设是否成立**，定主用策略
 
 ## 7. 抽查式推理 CLI
 
