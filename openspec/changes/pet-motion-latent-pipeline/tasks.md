@@ -91,5 +91,6 @@
 ### 10B. 登记-检索架构（design D9，用户确认方向，实施待批准）
 
 - [ ] 10.5 （待批准）统一登记-检索库：`petlib/identity/`（或 register 脚本）——登记照 → DINOv2 embedding → FAISS；猫与物品共用一套
-- [ ] 10.6 （待批准）物品实例识别闭环：GroundingDINO 粗候选 → DINOv2 检索判定（碗/摄像头等）；OWL 图像引导作对照
-- [ ] 10.7 （待批准）猫 Re-ID 联调：与 §8.2 register_cats.py 合并设计
+- [ ] 10.6 （待批准）静态物体候选生成：**SAM 一次性分割（固定机位缓存）** + 帧差变更触发重分割；文本检测失效时的兜底，解决「连碗都检测不到」
+- [ ] 10.7 （待批准）物品实例识别闭环：SAM mask/粗框候选 → DINOv2 检索判定；OWLv2 图像引导作对照；**GroundingDINO LoRA 室内微调仅作最后手段备档**
+- [ ] 10.8 （待批准）猫 Re-ID 联调：与 §8.2 register_cats.py 合并设计
