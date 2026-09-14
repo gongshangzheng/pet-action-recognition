@@ -16,7 +16,9 @@
 - [x] 1.6 `petlib/registry.py`：`create(kind, name, **cfg)` 工厂 + `pipeline.yaml` 配置选择；验收 = `create('tracker','byte_track')` 返回实例
 - [x] 1.7 `petlib/contract_tests.py`：契约冒烟测试（fixture 帧 → 接口调用 → schema 校验），pytest 参数化
 
-## 2. 跟踪器对比选型实验（四候选：ByteTrack/OC-SORT/BoT-SORT/DeepSORT，BoxMOT 官方实现）
+## 2. 跟踪器对比选型实验（**延后**：单猫场景「抽样+插值」方案已验收足够；多猫数据出现时再启用本节）
+
+> 延后原因（2026-09-10 用户验收）：v3 方案观感更平滑且满足需求；BoxMOT 四候选对比在单猫场景增益有限。BoxMOT 已装于 plf 环境备用。
 
 > 沙发误检漂移的抑制已由渲染层的尺寸离群过滤实现（side > 1.8×中位 → 剔除+插值，见 6.2）；检测门控方案经评审否决（design D1b 记录）。
 
@@ -37,9 +39,9 @@
 
 ## 4. 猫居中 Demo 重做 + 用户验收（硬关卡）
 
-- [ ] 4.1 用 §3 选型胜出的跟踪器重跑两段 Demo（120311 + 074451，follow_adaptive 裁剪，design D1 CameraPolicy 默认）
-- [ ] 4.2 ffmpeg 转 H.264（mp4v 编码 QuickTime 不支持）+ 产物回传本地
-- [ ] 4.3 **用户验收**：猫始终居中、无跳切抖动、**无沙发漂移**；不通过则回退 §2 重新评估（阻塞 §5 之后所有任务）
+- [x] 4.1 Demo 重跑：以「抽样检测(每10帧)+线性插值+滑动平均」方案完成两段（120311 + 074451）；全帧率+ByteTrack 版本因画面抖动被用户否决（v5 对比实验，结论记 design D1）
+- [x] 4.2 ffmpeg 转 H.264 + 产物回传本地（results/gate0a/、gate0a_v2/、gate0a_v3/）
+- [x] 4.3 **用户验收通过**：猫居中稳定、观感平滑；沙发段由尺寸离群过滤兜底
 
 ## 5. 关键点提取器对比选型（在验收通过的跟随视频上进行）
 
