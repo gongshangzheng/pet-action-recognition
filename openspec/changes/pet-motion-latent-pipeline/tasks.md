@@ -1,91 +1,87 @@
 # Tasks: pet-motion-latent-pipeline
 
-> **依赖与执行机**：本 change 在 **pet** 上执行（plf 独立 conda 环境，与 mmaction2 的 pet 环境隔离；不依赖 A100——A100 已降级为备用算力）。**每次使用 GPU 前必须先 `nvidia-smi` 检查占用**：两卡都被占则等待或与占用者协调，禁止抢占；选空闲卡以 `CUDA_VISIBLE_DEVICES=cuda:N` 指定。依赖完成前：仅 §1 接口骨架（本地纯代码）可先行；§2–§4 执行类任务不得开工。
+> **依赖与执行机**：本 change 在 **pet** 上执行（plf 独立 conda 环境，与 mmaction2 的 pet 环境隔离；A100 已降级为备用算力）。**每次使用 GPU 前必须先 `nvidia-smi` 检查占用**：两卡都被占则等待或与占用者协调，禁止抢占；选空闲卡以 `CUDA_VISIBLE_DEVICES=cuda:N` 指定。依赖完成前：仅 §1 接口骨架（本地纯代码）可先行。
 >
-> **约定**：NPZ 关键点 schema = `keypoints (T,V,3) float16 + frame_inds + total_frames`（score 内嵌第三通道）；轨迹 JSON = `{track_id, boxes:[{frame,x1,y1,x2,y2,conf,interpolated}]}`；示例视频 = `event_20260806_120311.mp4`（2880×1620@15fps，384 帧，白天）。
+> **执行顺序 = 编号顺序（§1 → §10）**。§4 的用户验收是硬关卡，未通过则回退 §2 重新评估。
+>
+> **约定**：NPZ 关键点 schema = `keypoints (T,V,3) float16 + frame_inds + total_frames`（score 内嵌第三通道）；轨迹 JSON = `{track_id, boxes:[{frame,x1,y1,x2,y2,conf,interpolated}]}`。
 
-## 0. 关卡 0A：猫居中预处理 Demo（用户验收点，先行）
+## 1. petlib 接口骨架（本地纯代码）
 
-- [x] 0.0 pet 建 plf 环境：`conda create -n plf --clone pet` → `pip install transformers accelerate`（隔离安装，验证 pet 环境 mmcv 不受影响）+ `nvidia-smi` 检查占用选卡
-- [x] 0.1 示例视频就位：pet 本地/NAS 已有（`~/mnt/cats/dataset_崔/`），ffprobe 校验帧数/分辨率
-- [x] 0.2 GroundingDINO 权重就位：plf 环境经 hf-mirror 下载 `IDEA-Research/grounding-dino-tiny`，单帧推理冒烟
-- [x] 0.3 抽样检测：每 10 帧跑 GroundingDINO（prompt=`"cat."`，box_threshold=0.3）→ 39 帧检测框
-- [x] 0.4 轨迹关联：IoU>0.3 逐帧关联 → 主轨迹（累计置信度最高）；跨帧断链用 IoU 插值续接
-- [x] 0.5 轨迹插值到全帧 + 滑动平均（窗口 5）平滑 → 平滑轨迹 JSON
-- [x] 0.6 虚拟摄像机渲染（**follow_adaptive**，先行默认）：逐帧以检测框中心裁剪、边长=框最大边×1.2（随框变化，不锁定）→ `followcam.mp4`；尺寸锁定版留作 6.6 消融对照
-- [x] 0.7 并排对比视频（左原图+框叠加，右跟随视角）+ 检测框接触表 JPG
-- [x] 0.7b 转码：OpenCV 写出的 mp4v 编码 QuickTime 不支持 → ffmpeg 转 H.264（`ffmpeg -i in.mp4 -c:v libx264 -pix_fmt yuv420p`）；全量批处理（4.4）同此步骤
-- [x] 0.8 产物回传本地，交用户观看
-- [ ] 0.9 **用户验收**：猫始终居中、无跳切抖动；不通过则方案重评（阻塞后续）
+- [x] 1.1 pet 建 plf 环境：clone pet 环境（torch 2.1.2+cu121）+ pip install transformers==4.49.0 accelerate；验证 pet 环境 mmcv 2.1.0 不受影响；GPU 占用检查纪律生效
+- [ ] 1.2 `petlib/schemas.py`：dataclass `Detection(frame,box,conf,cls)` / `Track(track_id,boxes,...)` / `KeypointSequence(kp,score,frame_inds,total_frames,source)` + NPZ/轨迹 JSON schema 常量；验收 = `import petlib` 零重依赖 + pytest -k schemas 通过
+- [ ] 1.3 `petlib/detection/base.py`：`Detector(ABC).detect(img_bgr, classes) -> list[Detection]`；`grounding_dino.py`（transformers 懒加载实现）
+- [ ] 1.4 `petlib/tracking/base.py`：`Tracker(ABC).update(dets, frame_idx) -> list[Track]` + `finalize()`；`byte_track.py / oc_sort.py / bot_sort.py / deep_sort.py` 四个适配实现
+- [ ] 1.5 `petlib/keypoints/base.py`：`KeypointExtractor(ABC).extract(crop_seq) -> KeypointSequence`；`superanimal.py`、`vitpose_ap10k.py` 实现
+- [ ] 1.6 `petlib/registry.py`：`create(kind, name, **cfg)` 工厂 + `pipeline.yaml` 配置选择；验收 = `create('tracker','byte_track')` 返回实例
+- [ ] 1.7 `petlib/contract_tests.py`：契约冒烟测试（fixture 帧 → 接口调用 → schema 校验），pytest 参数化
 
-## 0b. 关卡 0B：关键点质量抽查（在 0A 验收通过的跟随视频上进行）
+## 2. GatedTracker：修复沙发误检漂移（074451 段事故，design D1b）
 
-> 关键点检测方法不止一种：DLC 式（SuperAnimal）、MMPose 动物动物园（ViTPose/RTMPose/HRNet 的 AP-10K 变体）、SLEAP 式等，各有训练数据与骨架定义差异。petlib/keypoints 注册表内所有候选走同一评测，不预设胜负（选型标准见 spec「关键点提取器双候选对比选型」场景）。
+- [ ] 2.1 `petlib/tracking/gated_wrapper.py`：GatedTracker 门控包装层——全候选评分（score = conf × (0.3+0.7·IoU) × gate）、尺寸门（side/med_side ∈ (0.25,4.0)）、运动门（max|b−pred| < 3×med_side，pred = last+EMA速度）、拒绝=coast 插值、rejected 检测全量落盘
+- [ ] 2.2 轨迹后处理：漏检线性插值 → scipy 中值滤波（窗 5，修复 /tmp 版索引 bug）→ 滑动平均（窗 5）
+- [ ] 2.3 074451 段复跑：验证沙发误检被 rejected 日志捕获、followcam 末尾不再漂移；契约测试通过
 
-- [ ] 0b.1 抽 5 段白天跟随视频，分别跑注册的候选提取器（至少：SuperAnimal-Quadruped、ViTPose-AP10K；可扩 RTMPose-AP10K/HRNet-AP10K）+ 叠加可视化
-- [ ] 0b.2 出对比质量报告：各候选的置信度分布、时序抖动（相邻帧关键点位移方差）、点位合理性人工判定（通过者进关键点路线，多者通过则按 spec 选型标准定主用）
-- [ ] 0b.3 范围备忘：夜间红外 45 段本 change 不处理（二期，需 YOLO11 夜视微调 + IR 关键点验证）
+## 3. 跟踪器对比选型（五候选同台）
 
-## 1. petlib 接口骨架（本地纯代码，可先于依赖完成）
+- [ ] 3.1 GT 制作：抽 3–5 段白天视频（含 1 段多猫），人工核对/修正 track_id，形成小样本 GT
+- [ ] 3.2 固定检测源：同一份 GroundingDINO 白天检出缓存作为所有候选的共同输入（排除检测变量）
+- [ ] 3.3 运行五候选（GatedTracker + ByteTrack/OC-SORT/BoT-SORT/DeepSORT），逐段产出轨迹
+- [ ] 3.4 指标计算：IDF1（主）、IDSW、轨迹碎片数、框平滑度（相邻帧中心位移方差）
+- [ ] 3.5 选型报告：对比表 + 判定标准（IDF1 优先，碎片/抖动为辅）+ 结论（决定 §6 CLI 默认跟踪器）
 
-- [ ] 1.1 `petlib/schemas.py`：dataclass `Detection(frame,box,conf,cls)` / `Track(track_id,boxes,...)` / `KeypointSequence(kp,score,frame_inds,total_frames,source)` + NPZ/轨迹 JSON schema 常量；验收 = `import petlib` 零重依赖 + pytest -k schemas 通过
-- [ ] 1.2 `petlib/detection/base.py`：`Detector(ABC).detect(img_bgr, classes) -> list[Detection]`；`grounding_dino.py`（transformers 懒加载实现）
-- [ ] 1.3 `petlib/tracking/base.py`：`Tracker(ABC).update(dets, frame_idx) -> list[Track]` + `finalize()`；`byte_track.py / oc_sort.py / bot_sort.py / deep_sort.py` 四个适配实现
-- [ ] 1.4 `petlib/keypoints/base.py`：`KeypointExtractor(ABC).extract(crop_seq) -> KeypointSequence`；`superanimal.py`、`vitpose_ap10k.py` 实现
-- [ ] 1.5 `petlib/registry.py`：`create(kind, name, **cfg)` 工厂 + `pipeline.yaml` 配置选择；验收 = `create('tracker','byte_track')` 返回实例
+## 4. 猫居中 Demo 重做 + 用户验收（硬关卡）
 
-## 2. 跟踪器对比选型实验（design D1）
+- [ ] 4.1 用 §3 选型胜出的跟踪器重跑两段 Demo（120311 + 074451，follow_adaptive 裁剪，design D1 CameraPolicy 默认）
+- [ ] 4.2 ffmpeg 转 H.264（mp4v 编码 QuickTime 不支持）+ 产物回传本地
+- [ ] 4.3 **用户验收**：猫始终居中、无跳切抖动、**无沙发漂移**；不通过则回退 §2 重新评估（阻塞 §5 之后所有任务）
 
-- [ ] 2.0 `petlib/tracking/gated_wrapper.py`：GatedTracker 门控包装层（全候选评分/尺寸门/运动门/coast 策略/中值滤波后处理，参数见 design D1b）+ 契约测试；在 074451 段复跑验证沙发误检被 rejected 日志捕获
-- [ ] 2.1 GT 制作：抽 3–5 段白天视频（含 1 段多猫），人工核对/修正各候选跟踪器输出的 track_id，形成小样本 GT
-- [ ] 2.2 固定检测源：同一份 GroundingDINO 白天检出缓存作为四候选的共同输入（排除检测变量）
-- [ ] 2.3 运行五候选（GatedTracker + ByteTrack/OC-SORT/BoT-SORT/DeepSORT），逐段产出轨迹
-- [ ] 2.4 指标计算：IDF1（主）、IDSW、轨迹碎片数、框平滑度（相邻帧中心位移方差）
-- [ ] 2.5 选型报告：对比表 + 判定标准（IDF1 优先，碎片/抖动为辅）+ 结论（决定 §4 CLI 默认跟踪器）
+## 5. 关键点提取器对比选型（在验收通过的跟随视频上进行）
 
-## 3. 关键点提取器对比选型实验（关卡 0B 的正式化，design D2）
+> 关键点检测方法不止一种：DLC 式（SuperAnimal）、MMPose 动物动物园（ViTPose/RTMPose/HRNet 的 AP-10K 变体）、SLEAP 式等。petlib/keypoints 注册表内所有候选走同一评测，不预设胜负（选型标准见 spec「关键点提取器双候选对比选型」场景）。
 
-- [ ] 3.1 候选实现注册：superanimal.py、vitpose_ap10k.py 通过契约测试（1.4 完成后自动满足）
-- [ ] 3.2 同 5 段白天跟随视频跑双候选，产出对比报告（置信度分布/时序抖动/可视化抽检/下游线性探针 top1）
-- [ ] 3.3 选型结论记录（探针 top1 为主判据；平手取 SuperAnimal 因与现有脚本兼容），主用提取器写进 pipeline.yaml
+- [ ] 5.1 抽 5 段白天跟随视频，分别跑注册候选（至少 SuperAnimal-Quadruped、ViTPose-AP10K；可扩 RTMPose-AP10K/HRNet-AP10K）+ 叠加可视化
+- [ ] 5.2 对比质量报告：置信度分布、时序抖动（相邻帧关键点位移方差）、点位合理性人工判定
+- [ ] 5.3 选型结论（多者通过按 spec 标准定主用）
+- [ ] 5.4 范围备忘：夜间红外 45 段本 change 不处理（二期，需 YOLO11 夜视微调 + IR 关键点验证）
 
-## 4. 离线猫居中预处理管线（全量白天段）
+## 6. 全量批处理（白天段 34/79）
 
-- [ ] 4.1 `scripts/plf_detect_track.py` CLI 编排（petlib 组装：检测→跟踪→插值→平滑→轨迹 JSON + 处理报告检出率/插值率）
-- [ ] 4.2 `scripts/make_followcam.py`：轨迹 JSON + 原视频 → followcam.mp4（CameraPolicy 可配置，**默认 follow_adaptive**，design D1）+ 并排对比视频
-- [ ] 4.3 `scripts/extract_keypoints_from_tracks.py`：轨迹 + 原视频 → 每轨迹关键点 NPZ（默认关卡 0B 胜出提取器）
-- [ ] 4.4 全量批处理白天段（34/79）：循环 4.1–4.3，产出 `datasets/cats/followcam/`、`keypoints/`、伪标注框包（YOLO 训练格式）
-- [ ] 4.5 批处理报告：逐段检出率/插值率/时长覆盖表；插值率 >30% 的异常段告警清单
+- [ ] 6.1 `scripts/plf_detect_track.py` CLI 编排（petlib 组装：检测→跟踪→插值→平滑→轨迹 JSON + 检出率/插值率报告）
+- [ ] 6.2 `scripts/make_followcam.py`：轨迹 JSON + 原视频 → followcam.mp4（CameraPolicy 可配置，默认 follow_adaptive，design D1）+ 并排对比视频
+- [ ] 6.3 `scripts/extract_keypoints_from_tracks.py`：轨迹 + 原视频 → 每轨迹关键点 NPZ（§5 选型胜出者）
+- [ ] 6.4 全量循环 34 段：产出 `datasets/cats/followcam/`、`keypoints/`、伪标注框包（YOLO 训练格式）+ ffmpeg 转 H.264
+- [ ] 6.5 批处理报告：逐段检出率/插值率/时长覆盖表；插值率 >30% 告警清单
 
-## 5. 运动隐空间（条件启动：零训练基线不达标时才训）
+## 7. 运动隐空间（条件启动：零训练基线不达标时才训）
 
-> 依 design D3 实施次序：先跑 5.1–5.3 零训练基线（B-SOiD 式），「人工可命名率 ≥60% 且簇不碎」则 5.4–5.6 降级为可选增强；不达标才启动 VQ-VAE 训练。
+> 依 design D3 实施次序：先跑 7.1–7.3 零训练基线（B-SOiD 式），「人工可命名率 ≥60% 且簇不碎」则 7.4–7.6 降级为可选增强；不达标才启动 VQ-VAE 训练。
 
-- [ ] 5.1 零训练基线特征：关键点 → 手工运动学特征（逐帧关节速度 V×2、选定关节角、成对距离子集；窗口标准化去机位/尺度）
-- [ ] 5.2 零训练基线聚类：UMAP(n_neighbors=30) → HDBSCAN → 行为簇
-- [ ] 5.3 可命名率报告：导出各簇代表帧，人工抽 30 簇判定「能说出猫在干嘛」的占比
-- [ ] 5.4（条件）`configs/motion_latent/`：模型定义 E_mot(1D CNN+Transformer, 48×34→12×32) / E_id(池化+MLP→64) / VQ 码本(K=512,d=32) / G 解码器；损失 = L1 重建 + 速度 L1 + VQ + InfoNCE(s, **track 级监督**) + 0.01‖Δz‖² 平滑
-- [ ] 5.5（条件）训练数据生成：cats + pet_action_mammal_v0 + live 录像关键点窗口（48/24 滑窗，**按源视频分组切分**，目标 ≥15 万窗口）
-- [ ] 5.6（条件）pet 空闲卡训练至收敛（≤4h，开跑前 nvidia-smi 查占用），码本利用率 ≥50%（否则重置机制），保存 checkpoint + 曲线
+- [ ] 7.1 零训练基线特征：关键点 → 手工运动学特征（逐帧关节速度 V×2、选定关节角、成对距离子集；窗口标准化去机位/尺度）
+- [ ] 7.2 零训练基线聚类：UMAP(n_neighbors=30) → HDBSCAN → 行为簇
+- [ ] 7.3 可命名率报告：导出各簇代表帧，人工抽 30 簇判定「能说出猫在干嘛」的占比
+- [ ] 7.4（条件）`configs/motion_latent/`：模型定义 E_mot(1D CNN+Transformer, 48×34→12×32) / E_id(池化+MLP→64) / VQ 码本(K=512,d=32) / G 解码器；损失 = L1 重建 + 速度 L1 + VQ + InfoNCE(s, **track 级监督**) + 0.01‖Δz‖² 平滑
+- [ ] 7.5（条件）训练数据生成：cats + pet_action_mammal_v0 + live 录像关键点窗口（48/24 滑窗，**按源视频分组切分**，目标 ≥15 万窗口）
+- [ ] 7.6（条件）pet 空闲卡训练至收敛（≤4h，开跑前 nvidia-smi 查占用），码本利用率 ≥50%（否则重置机制），保存 checkpoint + 曲线
 
-## 6. 评测：L3 发现 + L1 探针
+## 8. 评测：L3 发现 + L1 探针 + 消融
 
-- [ ] 6.1 `scripts/discover_behaviors.py`：聚类 → 各簇代表帧导出 → 人工命名表（输入兼容：零训练基线特征簇 / VQ token 簇）
-- [ ] 6.2 NMI/ARI 报告（聚类 vs 现有 5 类人工标注）
-- [ ] 6.3 `scripts/train_linear_probe.py`：冻结编码器线性探针（5 类），top1 + 与 VideoMAEv2 基线差值；判定：≥ 基线 80% 则路线成立
-- [ ] 6.4 可遍历性检查：隐码插值序列渲染抽查
-- [ ] 6.5 HQSAM 消融实验（可选阶段）：mask 清洗 crop vs 原始 crop 各训线性探针对比，决定 mask 是否进入主链
-- [ ] 6.6 虚拟摄像机策略消融：follow_adaptive（先行已出结果）vs follow_locked vs fixed 各产出跟随视频，各训线性探针对比 top1 + 人工观感抽查——**检验「尺寸锁定保留距离线索」假设是否成立**，定主用策略
+- [ ] 8.1 `scripts/discover_behaviors.py`：聚类 → 各簇代表帧导出 → 人工命名表（输入兼容：零训练基线特征簇 / VQ token 簇）
+- [ ] 8.2 NMI/ARI 报告（聚类 vs 现有 5 类人工标注）
+- [ ] 8.3 `scripts/train_linear_probe.py`：冻结编码器线性探针（5 类），top1 + 与 VideoMAEv2 基线差值；判定：≥ 基线 80% 则路线成立
+- [ ] 8.4 可遍历性检查：隐码插值序列渲染抽查
+- [ ] 8.5 HQSAM 消融实验（可选阶段）：mask 清洗 crop vs 原始 crop 各训线性探针对比，决定 mask 是否进入主链
+- [ ] 8.6 虚拟摄像机策略消融：follow_adaptive（已出结果）vs follow_locked vs fixed 各产出跟随视频，各训线性探针对比 top1 + 人工观感抽查——**检验「尺寸锁定保留距离线索」假设是否成立**，定主用策略
 
-## 7. 抽查式推理 CLI
+## 9. 抽查式推理 CLI
 
-- [ ] 7.1 `scripts/spot_check_actions.py`：输入摄像头+时间段 → 拉录像 → 预处理 → 隐码 → 动作报告（JSON/Markdown：标签/起止秒/track_id/**登记身份（哪只猫）**/置信度/疑似新动作提示/猫在场率）
-- [ ] 7.2 `scripts/register_cats.py`：猫个体档案登记（每猫 3–5 张清晰 crop → 特征 embedding 入库）+ 检索识别函数（供 7.1 调用），标注未登记个体为「未知猫 #N」
-- [ ] 7.3 端到端联调：抽 3 个真实时段（含 1 个无猫时段）出报告
-- [ ] 7.4 L2 边界误差抽查：动作码突变点 = 切换边界，误差须在滑窗粒度 ±1.5s 内
+- [ ] 9.1 `scripts/spot_check_actions.py`：输入摄像头+时间段 → 拉录像 → 预处理 → 隐码 → 动作报告（JSON/Markdown：标签/起止秒/track_id/**登记身份（哪只猫）**/置信度/疑似新动作提示/猫在场率）
+- [ ] 9.2 `scripts/register_cats.py`：猫个体档案登记（每猫 3–5 张清晰 crop → 特征 embedding 入库）+ 检索识别函数（供 9.1 调用），标注未登记个体为「未知猫 #N」
+- [ ] 9.3 端到端联调：抽 3 个真实时段（含 1 个无猫时段）出报告
+- [ ] 9.4 L2 边界误差抽查：动作码突变点 = 切换边界，误差须在滑窗粒度 ±1.5s 内
 
-## 8. 收尾
+## 10. 收尾
 
-- [ ] 8.1 文档：管线架构图 + 各脚本用法 + 双环境（pet 的 mmaction2 env / plf）说明，补进 `papers/docs/animal-action-survey.md` §4.4 附录
-- [ ] 8.2 向用户汇报：隐空间聚类发现的行为簇结果 + 线性探针指标
-- [ ] 8.3 提交（feat: 前缀；脚本/config/文档；数据资产不入库）
+- [ ] 10.1 文档：管线架构图 + 各脚本用法 + 双环境（pet 的 mmaction2 env / plf）说明，补进 `papers/docs/animal-action-survey.md` §4.4 附录
+- [ ] 10.2 向用户汇报：隐空间聚类发现的行为簇结果 + 线性探针指标
+- [ ] 10.3 提交（feat: 前缀；脚本/config/文档；数据资产不入库）
