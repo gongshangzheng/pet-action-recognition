@@ -66,3 +66,8 @@ third-party/
 
 # papers db backup files
 data/*.bak*
+
+# 权重/训练产物（pet 直接产出，不进 git）
+yolo11n.pt
+yolo11s.pt
+work_dirs/

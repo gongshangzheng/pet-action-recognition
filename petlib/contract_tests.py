@@ -53,7 +53,6 @@ def test_schemas_keypoint_npz_roundtrip(tmp_path):
     kp[..., 2] = 0.9
     seq = KeypointSequence(kp=kp, frame_inds=list(range(12)), total_frames=48, source="unit-test")
     d = seq.to_npz_dict()
-    import numpy as np
     assert d["keypoints"].shape == (12, 17, 3)
     assert d["keypoints"].dtype == np.float16
 
