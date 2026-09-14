@@ -37,32 +37,32 @@
 - [x] 4.1 环境：plf 装 mmpose 1.3.2（修 numpy 2.2 连坐降级 + xtcocotools 轮子 + torch 复制 + setuptools<81）+ mim 下载 AP-10K 双候选权重（HRNet-W32 / ResNet-101）
 - [x] 4.2 双候选跑两段验收视频（bbox-internal 口径）：HRNet conf 0.334/0.431，ResNet-101 conf 0.331/0.383
 - [x] 4.3 crop-first 口径实测（在跟随视频上整帧识别）：conf **0.455** > bbox-internal 0.431 → **crop-first 定为管线口径**
-- [ ] 4.4 **用户人工抽检**：keypoint 叠加可视化（results/gate0b/*.jpg）确认点位合理性 → 定主用提取器（HRNet vs ResNet-101 打平，抽检裁决）
+- [x] 4.4 **用户人工抽检完成（2026-09-14）**：骨架连线视频交付后用户判定「关键点连出但提取不出信息」→ **裁定：关键点降级为辅助信号**（在场率/运动强度/簇命名参考），主表示切换预训练视频编码器特征（design D8）
 
 ## 5. 全量批处理（白天段 34/79）
 
 - [ ] 5.1 `scripts/plf_detect_track.py`：抽样检测 + 插值平滑 → 轨迹 JSON（沿用验收方案，相机策略 follow_adaptive）
 - [ ] 5.2 `scripts/make_followcam.py`：跟随视角视频（尺寸离群过滤内置）+ H.264 直写（petlib/videowriter）
-- [ ] 5.3 `scripts/extract_keypoints_from_tracks.py`：crop-first 口径关键点 NPZ（§4 选型胜出者）
+- [ ] 5.3 `scripts/extract_keypoints_from_tracks.py`：crop-first 口径关键点 NPZ（HRNet-W32-AP10K；**辅助信号用途**：在场率/运动强度/消融对照）
 - [ ] 5.4 全量循环 34 段：产出 `datasets/cats/followcam/`、`keypoints/`、伪标注框包（YOLO 格式）
 - [ ] 5.5 批处理报告：检出率/插值率/离群剔除统计；插值率 >30% 告警清单
 
-## 6. 运动隐空间（条件启动：零训练基线不达标时才训）
+## 6. 运动隐空间表征（视频特征主链，零训练；自训版条件启动）
 
-> 零训练基线（B-SOiD 式）先行；「人工可命名率 ≥60% 且簇不碎」则 6.4–6.6 降级为可选增强。
+> 关卡 0B 裁定后修订：主表示 = 预训练编码器零训练特征（design D8）；自监督 VQ 训练仅在零训练基线不达标时启动。
 
-- [ ] 6.1 零训练基线特征：关键点 → 手工运动学特征（速度/关节角/成对距离；窗口标准化）
-- [ ] 6.2 零训练基线聚类：UMAP(30) → HDBSCAN → 行为簇
-- [ ] 6.3 可命名率报告：各簇代表帧 + 人工抽 30 簇判定
-- [ ] 6.4（条件）`configs/motion_latent/`：E_mot/E_id/VQ(K=512)/G；损失 = 重建 + 速度 + VQ + InfoNCE(track 级) + 平滑
-- [ ] 6.5（条件）训练数据：cats + mammal_v0 + live 关键点窗口（48/24 滑窗，按源视频分组，目标 ≥15 万窗口）
-- [ ] 6.6（条件）pet 空闲卡训练（≤4h，先查占用），码本利用率 ≥50%
+- [ ] 6.1 主表示选型实验：VideoMAEv2 vs DINOv2 在两段验收跟随视频 + 抽 3 段白天段上各出窗口特征（16 帧窗口 stride 8）→ UMAP 可视化 + 时序连续性（相邻窗口余弦距离）→ 人工看簇代表帧可命名性；判定：可命名簇比例为主，打平取 VideoMAEv2
+- [ ] 6.2 胜出编码器接入 petlib（`petlib/features/` 抽象 + 契约测试复用）
+- [ ] 6.3 全量窗口特征提取 + UMAP(30) → HDBSCAN → 行为簇
+- [ ] 6.4 可命名率报告：各簇代表帧（叠加关键点辅助参考）+ 人工抽 30 簇判定
+- [ ] 6.5（条件）`configs/motion_latent/`：自训 VQ 版——输入修订为视频特征序列 (48,768)，其余架构不变（E_mot/E_id/VQ(K=512)/G；损失 = 重建 + 速度 + VQ + InfoNCE(track 级) + 平滑）
+- [ ] 6.6（条件）训练数据：cats + mammal_v0 + live 窗口（按源视频分组，目标 ≥15 万窗口）；pet 空闲卡训练（≤4h，先查占用），码本利用率 ≥50%
 
 ## 7. 评测：L3 发现 + L1 探针 + 消融
 
 - [ ] 7.1 `scripts/discover_behaviors.py`：聚类 → 代表帧 → 人工命名表
 - [ ] 7.2 NMI/ARI 报告（聚类 vs 5 类人工标注）
-- [ ] 7.3 `scripts/train_linear_probe.py`：线性探针 top1（判定 ≥ VideoMAEv2 基线 80%）
+- [ ] 7.3 `scripts/train_linear_probe.py`：线性探针 top1——主对照 = **同一编码器在原始整帧视频上的特征**（检验跟随预处理增益）；参考 = VideoMAEv2 全量微调基线
 - [ ] 7.4 可遍历性检查：隐码插值渲染抽查
 - [ ] 7.5 HQSAM 消融（可选）：mask 清洗 crop vs 原始 crop
 - [ ] 7.6 摄像机策略消融：follow_adaptive（已验收）vs follow_locked vs fixed 线性探针对比
