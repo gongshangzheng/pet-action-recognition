@@ -7,14 +7,14 @@
 ## 0. 关卡 0A：猫居中预处理 Demo（用户验收点，先行）
 
 - [ ] 0.0 pet 建 plf 环境：`conda create -n plf --clone pet` → `pip install transformers accelerate`（隔离安装，验证 pet 环境 mmcv 不受影响）+ `nvidia-smi` 检查占用选卡
-- [ ] 0.1 示例视频就位：pet 本地/NAS 已有（`~/mnt/cats/dataset_崔/`），ffprobe 校验帧数/分辨率
-- [ ] 0.2 GroundingDINO 权重就位：plf 环境经 hf-mirror 下载 `IDEA-Research/grounding-dino-tiny`，单帧推理冒烟
-- [ ] 0.3 抽样检测：每 10 帧跑 GroundingDINO（prompt=`"cat."`，box_threshold=0.3）→ 39 帧检测框
-- [ ] 0.4 轨迹关联：IoU>0.3 逐帧关联 → 主轨迹（累计置信度最高）；跨帧断链用 IoU 插值续接
-- [ ] 0.5 轨迹插值到全帧 + 滑动平均（窗口 5）平滑 → 平滑轨迹 JSON
-- [ ] 0.6 虚拟摄像机渲染（**follow_adaptive**，先行默认）：逐帧以检测框中心裁剪、边长=框最大边×1.2（随框变化，不锁定）→ `followcam.mp4`；尺寸锁定版留作 6.6 消融对照
-- [ ] 0.7 并排对比视频（左原图+框叠加，右跟随视角）+ 检测框接触表 JPG
-- [ ] 0.8 产物回传本地，交用户观看
+- [x] 0.1 示例视频就位：pet 本地/NAS 已有（`~/mnt/cats/dataset_崔/`），ffprobe 校验帧数/分辨率
+- [x] 0.2 GroundingDINO 权重就位：plf 环境经 hf-mirror 下载 `IDEA-Research/grounding-dino-tiny`，单帧推理冒烟
+- [x] 0.3 抽样检测：每 10 帧跑 GroundingDINO（prompt=`"cat."`，box_threshold=0.3）→ 39 帧检测框
+- [x] 0.4 轨迹关联：IoU>0.3 逐帧关联 → 主轨迹（累计置信度最高）；跨帧断链用 IoU 插值续接
+- [x] 0.5 轨迹插值到全帧 + 滑动平均（窗口 5）平滑 → 平滑轨迹 JSON
+- [x] 0.6 虚拟摄像机渲染（**follow_adaptive**，先行默认）：逐帧以检测框中心裁剪、边长=框最大边×1.2（随框变化，不锁定）→ `followcam.mp4`；尺寸锁定版留作 6.6 消融对照
+- [x] 0.7 并排对比视频（左原图+框叠加，右跟随视角）+ 检测框接触表 JPG
+- [x] 0.8 产物回传本地，交用户观看
 - [ ] 0.9 **用户验收**：猫始终居中、无跳切抖动；不通过则方案重评（阻塞后续）
 
 ## 0b. 关卡 0B：关键点质量抽查（在 0A 验收通过的跟随视频上进行）
