@@ -21,7 +21,24 @@
 ### D1: 检测/跟踪/居中的工程形态
 
 - 检测：GroundingDINO 开放词汇检出（白天段，零训练）；低置信帧 → 跟踪器插值并打「低置信」标（YOLO11 夜视微调版为二期，本 change 不做）
-- 跟踪：**对比选型实验**，候选 ByteTrack / OC-SORT / BoT-SORT / DeepSORT。PigTrack 畜牧基准（`2507.16639`）显示 SORT 系在检测指标上占优，但那是猪圈域——须在本域验证。实验设计：固定同一检测源（GroundingDINO 白天检出），对 3–5 段人工核对过 track_id 的视频小样本 GT，比 IDF1 / IDSW / 轨迹碎片数 / 框平滑度；判定标准（IDF1 优先，碎片与抖动为辅）与结论一并记录。输出 = 平滑轨迹（滑动平均窗口 5 帧）+ track_id + 插值标记
+- 跟踪：**对比选型实验**，候选 ByteTrack / OC-SORT / BoT-SORT / DeepSORT + **GatedTracker（门控包装层，见 D1b）**。PigTrack 畜牧基准（`2507.16639`）显示 SORT 系在检测指标上占优，但那是猪圈域——须在本域验证。实验设计：固定同一检测源（GroundingDINO 白天检出），对 3–5 段人工核对过 track_id 的视频小样本 GT，比 IDF1 / IDSW / 轨迹碎片数 / 框平滑度；判定标准（IDF1 优先，碎片与抖动为辅）与结论一并记录。输出 = 平滑轨迹（滑动平均窗口 5 帧）+ track_id + 插值标记
+
+### D1b: GatedTracker——检测后门控包装层（ sofas 误检漂移事故的设计回应）
+
+**事故**：074451 段末尾 GroundingDINO 把沙发误检为猫（conf 过线），argmax 取框 + 线性插值把跳变铺开成可见漂移。
+
+**机制**（包装任意检测器输出，与 ByteTrack 等并列参与选型）：
+1. 收集全部 conf≥0.3 候选（不取 argmax）
+2. 运动预测：pred = last + vel（vel = 帧间位移 EMA，α=0.4）
+3. 逐候选打分 score = conf × (0.3 + 0.7·IoU(b, last)) × gate；两道门：
+   - 尺寸门：side/med_side ∈ (0.25, 4.0)
+   - 运动门：max|b − pred| < 3×med_side
+4. 全部被拒 → 本帧判漏检（coast，插值补全），rejected 检测（帧号/框/ conf）全量落盘
+5. 轨迹后处理：漏检线性插值 → **中值滤波(窗5, scipy.ndimage.median_filter)** → 滑动平均(窗5)
+
+**参数与阈值**：velocity gate 3×med_side；面积比 (0.25, 4.0)；med_side 缓慢更新（逐检测 EMA）。**失败条件**：若门控版仍漂移（沙发检测得分高过门控），说明需要外观 Re-ID 特征——个体识别（任务 7.2）提前登场，如实记录。
+
+**位置**：`petlib/tracking/gated_wrapper.py`——不是第四种跟踪算法，是任意检测输出的门控后处理层，同样走可插拔接口与契约测试。
 - 居中裁剪：虚拟摄像机策略 **CameraPolicy 可插拔**（petlib/pipeline/camera_policy.py），三候选。**先行 = `follow_adaptive`**（用户指示：先用不锁定尺寸的方式试结果）：位置尺寸逐帧跟随检测框（×1.2 外扩，AnimalFormer/畜牧常规做法）
   - `follow_adaptive`（先行默认）：实现最简、猫占比恒定（利于关键点/分类模型）
   - `follow_locked`（对照，design 保留）：位置跟随 + 尺寸锁定（初值 = track 前 N 次检出框 P75×1.2，实测示例段 ≈1234px@2880 宽）——假设：保留猫表观尺寸变化 = 距离/接近行为线索；**该假设未经实验验证，由任务 6.6 消融裁决**；保护规则：实际框 > 窗口×0.9 时临时放大防裁切

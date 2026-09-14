@@ -36,9 +36,10 @@
 
 ## 2. 跟踪器对比选型实验（design D1）
 
+- [ ] 2.0 `petlib/tracking/gated_wrapper.py`：GatedTracker 门控包装层（全候选评分/尺寸门/运动门/coast 策略/中值滤波后处理，参数见 design D1b）+ 契约测试；在 074451 段复跑验证沙发误检被 rejected 日志捕获
 - [ ] 2.1 GT 制作：抽 3–5 段白天视频（含 1 段多猫），人工核对/修正各候选跟踪器输出的 track_id，形成小样本 GT
 - [ ] 2.2 固定检测源：同一份 GroundingDINO 白天检出缓存作为四候选的共同输入（排除检测变量）
-- [ ] 2.3 运行四候选（ByteTrack/OC-SORT/BoT-SORT/DeepSORT），逐段产出轨迹
+- [ ] 2.3 运行五候选（GatedTracker + ByteTrack/OC-SORT/BoT-SORT/DeepSORT），逐段产出轨迹
 - [ ] 2.4 指标计算：IDF1（主）、IDSW、轨迹碎片数、框平滑度（相邻帧中心位移方差）
 - [ ] 2.5 选型报告：对比表 + 判定标准（IDF1 优先，碎片/抖动为辅）+ 结论（决定 §4 CLI 默认跟踪器）
 
