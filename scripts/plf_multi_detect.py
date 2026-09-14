@@ -26,12 +26,13 @@ import torch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from petlib.videowriter import H264VideoWriter  # noqa: E402
 
-PROMPT = "cat. bed. table. sofa. shelf. bowl. camera."
-LABELS = ["cat", "bed", "table", "sofa", "shelf", "bowl", "camera"]
+# 验收通过的五类清单（v1）；bowl/camera 因文本检测效果差已撤下（2026-09-14 用户裁定），
+# 静态小物体走 D9 路线：SAM 一次分割 + 固定机位缓存 + 定期重分割 + 登记照检索。
+DEFAULT_PROMPT = "cat. bed. table. sofa. shelf."
+LABELS = ["cat", "bed", "table", "sofa", "shelf"]
 COLORS = {
     "cat": (0, 255, 0), "bed": (255, 180, 0), "table": (0, 180, 255),
-    "sofa": (180, 0, 255), "shelf": (255, 255, 0), "bowl": (0, 255, 255),
-    "camera": (128, 128, 255),
+    "sofa": (180, 0, 255), "shelf": (255, 255, 0),
 }
 MODEL_ID = "IDEA-Research/grounding-dino-tiny"
 
@@ -40,6 +41,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--video", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--prompt", default=DEFAULT_PROMPT,
+                    help="GroundingDINO 多 prompt（点号分隔；默认=验收五类）")
     ap.add_argument("--threshold", type=float, default=0.35)
     ap.add_argument("--width", type=int, default=1280, help="输出视频宽度")
     ap.add_argument("--hold-sec", type=float, default=1.5, help="状态切换迟滞秒数")
@@ -61,7 +64,7 @@ def main() -> None:
 
     def infer(frame: np.ndarray) -> list[tuple[str, float, np.ndarray]]:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        inputs = processor(images=rgb, text=PROMPT, return_tensors="pt").to(device)
+        inputs = processor(images=rgb, text=args.prompt if False else PROMPT, return_tensors="pt").to(device)
         with torch.no_grad():
             out = model(**inputs)
         res = processor.post_process_grounded_object_detection(
