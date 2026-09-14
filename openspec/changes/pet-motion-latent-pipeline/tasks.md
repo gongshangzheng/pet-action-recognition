@@ -32,7 +32,7 @@
 
 ## 4. 多目标检测 + 空间关系状态验证（⬅️ 当前任务，用户验收节点）
 
-- [ ] 4.1 **多 prompt 同帧检测**：GroundingDINO `"cat. bed. table. sofa. shelf."`（清单可调）一次前向多类打框；验收 = 各类物体框均正确（逐类着色+标签的可视化视频）
+- [ ] 4.1 **多 prompt 同帧检测**：GroundingDINO `"cat. bed. table. sofa. shelf. bowl. camera."`（清单可调）一次前向多类打框；验收 = 各类物体框均正确（逐类着色+标签的可视化视频）。**正式脚本 = `scripts/plf_multi_detect.py`**（入版本管理；产物 = `<out>/multi_detect.mp4` + `multi_detect.json` 检出统计；禁止放 /tmp）
 - [ ] 4.2 **空间关系状态层（规则，无学习）**：猫框**底边中点**（脚部位置）落入家具框内 → 状态 = `"cat on bed/table/shelf/sofa"`，否则 `"on floor"`；切换要求**持续 ≥1.5s**（迟滞防抖）；防透视假象 = 底边点判定而非框 IoU
 - [ ] 4.3 **验收视频叠加状态文字**（如 `cat on bed`），**用户抽检通过**后：§5 批处理检测环节改用多 prompt，家具框 + 空间状态作为场景上下文辅助信号（同时语义化解决沙发误检：猫框落入沙发框时做一致性校验）
 
