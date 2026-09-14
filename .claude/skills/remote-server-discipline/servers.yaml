@@ -1,0 +1,55 @@
+# 远程服务器信息登记表（remote-server-discipline skill 的数据文件）
+#
+# ⚠️ 安全须知：本文件含密码明文，随仓库版本管理（现状如此，与 remote-servers skill 一致）。
+#    建议：① 优先配好 SSH 公钥免密（密码仅作 fallback）；② 若仓库转公开，先把本文件移出 git
+#    （git rm --cached + .gitignore）。
+# 用法：每个会话开始操作远程前，先读本文件了解服务器现状；变更（新机器/环境/IP）后更新本文件。
+
+servers:
+  pet:
+    alias: pet
+    ssh: ssh pet            # ~/.ssh/config: HostName remote.mghus.top（frp 动态 IP），端口 22108
+    user: wyy
+    auth: SSH 公钥免密（密码未设）
+    current_ip: 125.64.108.97   # 动态，失效跑 bash scripts/pet_repin.sh
+    gpus:
+      - { index: 0, model: "RTX 4090 D", vram: 24GB }
+      - { index: 1, model: "RTX 4090 D", vram: 24GB }
+    role: 训练/推理/评测主力（共享机，有其他用户）
+    envs:
+      - { name: pet,  purpose: "mmaction2 1.2.0 主力训练环境", pin: "mmcv 2.1.0 钉死，numpy<2，opencv 4.10——禁止装包" }
+      - { name: plf,  purpose: "GroundingDINO/transformers 4.49 管线环境（clone 自 pet）" }
+      - { name: yolo, purpose: "ultralytics 8.4.120 检测体检" }
+      - { name: dlc,  purpose: "预留（deeplabcut 未装）" }
+    storage:
+      nas: /home/wyy/mnt/          # CIFS 39TB；UCF101/cats 原始数据
+      local: ~/datasets/           # pet_action_mammal_v0 等
+    repos:
+      - ~/pet-action-recognition   # updateInstead 接收本地 push
+    status: 就绪
+    pitfalls: "GPU 共享需 nvidia-smi 查占用；conda 非交互 ssh 需全路径 ~/miniconda3/bin/conda"
+
+  a100:
+    alias: A100
+    ssh: ssh A100            # ~/.ssh/config: HostName 同 frp，端口 33222，主机名 ps
+    user: wyy
+    auth: SSH 公钥免密（密码 fallback: wyunyang）
+    gpus:
+      - { index: 0, model: "A100-SXM4-80GB" }
+      - { index: 1, model: "A100-SXM4-80GB" }
+      - { index: 2, model: "A100-SXM4-80GB" }
+      - { index: 3, model: "A100-SXM4-80GB" }
+    role: 备用算力（曾短暂启用为管线专用机，已降级——见 provision-a100-server 归档）
+    envs:
+      - { name: 系统 python3.10, purpose: "裸系统；miniconda3 已装于 ~/miniconda3" }
+    storage:
+      root: / 879G（794G 空闲）
+    repos:
+      - ~/pet-action-recognition   # bundle clone（2026-09-10，main@当时 HEAD）
+    status: 备用（未启用训练环境）
+    pitfalls: "无 conda in PATH（全路径 ~/miniconda3/bin/conda）；GitHub 直连未验证"
+
+# 新增服务器流程：
+# 1. 先立 OpenSpec change（provision-*）
+# 2. ssh 信息核实后登记到本文件
+# 3. 按 remote-server-discipline SKILL.md 初始化
