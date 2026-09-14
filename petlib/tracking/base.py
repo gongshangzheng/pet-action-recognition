@@ -19,7 +19,9 @@ class Tracker(ABC):
     name: str = "base"
 
     @abstractmethod
-    def update(self, detections: list[Detection], frame_idx: int) -> list[Track]: ...
+    def update(self, detections: list[Detection], frame_idx: int,
+               frame: "np.ndarray | None" = None) -> list[Track]:
+        """frame：当前帧图像（Re-ID/CMC 类跟踪器需要；纯运动跟踪器可忽略）。"""
 
     @abstractmethod
     def finalize(self) -> list[Track]: ...

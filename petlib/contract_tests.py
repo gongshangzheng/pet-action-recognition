@@ -84,7 +84,7 @@ TRACKER_NAMES = ["byte_track", "oc_sort", "bot_sort", "deep_sort"]
 def test_tracker_contract(name, moving_cat_detections):
     tracker = create("tracker", name)
     for fi, dets in enumerate(moving_cat_detections):
-        tracks = tracker.update(dets, frame_idx=fi)
+        tracks = tracker.update(dets, frame_idx=fi, frame=synthetic_frame)
         for t in tracks:
             assert isinstance(t, Track) and t.is_valid()
     final = tracker.finalize()
@@ -92,10 +92,10 @@ def test_tracker_contract(name, moving_cat_detections):
 
 
 @pytest.mark.parametrize("name", TRACKER_NAMES)
-def test_tracker_no_dets_no_crash(name):
+def test_tracker_no_dets_no_crash(name, synthetic_frame):
     tracker = create("tracker", name)
     for fi in range(5):
-        tracks = tracker.update([], frame_idx=fi)
+        tracks = tracker.update([], frame_idx=fi, frame=synthetic_frame)
         assert isinstance(tracks, list)
     assert tracker.finalize() is not None
 

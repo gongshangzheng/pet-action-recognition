@@ -23,13 +23,14 @@ class BoxMotAdapter(Tracker):
         """子类返回 boxmot 跟踪器实例。"""
         raise NotImplementedError
 
-    def update(self, detections: list[Detection], frame_idx: int) -> list[Track]:
+    def update(self, detections: list[Detection], frame_idx: int,
+               frame: np.ndarray | None = None) -> list[Track]:
         if detections:
             arr = np.array(
                 [[*d.box, d.conf, 0.0] for d in detections], dtype=np.float32)
         else:
             arr = np.zeros((0, 6), dtype=np.float32)
-        out = self._impl.update(arr, None)  # boxmot: (N,8) [x1,y1,x2,y2,id,conf,cls,det]
+        out = self._impl.update(arr, frame)  # boxmot: (N,8) [x1,y1,x2,y2,id,conf,cls,det]
         out = np.asarray(out).reshape(-1, 8) if out is not None and out.size else np.zeros((0, 8))
         frame_tracks = []
         for row in out:
