@@ -6,7 +6,7 @@
 
 ## 0. 关卡 0A：猫居中预处理 Demo（用户验收点，先行）
 
-- [ ] 0.0 pet 建 plf 环境：`conda create -n plf --clone pet` → `pip install transformers accelerate`（隔离安装，验证 pet 环境 mmcv 不受影响）+ `nvidia-smi` 检查占用选卡
+- [x] 0.0 pet 建 plf 环境：`conda create -n plf --clone pet` → `pip install transformers accelerate`（隔离安装，验证 pet 环境 mmcv 不受影响）+ `nvidia-smi` 检查占用选卡
 - [x] 0.1 示例视频就位：pet 本地/NAS 已有（`~/mnt/cats/dataset_崔/`），ffprobe 校验帧数/分辨率
 - [x] 0.2 GroundingDINO 权重就位：plf 环境经 hf-mirror 下载 `IDEA-Research/grounding-dino-tiny`，单帧推理冒烟
 - [x] 0.3 抽样检测：每 10 帧跑 GroundingDINO（prompt=`"cat."`，box_threshold=0.3）→ 39 帧检测框
