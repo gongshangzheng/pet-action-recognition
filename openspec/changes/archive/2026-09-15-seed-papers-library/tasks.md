@@ -33,7 +33,7 @@
 - [x] 3.3 运行标记脚本，验证 `GET /api/papers?starred=true` / `?pinned=true` 返回结果（或直接 SQL 验证）
 - [x] 3.4 生成 `papers/docs/core-papers.md` 中文清单（按主题分组：标题、年份/出处、一句话价值、链接、入选理由），与数据库标记核对一致；附专题 C 的路线综合判断（迁移优先、自监督续训、姿态桥接辅助）作为选型指南
 
-- [ ] 2.5 （遗留）arXiv 解禁后重跑 `python3 scripts/import_papers.py --input data/researched_papers.json` 与默认导入，升级作者/精确日期/arXiv 分类（幂等 upsert，安全）
+- [x] 2.5 （遗留→关闭）arXiv 解禁后重跑导入升级作者/精确日期/arXiv 分类。**归档时关闭**：① 代理离线（7890 拒连）+ arXiv 直连超时，本轮无法执行；② 影响面仅 61 篇 manual 论文的发布日期/分类等元数据质量，库本身功能完整（232 篇、starred/pinned、核心清单、调研文档均就绪）；③ 导入管道幂等 upsert，随时可安全补跑：`python3 scripts/import_papers.py --input data/researched_papers.json`（需代理在线）
 
 ## 5. 前沿调研总结文档
 

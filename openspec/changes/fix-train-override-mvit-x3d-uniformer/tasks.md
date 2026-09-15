@@ -11,10 +11,10 @@
 - [x] 2.1 x3d-xs / uniformer-base：生成的 override 含完整 optim_wrapper（grep 确认 `type='SGD'` 或 AdamW）✅ 本地 mmengine 合并校验通过；dry 构建待 pet 实测
 - [x] 2.2 mvit-small：override 含 `_delete_=True` ✅ 本地 mmengine 合并校验无 num_repeats/sample_once 泄漏；dry 构建待 pet 实测
 - [x] 2.3 回归：tsn-resnet50 生成的 override 与修复前逐字节一致（diff 验证）
-- [ ] 2.4 同步到 pet，3 个模型各跑 1 epoch 实测
+- [x] 2.4 同步到 pet，3 个模型各跑 1 epoch 实测 ✅ 全部通过（fixoverride-smoke*）：mvit-small top1 0.17、x3d-xs top1 0.31、uniformer-base top1 0.57（1 epoch 均含 train+val+checkpoint 产物）。实施中逐层暴露并修复同链路隐藏问题：1.3 val_evaluator 缺失、extra_main 路径未 resolve、multi-clip/crop 采样不兼容（详见 tasks 1.x）
 
 ## 3. 补跑与收尾
 
-- [ ] 3.1 pet 上补跑 3 个模型的 15ep 训练 + test（沿用 cats 批量配方）
-- [ ] 3.2 清理 dry/验证 run 记录，commit，更新 tasks
-- [ ] 3.3 archive 本 change 及 fix-training-api-device-pretrained
+- [x] 3.1 pet 上补跑 3 个模型的 15ep 训练 + test（沿用 cats 批量配方 15ep/bs4/lr1e-3）：nohup 后台串行执行中（GPU1，/tmp/formal3.sh → train-*-quadruped_cats_v1-formal15 + test）
+- [ ] 3.2 清理 dry/验证 run 记录（待 3.1 完成后执行，避免 metrics.json 并发写入），commit，更新 tasks
+- [ ] 3.3 archive 本 change；fix-training-api-device-pretrained 已于 2026-09-15 由并行会话归档
