@@ -46,13 +46,10 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--hold-sec", type=float, default=1.5, help="空间状态迟滞秒数")
     ap.add_argument("--bg-lr", type=float, default=0.002,
                     help="背景模型学习率（慢更新，避免静止猫被快速吸收）")
-    ap.add_argument("--cam-alpha-center", type=float, default=0.15)
-    ap.add_argument("--cam-alpha-size", type=float, default=0.06,
-                    help="变焦通道 EMA（刻意慢于平移，摄像师式运镜）")
-    ap.add_argument("--cam-max-center-v", type=float, default=0.015,
-                    help="平移限速（帧宽比例/帧）")
-    ap.add_argument("--cam-max-zoom", type=float, default=0.02,
-                    help="变焦限速（尺寸比例/帧）")
+    ap.add_argument("--off-alpha", type=float, default=0.3,
+                    help="偏移场 EMA 系数（v4 相机路径）")
+    ap.add_argument("--off-max-v", type=float, default=0.01,
+                    help="偏移限速（帧宽比例/帧）")
     ap.add_argument("--no-motion-correct", action="store_true",
                     help="关闭逐帧运动校正（消融对照用，任务 1.2）")
     return ap.parse_args()
@@ -176,27 +173,37 @@ def main() -> None:
             "motion_corrected": bool(corrected[i]),
         })
 
-    # ── 3b. 相机路径 v3（design B2：校正框 → 平移/变焦双通道限速平滑 → 渲染框）──
-    max_cv = args.cam_max_center_v * W
-    cur = None
+    # ── 3b. 相机路径 v4（design B2：精确过锚点 + 校正作为锚点间平滑偏移）──────
+    # 抽样帧 camera_box ≡ interp-only（硬性要求）；校正量以半余弦窗约束在间隙内
+    # 平滑生效/退出，EMA 状态在锚点处强制归零。
+    sampled_mask = np.zeros(T, dtype=bool)
+    sampled_mask[::args.sample_stride] = True
+    idx = np.arange(T)
+    prev_anchor = (idx // args.sample_stride) * args.sample_stride
+    next_anchor = np.minimum(prev_anchor + args.sample_stride,
+                             ((T - 1) // args.sample_stride) * args.sample_stride)
+    dmin = np.minimum(idx - prev_anchor, next_anchor - idx)
+    half = args.sample_stride / 2
+    w = np.where(sampled_mask, 0.0, 0.5 * (1 - np.cos(np.pi * dmin / half)))
+
+    raw_off = np.zeros((T, 4), dtype=np.float64)
     for rec in track:
-        bx = rec["box"]
-        cx, cy = (bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2
-        side = max(bx[2] - bx[0], bx[3] - bx[1])
-        if cur is None:
-            cur = {"cx": cx, "cy": cy, "s": side}
-        else:
-            dx = float(np.clip(cx - cur["cx"], -max_cv, max_cv))
-            dy = float(np.clip(cy - cur["cy"], -max_cv, max_cv))
-            cur["cx"] += args.cam_alpha_center * dx
-            cur["cy"] += args.cam_alpha_center * dy
-            ds = float(np.clip(side - cur["s"],
-                               -args.cam_max_zoom * cur["s"],
-                               args.cam_max_zoom * cur["s"]))
-            cur["s"] += args.cam_alpha_size * ds
-        half = cur["s"] / 2
-        rec["camera_box"] = [round(cur["cx"] - half, 1), round(cur["cy"] - half, 1),
-                             round(cur["cx"] + half, 1), round(cur["cy"] + half, 1)]
+        i = rec["frame"]
+        raw_off[i] = np.array(rec["box"]) - smooth[i]  # 非校正帧为 0
+
+    max_ov = args.off_max_v * W
+    off = np.zeros((T, 4), dtype=np.float64)
+    curv = np.zeros(4)
+    for i in range(T):
+        if sampled_mask[i]:
+            curv = np.zeros(4)  # 锚点处强制归零 → camera_box ≡ interp-only
+        tgt = raw_off[i] * w[i]
+        curv = curv + args.off_alpha * np.clip(tgt - curv, -max_ov, max_ov)
+        off[i] = curv
+    for rec in track:
+        i = rec["frame"]
+        cb = smooth[i] + off[i]
+        rec["camera_box"] = [round(float(v), 1) for v in cb]
 
     # ── 4. 空间状态层（MD3 规则：底边中点 + 迟滞）─────────────────────
     min_hold = int(fps * args.hold_sec)
