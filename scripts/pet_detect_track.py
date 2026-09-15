@@ -65,6 +65,9 @@ def main() -> None:
     model = GroundingDinoForObjectDetection.from_pretrained(MODEL_ID).to(device).eval()
 
     cap = cv2.VideoCapture(args.video)
+    if not cap.isOpened():
+        print(f"ERROR: cannot open video {args.video}", flush=True)
+        sys.exit(2)
     fps = cap.get(cv2.CAP_PROP_FPS)
     frames: list[np.ndarray] = []
     while True:
@@ -74,6 +77,9 @@ def main() -> None:
         frames.append(f)
     cap.release()
     T = len(frames)
+    if T == 0:
+        print(f"ERROR: zero frames read from {args.video}", flush=True)
+        sys.exit(2)
     H, W = frames[0].shape[:2]
     print(f"video: {T} frames {W}x{H} @{fps:.1f}fps", flush=True)
 
