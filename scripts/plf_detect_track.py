@@ -117,16 +117,17 @@ def main() -> None:
     for f in fs:
         furn_at[f] = [(lab, b.tolist(), sc) for lab, b, sc in sampled[f]["furniture"]]
 
-    # ── 3. 逐帧运动校正（design B2：背景建模前景 mask 融合）───────────
+    # ── 3. 逐帧运动校正 v2（design B2：覆盖度门槛 + 只扩不缩）───────────
     bg = cv2.createBackgroundSubtractorMOG2(history=120, varThreshold=25,
                                             detectShadows=False)
-    # 预热背景模型（跳过前 N 帧的校正，让背景先稳定）
     WARMUP = 15
+    MIN_COVER_RATIO = 0.35  # 前景对框覆盖度低于此 → 前景只是猫的局部（静止被吸收）→ 不校正
     corrected = np.zeros(T, dtype=bool)
     track = []
     for i in range(T):
         box = smooth[i].copy()
-        if not args.no_motion_correct and i >= WARMUP:
+        is_sampled = (i % args.sample_stride == 0)
+        if not args.no_motion_correct and not is_sampled and i >= WARMUP:
             fg = bg.apply(frames[i], learningRate=args.bg_lr)
             fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN,
                                   np.ones((5, 5), np.uint8))
@@ -146,18 +147,21 @@ def main() -> None:
                     best_inter = inter
                     best = (cbx, cby, cbw, cbh)
             if best is not None and best_inter > 0:
-                bx, by, bw2, bh2 = best
-                # 校正幅度上限（相对边长比例）
-                dx1 = min(bx - x1, MAX_CORRECT_RATIO * bw)
-                dx2 = min((bx + bw2) - x2, MAX_CORRECT_RATIO * bw)
-                dy1 = min(by - y1, MAX_CORRECT_RATIO * bh)
-                dy2 = min((by + bh2) - y2, MAX_CORRECT_RATIO * bh)
-                nx1 = x1 + max(0, dx1); ny1 = y1 + max(0, dy1)
-                nx2 = x2 + max(0, dx2); ny2 = y2 + max(0, dy2)
-                new = np.array([nx1, ny1, nx2, ny2], dtype=np.float32)
-                if not np.allclose(new, box, atol=0.5):
-                    corrected[i] = True
-                    box = new
+                cover = best_inter / max(1.0, bw * bh)
+                if cover >= MIN_COVER_RATIO:
+                    bx, by, bw2, bh2 = best
+                    # 只扩不缩：并集，四边永不内收（防 v1 静止猫切切切）
+                    ux1, uy1 = min(x1, bx), min(y1, by)
+                    ux2, uy2 = max(x2, bx + bw2), max(y2, by + bh2)
+                    # 单帧外扩幅度上限（相对原框边长）
+                    ux1 = max(ux1, x1 - MAX_CORRECT_RATIO * bw)
+                    uy1 = max(uy1, y1 - MAX_CORRECT_RATIO * bh)
+                    ux2 = min(ux2, x2 + MAX_CORRECT_RATIO * bw)
+                    uy2 = min(uy2, y2 + MAX_CORRECT_RATIO * bh)
+                    new = np.array([ux1, uy1, ux2, uy2], dtype=np.float32)
+                    if not np.allclose(new, box, atol=0.5):
+                        corrected[i] = True
+                        box = new
         track.append({
             "frame": i,
             "box": [round(float(v), 1) for v in box],
