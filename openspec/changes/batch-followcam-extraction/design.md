@@ -1,6 +1,6 @@
 # Design: batch-followcam-extraction
 
-> 继承总管 D1（验收的抽样+插值方案）、D1b（GatedTracker 否决记录）、D2（crop-first 口径）、D6（petlib 接口）；子 change `multi-object-detect-gate` 的 MD1-MD3（多 prompt + 空间状态）。
+> 继承总管 D5（环境隔离）、D6（petlib 接口）；引用 `multi-object-detect-gate` MD1–MD3。**总管 D1/D2/A1/A3 已物理迁入本文件（ID 不变）**。
 
 ## Decisions
 
@@ -28,3 +28,52 @@ GroundingDINO 多 prompt 抽样检测（每 10 帧）→ 线性插值 → 滑动
 - 跟随视频：H.264（petlib H264VideoWriter）
 - 关键点 NPZ：(T,V,3) float16 + frame_inds（辅助信号）
 - 批处理报告：逐段检出率/插值率/校正率/离群剔除数；插值率 >30% 告警
+
+
+---
+
+## 自总管迁入的决策（ID 不变，交叉引用保持有效）
+
+### D1: 检测/跟踪/居中的工程形态
+
+- 检测：GroundingDINO 开放词汇检出（白天段，零训练）；低置信帧 → 跟踪器插值并打「低置信」标（YOLO11 夜视微调版为二期，本 change 不做）
+- 跟踪：**对比选型实验**，候选 ByteTrack / OC-SORT / BoT-SORT / DeepSORT + **GatedTracker（门控包装层，见 D1b）**。PigTrack 畜牧基准（`2507.16639`）显示 SORT 系在检测指标上占优，但那是猪圈域——须在本域验证。实验设计：固定同一检测源（GroundingDINO 白天检出），对 3–5 段人工核对过 track_id 的视频小样本 GT，比 IDF1 / IDSW / 轨迹碎片数 / 框平滑度；判定标准（IDF1 优先，碎片与抖动为辅）与结论一并记录。输出 = 平滑轨迹（滑动平均窗口 5 帧）+ track_id + 插值标记
+
+### D2: 关键点提取器可插拔——SuperAnimal vs ViTPose 双候选对比（不做先验断言）
+
+两个候选各有依据，**无实验前不预设胜负**：
+- SuperAnimal-Quadruped（DeepLabCut 生态，26 点四足专用定义，零样本）
+- ViTPose+（AP-10K 动物数据训练变体，AnimalFormer 在羊上验证过）
+
+关卡 0 = 双候选对比实验：同 5 段白天抽帧跑两套，比①置信度分布 ②关键点时序抖动（相邻帧位移方差）③可视化人工抽检。接口做成可插拔（统一输出 NPZ schema），落选者保留为备选。
+
+**✅ 关卡 0B 实测裁定（2026-09-14，用户判定）**：实际执行的候选为 MMPose 生态 HRNet-W32-AP10K 与 ResNet-101-AP10K（SuperAnimal 需 deeplabcut 重依赖未装）。结果：两段验收视频 mean conf 0.33–0.46（crop-first 口径 0.455），可视化人工抽检后**用户判定「关键点连出来了但提取不出信息」**——AP-10K 域在家猫特写上的点位质量不足以作为主表示。**裁定：关键点降级为辅助信号**（在场率/运动强度/簇命名叠加参考），主表示切换为预训练视频编码器特征（见 D8）；SuperAnimal 不再进入主链，域适配微调可作为未来升级路径。
+
+
+---
+
+## 附录：算法原理（自总管附录 A 迁入）
+
+### A1 检测
+
+**GroundingDINO（白天主检测器）**
+- 是什么：开放词汇（open-vocabulary）目标检测器——用**自然语言**指定要找什么（"cat."），不限于训练类别
+- 怎么工作：图像侧 Swin Transformer + 文本侧 BERT 双编码器 → **跨模态特征增强器**（图像特征和文本特征互相注意）→ 语言引导的查询选择 → 解码出 (框, 短语) 对。训练数据是 2800 万"图文-框"对（Grounding-20M），模型学会把"文字描述"对齐到"图像区域"
+- 为什么选它：零训练检出猫/person/bowl 三类（闭集 YOLO 需要标注微调）；误报问题用 GatedTracker 门控兜住（D1b）
+
+**YOLO11（夜视微调，二期）**
+- 是什么：单阶段闭集检测器（backbone-neck-head 一次前向出框），COCO 80 类预训练
+- 为什么夜视要用它：COCO 预训练权重 + 少量夜视帧微调即可针对 IR 域校准；快（边缘可部署）。GroundingDINO 夜视退化（文献 + 群养猪论文实测），微调 YOLO 是对策
+
+### A3 关键点
+
+**SuperAnimal-Quadruped（DLC 生态，候选 1）**
+- 是什么：跨物种四足关键点基础模型（DeepLabCut 团队），26 点四足骨架定义
+- 怎么工作：DLC 范式 = ImageNet 预训练 CNN + 少量标注帧热图微调 + **主动帧选择**（只标模型最不确定的帧）；SuperAnimal 在大规模多物种动物关键点上预训练，对未见物种**零样本**出点
+- 为什么选：对宠物零标注；DeepLabCut 生态十年验证
+
+**ViTPose-AP10K（候选 2）**
+- 是什么：纯 ViT 骨干 + 简单反卷积线性头的姿态估计器；AP-10K = 23 科 54 种动物的 17 点关键点基准
+- 怎么工作：人体姿态预训练迁移到动物（ViTPose 核心发现：人体姿态知识跨物种可迁移）；AnimalFormer 在羊上用的就是它
+- 为什么候选：与 SuperAnimal 是**不同技术路线**（人体迁移 vs 动物原生），谁好用由关卡 0B 实验裁决
+

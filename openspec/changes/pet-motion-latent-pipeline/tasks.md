@@ -34,9 +34,4 @@
 
 ### 4A. 跟踪器对比选型 → 已拆为子 change `tracker-selection`（延后，多猫数据出现时启动）
 
-### 4B. 登记-检索架构（design D9，用户确认方向，实施待批准）
-
-- [ ] 4.5 （待批准）统一登记-检索库：登记照 → DINOv2 embedding → FAISS；猫与物品共用一套
-- [ ] 4.6 （待批准）静态物体候选生成：SAM 一次性分割（固定机位缓存 + 定期重分割）+ 帧差变更触发；解决文本检测不到碗/摄像头的问题
-- [ ] 4.7 （待批准）物品实例识别闭环：SAM mask 候选 → DINOv2 检索判定；OWLv2 图像引导作对照；GroundingDINO LoRA 室内微调仅作最后手段备档
-- [ ] 4.8 （待批准）猫 Re-ID 联调：与 spot-check-cli 的 register_cats.py 合并设计
+### 4B. 登记-检索架构 → 已拆为子 change `registry-retrieval`（延后，实施待批准）
