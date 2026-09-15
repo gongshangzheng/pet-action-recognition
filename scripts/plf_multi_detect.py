@@ -1,8 +1,11 @@
 """GroundingDINO 多目标检测验收脚本（任务 4.1/4.2/4.3）。
 
-一次前向检测多类物体（cat/bed/table/sofa/shelf/bowl/camera），逐类着色打框，
+一次前向检测多类物体（默认五类：cat/bed/table/sofa/shelf，--prompt 可调），逐类着色打框，
 叠加空间关系状态（猫脚底点落入家具框 → "cat on X"，1.5s 迟滞防抖），
 输出 H.264 验收视频 + 检出统计 JSON。
+
+注：bowl/camera 曾因文本检测效果差从默认清单撤下（2026-09-14 用户裁定），
+静态小物体走 D9 路线（SAM 一次分割 + 固定机位缓存 + 登记照检索）。
 
 用法（在 pet 的 plf 环境执行，GPU 任务前须 nvidia-smi 查占用）：
     CUDA_VISIBLE_DEVICES=0 python scripts/plf_multi_detect.py \
@@ -64,7 +67,7 @@ def main() -> None:
 
     def infer(frame: np.ndarray) -> list[tuple[str, float, np.ndarray]]:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        inputs = processor(images=rgb, text=args.prompt if False else PROMPT, return_tensors="pt").to(device)
+        inputs = processor(images=rgb, text=args.prompt, return_tensors="pt").to(device)
         with torch.no_grad():
             out = model(**inputs)
         res = processor.post_process_grounded_object_detection(
@@ -131,7 +134,7 @@ def main() -> None:
     vw.release()
     cap.release()
     report = {"video": args.video, "frames": fi, "threshold": args.threshold,
-              "prompt": PROMPT, "det_counts": stats}
+              "prompt": args.prompt, "det_counts": stats}
     with open(f"{args.out}/multi_detect.json", "w") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
     print(f"frames={fi} det_counts={stats}", flush=True)
