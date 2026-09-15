@@ -10,7 +10,6 @@
 
 - `scripts/plf_detect_track.py`：多 prompt 抽样检测（每 10 帧）+ 插值平滑 + **逐帧运动校正**（背景建模前景 mask 修正插值框）→ 轨迹 JSON（含家具框）
 - `scripts/make_followcam.py`：轨迹 → follow_adaptive 跟随视频（尺寸离群过滤内置）+ H.264 直写
-- `scripts/extract_keypoints_from_tracks.py`：crop-first 关键点 NPZ（HRNet-W32-AP10K，辅助信号）
 - 全量 34 段批处理 + 批处理报告（检出率/插值率/校正率/离群剔除统计）
 
 ## Capabilities
