@@ -175,3 +175,13 @@ VideoMAE v1/v2 预训练权重（通用起点，即视频界的 Wav2vec）
 **验收第 4 闸门**：伪身份小分类器在动作 embedding 上的准确率 < 1.5× 随机水平（多猫审计段上测）。
 
 **参数初值**：K=256 / 遮 4-8 窗 / mask 率 40% / Transformer 4层384d6头 / 2 轮迭代。Wav2vec2 式 InfoNCE 对比留作对照实验。
+
+### L7: 跨域迁移实验（2026-09-15 用户提议）——V-JEPA 2 微调 vs VideoMAE v1 基线
+
+**目的**：量化「人类视频预训练 → 四足动作」的跨域迁移性——V-JEPA 2 到底行不行，用数据说话而非猜测。
+
+**设置**：V-JEPA 2 fpc16（ViT-L，16 帧窗口与行为素窗口对齐）在 pet_action_mammal_v0（2234 clips，7 类）上微调；对照 = VideoMAE v1 基线（同数据同切分的既有 top1）。val top1 对比：V-JEPA 2 ≥ 基线 → 迁移性成立，确立其 CatHuBERT 骨干首选地位；差距显著 → 域差坐实，骨干转向宠物微调 v1。同时兼作路线 4（有监督微调对照）。
+
+**工程**：独立 conda 环境 `pet_vjepa`（clone plf 后仅升级 transformers ≥4.55，不动 plf 本体以保护 GroundingDINO/mmpose）；bf16 + 梯度检查点 + 低学习率（ViT-L 全微调，4090 约 2-4h）；视频解码走 cv2/decord，绕开 torchcodec 依赖。
+
+**顺带产出**：微调后的 V-JEPA 2 即「路线 4 对照分类器」，其冻结特征也加入 L1 选型对比（= 第四个特征候选）。
