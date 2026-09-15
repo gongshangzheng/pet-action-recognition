@@ -15,7 +15,7 @@
 | # | 子 change | 内容 | 状态 |
 |---|---|---|---|
 | 2.1 | `multi-object-detect-gate` | 多目标检测（五类）+ 空间关系状态层 | 🔄 进行中（待用户验收 1.4） |
-| 2.2 | `batch-followcam-extraction` | 全量批处理 34 段（含逐帧运动校正，design B2） | ⏳ 待 2.1 验收 |
+| 2.2 | `batch-followcam-extraction` | 全量批处理 34 段（含逐帧运动校正，design B2） | 🔄 **34/34 完成**，报告已出，待告警段处置+归档 |
 | 2.3 | `video-feature-latent` | 视频特征主表示选型 + 聚类 + 探针评测 | ⏳ 待 2.2 |
 | 2.4 | `spot-check-cli` | 抽查式推理 CLI + 猫身份登记 | ⏳ 待 2.3 |
 
