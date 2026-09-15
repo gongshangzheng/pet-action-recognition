@@ -16,5 +16,5 @@
 ## 3. 补跑与收尾
 
 - [x] 3.1 pet 上补跑 3 个模型的 15ep 训练 + test（沿用 cats 批量配方 15ep/bs4/lr1e-3）：nohup 后台串行执行中（GPU1，/tmp/formal3.sh → train-*-quadruped_cats_v1-formal15 + test）
-- [ ] 3.2 清理 dry/验证 run 记录（待 3.1 完成后执行，避免 metrics.json 并发写入），commit，更新 tasks
-- [ ] 3.3 archive 本 change；fix-training-api-device-pretrained 已于 2026-09-15 由并行会话归档
+- [x] 3.2 清理验证 run：pet 上 metrics.json 64→49（15 条 smoke 移除）、work_dirs/overrides 各清 15 项，3 个 formal15 run 完整保留；代码+tasks 已 commit/push
+- [x] 3.3 archive 本 change（openspec archive 自动同步 training-launch-contract delta）；fix-training-api-device-pretrained 已于 2026-09-15 由并行会话归档
