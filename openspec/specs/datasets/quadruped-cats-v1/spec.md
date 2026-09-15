@@ -1,6 +1,11 @@
-# quadruped-cats-v1
+# datasets/quadruped-cats-v1 Specification
 
-## Overview
+## Purpose
+TBD - created by archiving change cats-dataset-v1. Update Purpose after archive.
+## Requirements
+### Requirement: quadruped_cats_v1 数据集规范
+
+**Overview**
 
 Cats 视频切段数据集，用于四足动物动作识别模型训练。
 
@@ -14,9 +19,9 @@ Cats 视频切段数据集，用于四足动物动作识别模型训练。
 - 切段 clip 标签分配：若 clip 与某 range 重叠 ≥1 帧，则 clip 获得该 label；多 label 重叠时按重叠帧数投票
 - 仅保留有标签的 clip，无标签 clip 排除
 
-## Data Format
+**Data Format**
 
-### Source
+**Source**
 
 ```
 /home/wyy/mnt/cats/
@@ -26,7 +31,7 @@ Cats 视频切段数据集，用于四足动物动作识别模型训练。
 └── annotation_蒋/        project-6 JSON + CSV
 ```
 
-### Output
+**Output**
 
 ```
 /home/wyy/mnt/cats/quadruped_cats_v1/
@@ -38,7 +43,7 @@ Cats 视频切段数据集，用于四足动物动作识别模型训练。
     └── test_public.txt    test clip manifest
 ```
 
-### Clip Manifest Format（mmaction2 VideoDataset）
+**Clip Manifest Format（mmaction2 VideoDataset）**
 
 每行：`<相对 data_prefix.video 的路径> <label_int>`
 
@@ -48,7 +53,7 @@ videos/clip_0002.mp4 3
 ...
 ```
 
-### Label Map
+**Label Map**
 
 | ID | Label | Description |
 |----|-------|-------------|
@@ -58,9 +63,9 @@ videos/clip_0002.mp4 3
 | 3 | grooming | 梳理 |
 | 4 | prolonged_stationary | 长时间静止 |
 
-## Slicing Specification
+**Slicing Specification**
 
-### Parameters
+**Parameters**
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
@@ -68,7 +73,7 @@ videos/clip_0002.mp4 3
 | stride | 2s | 50% 重叠，增强样本量 |
 | unit | frame | 基于 FPS=15 精确切段 |
 
-### Algorithm
+**Algorithm**
 
 ```
 FOR each original video:
@@ -94,15 +99,15 @@ FOR each original video:
       save clip to output
 ```
 
-### Split Ratio
+**Split Ratio**
 
 - 有标注视频 69 个 → 切段后全部参与 split
 - 比例：train 70% / val 15% / test 15%（按视频级别 split，切段 clip 继承父视频 split）
 - random.seed = 42
 
-## File Manifest
+**File Manifest**
 
-### scripts/slice_cats_clips.py
+**scripts/slice_cats_clips.py**
 
 输入：
 - `--root`: `/home/wyy/mnt/cats/quadruped_cats_v0`（源目录）
@@ -117,8 +122,14 @@ FOR each original video:
 - `classes.txt`
 - 摘要 JSON（clip 统计）
 
-### 软链接
+**软链接**
 
 ```bash
 ln -s /home/wyy/mnt/cats/quadruped_cats_v1 ~/pet-action-recognition/datasets/cats
 ```
+
+#### Scenario: 数据集构建完成
+
+- **WHEN** 按本规范执行切段与 manifest 生成
+- **THEN** 产出 `classes.txt`（5 类）+ `videos/`（79 个原始 mp4）+ `annotation/{train,val,test}_public.txt`，标签分配遵循帧重叠投票规则，无标签 clip 被排除
+
