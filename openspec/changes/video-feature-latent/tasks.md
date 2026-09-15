@@ -10,3 +10,4 @@
 - [ ] 1.6 `scripts/train_linear_probe.py`：线性探针 top1——主对照 = 同一编码器原始整帧特征；参考 = VideoMAEv2 全量微调基线
 - [ ] 1.7 （条件）自训 VQ 版：可命名率 <60% 或探针不达标时启动（总管 D3：输入 48×768 视频特征，VQ K=512，码本利用率 ≥50%）
 - [ ] 1.8 （可选）消融：HQSAM mask 清洗 crop；摄像机策略对比（follow_adaptive vs follow_locked vs fixed）
+- [ ] 1.9 （可选）决策树蒸馏：簇命名后用 (特征→簇名) 训浅决策树（可读运动学特征优先），验证规则可读性 + spot-check 免聚类推理；备选无监督树（预测聚类树/层次聚类多粒度）见 design L4

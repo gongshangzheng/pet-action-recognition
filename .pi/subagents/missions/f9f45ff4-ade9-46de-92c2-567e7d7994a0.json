@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "f9f45ff4-ade9-46de-92c2-567e7d7994a0",
+  "title": "Workflow: worker",
+  "objective": "Workflow: worker",
+  "status": "failed",
+  "createdAt": "2026-09-15T08:05:51.809Z",
+  "updatedAt": "2026-09-15T08:05:51.861Z",
+  "runs": [
+    {
+      "runId": "2f8ab197-3040-4d67-a24e-2bf5394024b6",
+      "mode": "workflow",
+      "asyncDir": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/2f8ab197-3040-4d67-a24e-2bf5394024b6",
+      "status": "failed",
+      "startedAt": "2026-09-15T08:05:51.813Z",
+      "completedAt": "2026-09-15T08:05:51.861Z"
+    }
+  ],
+  "workflowChildren": [],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "status",
+      "path": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/2f8ab197-3040-4d67-a24e-2bf5394024b6/status.json"
+    },
+    {
+      "kind": "other",
+      "path": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/2f8ab197-3040-4d67-a24e-2bf5394024b6/events.jsonl",
+      "description": "Lifecycle events"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/Users/zhengxinyu/pet-action-recognition",
+  "ownerSessionId": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2.jsonl",
+  "summary": "workflowScript must be valid JavaScript.\nIf task text contains Markdown fences or backticks, use an array joined with \"\\n\" or escaped strings instead of a raw backtick template literal.\n\nOriginal SyntaxError:\nworkflow-script.js:2\nreturn runs.run('batch-monitor', {agent: 'worker', task: [`你是批处理进度监控员。pet 服务器（ssh alias: pet）上正在后台跑 34 段视频的批处理（进程 pet_batch_run.py）。`, ``, `你的任务：`, `1. 每 10 分钟轮询一次进度：ssh pet \"wc -l < ~/results/batch/batch_progress.jsonl; tail -2 ~/batch_run.log\"`，每次轮询用一个 bash 调用完成（可以 sleep 600 && ssh ... 合并调用，超时给足 900s）。`, `2. 当日志出现 \"BATCH DONE\" 字样，或连续 3 次轮询进度行数无增长且进程消失（pgrep -f pet_batch_run.py 判断），则判定批处理结束。`, `3. 结束后：ssh pet 读取 ~/results/batch/batch_summary.json，统计：ok/failed 数、逐段检出率(det_rate)/插值率(interp)列表、插值率>30% 的告警段清单、总耗时。用中文写一份简要报告（≤40 行），保存到 pet 的 ~/results/batch/batch_report.md，并把报告全文作为你的最终输出返回。`, ``, `注意：不要动 GPU，不要改任何文件除了 batch_report.md；ssh 偶发断连（Connection closed）属正常，等 60 秒重试即可。`].join(\"\\n\")})\n                                                                                                                                                                                                                                                      \n\nSyntaxError: Invalid or unexpected token\n    at new Script (node:vm:117:7)\n    at MessagePort.<anonymous> ([worker eval]:298:18)\n    at [nodejs.internal.kHybridDispatch] (node:internal/event_target:843:20)\n    at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)"
+}
