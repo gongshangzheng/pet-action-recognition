@@ -46,9 +46,9 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--hold-sec", type=float, default=1.5, help="空间状态迟滞秒数")
     ap.add_argument("--bg-lr", type=float, default=0.002,
                     help="背景模型学习率（慢更新，避免静止猫被快速吸收）")
-    ap.add_argument("--off-alpha", type=float, default=0.3,
+    ap.add_argument("--off-alpha", type=float, default=0.6,
                     help="偏移场 EMA 系数（v4 相机路径）")
-    ap.add_argument("--off-max-v", type=float, default=0.01,
+    ap.add_argument("--off-max-v", type=float, default=0.05,
                     help="偏移限速（帧宽比例/帧）")
     ap.add_argument("--no-motion-correct", action="store_true",
                     help="关闭逐帧运动校正（消融对照用，任务 1.2）")
@@ -125,7 +125,7 @@ def main() -> None:
     bg = cv2.createBackgroundSubtractorMOG2(history=120, varThreshold=25,
                                             detectShadows=False)
     WARMUP = 15
-    MIN_COVER_RATIO = 0.35  # 前景对框覆盖度低于此 → 前景只是猫的局部（静止被吸收）→ 不校正
+    MIN_COVER_RATIO = 0.2  # 前景对框覆盖度门槛（0.35 会拦住快速移动时的合法校正）
     corrected = np.zeros(T, dtype=bool)
     track = []
     for i in range(T):
