@@ -983,11 +983,16 @@ def main() -> int:
         return 1
 
     # 检测 config 是否缺 val_cfg / val_evaluator（与 build_train_command 内部逻辑相同）
+    # 注意：必须用 resolve 后的路径 —— registry 存的是相对 vendor 根的 configs/...，
+    # 直接 fromfile 会 FileNotFoundError 且被 except 吞掉，extra_main 静默变空
     extra_main = []
     _cfg_main = None
     try:
         from mmengine.config import Config
-        _cfg_main = Config.fromfile(args.mmaction2_config)
+        _cfg_path_main = (os.path.abspath(args.mmaction2_config)
+                          if os.path.isabs(args.mmaction2_config)
+                          else resolve_mmaction2_config(args.mmaction2_config))
+        _cfg_main = Config.fromfile(_cfg_path_main)
         if not _cfg_main.get("val_cfg") and (_cfg_main.get("val_dataloader") or ann_val):
             extra_main.append("val_cfg = dict(type='ValLoop')")
         if not _cfg_main.get("val_evaluator"):
