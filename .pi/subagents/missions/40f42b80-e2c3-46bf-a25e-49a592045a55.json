@@ -5,7 +5,7 @@
   "objective": "你是批处理进度监控员。pet 服务器（ssh alias: pet）上正在后台运行 34 段视频的批处理（进程名 pet_batch_run.py）。\n你的任务：\n1. 每 10 分钟轮询一次进度。每次轮询用一个 bash 调用完成：先 sleep 600，再 ssh pet 查看两样东西 —— 文件 ~/results/batch/batch_progress.jsonl 的行数，以及文件 ~/batch_run.log 的最后两行。bash 工具超时设 900 秒。\n2. 结束判定：日志出现 BATCH DONE 字样；或连续 3 次轮询进度行数无增长且 pgrep 找不到 pet_batch_run.py 进程。\n3. 结束后：读取 ~/results/batch/batch_summary.json，统计 ok 与 failed 数量、逐段检出率 det_rate 和插值率 interp、插值率大于 30% 的告警段清单、总耗时。用中文写一份不超过 40 行的简要报告，保存到 pet 的 ~/results/batch/batch_report.md，并把报告全文作为你的最终输出返回。\n注意：不要动 GPU；除 batch_report.md 外不要修改任何文件；ssh 偶发断连（Connection closed）属正常现象，等 60 秒重试即可。",
   "status": "active",
   "createdAt": "2026-09-15T08:07:36.482Z",
-  "updatedAt": "2026-09-15T08:31:28.079Z",
+  "updatedAt": "2026-09-15T08:32:25.238Z",
   "runs": [
     {
       "runId": "c0763e37-3d56-4858-92de-4d5650616e18",
@@ -21,13 +21,13 @@
       "key": "batch-monitor",
       "status": "running",
       "startedAt": "2026-09-15T08:07:36.516Z",
-      "updatedAt": "2026-09-15T08:31:28.079Z",
+      "updatedAt": "2026-09-15T08:32:25.238Z",
       "artifactPaths": [],
       "agent": "worker",
       "task": "你是批处理进度监控员。pet 服务器（ssh alias: pet）上正在后台运行 34 段视频的批处理（进程名 pet_batch_run.py）。\n你的任务：\n1. 每 10 分钟轮询一次进度。每次轮询用一个 bash 调用完成：先 sleep 600，再 ssh pet 查看两样东西 —— 文件 ~/results/batch/batch_progress.jsonl 的行数，以及文件 ~/batch_run.log 的最后两行。bash 工具超时设 900 秒。\n2. 结束判定：日志出现 BATCH DONE 字样；或连续 3 次轮询进度行数无增长且 pgrep 找不到 pet_batch_run.py 进程。\n3. 结束后：读取 ~/results/batch/batch_summary.json，统计 ok 与 failed 数量、逐段检出率 det_rate 和插值率 interp、插值率大于 30% 的告警段清单、总耗时。用中文写一份不超过 40 行的简要报告，保存到 pet 的 ~/results/batch/batch_report.md，并把报告全文作为你的最终输出返回。\n注意：不要动 GPU；除 batch_report.md 外不要修改任何文件；ssh 偶发断连（Connection closed）属正常现象，等 60 秒重试即可。",
       "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-09-15T08-07-36-559Z_01a0a41b-6f6f-7895-aeab-9eabfaf9a7d4.jsonl",
       "heartbeat": {
-        "updatedAt": "2026-09-15T08:31:28.079Z",
+        "updatedAt": "2026-09-15T08:32:25.238Z",
         "status": "running"
       }
     }
