@@ -1,8 +1,8 @@
 ---
 name: datasets
 description: |
-  数据集与预训练权重的管理指南。说明 UCF101/四足数据集/pet_action_mammal_v0 的下载与组织、per-model label_map、checkpoint 下载、软链（NAS 或本地）、ann_file 格式。
-  触发场景：(1) 下载数据集 (2) 下载预训练 checkpoint (3) 管理 label_map (4) 组织 datasets/ 目录 (5) 了解数据集状态
+  数据集与预训练权重的管理指南。说明 UCF101/四足数据集/pet_action_mammal_v0/家猫监控数据集（cats）的下载与组织、per-model label_map、checkpoint 下载、软链（NAS 或本地）、ann_file 格式。
+  触发场景：(1) 下载数据集 (2) 下载预训练 checkpoint (3) 管理 label_map (4) 组织 datasets/ 目录 (5) 了解数据集状态 (6) 家猫监控视频/红外段/白天夜间分类问题
 ---
 
 # 数据集与预训练权重管理
@@ -50,6 +50,18 @@ description: |
   - `ann_file = datasets/pet_action_mammal_v0/annotation/{train,val,test}_public.txt`（manifest 路径形如 `dataset/video/AAABBBBB.mp4 0`，相对 `data_prefix`）
   - `num_classes = 7`
 - 注意：片段**未经人工视觉复核**（物种/动作歧义/字幕水印都没人看过），继承父版本 `not_visually_reviewed` 标志。
+
+## 家猫监控数据集（cats，dataset_崔/蒋）
+
+**⚠️ 最重要的教训：文件名时间戳 ≠ 白天/黑夜。** 摄像头在暗光房间会自动切红外（哪怕中午），必须按**画面内容**分类（饱和度审计，见下）。
+
+- **原始事件视频**：`/home/wyy/mnt/cats/dataset_崔/`（22 段）+ `dataset_蒋/`（57 段）= **79 段**。注意：是**短事件片段**（移动侦测触发），非连续监控——34 段“白天”段总素材仅 **14.7 分钟**（16 段 <20s，最长 1 段 ≈60s+）。
+- **标注**：`annotation_崔/`（project-8 JSON+CSV）、`annotation_蒋/`（project-6）。注意标注 range 单位是**帧**（FPS=15），路径 hash 被下载工具剥离需按时间戳匹配。
+- **切片数据集**：`quadruped_cats_v0/`（NAS）、`quadruped_cats_v1/`（NAS）——5 类（activity/drinking/eating/grooming/prolonged_stationary），clip 标签按帧重叠投票；v1 = 717 clips + train/val/test manifest（详见归档 change `2026-09-15-cats-dataset-v1` 的 spec）。
+- **内容级日/夜分类（饱和度审计）**：抽样 ~10 帧 → HSV S 通道均值 **< 20 = 红外灰度段**。审计结果（79 段）：彩色 33 / **红外灰度 46**——红外段遍布全天时段（暗房间中午也是红外）。审计产物：pet:`~/results/batch/saturation_audit.json` + `color_segments.json`（33 段彩色清单）。
+- **红外段检测行为（GroundingDINO 实测）**：22 段“时间戳白天”的批处理段中 22 段红外，其中 20 段 det_rate ≥ 0.89（灰度复制三通道后 GDINO 大体可用），但部分段置信度压到阈值边缘（event_20260806_100505 漏检帧复检仅 0.10-0.18）——**红外域微调（YOLO11）仍是二期必要项**。
+- **管线产物**（batch-followcam-extraction，34 段时间戳白天段）：pet:`~/results/batch/<段名>/{track.json, followcam.mp4}`（运动校正轨迹 + 跟随视角）；汇总 `batch_report.md` / `batch_summary.json`；告警段接触表 `<段名>/contact.jpg`。
+- **定位提醒**：79 段事件视频仅 14.7 分钟，行为发现/预训练的主粮是 pet_action_mammal_v0（2234 clips）+ quadruped_cats_v1（717 clips）；79 段承担管线验证、spot-check 演示与二期红外微调素材。
 
 ## 四足动作数据集（目标数据集，待收集）
 
