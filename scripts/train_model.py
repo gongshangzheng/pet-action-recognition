@@ -213,6 +213,19 @@ def _read_pipeline_from_config(cfg_path: str) -> tuple[str, str]:
                 if item.get("type") == "SampleFrames":
                     item.pop("test_mode", None)
                 train_pipeline.append(item)
+        # train/val 统一收敛 multi-clip：x3d/uniformer 等 config 的 pipeline 带
+        # num_clips>1 + test_mode=True（多视图采样，依赖 label-repeat 机制），
+        # 与单标签 VideoDataset/AccMetric 不兼容（loss/accuracy batch mismatch），
+        # 且 forward batch ×N 放大导致 24GB 显存溢出 → 训练体系统一单 clip：
+        # train 去 test_mode，val 保留 test_mode，num_clips 归 1
+        for item in train_pipeline:
+            if item.get("type") == "SampleFrames":
+                item.pop("test_mode", None)
+                if int(item.get("num_clips", 1) or 1) > 1:
+                    item["num_clips"] = 1
+        for item in val_pipeline:
+            if item.get("type") == "SampleFrames" and int(item.get("num_clips", 1) or 1) > 1:
+                item["num_clips"] = 1
         return _pipeline_repr(train_pipeline), _pipeline_repr(val_pipeline)
     except Exception as ex:
         log("internal", f"[warn] 读取 pipeline 失败，回退空列表: {ex}")
