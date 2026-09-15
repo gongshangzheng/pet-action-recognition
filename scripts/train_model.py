@@ -213,19 +213,27 @@ def _read_pipeline_from_config(cfg_path: str) -> tuple[str, str]:
                 if item.get("type") == "SampleFrames":
                     item.pop("test_mode", None)
                 train_pipeline.append(item)
-        # train/val 统一收敛 multi-clip：x3d/uniformer 等 config 的 pipeline 带
-        # num_clips>1 + test_mode=True（多视图采样，依赖 label-repeat 机制），
-        # 与单标签 VideoDataset/AccMetric 不兼容（loss/accuracy batch mismatch），
-        # 且 forward batch ×N 放大导致 24GB 显存溢出 → 训练体系统一单 clip：
-        # train 去 test_mode，val 保留 test_mode，num_clips 归 1
+        # train/val 统一收敛多视图采样：x3d/uniformer 等 config 只有 test_pipeline
+        # （SampleFrames num_clips>1 + test_mode=True + ThreeCrop 多 crop），依赖
+        # label-repeat 机制，与单标签 VideoDataset/AccMetric 不兼容（loss/accuracy
+        # batch mismatch），且 forward batch ×(clips×crops) 放大致 24GB 显存溢出。
+        # → 收敛为单视图：num_clips=1、Three/TenCrop→CenterCrop；train 去 test_mode
+        def _single_view(items):
+            out = []
+            for item in items:
+                if item.get("type") == "SampleFrames":
+                    item = dict(item)
+                    if int(item.get("num_clips", 1) or 1) > 1:
+                        item["num_clips"] = 1
+                elif item.get("type") in ("ThreeCrop", "TenCrop"):
+                    item = {"type": "CenterCrop", "crop_size": item.get("crop_size", 224)}
+                out.append(item)
+            return out
+        train_pipeline = _single_view(train_pipeline)
         for item in train_pipeline:
             if item.get("type") == "SampleFrames":
                 item.pop("test_mode", None)
-                if int(item.get("num_clips", 1) or 1) > 1:
-                    item["num_clips"] = 1
-        for item in val_pipeline:
-            if item.get("type") == "SampleFrames" and int(item.get("num_clips", 1) or 1) > 1:
-                item["num_clips"] = 1
+        val_pipeline = _single_view(val_pipeline)
         return _pipeline_repr(train_pipeline), _pipeline_repr(val_pipeline)
     except Exception as ex:
         log("internal", f"[warn] 读取 pipeline 失败，回退空列表: {ex}")
