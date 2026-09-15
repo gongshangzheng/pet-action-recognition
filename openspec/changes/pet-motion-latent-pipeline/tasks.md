@@ -19,7 +19,7 @@
 | 2.3 | `video-feature-latent` | 视频特征主表示选型 + 聚类 + 探针评测 | ⏳ 待 2.2 |
 | 2.4 | `spot-check-cli` | 抽查式推理 CLI + 猫身份登记 | ⏳ 待 2.3 |
 
-- [ ] 2.1 multi-object-detect-gate 验收并 archive
+- [x] 2.1 multi-object-detect-gate 验收并 archive（2026-09-15，归档为 2026-09-15-multi-object-detect-gate；主 spec motion-pipeline 建立）
 - [ ] 2.2 batch-followcam-extraction 验收并 archive
 - [ ] 2.3 video-feature-latent 验收并 archive
 - [ ] 2.4 spot-check-cli 验收并 archive
