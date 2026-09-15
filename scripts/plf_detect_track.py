@@ -46,6 +46,13 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--hold-sec", type=float, default=1.5, help="空间状态迟滞秒数")
     ap.add_argument("--bg-lr", type=float, default=0.002,
                     help="背景模型学习率（慢更新，避免静止猫被快速吸收）")
+    ap.add_argument("--cam-alpha-center", type=float, default=0.15)
+    ap.add_argument("--cam-alpha-size", type=float, default=0.06,
+                    help="变焦通道 EMA（刻意慢于平移，摄像师式运镜）")
+    ap.add_argument("--cam-max-center-v", type=float, default=0.015,
+                    help="平移限速（帧宽比例/帧）")
+    ap.add_argument("--cam-max-zoom", type=float, default=0.02,
+                    help="变焦限速（尺寸比例/帧）")
     ap.add_argument("--no-motion-correct", action="store_true",
                     help="关闭逐帧运动校正（消融对照用，任务 1.2）")
     return ap.parse_args()
@@ -168,6 +175,28 @@ def main() -> None:
             "interpolated": bool(interpolated[i]),
             "motion_corrected": bool(corrected[i]),
         })
+
+    # ── 3b. 相机路径 v3（design B2：校正框 → 平移/变焦双通道限速平滑 → 渲染框）──
+    max_cv = args.cam_max_center_v * W
+    cur = None
+    for rec in track:
+        bx = rec["box"]
+        cx, cy = (bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2
+        side = max(bx[2] - bx[0], bx[3] - bx[1])
+        if cur is None:
+            cur = {"cx": cx, "cy": cy, "s": side}
+        else:
+            dx = float(np.clip(cx - cur["cx"], -max_cv, max_cv))
+            dy = float(np.clip(cy - cur["cy"], -max_cv, max_cv))
+            cur["cx"] += args.cam_alpha_center * dx
+            cur["cy"] += args.cam_alpha_center * dy
+            ds = float(np.clip(side - cur["s"],
+                               -args.cam_max_zoom * cur["s"],
+                               args.cam_max_zoom * cur["s"]))
+            cur["s"] += args.cam_alpha_size * ds
+        half = cur["s"] / 2
+        rec["camera_box"] = [round(cur["cx"] - half, 1), round(cur["cy"] - half, 1),
+                             round(cur["cx"] + half, 1), round(cur["cy"] + half, 1)]
 
     # ── 4. 空间状态层（MD3 规则：底边中点 + 迟滞）─────────────────────
     min_hold = int(fps * args.hold_sec)

@@ -50,7 +50,8 @@ def main() -> None:
         vis = cv2.resize(frame, (args.width, oh))
         sx = args.width / W
         b1 = nc[min(fi, len(nc) - 1)]["box"]
-        b2 = mc[min(fi, len(mc) - 1)]["box"]
+        m2 = mc[min(fi, len(mc) - 1)]
+        b2 = m2.get("camera_box", m2["box"])  # 优先画相机路径（渲染框）
         difs.append(float(np.abs(np.array(b1) - np.array(b2)).mean()))
         cv2.rectangle(vis, (int(b1[0]*sx), int(b1[1]*sx)),
                       (int(b1[2]*sx), int(b1[3]*sx)), (255, 120, 0), 3)
