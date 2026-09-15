@@ -982,7 +982,7 @@ def main() -> int:
         upsert_run(run)
         return 1
 
-    # 检测 config 是否缺 val_cfg（与 build_train_command 内部逻辑相同）
+    # 检测 config 是否缺 val_cfg / val_evaluator（与 build_train_command 内部逻辑相同）
     extra_main = []
     _cfg_main = None
     try:
@@ -990,6 +990,12 @@ def main() -> int:
         _cfg_main = Config.fromfile(args.mmaction2_config)
         if not _cfg_main.get("val_cfg") and (_cfg_main.get("val_dataloader") or ann_val):
             extra_main.append("val_cfg = dict(type='ValLoop')")
+        if not _cfg_main.get("val_evaluator"):
+            # x3d/uniformer 等 config 无 val_evaluator：若不补全，build_train_command 拼的
+            # --cfg-options val_evaluator.metric_options... 会创建无 type 的 dict → build 崩
+            extra_main.append(
+                "val_evaluator = dict(type='AccMetric', "
+                "metric_options=dict(top_k_accuracy=dict(topk=(1, 5))))")
     except Exception:
         pass
     override_main, has_sched = _maybe_write_override(
