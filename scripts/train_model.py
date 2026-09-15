@@ -219,6 +219,13 @@ def _read_pipeline_from_config(cfg_path: str) -> tuple[str, str]:
         return "", ""
 
 
+def _bracket_delta(line: str) -> int:
+    """单行内 (/[/{ 开闭净差（开为正、闭为负），用于多行语句块深度跟踪。"""
+    return (line.count("(") - line.count(")")
+            + line.count("[") - line.count("]")
+            + line.count("{") - line.count("}"))
+
+
 def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | None = None,
                           ann_train: str | None = None, ann_val: str | None = None,
                           videos_train: str | None = None, videos_val: str | None = None) -> tuple[str | None, bool]:
@@ -247,9 +254,12 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
     out = os.path.join(OVERRIDES_DIR, f"{args.run_id}_override.py")
     # videomaev2 等模型 config 只有 model/test_dataloader，无 optim_wrapper/train_cfg
     _sched_lines: list[str] = []
+    _base_train_ds_type = ""  # base config 的 train dataset type（用于 _delete_ 判定）
     try:
         from mmengine.config import Config as _Config
         _bc = _Config.fromfile(cfg_path)
+        _base_train_ds_type = str(
+            ((_bc.get("train_dataloader") or {}).get("dataset") or {}).get("type", ""))
         if not _bc.get("optim_wrapper") and not _bc.get("optimizer"):
             _backbone_type = str(_bc.get("model", {}).get("backbone", {}).get("type", ""))
             if "VisionTransformer" in _backbone_type or "ViT" in _backbone_type:
@@ -263,8 +273,8 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
                 for _line in _sf:
                     _stripped = _line.rstrip()
                     if _in_block > 0:
-                        # 仍在多行语句内 → 计数括号，找结束
-                        _in_block += _stripped.count("(") - _stripped.count(")")
+                        # 仍在多行语句内 → 计数括号，找结束（param_scheduler = [...] 用 [] 收尾）
+                        _in_block += _bracket_delta(_stripped)
                         if _in_block <= 0:
                             _in_block = 0
                         continue
@@ -275,7 +285,7 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
                     if _stripped.startswith("train_cfg"):
                         # 提取 train_cfg：用用户 epochs 替换 schedule 的 max_epochs
                         # 保留 type（EpochBasedTrainLoop），跳过 by_epoch 避免冲突
-                        _in_block = _stripped.count("(") - _stripped.count(")")
+                        _in_block = _bracket_delta(_stripped)
                         # 第一行：train_cfg = dict(
                         _sched_lines.append(
                             f"train_cfg = dict(type='EpochBasedTrainLoop', "
@@ -338,13 +348,20 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
         if ann_train:
             ann_str = repr(ann_train)
             vid_str = repr(videos_train) if videos_train else "None"
+            # base 的 train dataset 非 VideoDataset（如 RepeatAugDataset）时，mmengine 深合并
+            # 会残留其专有键（num_repeats/sample_once）→ 必须 _delete_ 整块替换 + 显式 collate_fn
+            _ds_delete = bool(_base_train_ds_type) and _base_train_ds_type != "VideoDataset"
             lines.append(f"train_dataloader = dict(")
             lines.append(f"    batch_size={args.batch_size},")
             lines.append(f"    num_workers=2,")
             lines.append(f"    persistent_workers=False,")
             lines.append(f"    sampler=dict(type='DefaultSampler', shuffle=True),")
+            if _ds_delete:
+                lines.append(f"    collate_fn=dict(type='pseudo_collate'),")
             lines.append(f"    dataset=dict(")
             lines.append(f"        type='VideoDataset',")
+            if _ds_delete:
+                lines.append(f"        _delete_=True,")
             lines.append(f"        ann_file={ann_str},")
             if videos_train:
                 lines.append(f"        data_prefix=dict(video={vid_str}),")
@@ -376,9 +393,6 @@ def _maybe_write_override(args, cfg_path: str, n_cls, extra_lines: list[str] | N
     if _sched_lines:
         lines.append("")
         lines.extend(_sched_lines)
-
-    with open(out, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
 
     with open(out, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
