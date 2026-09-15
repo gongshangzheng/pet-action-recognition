@@ -58,6 +58,9 @@ def main() -> None:
             thumbs.append(th)
         fi += 1
     cap.release()
+    if not thumbs:
+        print(f"ERROR: 视频无帧可读: {args.video}", flush=True)
+        sys.exit(1)
 
     rows = []
     for r in range(0, len(thumbs), PER_ROW):
@@ -67,7 +70,6 @@ def main() -> None:
         rows.append(np.hstack(row))
     grid = np.vstack(rows)
     cv2.imwrite(args.out, grid, [cv2.IMWRITE_JPEG_QUALITY, 85])
-    n_hit = sum(1 for t in thumbs if t is not None)
     print(f"thumbs={len(thumbs)} -> {args.out}")
 
 
