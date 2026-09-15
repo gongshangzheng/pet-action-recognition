@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: 运动隐空间表征（零训练主链 + 可选自监督增强）
 
