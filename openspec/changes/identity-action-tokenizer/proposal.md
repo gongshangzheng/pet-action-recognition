@@ -26,5 +26,5 @@
 ## Impact
 
 - 新增 `configs/identity_tokenizer/` + 训练脚本（pet，4090；阶段 A 预计 1-2 天训练）
-- 依赖：V-JEPA 2 环境（`pet_vjepa`，待建）；UCF101 在 NAS（已有）
+- 依赖：V-JEPA 2 环境（`pet_tokenizer`，待建）；UCF101 在 NAS（已有）
 - 消费方：video-feature-latent 的 CatHuBERT 升级路线、登记-检索（E_id 支线）、可控视频生成（远期）

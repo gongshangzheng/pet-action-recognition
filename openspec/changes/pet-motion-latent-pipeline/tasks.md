@@ -29,7 +29,7 @@
 
 - [x] 2.1 multi-object-detect-gate 验收并 archive（2026-09-15；主 spec motion-pipeline 建立）
 - [ ] 2.2 batch-followcam-extraction 归档（34/34 完成 + 告警结案，仅差归档动作）
-- [ ] 2.3 identity-action-tokenizer 执行（任务 1.1 谱系精读→ 1.2 pet_vjepa 环境→ 1.3 UCF101 manifest→ 1.4 tokenizer 实现→ 1.5-1.6 阶段 A→ 1.7-1.8 阶段 B）→ 验收 → archive
+- [ ] 2.3 identity-action-tokenizer 执行（任务 1.1 谱系精读→ 1.2 pet_tokenizer 环境→ 1.3 UCF101 manifest→ 1.4 tokenizer 实现→ 1.5-1.6 阶段 A→ 1.7-1.8 阶段 B）→ 验收 → archive
 - [ ] 2.4 video-feature-latent 执行（直接消费 2.3 编码器，零训练选型作回退）→ 验收 → archive
 - [ ] 2.5 spot-check-cli 执行 → 验收 → archive
 

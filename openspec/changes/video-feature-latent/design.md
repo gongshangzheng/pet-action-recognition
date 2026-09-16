@@ -29,7 +29,7 @@
 
 | 候选 | 动物域适配 | 时序 | 成本 |
 |---|---|---|---|
-| **D. V-JEPA 2**（Meta FAIR 2025-06，MIT 协议）——**主力候选**：JEPA = latent 空间预测（非像素重建），官方定位即"视频→特征编码器"；transformers 原生；fpc16 变体与行为素窗口对齐；hf-mirror 可下载。集成风险：需 transformers ≥4.55（独立 pet_vjepa 环境） | ⚠️ 人类语料预训练 | ✅ 原生 | 下载 |
+| **D. V-JEPA 2**（Meta FAIR 2025-06，MIT 协议）——**主力候选**：JEPA = latent 空间预测（非像素重建），官方定位即"视频→特征编码器"；transformers 原生；fpc16 变体与行为素窗口对齐；hf-mirror 可下载。集成风险：需 transformers ≥4.55（独立 pet_tokenizer 环境） | ⚠️ 人类语料预训练 | ✅ 原生 | 下载 |
 | C. **MammalNet VideoMAE**（CVPR 2023，哺乳动物行为基准，动物版 VideoMAE） | ✅✅ 最贴近 | ✅ 原生 | 需下载（GitHub 可达性待探） |
 | B. **DINOv2（重定位）**：无动作设计目标——降为**对照组 + 姿态/身份通道**（单帧体态判姿势型行为；Δ差分仅作运动粗代理） | 中性 | ❌ 无时序 | 零 |
 
@@ -224,7 +224,7 @@ VideoMAE v1/v2 预训练权重（通用起点，即视频界的 Wav2vec）
 
 **设置**：V-JEPA 2 fpc16（ViT-L，16 帧窗口与行为素窗口对齐）在 pet_action_mammal_v0（2234 clips，7 类）上微调；对照 = VideoMAE v1 基线（同数据同切分的既有 top1）。val top1 对比：V-JEPA 2 ≥ 基线 → 迁移性成立，确立其 CatHuBERT 骨干首选地位；差距显著 → 域差坐实，骨干转向宠物微调 v1。同时兼作路线 4（有监督微调对照）。
 
-**工程**：独立 conda 环境 `pet_vjepa`（clone plf 后仅升级 transformers ≥4.55，不动 plf 本体以保护 GroundingDINO/mmpose）；bf16 + 梯度检查点 + 低学习率（ViT-L 全微调，4090 约 2-4h）；视频解码走 cv2/decord，绕开 torchcodec 依赖。
+**工程**：独立 conda 环境 `pet_tokenizer`（clone plf 后仅升级 transformers ≥4.55，不动 plf 本体以保护 GroundingDINO/mmpose）；bf16 + 梯度检查点 + 低学习率（ViT-L 全微调，4090 约 2-4h）；视频解码走 cv2/decord，绕开 torchcodec 依赖。
 
 **顺带产出**：微调后的 V-JEPA 2 即「路线 4 对照分类器」，其冻结特征也加入 L1 选型对比（= 第四个特征候选）。
 ### L8: TiTok 式双 token 流——身份 register tokens × 动作 tokens（2026-09-15/16 用户提议+联网调研）

@@ -2,10 +2,10 @@
 
 > 总管：`pet-motion-latent-pipeline`。**2026-09-16 用户裁定**：已从"研究型条件启动"升为主线 2.3（encoder 优先——只有此 change 产出编码器，下游 video-feature-latent/spot-check-cli 才能做高质量无监督工作）。
 > 两阶段：A 人类 UCF101 → B 猫语料；A1 快速验证 → A2 端到端（V-JEPA 2 解冻联合微调）。严格按编号顺序；GPU 任务前 nvidia-smi 查占用。
-> 前置：`pet_vjepa` 环境（transformers ≥4.55，待建）。
+> 前置：`pet_tokenizer` 环境（transformers ≥4.55，待建）。
 
 - [ ] 1.1 配方精读：TiTok（2406.07550）/ AdapTok（2505.17011）/ 1d-tokenizer / FLOAT 训练细节（mask 策略/解码器规模/LR/epoch），沉淀训练配方笔记
-- [ ] 1.2 `pet_vjepa` 环境：clone plf + transformers ≥4.55 + 验证 V-JEPA 2 fpc16 加载与特征提取（不动 plf）
+- [ ] 1.2 `pet_tokenizer` 环境：clone plf + transformers ≥4.55 + 验证 V-JEPA 2 fpc16 加载与特征提取（不动 plf）
 - [ ] 1.3 UCF101 manifest：NAS UCF-101 → 窗口清单（16 帧/窗）+ 缓存 patch tokens（冻结骨干，一次性 ~半天）
 - [ ] 1.4 tokenizer 实现：瓶颈交叉注意力身份 tokens（K_id=32）+ 逐帧动作 query（z_t 32d）+ 轻量解码器；`configs/identity_tokenizer/`
 - [ ] 1.5 阶段 A 训练（UCF101，重建 + 动作 CE + 类别弱监督）：LPIPS/PSNR 曲线 + token 数缩放实验（8/16/32 tokens）
