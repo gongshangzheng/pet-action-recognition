@@ -33,7 +33,7 @@ id: 1
 
 | 资产 | 路径/位置 | 规模 | 状态 | 用途 |
 |---|---|---|---|---|
-| cats v1 家猫监控（双人3 批标注） | 🗄️ `datasets/cats/` | 552MB（8 zip） | **已就绪**（中文+英文命名各一份） | 训练/评测/猫语料迁移 |
+| cats v1 家猫监控（双人标注·中英双名） | 🗄️ `datasets/cats/` | 552MB（8 zip，实际 4 个唯一文件） | **已就绪**（每份文件中文 + 拼音双名） | 训练/评测/猫语料迁移 |
 | cats zip 清单 | 🗄️ `datasets/cats/` | dataset_蒋(159M) / dataset_崔(117M) / dataset_cui(159M) + 三个 annotation_*.zip(32–84K) | — | 视频原始数据 + 标注 |
 | quadruped_action 占位 | 🗄️ `datasets/quadruped_action/` | 骨架（classes.txt + 3 个 ann list，无视频） | **占位** | mmaction2 训练目标 |
 | mammal_v0 | （路径待补，建议 `datasets/mammal_v0/`） | 七类 ~3h | 在用 | 迁移基线、V-JEPA 1.13 对照 |
