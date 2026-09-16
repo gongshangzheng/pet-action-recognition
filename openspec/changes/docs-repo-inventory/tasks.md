@@ -2,10 +2,10 @@
 
 ## 1. 素材取证（写文档前的事实核对）
 
-- [ ] 1.1 数据资产取证：datasets/cats 8 个 zip 清单与大小、quadruped_action ann list 行数、papers.db（239 篇/519 类目）、extracted/researched JSON 内容抽样、NAS UCF101 路径、pet 远程已知路径（checkpoints、~/results/batch）
-- [ ] 1.2 产物取证：results/ 逐子目录记录路径+生成日期+关键数字——training（metrics.json 5 run、test_results.json k400 指标）、speedrun（results.json）、batch（batch_report.md 三率+3 告警结案）、gate0a/0a_v2/0a_v3/0b/4、skeleton、live.db
-- [ ] 1.3 代码取证：scripts/ 27 个逐个一句话用途、server 8 路由、petlib 7 模块、web 28 页面分组、configs/ 11 文件用途
-- [ ] 1.4 管线与身份取证：精读 openspec 总管（design D1–D9 裁决与决策索引、tasks §2 主线序/§4 延后旁支登记）+ 7 个子 change（任务/闸门/状态）；产出「结论与关键数字清单」（D6 四要素）+「算法阶段素材清单」（每阶段算法/输入输出/否决方案及理由）+**「身份一致性原理表」**（同猫跨时间/视角特征相似、不同猫区分——从 Re-ID、FAISS 检索、track 级 InfoNCE 抽取证据），供 2.3/2.6/2.7/2.8/2.9 使用
+- [x] 1.1 数据资产取证：datasets/cats 8 个 zip 清单与大小、quadruped_action ann list 行数、papers.db（239 篇/519 类目）、extracted/researched JSON 内容抽样、NAS UCF101 路径、pet 远程已知路径（checkpoints、~/results/batch）
+- [x] 1.2 产物取证：results/ 逐子目录记录路径+生成日期+关键数字——training（metrics.json 5 run 全部 error、test_results.json k400 指标）、speedrun（results.json 366 条 24 模型）、batch（batch_report.md 三率+3 告警结案）、gate0a/0a_v2/0a_v3/0b/4、skeleton、live.db
+- [x] 1.3 代码取证：scripts/ 26 个逐个一句话用途、server 7 路由、petlib 4 模块、web 28 页面分组、configs/ 14 文件用途（含 hooks/aim_modules 子目录）
+- [x] 1.4 管线与身份取证：精读 openspec 总管（design D1–D9 裁决与决策索引、tasks §2 主线序/§4 延后旁支登记）+ 7 个子 change（任务/闸门/状态）；产出「结论与关键数字清单」（D6 四要素）+「算法阶段素材清单」（每阶段算法/输入输出/否决方案及理由）+**「身份一致性原理表」**（同猫跨时间/视角特征相似、不同猫区分——从 Re-ID、FAISS 检索、track 级 InfoNCE 抽取证据），供 2.3/2.6/2.7/2.8/2.9 使用
 
 ## 2. 撰写 11 篇统一文档（management/docs/，id 1–11，frontmatter 齐全；逐节按 design D4 对应规格写）
 
