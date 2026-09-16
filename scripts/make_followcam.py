@@ -62,6 +62,10 @@ def main() -> None:
         crop = frame[ya:yb, xa:xb]
         crop = (cv2.resize(crop, (args.size, args.size))
                 if crop.size else np.zeros((args.size, args.size, 3), np.uint8))
+        st = rec.get("state", "")
+        if st:
+            c = (0, 255, 255) if st != "on floor" else (180, 180, 180)
+            cv2.putText(crop, st, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, c, 2)
         vw.write(crop)
         if vw_sbs:
             small = cv2.resize(frame, (sbs_w, sbs_h))

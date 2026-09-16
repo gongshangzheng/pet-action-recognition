@@ -36,6 +36,23 @@ SMOOTH_WIN = 5
 MAX_CORRECT_RATIO = 0.25  # 单帧校正幅度上限（相对框边长的比例），防漂移
 
 
+def _iou(a, b) -> float:
+    ix = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+    iy = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+    inter = ix * iy
+    ua = (a[2]-a[0])*(a[3]-a[1]) + (b[2]-b[0])*(b[3]-b[1]) - inter
+    return inter / max(1e-6, ua)
+
+
+def _dedup_furniture(items: list) -> list:
+    """同类家具框按置信度去重（IoU>0.5 保留最高），防同帧多框重复计数。"""
+    out = []
+    for lab, b, s in sorted(items, key=lambda x: -x[2]):
+        if all(_iou(b, b2) < 0.5 for l2, b2, _ in out if l2 == lab):
+            out.append((lab, b, s))
+    return out
+
+
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser()
     ap.add_argument("--video", required=True)
@@ -103,6 +120,7 @@ def main() -> None:
                         entry["cat"] = (box, float(sc))
                 elif lab in FURNITURE:
                     entry["furniture"].append((lab, box, float(sc)))
+            entry["furniture"] = _dedup_furniture(entry["furniture"])
             if entry["cat"] is not None:
                 sampled[f] = entry
     n_sampled = len(sampled)
@@ -211,7 +229,8 @@ def main() -> None:
         cb = smooth[i] + off[i]
         rec["camera_box"] = [round(float(v), 1) for v in cb]
 
-    # ── 4. 空间状态层（MD3 规则：底边中点 + 迟滞）─────────────────────
+    # ── 4. 空间状态层（MD3 v2：底部1/3区域重叠率 ≥50% + 1.5s 迟滞）──────
+    # v1 脚点单点判定对画面边缘裁切脆弱（猫框底边贴画面底边时永不命中）
     min_hold = int(fps * args.hold_sec)
     state, pending, pending_cnt = "on floor", None, 0
     states = []
@@ -219,12 +238,18 @@ def main() -> None:
         i = rec["frame"]
         furn = furn_at[min(fs, key=lambda f: abs(f - i))] if fs else []
         x1, y1, x2, y2 = rec["box"]
-        foot = ((x1 + x2) / 2, y2)
-        cur = "on floor"
+        bh = y2 - y1
+        zone = (x1, y2 - bh / 3, x2, y2)  # 猫框底部 1/3（支撑接触区）
+        za = max(1.0, (zone[2] - zone[0]) * (zone[3] - zone[1]))
+        cur, best_r, best_lab = "on floor", 0.0, None
         for lab, fb, _sc in furn:
-            if fb[0] <= foot[0] <= fb[2] and fb[1] <= foot[1] <= fb[3]:
-                cur = f"cat on {lab}"
-                break
+            ix = max(0.0, min(zone[2], fb[2]) - max(zone[0], fb[0]))
+            iy = max(0.0, min(zone[3], fb[3]) - max(zone[1], fb[1]))
+            r = (ix * iy) / za
+            if r >= 0.5 and r > best_r:
+                best_r, best_lab = r, lab
+        if best_lab:
+            cur = f"cat on {best_lab}"
         if cur == state:
             pending, pending_cnt = None, 0
         else:
