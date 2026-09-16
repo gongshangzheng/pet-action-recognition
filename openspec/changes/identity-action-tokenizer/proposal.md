@@ -1,30 +1,37 @@
 # Proposal: identity-action-tokenizer
 
-> 子 change，总管：`pet-motion-latent-pipeline`。**性质：研究型**（对标 video-feature-latent 的条件升级路线，独立立项深入设计）。
+> 子 change，总管：`pet-motion-latent-pipeline`（**2.3 主线**）。**性质：研究型**，2026-09-16 用户裁定升为主线（encoder 优先——此 change 产出编码器，下游 `video-feature-latent` / `spot-check-cli` 才能做高质量无监督工作）。
 
 ## Why
 
-管线最终形态需要"可控的行为潜空间"：**身份与动作解耦**的视频表征——身份 tokens 表示"这是哪只猫"，逐帧动作 latent 表示"它在做什么动作"，二者组合可重建视频（验证表征完整性），也可生成视频（验证可控性，FLOAT 同款应用）。此前的障碍是猫数据量太少（34 段 = 14.7 分钟 + 3k 短 clips）——**解法：先在规模大两个数量级的人类动作数据集（UCF101，13320 段，已在 NAS）上验证架构，再迁移到猫语料**。
+管线需要**身份与动作解耦**的猫视频编码器：身份表征表示"这是哪只猫"，逐帧动作表征表示"它在做什么"，二者可组合重建视频（验证表征完整性）与生成视频（FLOAT 同款应用）。此前障碍是猫数据量少——**解法：先在规模大两个数量级的人类动作数据集（UCF101，13320 段，已在 NAS）上验证架构，再迁移到猫语料**。
 
-**用户定义的架构（2026-09-16，FLOAT × TiTok 杂交）**：
-① 从整段视频提取**几十个身份 tokens**（TiTok 式，跨时间共享）= "这是哪只猫"
-② **每一帧得到一个动作 latent token** = "这一帧在动什么"
-③ **解码器用 (身份 tokens + 逐帧动作 latents) 重建原始视频**——重建可行则解耦成立
+**架构（2026-09-16 联网精读三篇后收敛）**：
+- **TivTok**（arXiv 2606.17590）→ 双 token 骨架：TIV tokens attend 整段视频（身份），TV tokens 每帧 local scope（动作）
+- **FLOAT**（arXiv 2412.01064）/ **LIA**（arXiv 2203.09043）→ 正交运动基：z_t = Σ λ_m·v_m，基由 Gram-Schmidt 前向硬约束保证正交
+- **DeRA**（arXiv 2512.04483）→ 显式对齐（可选稳定器）
+- 详见 `design.md`（含被否定方案的记录与理由）
 
 ## What Changes
 
-- **阶段 A（人类数据，大规模）**：UCF101 上训练双 token 视频重建 tokenizer，验证架构 + 重建质量 + 动作 latent 判别性
-- **阶段 B（猫语料迁移）**：猫语料继续训练，身份 tokens 接入 track ID 监督 + 跨猫交换重建，产出解耦的行为素/身份双表征
-- 评测：重建（LPIPS/PSNR/FVD）、动作线性探针、身份检索、身份泄漏审计、跨猫交换重建
+- **前置依赖**：`pet-background-removal`（抠像语料——消除背景运动对动作通道的污染，独立 change）
+- **阶段 A（人类数据）**：UCF101 上训练 TivTok 式双 token tokenizer + 正交运动基，验证架构、重建质量、动作基元有效性
+- **阶段 B（猫语料迁移）**：抠像后的猫语料继续训练，TIV 接入 track ID 监督 + 跨猫交换重建，产出解耦的双表征
+- 评测：重建（LPIPS/PSNR/rFVD）、动作线性探针、λ 基元强度可解释性、身份检索、视角无关性、身份泄漏、跨猫交换重建
 
 ## Capabilities
 
 ### New Capabilities
+<!-- 无新 capability -->
 
-- `motion-pipeline` 新增"身份-动作双 token tokenizer（研究）"要求（见 spec delta）
+### Modified Capabilities
+
+- `motion-pipeline`: 更新"身份-动作双 token 视频 tokenizer"要求——骨架由瓶颈 register tokens 改为 **TivTok SIF（TIV/TV attention scope）**，动作通道改为 **FLOAT/LIA 正交运动基（Gram-Schmidt）**，并明确抠像语料为前置条件
 
 ## Impact
 
-- 新增 `configs/identity_tokenizer/` + 训练脚本（pet，4090；阶段 A 预计 1-2 天训练）
-- 依赖：V-JEPA 2 环境（`pet_tokenizer`，待建）；UCF101 在 NAS（已有）
-- 消费方：video-feature-latent 的 CatHuBERT 升级路线、登记-检索（E_id 支线）、可控视频生成（远期）
+- 新增 `configs/identity_action_tokenizer/` + 训练/评测脚本（`scripts/`）
+- 依赖：`pet-background-removal` 产物（抠像语料）、`pet_tokenizer` 环境（conda，隔离）
+- 执行机：pet（RTX 4090），GPU 任务前查占用
+- 消费方：`video-feature-latent`（用产出的编码器做行为发现）、登记-检索（身份支线）、可控视频生成（远期）
+- 不改变既有产出（UCF101 manifest 新增、原视频不动）

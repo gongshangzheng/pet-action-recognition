@@ -1,15 +1,32 @@
 # Tasks: identity-action-tokenizer
 
-> 总管：`pet-motion-latent-pipeline`。**2026-09-16 用户裁定**：已从"研究型条件启动"升为主线 2.3（encoder 优先——只有此 change 产出编码器，下游 video-feature-latent/spot-check-cli 才能做高质量无监督工作）。
-> 两阶段：A 人类 UCF101 → B 猫语料；A1 快速验证 → A2 端到端（V-JEPA 2 解冻联合微调）。严格按编号顺序；GPU 任务前 nvidia-smi 查占用。
-> 前置：`pet_tokenizer` 环境（transformers ≥4.55，待建）。
+> 总管：`pet-motion-latent-pipeline`（**2.3 主线**，encoder 优先）。两阶段：A 人类 UCF101 → B 猫语料。
+> 架构 = **TivTok SIF 双 token + FLOAT/LIA 正交运动基**（详见 design.md）。严格按编号顺序；GPU 任务前 `nvidia-smi` 查占用。
+> 前置：`pet_tokenizer` 环境（待建）；`pet-background-removal` 抠像语料（阶段 B 需要）。
 
-- [ ] 1.1 配方精读：TiTok（2406.07550）/ AdapTok（2505.17011）/ 1d-tokenizer / FLOAT 训练细节（mask 策略/解码器规模/LR/epoch），沉淀训练配方笔记
-- [ ] 1.2 `pet_tokenizer` 环境：clone plf + transformers ≥4.55 + 验证 V-JEPA 2 fpc16 加载与特征提取（不动 plf）
-- [ ] 1.3 UCF101 manifest：NAS UCF-101 → 窗口清单（16 帧/窗）+ 缓存 patch tokens（冻结骨干，一次性 ~半天）
-- [ ] 1.4 tokenizer 实现：瓶颈交叉注意力身份 tokens（K_id=32）+ 逐帧动作 query（z_t 32d）+ 轻量解码器；`configs/identity_tokenizer/`
-- [ ] 1.5 阶段 A 训练（UCF101，重建 + 动作 CE + 类别弱监督）：LPIPS/PSNR 曲线 + token 数缩放实验（8/16/32 tokens）
-- [ ] 1.6 阶段 A 验收：z_t 线性探针 top1（101 类）+ 身份 dropout/交换消融 → 架构可行性判定（**中期检查点**）
-- [ ] 1.7 阶段 B 猫语料迁移：mammal_v0 + cats v1 + followcam 继续训练，e_id 接入 track 级 InfoNCE + 跨猫交换重建
-- [ ] 1.8 阶段 B 评测矩阵（design T-A4 全表）：重建/动作探针（5 类）/身份检索/身份泄漏/交换重建 → 总报告
-- [ ] 1.9 结论裁定（**用户验收**）：CatHuBERT 骨干是否采用本 tokenizer；产出回流 video-feature-latent 任务 1.7
+## 1. 准备
+
+- [ ] 1.1 配方精读：TivTok SIF（2606.17590）/ LIA Gram-Schmidt（2203.09043）/ FLOAT 分解（2412.01064）/ DeRA 对齐（2512.04483）/ SoftVQ-VAE 基础，沉淀训练配方笔记
+- [ ] 1.2 `pet_tokenizer` 环境：独立 conda（不污染 plf），安装依赖 + 验证 GPU 可用
+- [ ] 1.3 UCF101 manifest：NAS UCF-101 → 16 帧窗口清单（stride 8），核对总量与可用性
+
+## 2. Tokenizer 实现
+
+- [ ] 2.1 双 token 骨架：TIV tokens（attend 整段）+ TV tokens（每帧 local scope），实现 TivTok SIF 的非对称 attention scope
+- [ ] 2.2 动作通道：FLOAT/LIA 正交运动基（可学习矩阵 + 每次前向 Gram-Schmidt）→ z_t = Σ λ_m(t)·v_m；系数 λ 可闭式提取
+- [ ] 2.3 解码器 + 重建损失（L1 + perceptual + adversarial，TivTok 口径；Invariant Broadcasting 复用 TIV）
+- [ ] 2.4 身份通道：TIV 池化 → identity embedding + track ID InfoNCE（τ=0.07，memory bank）
+- [ ] 2.5 跨猫交换重建（解耦验证）：猫 A 的 TV × 猫 B 的 TIV → 重建"B 做 A 的动作"
+- [ ] 2.6 `configs/identity_action_tokenizer/` 配置 + 训练脚本（bf16 + 梯度检查点）
+
+## 3. 阶段 A（UCF101，人类数据）
+
+- [ ] 3.1 阶段 A 训练：UCF101，重建 + 动作伪行为素 CE；监控 LPIPS/PSNR
+- [ ] 3.2 超参搜索：N_TIV（8/16/32）、N_TV、M（正交基元数，16/32/64）
+- [ ] 3.3 阶段 A 验收（**中期检查点**）：z_t 线性探针 top1（101 类）+ λ_m 基元曲线可视化 + v_m 可视化 → 架构可行性判定
+
+## 4. 阶段 B（猫语料迁移）与验收
+
+- [ ] 4.1 抠像猫语料迁移训练（依赖 `pet-background-removal` 产物）：mammal_v0 + cats_v1 + followcam
+- [ ] 4.2 阶段 B 评测矩阵（design T-A8 全表）：重建 / 动作探针（5 类）/ λ 可解释性 / 身份检索 / 视角无关性（≥0.7）/ 身份泄漏 / 跨猫交换重建
+- [ ] 4.3 总报告 + 结论裁定（**用户验收**）：编码器是否供 `video-feature-latent` 消费

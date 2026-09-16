@@ -21,15 +21,17 @@
 |---|---|---|---|---|
 | 2.1 | `multi-object-detect-gate` | 多目标检测（五类）+ 空间关系状态层 | — | ✅ 已归档（2026-09-15） |
 | 2.2 | `batch-followcam-extraction` | 全量批处理 34 段 + followcam 产出 | 2.1 | ✅ 1.1-1.6 闭环（34/34 ok，23 分钟；告警段结案=超短红外低在场片段；语料事实：34 段共 14.7 分钟），**待归档** |
-| 2.3 | `video-feature-latent` | 零训练选型 + 行为发现 + 探针评测（L1-L2 主链；L4 决策树可选） | 2.2 | ⏳ 待 2.2 归档 |
-| 2.4 | `spot-check-cli` | 抽查式推理 CLI + 猫身份登记 | 2.3 | ⏳ 待 2.3 |
-| 2.5 | `identity-action-tokenizer` | 🔬 研究型：FLOAT×TiTok 双 token 视频重建 tokenizer（UCF101→猫语料两阶段） | 2.3 阶段二闸门失败，**或用户指定提前** | ⏸️ 已创建待启动 |
+| 2.3 | `identity-action-tokenizer` | 🔬 升主线（encoder 优先）：TivTok SIF 双 token + FLOAT/LIA 正交运动基（UCF101→猫语料两阶段） | 2.2 | ⏳ 待 2.2 归档 |
+| 2.3b | `pet-background-removal` | 猫本体抠像（背景移除，只留猫）——消除背景运动对动作通道的污染 | 可并行 2.3 阶段 A；**2.3 阶段 B 前必须完成** | 📋 已创建待启动 |
+| 2.4 | `video-feature-latent` | 消费 2.3 编码器做行为发现 + 探针评测（现成 backbone 降为回退） | 2.3 | ⏳ 待 2.3 |
+| 2.5 | `spot-check-cli` | 抽查 CLI + 实时监控模式 + 猫身份登记 | 2.4 | ⏳ 待 2.4 |
 
 ### 主线推进清单
 
 - [x] 2.1 multi-object-detect-gate 验收并 archive（2026-09-15；主 spec motion-pipeline 建立）
 - [ ] 2.2 batch-followcam-extraction 归档（34/34 完成 + 告警结案，仅差归档动作）
-- [ ] 2.3 identity-action-tokenizer 执行（任务 1.1 谱系精读→ 1.2 pet_tokenizer 环境→ 1.3 UCF101 manifest→ 1.4 tokenizer 实现→ 1.5-1.6 阶段 A→ 1.7-1.8 阶段 B）→ 验收 → archive
+- [ ] 2.3 identity-action-tokenizer 执行（任务 1.1 配方精读→ 1.2 pet_tokenizer 环境→ 1.3 UCF101 manifest→ 2.x tokenizer 实现→ 3.x 阶段 A→ 4.x 阶段 B）→ 验收 → archive
+- [ ] 2.3b pet-background-removal 执行（选型实测 → 抠像管线 → 全量批处理）→ 验收 → archive（**2.3 阶段 B 前置**）
 - [ ] 2.4 video-feature-latent 执行（直接消费 2.3 编码器，零训练选型作回退）→ 验收 → archive
 - [ ] 2.5 spot-check-cli 执行 → 验收 → archive
 
