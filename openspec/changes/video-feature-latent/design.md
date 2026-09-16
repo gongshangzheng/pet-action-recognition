@@ -195,3 +195,33 @@ VideoMAE v1/v2 预训练权重（通用起点，即视频界的 Wav2vec）
 **工程**：独立 conda 环境 `pet_vjepa`（clone plf 后仅升级 transformers ≥4.55，不动 plf 本体以保护 GroundingDINO/mmpose）；bf16 + 梯度检查点 + 低学习率（ViT-L 全微调，4090 约 2-4h）；视频解码走 cv2/decord，绕开 torchcodec 依赖。
 
 **顺带产出**：微调后的 V-JEPA 2 即「路线 4 对照分类器」，其冻结特征也加入 L1 选型对比（= 第四个特征候选）。
+### L8: TiTok 式双 token 流——身份 register tokens × 动作 tokens（2026-09-15/16 用户提议+联网调研）
+
+**用户提议**：参考 TiTok（32 tokens 承载全图）与后续视频工作，用**外接 extra tokens 提取身份**，另用某种机制提取**逐帧动作**——身份与动作在 token 层面物理分离。
+
+**联网调研谱系（2026-09-16）**：
+| 工作 | 出处 | 对我们的启发 |
+|---|---|---|
+| TiTok "An Image is Worth 32 Tokens" | arXiv 2406.07550（DeepMind） | 1D 极简 token 承载全图信息；masked token 重建 + 量化 |
+| 1d-tokenizer | github.com/bytedance/1d-tokenizer（字节） | 1D tokenizer 工程实现 |
+| **AdapTok** | arXiv 2505.17011，**CVPR'26**，VisionXLab（README 全文已抓取） | **视频 1D 潜空间 + 时序因果** + 内容自适应 token 预算分配（块级 mask + ILP 评分）；UCF-101/K600 验证；HF 有预训练模型 |
+| Register Tokens | arXiv 2309.16588（ICLR'24，**知识库未联网复核**） | 额外低信息 token 吸附全局信息/伪影——"register"机制的出处 |
+| V-JEPA 2 | hf-mirror 模型卡（已核实） | latent 预测式骨干，fpc16 与窗口对齐（候选 D） |
+
+**映射到我们的架构（L3 合流自训版的 token 化实现）**：
+```
+跟随窗口(16帧) → 骨干（V-JEPA 2 fpc16 初始化）
+  ├─ 身份 register tokens（K_id≈8-32 个可学习 token，register 风格）
+  │    与 patch tokens 共同注意力 → 池化 = E_id → InfoNCE(track 级 ID)
+  │    （TiTok/register 思想：紧凑潜码承载个体信息；分流进登记-检索支线）
+  └─ 动作 tokens：patch tokens 池化 → VQ 量化 = 行为素 → CatHuBERT 伪标签 CE
+       （区分动作；AdapTok 启发：token 预算可内容自适应——静止行为少分配，
+        运动行为多分配；一期固定 K_act，自适应留二期）
+解耦：E_id × E_mot 正交/GRL 互斥 + 各自监督（L3 合流）
+防塌缩辅助（可选）：TiTok 式轻量解码器从双 tokens 重建窗口
+  ——辅助损失保证 token 信息完整性；主目标仍为判别式（用户定调）
+```
+
+**与 L3 的关系**：L3 的"E_id = 池化+MLP"升级为 register tokens 聚合（注意力式、可控紧凑）；E_mot 不变。不是新路线，是 L3 架构的具体 token 化实现升级。
+
+**验收增补**：E_id 支线可独立评测——用 E_id embedding 做猫个体检索（对应 spot-check 登记需求），检索精度与 DINOv2 crop embedding 基线对比（若接近，则一模型同时出动作+身份两用表征）。
