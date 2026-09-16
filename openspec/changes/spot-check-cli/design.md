@@ -8,6 +8,13 @@
 
 `scripts/spot_check_actions.py --camera C --from T --to T`：拉录像 → 复用预处理管线（multi prompt 检测 + 运动校正 + 跟随裁剪）→ 隐码（video-feature-latent 选型胜出编码器 + 簇映射）→ 动作报告（JSON/Markdown）。分钟级延迟可接受。
 
+### C1b: 实时模式（用户修订 2026-09-16）
+
+- 流来源：复用 live 模块摄像头源（stream_token 安全体系不变）
+- 在线链路：YOLO11 检测（伪标注微调版，~5ms）→ 跟随裁剪 → 编码器特征 → 最近簇分配（离线发现的簇中心）
+- 推送：SSE（复用 live 基础设施）；秒级延迟目标
+- Open Questions：延迟预算具体数值？簇分配的滑动平滑窗口？低置信分配如何呈现（"疑似"态）？
+
 ### C2: 身份登记
 
 登记照（每猫 3–5 张清晰 crop）→ DINOv2 embedding → FAISS；新 crop 最近邻检索；未登记个体标「未知猫 #N」。与物品识别共用 `petlib/identity/` 抽象（总管 D9）。
