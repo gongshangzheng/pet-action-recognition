@@ -8,7 +8,7 @@
 
 ## What Changes
 
-- `scripts/pet_detect_track.py`：多 prompt 抽样检测（每 10 帧）+ 插值平滑 + **逐帧运动校正**（背景建模前景 mask 修正插值框）→ 轨迹 JSON（含家具框）
+- `scripts/pet_detect_track.py`：多 prompt 抽样检测（每 10 帧）+ 插值平滑（**逐帧运动校正为可选项，默认禁用**——2026-09-16 裁定）→ 轨迹 JSON（含家具框）
 - `scripts/make_followcam.py`：轨迹 → follow_adaptive 跟随视频（尺寸离群过滤内置）+ H.264 直写
 - 全量 34 段批处理 + 批处理报告（检出率/插值率/校正率/离群剔除统计）
 

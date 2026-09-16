@@ -5,8 +5,9 @@ batch-followcam-extraction 任务 1.1（design B1/B2/B3）。
 流程：
   1. GroundingDINO 多 prompt 抽样检测（每 sample_stride 帧，一次前向返回全部类别）
   2. 猫主轨迹关联（最高置信框，单猫场景）→ 线性插值到全帧 → 滑动平均平滑
-  3. 逐帧运动校正（design B2）：背景模型（时序中值）前景 mask 的连通域
-     与插值框相交 → 框向外扩展覆盖（校正幅度设上限防漂移）；无前景则不动
+  3. （可选，--motion-correct）逐帧运动校正（design B2）：背景建模前景 mask
+     与插值框相交 → 框向外扩展覆盖。默认禁用（2026-09-16 用户裁定：
+     实测多数场景收益有限，且引入尺寸呼吸抖动）
   4. 空间状态层：猫框底边中点落入家具框 → "cat on X"（≥hold_sec 迟滞）
   5. 产物（design B3 契约）：轨迹 JSON（猫框含 interpolated/motion_corrected
      标记 + 家具框 + 空间状态序列）
@@ -71,8 +72,8 @@ def parse_args() -> argparse.Namespace:
                     help="尺寸偏移 EMA（慢于平移，压变焦呼吸）")
     ap.add_argument("--off-max-v-size", type=float, default=0.02,
                     help="尺寸偏移限速（帧宽比例/帧）")
-    ap.add_argument("--no-motion-correct", action="store_true",
-                    help="关闭逐帧运动校正（消融对照用，任务 1.2）")
+    ap.add_argument("--motion-correct", action="store_true",
+                    help="启用逐帧运动校正（默认禁用；2026-09-16 用户裁定：实测多数场景收益有限，且引入尺寸呼吸。需要时显式开启）")
     return ap.parse_args()
 
 
@@ -161,7 +162,7 @@ def main() -> None:
         box = smooth[i].copy()
         is_sampled = (i % args.sample_stride == 0)
         hit_now = False
-        if not args.no_motion_correct and not is_sampled and i >= WARMUP:
+        if args.motion_correct and not is_sampled and i >= WARMUP:
             fg = bg.apply(frames[i], learningRate=args.bg_lr)
             fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN,
                                   np.ones((5, 5), np.uint8))
