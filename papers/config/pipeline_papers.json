@@ -1,0 +1,93 @@
+[
+ {
+  "title": "An Image is Worth 32 Tokens for Reconstruction and Generation",
+  "arxiv_id": "2406.07550",
+  "venue": "arXiv, DeepMind, 2024",
+  "url": "https://arxiv.org/abs/2406.07550",
+  "source_article": "video-feature-latent L8 调研",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "TiTok：1D 极简 token（32 个）承载全图信息；L8 双 token 流架构的出处"
+ },
+ {
+  "title": "AdapTok: Learning Adaptive and Temporally Causal Video Tokenization in a 1D Latent Space",
+  "arxiv_id": "2505.17011",
+  "venue": "CVPR 2026",
+  "url": "https://arxiv.org/abs/2505.17011",
+  "source_article": "video-feature-latent L8 调研",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "TiTok 思想视频版：1D 潜空间+时序因果+自适应 token 预算（ILP）；行为素窗口分配的二阶段参考"
+ },
+ {
+  "title": "Vision Transformers Need Registers",
+  "arxiv_id": "2309.16588",
+  "venue": "ICLR 2024",
+  "url": "https://arxiv.org/abs/2309.16588",
+  "source_article": "video-feature-latent L8 调研",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "register tokens 机制出处：额外低信息 token 吸附全局信息——身份 register tokens 的依据"
+ },
+ {
+  "title": "V-JEPA 2: Self-Supervised Video Models Enable Understanding, Prediction and Planning",
+  "arxiv_id": "2506.09985",
+  "venue": "Meta FAIR tech report, 2025",
+  "url": "https://arxiv.org/abs/2506.09985",
+  "source_article": "video-feature-latent L1 候选D",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "选型候选 D：JEPA latent 预测式视频编码器，fpc16 对齐行为素窗口；ID 待 arXiv 可达后复核"
+ },
+ {
+  "title": "wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations",
+  "arxiv_id": "2006.11477",
+  "venue": "NeurIPS 2020",
+  "url": "https://arxiv.org/abs/2006.11477",
+  "source_article": "video-feature-latent L5 调研",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "路线 W 目标函数参照：contrastive（InfoNCE）判别式自监督——W2 备选目标的出处"
+ },
+ {
+  "title": "HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units",
+  "arxiv_id": "2106.07447",
+  "venue": "IEEE/ACM TASLP 2021",
+  "url": "https://arxiv.org/abs/2106.07447",
+  "source_article": "video-feature-latent L5/L6 调研",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "路线 W 首选目标出处：迭代伪标签 masked prediction——CatHuBERT 行为素迭代预训练的直接范式"
+ },
+ {
+  "title": "LatentSync: Audio Conditioned Latent Diffusion Models for Lip Synchronization",
+  "arxiv_id": "2412.09262",
+  "venue": "arXiv, ByteDance, 2024",
+  "url": "https://arxiv.org/abs/2412.09262",
+  "source_article": "video-feature-latent L5 调研",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "SyncNet 式判别潜空间旁证：latent 空间判别性值得单独建目标；ID 待复核",
+  "unverified_id": true
+ },
+ {
+  "title": "FLOAT: Generative Motion Latent Flow Matching for Audio-driven Talking Portrait",
+  "arxiv_id": "2412.01064",
+  "venue": "arXiv, 2024",
+  "url": "https://arxiv.org/abs/2412.01064",
+  "source_article": "总管 D3 原始参照",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "D3 双分解架构的原始参照之一（motion latent 流匹配）；ID 待复核"
+ },
+ {
+  "title": "1D Tokenizer (ByteDance 1d-tokenizer)",
+  "arxiv_id": "",
+  "venue": "github.com/bytedance/1d-tokenizer",
+  "url": "https://github.com/bytedance/1d-tokenizer",
+  "source_article": "video-feature-latent L8 调研",
+  "role": "reference",
+  "category": "video-feature-latent",
+  "reason": "1D tokenizer 工程实现参考（仓库型条目，无 arXiv）"
+ }
+]
