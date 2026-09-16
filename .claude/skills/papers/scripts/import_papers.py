@@ -26,7 +26,7 @@ from server.db import init_db
 
 DB_PATH = Path(__file__).resolve().parents[4] / "data" / "papers.db"
 DEFAULT_INPUT = Path(__file__).resolve().parents[4] / "data" / "extracted_papers.json"
-ARXIV_API = "http://export.arxiv.org/api/query"
+ARXIV_API = "https://export.arxiv.org/api/query"
 ARXIV_ID_RE = re.compile(r"^\d{4}\.\d{4,5}$")
 
 # arXiv API namespace
