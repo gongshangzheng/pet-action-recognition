@@ -103,6 +103,18 @@ def main() -> None:
         fi += 1
     vw.release()
     cap.release()
+    # 抖动量化：各轨迹帧间中心位移与尺寸变化（px/帧）
+    def jitter(trk, key):
+        cs, ss, ds = [], [], []
+        for a, b in zip(trk, trk[1:]):
+            ba = a.get(key, a["box"]); bb = b.get(key, b["box"])
+            cs.append(np.hypot((ba[0]+ba[2])/2 - (bb[0]+bb[2])/2,
+                               (ba[1]+ba[3])/2 - (bb[1]+bb[3])/2))
+            ss.append(abs(max(ba[2]-ba[0], ba[3]-ba[1]) - max(bb[2]-bb[0], bb[3]-bb[1])))
+        return (f"中心Δ mean={np.mean(cs):.1f} p95={np.percentile(cs,95):.1f} | "
+                f"尺寸Δ mean={np.mean(ss):.1f} p95={np.percentile(ss,95):.1f}")
+    print(f"[interp-only]       {jitter(nc, 'box')}", flush=True)
+    print(f"[motion-corrected]  {jitter(mc, 'camera_box')}", flush=True)
     print(f"frames={fi} -> {args.out}", flush=True)
 
 
