@@ -76,3 +76,6 @@ work_dirs/
 # 二进制包不入库（2026-09-15 用户裁定）
 *.zip
 data/papers.db
+
+# live 模块演示资源（未跟踪；live/ 路径下 demos/ 不入库）
+/live/
