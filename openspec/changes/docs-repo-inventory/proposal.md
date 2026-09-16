@@ -7,7 +7,13 @@
 ## What Changes
 
 - **新增资产盘点主文档**（`management/docs/repo-inventory.md`）：作为全库唯一入口，盘点六类资产——数据资产（datasets/、data/、NAS、远程 pet 服务器）、训练/评测产物（results/training、speedrun、batch、gate0a/0b/4、skeleton、live）、代码模块（server 8 路由、scripts 27 个、petlib、web 28 页面、configs 11 个）、论文模块、项目管理数据、openspec change 全景（8 活跃 + 16 归档）。
-- **文档整合统一**：9 篇 wiki + 2 篇 plans 按主题归并为一套编号文档（训练体系 / 数据与标注 / Live 模块 / 研究结论与坑 / 第三方借鉴 / 研究路线），全部带 frontmatter（title/date/id/tags/summary）。
+- **文档整合统一**：9 篇 wiki + 2 篇 plans 按主题归并为一套编号文档（10 篇，id 1–10）：仓库资产盘点 / 数据集全景 / 模型 / 训练体系 / Live 模块 / 算法架构 / 规划与进度 / 研究结论与踩坑 / 第三方借鉴 / 交接与协作指南，全部带 frontmatter。
+- **新增算法架构文档**（《算法架构》）：首次系统说明全链路算法设计——宠物定位与跟踪（GDINO 多 prompt 抽样+插值+运动校正 v5，及 ByteTrack/GatedTracker 否决理由）→ 跟随视角生成（follow_adaptive 512²）→ 动作表征（四候选选型+UMAP/HDBSCAN 行为簇+路线 W CatHuBERT+四闸门）→ 身份识别与提取（FLOAT×TiTok 身份-动作解耦 tokenizer；DINOv2+FAISS 登记-检索）→ 应用出口（抽查报告/异常检测）；每阶段附决策 ID（D1–D9）回查表。
+- **新增规划分类文档**（《规划与进度》）：把散在 change 里的未来计划按四分类说明——主线执行序（batch-followcam→video-feature-latent→spot-check-cli）/ 条件启动（tracker-selection、registry-retrieval、behavior-anomaly，写明触发条件）/ 研究型独立立项（identity-action-tokenizer）/ 已归档（16 个索引）；附闸门里程碑与二期 P0–P2 对照。
+- **新增三篇事实型文档**（内容取自 results/ 产物与 openspec change 实录，非泛泛综述）：
+  - 《数据集全景》：当前所有数据集——cats v1（552MB 蒋/崔两批标注）、pet_action_mammal_v0（七类 ~3h）、NAS UCF101（13320 段）、quadruped_action（占位）、34 段白天事件片段（总素材仅 14.7 分钟的语料事实）、kinetics400（烟测）——各自的来源/规模/结构/label_map/位置/状态/用途，并全文迁入标注类目规范。
+  - 《模型》：**重要模型逐个条目，每个固定两段式——简介 + 实测结果**：分类模型（videomaev2×2 error、slowonly/tsm/timesformer 各 1 run、tsn-resnet50 k400 烟测 top1 0.77）、关键点模型（HRNet/ResNet-101/SuperAnimal 及裁剪裁定）、检测模型（GroundingDINO/YOLO11/OWLv2 及撤下裁定）；registry 其余未实测模型明确标注。
+  - 训练/测试结论与重要数据按 design D6 四要素登记：日期/来源/关键数字/证据路径。
 - **删除过时文档**（共 4 篇，关键信息先整合）：
   - `management/docs/tasks.md`（30 行，7 月后未更新，任务管理已迁移到 `management/projects/*/tasks.json`）
   - `docs/plans/2026-07-13-mmaction2-training-integration-plan.md`（已落地：training 模块 + registry 已上线，落地后决策回放进训练体系文档）
@@ -31,6 +37,6 @@
 
 ## Impact
 
-- **文件**：`management/docs/`（新增 8 篇、删除被吸收的旧篇）、`docs/plans/`（清空）、`README.md`（重写）、`datasets/quadruped_action/README.md`（保留不动）
+- **文件**：`management/docs/`（新增 10 篇、删除被吸收的旧篇）、`docs/plans/`（清空）、`README.md`（重写）、`datasets/quadruped_action/README.md`（保留不动）
 - **Web Wiki 页面**：management 路由递归扫描 `management/docs/`，文件增删自动反映到前端导航，无需改代码
 - **不受影响**：所有代码、数据库、数据集、results 产物、`.claude/skills/`（agent 操作指南，与 wiki 分工见 design）、AGENTS.md（agent 专用，保留独立维护）

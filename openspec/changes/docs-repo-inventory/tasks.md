@@ -1,25 +1,31 @@
 # Tasks: docs-repo-inventory
 
-## 1. 资产盘点（1 号文档素材定稿）
+## 1. 素材取证（写文档前的事实核对）
 
-- [ ] 1.1 复核数据资产数字：datasets/cats 规模与两批标注、quadruped_action ann list 行数、papers.db（239 篇/519 类目）、NAS UCF101 路径
-- [ ] 1.2 复核产物数字：results/training（metrics/test_results 关键指标）、speedrun/results.json 日期、batch 34 段与告警 3 段、gate0a/0b/4、skeleton、live.db
-- [ ] 1.3 整理 scripts/ 27 个脚本按用途分组清单（推理/训练/批处理/关键点/其他）与顶层散落文件清单
+- [ ] 1.1 数据资产取证：datasets/cats 8 个 zip 清单与大小、quadruped_action ann list 行数、papers.db（239 篇/519 类目）、extracted/researched JSON 内容抽样、NAS UCF101 路径、pet 远程已知路径（checkpoints、~/results/batch）
+- [ ] 1.2 产物取证：results/ 逐子目录记录路径+生成日期+关键数字——training（metrics.json 5 run、test_results.json k400 指标）、speedrun（results.json）、batch（batch_report.md 三率+3 告警结案）、gate0a/0a_v2/0a_v3/0b/4、skeleton、live.db
+- [ ] 1.3 代码取证：scripts/ 27 个逐个一句话用途、server 8 路由、petlib 7 模块、web 28 页面分组、configs/ 11 文件用途
+- [ ] 1.4 管线取证：精读 openspec 总管（design D1–D9 裁决与决策索引、tasks §2 主线序/§4 延后旁支登记）+ 7 个子 change（任务/闸门/状态），产出「结论与关键数字清单」（D6 四要素）+「算法阶段素材清单」（每阶段算法/输入输出/否决方案及理由），供 2.3/2.6/2.7/2.8 使用
 
-## 2. 撰写 7 篇统一文档（management/docs/，id 1–7，frontmatter 齐全）
+## 2. 撰写 10 篇统一文档（management/docs/，id 1–10，frontmatter 齐全；逐节按 design D4 对应规格写）
 
-- [ ] 2.1 repo-inventory.md（id:1 仓库资产盘点）：按 design D4 六类资产 + 三级位置标注 + 待清理项附录 + 指向 2–7 的索引，头部标注盘点基准日 2026-09-16
-- [ ] 2.2 training-guide.md（id:2）：吸收 mmaction2-overview + model-onboarding 全部有效内容 + 2026-07-13 计划的落地决策回顾
-- [ ] 2.3 data-and-annotation.md（id:3）：吸收 detection-annotation-taxonomy + 数据集现状（cats/ quadruped / NAS）
-- [ ] 2.4 live-module.md（id:4）：整合两篇 live plan 的落地现状与关键设计决策（不保留计划体例）
-- [ ] 2.5 research-notes.md（id:5）：吸收 keypoint-extraction-pitfalls 全部结论与复活条件分析
-- [ ] 2.6 third-party-notes.md（id:6）：合并两篇第三方借鉴文档，保留"可借鉴/反模式"
-- [ ] 2.7 research-roadmap.md（id:7）：吸收 2026-08-15 二期计划（KPI+路线+现状对照）+ openspec 8 活跃/16 归档 change 索引
+- [ ] 2.1 repo-inventory.md（D4.1）：头部基准日+位置图例+导航表；§1 数据资产表、§2 产物资产表、§3 代码模块、§4 论文、§5 管理数据、§6 openspec 一览、§7 外部资产、附录 A 散落文件/B 空目录
+- [ ] 2.2 datasets.md（D4.2）：§1 总览表、§2–7 六个数据集逐个（含 14.7 分钟语料事实、activity 伞类问题）、§8 标注规范全文迁入、§9 label_map/ann_file 约定
+- [ ] 2.3 models.md（D4.3）：重要模型逐个条目（两段式：简介 + 实测结果）——分类 5 个（含 5 run 与 k400 烟测全套指标）、关键点 3 个（裁剪裁定）、检测 3 个（撤下裁定）、§5 registry 全表标注未实测项、§6 结论汇总（D6 四要素）
+- [ ] 2.4 training-guide.md（D4.4）：机制/四模式/registry/configs 表/checkpoint/远程闭环 + 2026-07-13 计划历史决策回顾
+- [ ] 2.5 live-module.md（D4.5）：落地架构（表结构/stream_token/SSE 管线）+ 关键决策（不保留计划体例）
+- [ ] 2.6 algo-architecture.md（D4.6）：§0 全链路架构图（五阶段，各标输入/输出/算法/代码落点/决策 ID）、§1–5 逐阶段设计（含否决方案与理由）、§6 跨切面（双环境/petlib/决策索引表）
+- [ ] 2.7 pipeline-roadmap.md（D4.7）：§1 未来计划四分类表（主线序/条件启动含触发条件/研究型/已归档）、§2 主线逐 change、§3 闸门与里程碑、§4 二期 P0–P2 对照
+- [ ] 2.8 lessons.md（D4.8）：关键点五大问题全文、K400 共性、复活条件原文、用户裁定时间线表（含运动校正 v5 参数）
+- [ ] 2.9 third-party-notes.md（D5）：两项目各八节模板（定位来源/技术栈/目录导览/借鉴点→本仓库落地映射/反模式/运行方式/同步策略/交叉引用）
+- [ ] 2.10 handover-guide.md（D7）：六节（速览快照/环境搭建/工作纪律/协作约定/FAQ/安全红线），凭证只写"去哪找"不写值
 
 ## 3. 信息保全核对（删除前置闸门）
 
-- [ ] 3.1 按 design D3 决策表逐篇对照：11 篇待删文档的结论/数据/决策/路径/命令在新文档均有落点，核对结果记录到本 change（notes 追加或 PR 描述）
-- [ ] 3.2 确认 tasks.md（wiki）无 tasks.json 之外的有价值信息；有则补入 7 号文档后再删
+- [ ] 3.1 按 D3 决策表逐篇对照：11 篇待删文档的结论/数据/决策/路径/命令在新文档均有落点，核对结果记录在本 change
+- [ ] 3.2 确认 wiki tasks.md 无 tasks.json 之外的有价值信息；有则补入 6 号文档后再删
+- [ ] 3.3 D6 已知重要数据清单逐条核对：新文档中的数字与 json/md 原文一致（k400 指标、三率、14.7 分钟、0.367、4/1859、v5 参数、5 run 状态）
+- [ ] 3.4 算法架构文档与 change 原文一致性抽查：五阶段算法描述、否决理由、决策 ID 引用与各 design 原文一致；规划四分类与总管 tasks §2/§4 登记一致
 
 ## 4. 删除与重写（独立 commit，可单点回滚）
 
@@ -29,6 +35,7 @@
 
 ## 5. 验证
 
-- [ ] 5.1 打开 web（localhost:3000）Wiki 页：7 篇按 id 1–7 排序、旧文档消失、frontmatter 标题/摘要正确
-- [ ] 5.2 全库文档清点：docs/ 仅剩 docx；management/docs/ = 7 篇新文档；`git log` 三个 commit 独立可 revert
-- [ ] 5.3 提交剩余 change 目录更新（tasks 勾选）并收尾汇报
+- [ ] 5.1 打开 web（localhost:3000）Wiki 页：10 篇按 id 1–10 排序、旧文档消失、frontmatter 标题/摘要正确
+- [ ] 5.2 全库文档清点：docs/ 仅剩 docx；management/docs/ = 10 篇新文档；`git log` 删除/重写 commit 独立可 revert
+- [ ] 5.3 以新人视角走查 handover-guide：引用的每条路径/脚本/skill 均存在，全文无明文凭证
+- [ ] 5.4 提交 change 目录更新（tasks 勾选）并收尾汇报
