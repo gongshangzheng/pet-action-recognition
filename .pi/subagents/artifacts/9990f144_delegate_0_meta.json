@@ -1,0 +1,164 @@
+{
+  "runId": "9990f144",
+  "agent": "delegate",
+  "task": "你是文献+代码精读员。项目：宠物（猫）动作识别，正在设计身份-动作解耦视频 tokenizer。需要摸清 tokenizer 家族各方案的基座选择与开源情况。\n只读调研，不要修改任何文件。工作目录 /Users/zhengxinyu/pet-action-recognition。\n\n读以下材料：\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2412.13061_vidtok.txt     (VidTok, Microsoft, 开源)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2412.10958_softvqvae.txt  (SoftVQ-VAE, 连续 1D tokenizer)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2505.17011_adaptok.txt    (AdapTok, 自适应 token 预算)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2502.13967_flextok.txt    (FlexTok, Apple, 变长 token)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2602.04202_vtok.txt       (VTok, 关键帧+残差)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2505.12053_vfrtok.txt     (VFRTok, 变帧率)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/vidtok/ /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/softvqvae/ /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/adaptok/ /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/flextok/\n\n要回答的问题（逐条给出原文/代码证据，标注文件与行号或章节号）：\n1. 各方案的基座架构（backbone、token 数、量化方式：VQ / FSQ / SoftVQ / 连续 / 变长）。做一张对比表。\n2. 量化方式对比：SoftVQ-VAE 与 VQ/FSQ 的区别、码本塌缩风险、对下游'聚类/线性探针'的友好度。\n3. 哪些仓库可直接运行且有权重（VidTok / SoftVQ-VAE / AdapTok / FlexTok），给出关键文件路径、训练脚本、许可证。\n4. VTok 的'关键帧空间特征 + 逐帧残差 token'与 TivTok 的 TIV/TV 有何异同？VTok 是否开源？\n5. AdapTok 的自适应 token 预算机制怎么工作，是否值得作为 v2 增强。\n6. 对我们（身份=整段视频聚合、动作=逐帧）而言，哪套基座最适合改造，理由。\n\n输出：结构化中文简报+对比表，每条结论必须有出处（文件名+行号/章节）。不确定标注'论文/代码未说明'。不要臆测。",
+  "exitCode": 0,
+  "usage": {
+    "input": 102475,
+    "output": 30144,
+    "cacheRead": 4140544,
+    "cacheWrite": 0,
+    "cost": 0.03438034320000001,
+    "turns": 55
+  },
+  "model": "deepseek/deepseek-v4-flash",
+  "attemptedModels": [
+    "deepseek/deepseek-v4-flash"
+  ],
+  "modelAttempts": [
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 102475,
+        "output": 30144,
+        "cacheRead": 4140544,
+        "cacheWrite": 0,
+        "cost": 0.03438034320000001,
+        "turns": 55
+      }
+    }
+  ],
+  "durationMs": 313950,
+  "toolCount": 86,
+  "launchContractDigest": "7a43a0323b42ff14d9352259f1dfb1932730011d792b86e76c975f9a137d2613",
+  "launchResolvedExtensions": {
+    "version": 1,
+    "source": "launch-resolved",
+    "disableAmbientExtensions": false,
+    "runtime": [
+      "sha256:4bddb62f45a7a786"
+    ],
+    "configured": [],
+    "effective": [
+      "sha256:4bddb62f45a7a786"
+    ],
+    "omitted": {
+      "runtime": 0,
+      "configured": 0,
+      "effective": 0
+    }
+  },
+  "acceptance": {
+    "status": "attested",
+    "evidenceStatus": "attested",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "default lightweight attestation"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return a concise result and residual risks when applicable",
+          "evidence": [
+            "manual-notes",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "manual-notes",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "default lightweight attestation"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return a concise result and residual risks when applicable",
+        "evidence": [
+          "manual-notes",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "返回了结构化中文简报：§1 六方案基座/量化/token 数对比表，§2 SoftVQ-vs-VQ-vs-FSQ 三方向对比（机制/塌缩风险 U.R. 0.2% vs 99.8-100%/探针友好度），§3 四仓库可运行性+权重+许可证表，§4 VTok-vs-TivTok 同异+未开源实证，§5 AdapTok 机制+实测收益+v2 建议，§6 基座选型推荐+理由；每条结论均附 文件:行号，7 条不确定项单列；residualRisks 给出 7 项残余风险"
+        }
+      ],
+      "changedFiles": [],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [
+        {
+          "command": "grep/sed on third-party/refs/txt/*.txt (6 papers) for backbone/quantization/license/section anchors",
+          "result": "passed",
+          "summary": "提取全部关键行号与表格数据（VidTok Tab3 U.R.、SoftVQ Eq.4/Table5、AdapTok Eq.1-6/Algorithm1、TivTok SIF/IB、VTok Eq.13-17、VFRTok 无量化 AE）"
+        },
+        {
+          "command": "find/ls + git log + git remote on third-party/refs/repos/{vidtok,softvqvae,adaptok,flextok}",
+          "result": "passed",
+          "summary": "vidtok 6b18d25(microsoft/VidTok)、softvqvae f4d60a0(Hhhhhhao/continuous_tokenizer)、flextok 742f53d(apple/ml-flextok)；adaptok clone 为空（.git/HEAD -> refs/heads/.invalid，无 commit）"
+        },
+        {
+          "command": "head/LICENSE 检查 + grep -rn video on repos/softvqvae",
+          "result": "passed",
+          "summary": "VidTok=MIT、FlexTok=Sample Code License 1.1 + Apple ML Research Model License(均非商业)、SoftVQ-VAE 无 LICENSE 文件、AdapTok(MIT via API)；SoftVQ 仓库零 video 命中"
+        },
+        {
+          "command": "curl api.github.com / raw.githubusercontent.com / huggingface.co/api for AdapTok, VTok, VFRTok, VidTok, SoftVQVAE, flextok",
+          "result": "passed",
+          "summary": "核验：AdapTok MIT+scripts/*.sh+HF yeahhhh326/*；VTok 仓库仅 160B README『Code is coming soon (waiting for internal approval)』；VFRTok MIT+HF KwaiVGI/VFRTok；HF microsoft/VidTok 含 17+5 ckpt；SoftVQVAE/softvq-l-64 config.json 确认 num_latent_tokens=64/codebook 8192/tau 0.07"
+        }
+      ],
+      "validationOutput": [
+        "AdapTok Tab4: 512-token rFVD 509.95 -> 59.96（自适应三档全开），1024-token 37.13 -> 36.36；Tab5 延迟 50.9ms vs ElasticTok 571.7ms (11x)",
+        "VidTok Tab3: VQ-262144 U.R.=0.2% / FVD 960.5；FSQ-262144 U.R.=99.8% / FVD 160.1；Tab5 latent 5x32x32, 157M",
+        "SoftVQ: 256->32 token 时 VQ-S rFID 1.45->10.97，SoftVQ-S 0.80->1.24；K=16384 时 rFID 回退至 1.23；Fig.3a SoftVQ 线性探针在所有 token 数上优于 VQ-S/AE-S",
+        "TivTok Tab6: w/o SIF PSNR 19.67 / rFVD 1359.38（证明 TIV/TV scope 不可省）；Tab1 TivTok-T512 rFVD 12.65, 512 tokens"
+      ],
+      "residualRisks": [
+        "TivTok 未开源（论文无 code 链接、GitHub 无官方仓库）——SIF/IB 需按论文 §3.3-3.4 自行复现，无参考实现可对照，是最大工程风险",
+        "TivTok 量化器实现论文未说明（仅写 Q(·) 与 built upon SoftVQ-VAE），SoftVQ vs VQ/LFQ 选择需自行实验决定",
+        "VTok 未开源（仓库仅 README『waiting for internal approval』），其 token 离散化机制论文未说明，无法复用",
+        "FlexTok 代码与权重均为非商业许可（Sample Code License 1.1 / Apple ML Research Model License），在项目内不可作为实现基础，仅可参考思想",
+        "SoftVQ-VAE 仓库无 LICENSE（GitHub API license=None），法律上不可直接复制代码；只能移植算法或另写实现，用 HF 权重初始化",
+        "AdapTok 本地 clone 为空/损坏，仅通过 GitHub API 与 raw README 核验（MIT、scripts/*.sh、HF yeahhhh326/*、目录树），未逐行读其训练代码；训练脚本可用性未实测",
+        "SoftVQ-VAE 与 AdapTok 均无 256x256 长视频/猫语料实验；SoftVQ 是纯图像（仓库零 video 代码），移植到视频属本项目工程推断而非文献结论",
+        "本次未读 2406.07550_titok.txt 原文；若需 TiTok register-token 到 TivTok/SoftVQ 的谱系细节需补读"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "只读调研，未修改任何文件（changedFiles 为空）",
+      "reviewFindings": [
+        "no blockers",
+        "note: 项目 openspec/changes/identity-action-tokenizer/design.md T-A7 的『SoftVQ-VAE 开源权重（待查）』本次已查清——权重存在（HF SoftVQVAE/*），但仓库无许可证且仅图像域；建议改用 AdapTok(MIT) 骨架 + 自写 SoftVQ 量化器，避免许可证与图像域双重问题",
+        "note: design.md T-A3 默认 N_TIV=16 / N_TV=1~4 与 TivTok Tab4/Tab5 的实测区间（N_TIV 1/2/4/8；TIV:TV 比 1:3/1:1/3:1）方向一致，且 TivTok 实测 N_TIV=8 即可用（Tab4: 8 TIV → rFVD 28.96 vs 1 TIV → 92.09），N_TIV=16 属偏保守选择"
+      ],
+      "manualNotes": "任务要求的 4 个问题之外，另发现两条对选型有直接影响的事实：(1) AdapTok 本地仓库是空/损坏的 clone（无 commit），不能当成『本地已就绪的可复现代码』，需重新 clone VisionXLab/AdapTok（MIT）；(2) VTok 论文有网页与 GitHub 仓库名，但仓库只有一句『Code is coming soon (waiting for internal approval)』，因此问题 4 的『VTok 是否开源』答案是明确的否。另外，AdapTok 的 SVQ（stochastic VQ + straight-through）与 SoftVQ（全可微软分配）机制不同，若选 AdapTok 作骨架，身份通道的量化器应替换为 SoftVQ，否则会继承 VQ 类断梯度、影响 REPA 式对齐与线性探针。"
+    }
+  },
+  "effects": {
+    "fileMutation": {
+      "status": "not-applicable",
+      "expected": false,
+      "attempted": true
+    }
+  },
+  "transcriptPath": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/9990f144_delegate_0_transcript.jsonl",
+  "timestamp": 1789564562040
+}

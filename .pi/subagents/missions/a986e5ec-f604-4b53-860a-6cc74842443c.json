@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "id": "a986e5ec-f604-4b53-860a-6cc74842443c",
+  "title": "你是文献+代码精读员。项目：宠物（猫）动作识别，正在设计一个身份-动作解耦的视频 tokenizer。",
+  "objective": "你是文献+代码精读员。项目：宠物（猫）动作识别，正在设计一个身份-动作解耦的视频 tokenizer。\n只读调研，不要修改任何文件。工作目录 /Users/zhengxinyu/pet-action-recognition。\n\n读以下材料（论文已转纯文本，用 read 工具读；代码用 read/bash 探索）：\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2606.17590_tivtok.txt  (TivTok, 核心骨架来源)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2406.07550_titok.txt   (TiTok, 1D tokenizer 鼻祖)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/ti_tokenizer/         (TiTok 官方开源代码)\n\n要回答的问题（逐条给出原文/代码证据，标注文件与行号或章节号）：\n1. TivTok 的 SIF（Scope-Induced Factorization）在代码/论文里具体怎么实现？TIV tokens 和 TV tokens 的 attention scope 分别是什么？是否用 attention mask 实现？\n2. token 数量与维度：N_TIV、N_TV、hidden dim、patch size、位置编码（3D RoPE？）具体数值。\n3. encoder/decoder 的具体结构（层数、是否 ViT、解码器如何用 TIV+TV_t 重建第 t 帧，Invariant Broadcasting 怎么做）。\n4. 训练配方：损失组成与权重、优化器/LR/warmup/epoch、分辨率、数据（UCF101+K600 怎么用）、batch size。\n5. 量化方式（SoftVQ？VQ？连续？）以及 codebook 设置。\n6. ti_tokenizer 仓库里哪些代码可复用（1D tokenizer 的 bottleneck attention 实现、训练脚本、config 结构）？给出关键文件路径。\n7. TivTok 是否开源？若否，实现 SIF 的最小可行方案是什么。\n\n输出：结构化中文简报，每条结论必须有出处（文件名+章节/行号）。不确定的地方明确标注'论文未说明'。不要臆测。",
+  "status": "completed",
+  "createdAt": "2026-09-16T13:10:47.977Z",
+  "updatedAt": "2026-09-16T13:16:02.047Z",
+  "runs": [
+    {
+      "runId": "call_00_e6P3Skdo3yGp81xUkgxT9922",
+      "mode": "workflow",
+      "status": "completed",
+      "startedAt": "2026-09-16T13:16:02.047Z",
+      "completedAt": "2026-09-16T13:16:02.047Z",
+      "usage": {
+        "tokens": 578533
+      }
+    }
+  ],
+  "workflowChildren": [
+    {
+      "workflowRunId": "call_00_e6P3Skdo3yGp81xUkgxT9922",
+      "key": "tivtok",
+      "status": "completed",
+      "startedAt": "2026-09-16T13:10:48.007Z",
+      "updatedAt": "2026-09-16T13:15:19.226Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/b733f3ec/run-0/session.jsonl"
+      ],
+      "runId": "b733f3ec",
+      "agent": "delegate",
+      "task": "你是文献+代码精读员。项目：宠物（猫）动作识别，正在设计一个身份-动作解耦的视频 tokenizer。\n只读调研，不要修改任何文件。工作目录 /Users/zhengxinyu/pet-action-recognition。\n\n读以下材料（论文已转纯文本，用 read 工具读；代码用 read/bash 探索）：\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2606.17590_tivtok.txt  (TivTok, 核心骨架来源)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2406.07550_titok.txt   (TiTok, 1D tokenizer 鼻祖)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/ti_tokenizer/         (TiTok 官方开源代码)\n\n要回答的问题（逐条给出原文/代码证据，标注文件与行号或章节号）：\n1. TivTok 的 SIF（Scope-Induced Factorization）在代码/论文里具体怎么实现？TIV tokens 和 TV tokens 的 attention scope 分别是什么？是否用 attention mask 实现？\n2. token 数量与维度：N_TIV、N_TV、hidden dim、patch size、位置编码（3D RoPE？）具体数值。\n3. encoder/decoder 的具体结构（层数、是否 ViT、解码器如何用 TIV+TV_t 重建第 t 帧，Invariant Broadcasting 怎么做）。\n4. 训练配方：损失组成与权重、优化器/LR/warmup/epoch、分辨率、数据（UCF101+K600 怎么用）、batch size。\n5. 量化方式（SoftVQ？VQ？连续？）以及 codebook 设置。\n6. ti_tokenizer 仓库里哪些代码可复用（1D tokenizer 的 bottleneck attention 实现、训练脚本、config 结构）？给出关键文件路径。\n7. TivTok 是否开源？若否，实现 SIF 的最小可行方案是什么。\n\n输出：结构化中文简报，每条结论必须有出处（文件名+章节/行号）。不确定的地方明确标注'论文未说明'。不要臆测。",
+      "completedAt": "2026-09-16T13:15:19.226Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/b733f3ec/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-09-16T13:15:19.226Z",
+        "status": "completed"
+      }
+    },
+    {
+      "workflowRunId": "call_00_e6P3Skdo3yGp81xUkgxT9922",
+      "key": "float_lia",
+      "status": "completed",
+      "startedAt": "2026-09-16T13:10:48.043Z",
+      "updatedAt": "2026-09-16T13:14:43.588Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/3257be6d/run-0/session.jsonl"
+      ],
+      "runId": "3257be6d",
+      "agent": "delegate",
+      "task": "你是文献+代码精读员。项目：宠物（猫）动作识别，正在设计身份-动作解耦视频 tokenizer，其中动作通道要用 FLOAT/LIA 的正交运动基。\n只读调研，不要修改任何文件。工作目录 /Users/zhengxinyu/pet-action-recognition。\n\n读以下材料：\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2412.01064_float.txt  (FLOAT, ICCV 2025)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2203.09043_lia.txt     (LIA, ICLR 2022, FLOAT 的正交基来源)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/float/               (FLOAT 官方开源代码)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/lia/                 (LIA 官方开源代码)\n\n要回答的问题（逐条给出原文/代码证据，标注文件与行号或章节号）：\n1. 正交运动基到底怎么实现的？LIA 说 'implement D_m as a learnable matrix and apply Gram-Schmidt during each forward pass'——请找到代码里的具体位置（文件+行号）并给出实现细节（是 torch.nn.utils.parametrizations.orthogonal？手写 Gram-Schmidt？每次 forward 调用？）。\n2. 潜空间分解 w_S = w_{S→r}(身份) + w_{r→S}(运动) 在代码里怎么落地？两个分量分别由什么产生（编码器输出还是线性层）？\n3. 运动系数 λ 如何提取（闭式内积？）；d 和 M 的具体数值；代码里的对应参数名。\n4. FLOAT 相对 LIA 改了什么（除面部组件损失外）？FLOAT 的 motion latent auto-encoder 训练目标完整列表与权重。\n5. LIA/FLOAT 是否依赖光流（flow field）？如果我们要把正交运动基移植到'视频 tokenizer 的动作 latent'（不用光流、不用 warp），哪些部分可直接借用、哪些必须改？\n6. 两个仓库的依赖与可运行性（是否可 pip 安装、权重是否可得、许可证）。\n\n输出：结构化中文简报，每条结论必须有出处（文件名+行号/章节）。不确定标注'论文/代码未说明'。不要臆测。",
+      "completedAt": "2026-09-16T13:14:43.588Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/3257be6d/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-09-16T13:14:43.588Z",
+        "status": "completed"
+      }
+    },
+    {
+      "workflowRunId": "call_00_e6P3Skdo3yGp81xUkgxT9922",
+      "key": "dera_larp",
+      "status": "completed",
+      "startedAt": "2026-09-16T13:10:48.053Z",
+      "updatedAt": "2026-09-16T13:15:00.986Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/eeafdfec/run-0/session.jsonl"
+      ],
+      "runId": "eeafdfec",
+      "agent": "delegate",
+      "task": "你是文献+代码精读员。项目：宠物（猫）动作识别，正在设计身份-动作解耦视频 tokenizer；DeRA 是我们的对照方案（双流 + 显式对齐）。\n只读调研，不要修改任何文件。工作目录 /Users/zhengxinyu/pet-action-recognition。\n\n读以下材料：\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2512.04483_dera.txt   (DeRA, 2025-12)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2410.21264_larp.txt   (LARP, DeRA 的基座)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/larp/               (LARP 官方开源代码)\n\n要回答的问题（逐条给出原文/代码证据，标注文件与行号或章节号）：\n1. DeRA 的双流结构细节：appearance queries（第一帧）+ motion queries（全片段）各多少 token、共享 encoder 怎么实现（两路拼接后过同一 encoder？）、拼接后如何量化。\n2. 显式对齐损失的具体形式（负余弦相似度）、对齐目标（DINOv3 图像 / InternVideo2 视频）的取特征层、MLP 投影结构、损失权重。\n3. SACP（Symmetric Alignment-Conflict Projection）的算法伪代码与实现要点，梯度冲突如何检测与重加权。\n4. LARP 的 1D tokenizer 基座结构（bottleneck attention、token 数、量化方式），代码里关键实现文件路径。\n5. LARP 仓库的可用性：依赖、预训练权重、许可证、训练脚本（UCF-101 怎么跑）。\n6. 如果我们要复现 DeRA 式的显式对齐（外观↔DINOv3，动作↔视频基础模型），从 LARP 仓库能直接复用哪些代码，缺什么。\n\n输出：结构化中文简报，每条结论必须有出处（文件名+行号/章节）。不确定标注'论文/代码未说明'。不要臆测。",
+      "completedAt": "2026-09-16T13:15:00.986Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/eeafdfec/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-09-16T13:15:00.986Z",
+        "status": "completed"
+      }
+    },
+    {
+      "workflowRunId": "call_00_e6P3Skdo3yGp81xUkgxT9922",
+      "key": "bgremoval",
+      "status": "completed",
+      "startedAt": "2026-09-16T13:10:48.063Z",
+      "updatedAt": "2026-09-16T13:15:00.050Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/12f51386/run-0/session.jsonl"
+      ],
+      "runId": "12f51386",
+      "agent": "delegate",
+      "task": "你是文献+代码精读员。项目：宠物（猫）动作识别，需要一个'又快又好'的猫本体抠像（背景移除，只留猫）方案，将对全量语料批处理。\n只读调研，不要修改任何文件。工作目录 /Users/zhengxinyu/pet-action-recognition。\n\n读以下材料：\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2408.00714_sam2.txt      (SAM 2)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2108.11515_rvm.txt       (Robust Video Matting, RVM)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2401.03407_birefnet.txt  (BiRefNet, 图像二分分割 SOTA)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/sam2/\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/rvm/\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/birefnet/\n\n要回答的问题（逐条给出原文/代码证据，标注文件与行号或章节号）：\n1. 三者的输入要求与输出形式：SAM2（是否需要 prompt？box 可用吗？输出 mask 还是 alpha？视频传播怎么用）；RVM（是否需要 trimap？输出 alpha？训练域是人物吗）；BiRefNet（输出什么、是否逐帧）。\n2. 速度对比：三者论文报告的 FPS/延迟（注明硬件与分辨率），对'批处理数千段视频'哪个更合适。\n3. 时序一致性：SAM2 的 memory attention、RVM 的 temporal guidance、BiRefNet 的逐帧问题——对'消除帧间闪烁'哪个最好。\n4. 动物/毛发泛化：论文或代码里是否提到对非人类（动物）对象的效果？RVM 是人物训练的吗，对猫是否可靠？SAM2 的零样本对象泛化如何？\n5. 代码可运行性：三个仓库的依赖、权重下载方式（含镜像可达性）、许可证、最小调用示例（给出关键函数/文件路径）。\n6. 综合推荐：对'猫本体抠像、消除背景运动、批处理数千段视频'，推荐哪个为主、哪个为备选，理由与风险。\n\n输出：结构化中文简报，每条结论必须有出处（文件名+行号/章节）。不确定标注'论文/代码未说明'。不要臆测。",
+      "completedAt": "2026-09-16T13:15:00.050Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/12f51386/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-09-16T13:15:00.050Z",
+        "status": "completed"
+      }
+    },
+    {
+      "workflowRunId": "call_00_e6P3Skdo3yGp81xUkgxT9922",
+      "key": "tokenizer_family",
+      "status": "completed",
+      "startedAt": "2026-09-16T13:10:48.073Z",
+      "updatedAt": "2026-09-16T13:16:02.044Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/9990f144/run-0/session.jsonl"
+      ],
+      "runId": "9990f144",
+      "agent": "delegate",
+      "task": "你是文献+代码精读员。项目：宠物（猫）动作识别，正在设计身份-动作解耦视频 tokenizer。需要摸清 tokenizer 家族各方案的基座选择与开源情况。\n只读调研，不要修改任何文件。工作目录 /Users/zhengxinyu/pet-action-recognition。\n\n读以下材料：\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2412.13061_vidtok.txt     (VidTok, Microsoft, 开源)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2412.10958_softvqvae.txt  (SoftVQ-VAE, 连续 1D tokenizer)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2505.17011_adaptok.txt    (AdapTok, 自适应 token 预算)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2502.13967_flextok.txt    (FlexTok, Apple, 变长 token)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2602.04202_vtok.txt       (VTok, 关键帧+残差)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/txt/2505.12053_vfrtok.txt     (VFRTok, 变帧率)\n- /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/vidtok/ /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/softvqvae/ /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/adaptok/ /Users/zhengxinyu/pet-action-recognition/third-party/refs/repos/flextok/\n\n要回答的问题（逐条给出原文/代码证据，标注文件与行号或章节号）：\n1. 各方案的基座架构（backbone、token 数、量化方式：VQ / FSQ / SoftVQ / 连续 / 变长）。做一张对比表。\n2. 量化方式对比：SoftVQ-VAE 与 VQ/FSQ 的区别、码本塌缩风险、对下游'聚类/线性探针'的友好度。\n3. 哪些仓库可直接运行且有权重（VidTok / SoftVQ-VAE / AdapTok / FlexTok），给出关键文件路径、训练脚本、许可证。\n4. VTok 的'关键帧空间特征 + 逐帧残差 token'与 TivTok 的 TIV/TV 有何异同？VTok 是否开源？\n5. AdapTok 的自适应 token 预算机制怎么工作，是否值得作为 v2 增强。\n6. 对我们（身份=整段视频聚合、动作=逐帧）而言，哪套基座最适合改造，理由。\n\n输出：结构化中文简报+对比表，每条结论必须有出处（文件名+行号/章节）。不确定标注'论文/代码未说明'。不要臆测。",
+      "completedAt": "2026-09-16T13:16:02.044Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/9990f144/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-09-16T13:16:02.044Z",
+        "status": "completed"
+      }
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/b733f3ec_delegate_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/b733f3ec_delegate_0_transcript.jsonl",
+      "description": "Child transcript"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/3257be6d_delegate_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/3257be6d_delegate_0_transcript.jsonl",
+      "description": "Child transcript"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/eeafdfec_delegate_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/eeafdfec_delegate_0_transcript.jsonl",
+      "description": "Child transcript"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/12f51386_delegate_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/12f51386_delegate_0_transcript.jsonl",
+      "description": "Child transcript"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/9990f144_delegate_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/9990f144_delegate_0_transcript.jsonl",
+      "description": "Child transcript"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/Users/zhengxinyu/pet-action-recognition",
+  "ownerSessionId": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2.jsonl",
+  "summary": "Workflow completed.\n\nReturn:\n[\n  {\n    \"key\": \"tivtok\",\n    \"output\": \"# TivTok / TiTok 精读简报（只读调研）\\n\\n**材料**：`third-party/refs/txt/2606.17590_tivtok.txt`（831 行，全文含参考文献）、`2406.07550_titok.txt`、`refs/repos/ti_tokenizer/`；旁证：`refs/txt/2412.10958_softvqvae.txt`、`refs/repos/softvqvae/`（TivTok 的底座 SoftVQ-VAE）。\\n**引用约定**：txt 行号 = 纯文本提取行（双栏排版被重排，单行常混左右栏），故同时给章节号。**所有\\\"推算\\\"均明确标注，未标注者均为原文/代码直述。**\\n\\n---\\n\\n## 1. SIF 的实现方式与 TIV/TV attention scope\\n\\n**原文定义（§3.3，txt L252–300）**\\n- TIV：\\\"each TIV token attends to all frame patches {Xt} as well as all TV tokens\\\"（txt L252–268）\\n- TV：\\\"each TV token at time step t has only local visibility, restricted to its own frame patches Xt, the TIV tokens, and itself\\\"（txt L269–271）\\n- 两个 key-value scope（Eq.3，txt L273–276）：\\n  - `G = [Z_TIV, Z_TV^(1), …, Z_TV^(T), X_1, …, X_T]`（TIV query 的全局可见集）\\n  - `L_t = [Z_TIV, Z_TV^(t), X_t]`（TV query 的帧局部可见集）\\n- 更新式（Eq.4，txt L286–289）：`Z'_TIV = Attn(Z_TIV, G)`；`Z_TV^(t)' = Attn(Z_TV^(t), L_t)`，其中 `Attn(A,B)` = A 提供 query、**只有 B 作 key/value**。\\n- 复杂度（txt L271–274）：`O(T²·(N_TIV+N_TV))` → `O(T²·N_TIV + T·N_TV)`。\\n- 关键设计意图：\\\"the TIV/TV factorization is induced by the architecture rather than imposed through explicit supervision\\\"（txt L291–295）。\\n- 明确**否定 causal mask**：\\\"Using causal masking for TV tokens may appear suitable for autoregressive generation, but it would allow TV tokens to absorb cross-frame information that overlaps with the TIV tokens\\\"（txt L296–299）。\\n- 消融代价：w/o SIF → PSNR 19.67 / SSIM 0.5691 / rFVD 1359.38（Table 6，txt L654–662），与 w/o IB（17.69 / 3694.34）同量级崩塌，作者称两者\\\"mutually dependent\\\"（txt L590–598）。\\n\\n**是否用 attention mask 实现？**\\n- **论文全文没有出现\\\"attention mask / masked attention\\\"用于 SIF 的表述**（grep 全文只有 txt L563 的 \\\"motion masks\\\"，指被批评的 reference-frame 类方法）。官方代码未发布（见 §7），**故实现载体论文未说明**。\\n- 可推断的硬约束（**推断**）：两类 token 在**同一个 encoder、共享同一组层**里（Eq.3/4 是同一组更新式、且 G 包含 TV tokens，说明 TIV 与 TV 的表示在同一序列里互相可见），因此 SIF 只能通过\\\"把某些 key/value 对屏蔽掉\\\"实现——即 **additive/boolean attention mask，或按 query 分组的分段 atten..."
+}
