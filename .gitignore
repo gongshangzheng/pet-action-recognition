@@ -54,6 +54,9 @@ web/node_modules/
 web/dist/
 web/package-lock.json
 
+# 根级 npm 空壳 stub 防复发（2026-09-15 清理后）
+/package-lock.json
+
 # Python virtual env (server)
 server/__pycache__/
 server/**/__pycache__/
@@ -61,8 +64,6 @@ server/.venv/
 *.egg-info/
 .playwright-mcp/
 third-party/
-*.zip
-/live/
 
 # papers db backup files
 data/*.bak*
