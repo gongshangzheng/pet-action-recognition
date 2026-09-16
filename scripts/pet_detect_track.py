@@ -66,7 +66,11 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--off-alpha", type=float, default=0.6,
                     help="偏移场 EMA 系数（v4 相机路径）")
     ap.add_argument("--off-max-v", type=float, default=0.05,
-                    help="偏移限速（帧宽比例/帧）")
+                    help="偏移限速（帧宽比例/帧，平移通道）")
+    ap.add_argument("--off-alpha-size", type=float, default=0.15,
+                    help="尺寸偏移 EMA（慢于平移，压变焦呼吸）")
+    ap.add_argument("--off-max-v-size", type=float, default=0.02,
+                    help="尺寸偏移限速（帧宽比例/帧）")
     ap.add_argument("--no-motion-correct", action="store_true",
                     help="关闭逐帧运动校正（消融对照用，任务 1.2）")
     return ap.parse_args()
@@ -152,9 +156,11 @@ def main() -> None:
     MIN_COVER_RATIO = 0.2  # 前景对框覆盖度门槛（0.35 会拦住快速移动时的合法校正）
     corrected = np.zeros(T, dtype=bool)
     track = []
+    prev_hit = False  # 时序一致性门控：需连续两帧前景命中（滤单帧红外噪声）
     for i in range(T):
         box = smooth[i].copy()
         is_sampled = (i % args.sample_stride == 0)
+        hit_now = False
         if not args.no_motion_correct and not is_sampled and i >= WARMUP:
             fg = bg.apply(frames[i], learningRate=args.bg_lr)
             fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN,
@@ -176,7 +182,8 @@ def main() -> None:
                     best = (cbx, cby, cbw, cbh)
             if best is not None and best_inter > 0:
                 cover = best_inter / max(1.0, bw * bh)
-                if cover >= MIN_COVER_RATIO:
+                hit_now = cover >= MIN_COVER_RATIO
+                if hit_now and prev_hit:
                     bx, by, bw2, bh2 = best
                     # 只扩不缩：并集，四边永不内收（防 v1 静止猫切切切）
                     ux1, uy1 = min(x1, bx), min(y1, by)
@@ -190,6 +197,7 @@ def main() -> None:
                     if not np.allclose(new, box, atol=0.5):
                         corrected[i] = True
                         box = new
+        prev_hit = hit_now
         track.append({
             "frame": i,
             "box": [round(float(v), 1) for v in box],
@@ -215,14 +223,21 @@ def main() -> None:
         i = rec["frame"]
         raw_off[i] = np.array(rec["box"]) - smooth[i]  # 非校正帧为 0
 
-    max_ov = args.off_max_v * W
+    # v6：偏移场拆平移(x1,y1)/缩放(x2,y2 视为 w,h 增量)双通道——缩放重阻尼压变焦呼吸
+    max_vc = args.off_max_v * W
+    max_vs = args.off_max_v_size * W
     off = np.zeros((T, 4), dtype=np.float64)
     curv = np.zeros(4)
     for i in range(T):
         if sampled_mask[i]:
             curv = np.zeros(4)  # 锚点处强制归零 → camera_box ≡ interp-only
         tgt = raw_off[i] * w[i]
-        curv = curv + args.off_alpha * np.clip(tgt - curv, -max_ov, max_ov)
+        step = np.clip(tgt - curv, np.array([-max_vc, -max_vc, -max_vs, -max_vs]),
+                       np.array([max_vc, max_vc, max_vs, max_vs]))
+        curv[0] += args.off_alpha * step[0]
+        curv[1] += args.off_alpha * step[1]
+        curv[2] += args.off_alpha_size * step[2]
+        curv[3] += args.off_alpha_size * step[3]
         off[i] = curv
     for rec in track:
         i = rec["frame"]
