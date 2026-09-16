@@ -5,7 +5,7 @@
 > ## 子 change 管理规则（2026-09-16 增补）
 > 1. **注册制**：每新建一个子 change，必须同步登记进 §2 路线图表（含编号/依赖/状态），漏登即违规
 > 2. **状态机**：`⏸️ 延后/条件` → `⏳ 待前置` → `🔄 进行中` → `✅ 已归档`；状态只在此表更新
-> 3. **顺序纪律**：主线子 change 严格按编号顺序；🔬 研究型子 change **不阻塞主线**（可与主线并行或延后），启动需用户指定
+> 3. **顺序纪律**：主线子 change 严格按编号顺序；🔬 研究型子 change 仍按编号上线（2026-09-16 裁定：encoder 优先于下游消费方；研究型子 change 升主线的判定权在用户）
 > 4. **归档闭环**：子 change 全任务 [x] + 用户验收 → `openspec archive` → 本表状态改"✅ 已归档"并注明归档名
 > 5. **执行机**：pet（plf 环境）；每次 GPU 任务前 `nvidia-smi` 查占用；数据产物只写项目路径
 
@@ -29,9 +29,9 @@
 
 - [x] 2.1 multi-object-detect-gate 验收并 archive（2026-09-15；主 spec motion-pipeline 建立）
 - [ ] 2.2 batch-followcam-extraction 归档（34/34 完成 + 告警结案，仅差归档动作）
-- [ ] 2.3 video-feature-latent 执行（任务 1.1 选型实验起步）→ 验收 → archive
-- [ ] 2.4 spot-check-cli 执行 → 验收 → archive
-- [x] 2.5 identity-action-tokenizer 已创建登记（⏸️ 条件启动，见上表）
+- [ ] 2.3 identity-action-tokenizer 执行（任务 1.1 谱系精读→ 1.2 pet_vjepa 环境→ 1.3 UCF101 manifest→ 1.4 tokenizer 实现→ 1.5-1.6 阶段 A→ 1.7-1.8 阶段 B）→ 验收 → archive
+- [ ] 2.4 video-feature-latent 执行（直接消费 2.3 编码器，零训练选型作回退）→ 验收 → archive
+- [ ] 2.5 spot-check-cli 执行 → 验收 → archive
 
 ## 3. 收尾（主线子 change 全部归档后）
 

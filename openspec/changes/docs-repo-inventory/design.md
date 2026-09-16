@@ -47,8 +47,8 @@ Wiki 机制（`server/routers/management.py`）：递归扫描 `management/docs/
 | 3 | models.md | 模型 | 重要模型逐个条目：简介 + 实测结果 | 新写 + model-onboarding + results/*.json |
 | 4 | training-guide.md | 训练体系 | 怎么训：mmaction2 机制/四模式/registry/远程闭环 | mmaction2-overview + model-onboarding + 2026-07-13 计划 |
 | 5 | live-module.md | Live 模块 | 落地后架构与关键决策 | 两篇 live plan |
-| 6 | algo-architecture.md | 算法架构 | 全链路算法设计：定位追踪→动作识别→身份提取→应用出口，每阶段算法+理由 | openspec 总管/各子 change design（决策 D1–D9 索引） |
-| 7 | pipeline-roadmap.md | 规划与进度 | 未来计划四分类：主线序/条件启动/研究型/已归档 + 闸门与二期对照 | 总管 tasks §2/§4 + 2026-08-15 计划 |
+| 6 | architecture.md | 系统架构 | 完整结构总览 + 五阶段逐个详解 + 末节进度与未来计划分类 | openspec 总管/各子 change design + tasks |
+| 7 | identity-tokenizer.md | 身份-动作 Tokenizer（专篇） | 重点结构独立成篇：FLOAT×TiTok 架构/两阶段路线/评测矩阵 | identity-action-tokenizer change 全文 |
 | 8 | lessons.md | 研究结论与踩坑 | 关键点五大问题/标注体系教训/用户裁定时间线 | keypoint-extraction-pitfalls + change 裁决记录 |
 | 9 | third-party-notes.md | 第三方项目借鉴 | 每个项目八节模板（D5） | 两篇 third-party 文档 |
 | 10 | handover-guide.md | 交接与协作指南 | 新协作者上手入口 | 新写（D7） |
@@ -89,7 +89,7 @@ Wiki 机制（`server/routers/management.py`）：递归扫描 `management/docs/
 - **§3 代码模块**：server 8 路由一句话表；scripts/ 27 个按用途分组（训练测试：train_model/run_test/eval_all_k400/train_all_models；推理：inference/_infer/vlm_infer/run_test_vlm；speedrun：speedrun/benchmark_speed；批处理与比较：pet_batch_run/pet_detect_track/make_followcam/pet_compare_*/pet_multi_detect/pet_seg_contact/rtmdet_cross_check/yolo11_zeroshot_audit/assert_aim_frozen/extract_keypoints_from_tracks；live：live_analyze/live_stream；工具：md_to_docx/pet_repin）；petlib 7 模块（registry/schemas/detection/tracking/keypoints/videowriter/contract_tests）；web 28 页面按 7 组；configs/ 11 文件表；models/mmaction2（vendored 只读）
 - **§4 论文模块现状**：DB 统计 + 两类 research JSON 说明
 - **§5 项目管理数据**：management/ 七子目录文件数（daily 3/weekly 10/monthly 3/meetings 2/team 3/projects 27/docs 9→整合后 9 篇新集）
-- **§6 openspec 一览**：8 活跃表（名称/一句话定位/进度 x/y/状态/所属类别）+ 16 归档列表，详情指向 7，算法与裁决细节指向 6
+- **§6 openspec 一览**：8 活跃表（名称/一句话定位/进度 x/y/状态/所属类别）+ 16 归档列表，进度详情见 6 §7，tokenizer 详见 7 号专篇
 - **§7 外部资产索引**：pet、NAS、third-party/ 5 库（kabr-tools/keypoint-moseq/pet-videos/PigDetect/remix-petra）
 - **附录 A**：顶层散落文件清单 → 指向清理 change；**附录 B**：空/失效目录（checkpoints/ 本地空壳等）
 
@@ -133,26 +133,31 @@ Wiki 机制（`server/routers/management.py`）：递归扫描 `management/docs/
 - PTZ 摇杆、截屏上传、演示视频端点
 - 与 pet-videos 借鉴的映射（指向 8）
 
-#### 4.6 algo-architecture.md《算法架构》（全链路算法设计说明）
+#### 4.6 architecture.md《系统架构》（完整结构总览 + 逐阶段详解 + 进度计划）
 
-- **§0 全链路架构图**（文字图，每阶段标注：输入/输出/算法/代码落点/对应 change 与决策 ID）：监控视频 → ① 宠物定位与跟踪 → ② 跟随视角生成 → ③ 动作表征学习（识别动作）→ ④ 身份识别与提取 → ⑤ 应用出口
+- **§0 完整结构总览**：一张表把整条管线说清——监控视频 → ① 定位与跟踪 → ② 跟随视角生成 → ③ 动作表征 → ④ 身份识别与提取 → ⑤ 应用出口；每阶段一行：输入/输出/算法/代码落点/对应 change 与决策 ID
 - **§1 定位与跟踪**：GroundingDINO 开放词汇检测 + 多 prompt 抽样（每 10 帧）+ 插值平滑 + 逐帧运动校正 v5（off-alpha 0.6 等参数）；家具框与空间状态序列；**为什么**：ByteTrack 全帧率否决（D1）、GatedTracker 否决（D1b）、关键点降级辅助信号（D2）
 - **§2 跟随视角生成**：follow_adaptive 裁剪（512² H.264）+ 尺寸离群过滤 + 沙发漂移渲染层过滤；作为"主表示载体"的理由
 - **§3 动作表征（识别动作）**：窗口特征四候选选型（VideoMAE v1 微调 / DINOv2+帧间差分 / MammalNet / V-JEPA 2 fpc16）→ UMAP+HDBSCAN 行为簇 → 人工命名；路线 W：CatHuBERT 式行为素迭代预训练（HuBERT 伪标签 CE + <10M 小 Transformer）；**四闸门**：线性可分性/可命名率/码本健康度/身份泄漏审计；为什么零训练优先、为什么无监督发现（activity 伞类标注不可靠）
-- **§4 身份识别与提取**：两条路线——① identity-action-tokenizer（FLOAT×TiTok 杂交：跨时间共享身份 tokens K_id=32 + 逐帧动作 latent z_t + 轻量解码器重建视频，重建成立则解耦成立；UCF101 阶段 A → 猫语料阶段 B）；② registry-retrieval（登记照 → DINOv2 embedding → FAISS，猫 Re-ID 与物品实例共用登记-检索抽象，D9）
+- **§4 身份识别与提取**：两条路线——① identity-action-tokenizer（FLOAT×TiTok 身份-动作解耦，**详见 7 号专篇**）；② registry-retrieval（登记照 → DINOv2 embedding → FAISS，猫 Re-ID 与物品实例共用登记-检索抽象，D9）
 - **§5 应用出口**：spot-check-cli 抽查报告（非实时抽查形态：时段→预处理→隐码→动作报告：标签/起止秒/track_id/登记身份/置信度/在场率/空间状态段，D4/D7）；behavior-anomaly-detection（正常=高频已命名簇，异常=低频簇/token 转移突变/滑窗直方图偏离，候选机制与调研前置）
 - **§6 跨切面**：plf/pet_vjepa 双环境隔离（D5）、petlib 可替换模块架构（D6）、决策 ID 全局索引（D1–D9 → 各子 change design 回查表）
+- **§7 当前进度与未来计划**（原独立 roadmap 内容并入本节，避免两文档重复）：
+  - **未来计划四分类表**：① 主线执行序 batch-followcam-extraction（5/6 待归档）→ video-feature-latent（1/14 选型中）→ spot-check-cli（0/4）；② 条件启动/延后（总管 tasks §4）：tracker-selection（多猫数据出现）、registry-retrieval（用户批准）、behavior-anomaly-detection（前置归档+用户发起调研）；③ 研究型独立立项 identity-action-tokenizer（0/9，详见 7 号）；④ 已归档 16 个一行索引
+  - **闸门与里程碑**：video-feature-latent 四闸门、tokenizer 阶段 A 中期检查点、11 月中期验收 KPI
+  - **二期计划对照**：P0 精度攻坚 / P1 端侧 / P2 部署验收 现状对照
 
-#### 4.7 pipeline-roadmap.md《规划与进度》（未来计划分类说明）
+#### 4.7 identity-tokenizer.md《身份-动作 Tokenizer（专篇）》
 
-- **§1 未来计划四分类**（每类一张表，写明进入条件/触发条件）：
-  ① **主线执行序**（当前推进）：batch-followcam-extraction（5/6 待归档）→ video-feature-latent（1/14 选型中）→ spot-check-cli（0/4）
-  ② **条件启动/延后**（总管 tasks §4 登记表）：tracker-selection（多猫数据出现）、registry-retrieval（用户批准实施）、behavior-anomaly-detection（video-feature-latent 归档 + 用户发起调研）
-  ③ **研究型独立立项**：identity-action-tokenizer（FLOAT×TiTok，UCF101→猫两阶段，0/9）
-  ④ **已归档**：16 个 change 一行索引
-- **§2 主线逐 change 说明**：目标/当前进度/验收闸门/下一步
-- **§3 闸门与里程碑**：各 change 验收闸门 + 11 月中期验收 KPI
-- **§4 二期计划对照**：P0 精度攻坚/P1 端侧/P2 部署验收 现状对照
+重点结构单独成篇（总管裁定 2026-09-16 独立立项），全部取自 identity-action-tokenizer change：
+
+- **§1 问题与定位**：为什么需要身份-动作解耦（可控行为潜空间；重建/生成验证可控性）；猫语料太少（34 段=14.7 分钟+3k clips）的解法：先在 UCF101（13320 段）验证架构再迁移
+- **§2 架构设计**（用户定义 2026-09-16，FLOAT×TiTok 杂交）：① 几十个跨时间共享身份 tokens（K_id=32）=“这是哪只猫”；② 每帧一个动作 latent（z_t 32d）=“这帧在动什么”；③ 轻量解码器以（身份+动作）重建视频——重建成立则解耦成立
+- **§3 两阶段路线**：阶段 A UCF101（重建+动作 CE+类别弱监督；token 数缩放 8/16/32）→ **中期检查点**（z_t 探针 top1@101 类 + 身份 dropout/交换消融）；阶段 B 猫语料迁移（mammal_v0+cats v1+followcam；track 级 InfoNCE；跨猫交换重建）
+- **§4 评测矩阵**（design T-A4 全表）：重建质量 / 动作探针（5 类）/ 身份检索 / 身份泄漏 / 交换重建
+- **§5 训练配方笔记**：TiTok/AdapTok/1d-tokenizer/FLOAT 的 mask 策略、解码器规模、LR/epoch
+- **§6 验收裁定与回流**：CatHuBERT 骨干是否采用本 tokenizer（**用户验收**）→ 产出回流 video-feature-latent 任务 1.7
+- **§7 环境与依赖**：pet_vjepa 环境（transformers≥4.55）、NAS UCF101 manifest、V-JEPA 2 fpc16
 
 #### 4.8 lessons.md《研究结论与踩坑》
 

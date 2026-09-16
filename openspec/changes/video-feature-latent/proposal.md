@@ -2,7 +2,11 @@
 
 > 子 change，总管：`pet-motion-latent-pipeline`。前置：`batch-followcam-extraction` 完成（跟随视频资产就绪）。
 
-## Why
+## Why（2026-09-16 路线修订）
+
+本 change 改为**消费** identity-action-tokenizer 产出的编码器做行为发现（encoder 优先原则），现成四候选 backbone（V-JEPA 2 / MammalNet / DINOv2）降为**回退方案**——仅在 tokenizer 训练失败或需快速 smoke test 时启用。
+
+## Why（原版）
 
 **终局需求**：管线的最终产品是"抽查式动作报告"（`spot-check-cli`：指定时段 → 输出"14:03–14:12 睡觉/进食"）与行为异常识别——两者都依赖一层**动作语义**。
 

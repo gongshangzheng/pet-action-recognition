@@ -7,9 +7,9 @@
 ## What Changes
 
 - **新增资产盘点主文档**（`management/docs/repo-inventory.md`）：作为全库唯一入口，盘点六类资产——数据资产（datasets/、data/、NAS、远程 pet 服务器）、训练/评测产物（results/training、speedrun、batch、gate0a/0b/4、skeleton、live）、代码模块（server 8 路由、scripts 27 个、petlib、web 28 页面、configs 11 个）、论文模块、项目管理数据、openspec change 全景（8 活跃 + 16 归档）。
-- **文档整合统一**：9 篇 wiki + 2 篇 plans 按主题归并为一套编号文档（10 篇，id 1–10）：仓库资产盘点 / 数据集全景 / 模型 / 训练体系 / Live 模块 / 算法架构 / 规划与进度 / 研究结论与踩坑 / 第三方借鉴 / 交接与协作指南，全部带 frontmatter。
-- **新增算法架构文档**（《算法架构》）：首次系统说明全链路算法设计——宠物定位与跟踪（GDINO 多 prompt 抽样+插值+运动校正 v5，及 ByteTrack/GatedTracker 否决理由）→ 跟随视角生成（follow_adaptive 512²）→ 动作表征（四候选选型+UMAP/HDBSCAN 行为簇+路线 W CatHuBERT+四闸门）→ 身份识别与提取（FLOAT×TiTok 身份-动作解耦 tokenizer；DINOv2+FAISS 登记-检索）→ 应用出口（抽查报告/异常检测）；每阶段附决策 ID（D1–D9）回查表。
-- **新增规划分类文档**（《规划与进度》）：把散在 change 里的未来计划按四分类说明——主线执行序（batch-followcam→video-feature-latent→spot-check-cli）/ 条件启动（tracker-selection、registry-retrieval、behavior-anomaly，写明触发条件）/ 研究型独立立项（identity-action-tokenizer）/ 已归档（16 个索引）；附闸门里程碑与二期 P0–P2 对照。
+- **文档整合统一**：9 篇 wiki + 2 篇 plans 按主题归并为一套编号文档（10 篇，id 1–10）：仓库资产盘点 / 数据集全景 / 模型 / 训练体系 / Live 模块 / 系统架构 / 身份-动作 Tokenizer 专篇 / 研究结论与踩坑 / 第三方借鉴 / 交接与协作指南，全部带 frontmatter。
+- **新增《系统架构》文档**：完整结构一次讲清——宠物定位与跟踪 → 跟随视角生成 → 动作表征 → 身份识别与提取 → 应用出口，五阶段逐个详解（算法/输入输出/否决方案及理由/代码落点/决策 ID 回查）；末节并入**当前进度与未来计划四分类**（主线执行序 / 条件启动含触发条件 / 研究型 / 已归档）+ 闸门里程碑与二期 P0–P2 对照（不再单独设 roadmap 文档，避免与架构重复）。
+- **重点结构单独成篇**：《身份-动作 Tokenizer（专篇）》详述 FLOAT×TiTok 解耦架构（身份 tokens K_id=32 + 逐帧动作 latent + 重建验证）、UCF101→猫两阶段路线、评测矩阵与验收裁定。
 - **新增三篇事实型文档**（内容取自 results/ 产物与 openspec change 实录，非泛泛综述）：
   - 《数据集全景》：当前所有数据集——cats v1（552MB 蒋/崔两批标注）、pet_action_mammal_v0（七类 ~3h）、NAS UCF101（13320 段）、quadruped_action（占位）、34 段白天事件片段（总素材仅 14.7 分钟的语料事实）、kinetics400（烟测）——各自的来源/规模/结构/label_map/位置/状态/用途，并全文迁入标注类目规范。
   - 《模型》：**重要模型逐个条目，每个固定两段式——简介 + 实测结果**：分类模型（videomaev2×2 error、slowonly/tsm/timesformer 各 1 run、tsn-resnet50 k400 烟测 top1 0.77）、关键点模型（HRNet/ResNet-101/SuperAnimal 及裁剪裁定）、检测模型（GroundingDINO/YOLO11/OWLv2 及撤下裁定）；registry 其余未实测模型明确标注。

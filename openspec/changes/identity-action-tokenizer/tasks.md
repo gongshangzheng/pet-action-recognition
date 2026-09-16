@@ -1,6 +1,7 @@
 # Tasks: identity-action-tokenizer
 
-> 总管：`pet-motion-latent-pipeline`。**研究型**：两阶段（A 人类 UCF101 → B 猫语料）。严格按编号顺序；GPU 任务前 nvidia-smi 查占用。
+> 总管：`pet-motion-latent-pipeline`。**2026-09-16 用户裁定**：已从"研究型条件启动"升为主线 2.3（encoder 优先——只有此 change 产出编码器，下游 video-feature-latent/spot-check-cli 才能做高质量无监督工作）。
+> 两阶段：A 人类 UCF101 → B 猫语料；A1 快速验证 → A2 端到端（V-JEPA 2 解冻联合微调）。严格按编号顺序；GPU 任务前 nvidia-smi 查占用。
 > 前置：`pet_vjepa` 环境（transformers ≥4.55，待建）。
 
 - [ ] 1.1 配方精读：TiTok（2406.07550）/ AdapTok（2505.17011）/ 1d-tokenizer / FLOAT 训练细节（mask 策略/解码器规模/LR/epoch），沉淀训练配方笔记
