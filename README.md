@@ -1,99 +1,90 @@
 # Pet Action Recognition
 
-宠物动作识别研究项目——从文献调研、论文追踪到模型评测的全流程支撑平台。
+> **宠物动作识别研究平台**——管理动作识别相关论文、团队协作、模型训练与实时推理。
+>
+> **文档入口**：[`management/docs/repo-inventory.md`](management/docs/repo-inventory.md)（仓库资产盘点，全库唯一入口）；完整 wiki 共 11 篇，详 `management/docs/`。
 
 ## 项目背景
 
-本项目聚焦于宠物（猫/狗）动作识别方向，核心挑战是**粗粒度与细粒度动作之间的性能鸿沟**：当前主流方法在粗粒度动作（行走、站立、奔跑）上已达 88%+ 准确率，但细粒度动作（如"反刍-躺卧" vs "反刍-站立"）仅 12.7%–29.6%。
+本项目研究家养宠物（以猫为主）的动作识别：从监控视频自动判断"猫在做什么"（吃/喝/睡/跑/异常等）。涵盖三件事子子任务：
 
-研究覆盖以下技术路线：
-- 2D CNN → 3D CNN → Transformer → Skeleton → 多模态 → 视频基础模型
-- 级联架构：姿态提取 → 粗粒度分类 → 细粒度识别
-- Stitching-Retargeting 范式：缝合个体表征 → 重定向动作识别能力
-- 部件级时序建模（PMTNet 路径）
-
-> 研究背景详见 [动作识别系列文章](https://gongshangzheng.github.io/action-recognition-hub.html)
+1. **定位与跟踪**（`pet-motion-latent-pipeline` 总管 change）
+2. **动作表征与无监督发现**（`video-feature-latent`）
+3. **身份识别与物体实例识别**（`identity-action-tokenizer` + `registry-retrieval`）
 
 ## 项目结构
 
 ```
 pet-action-recognition/
-├── management/      # 项目管理体系（参考 InternWiki）
-│   ├── team/        # 团队成员档案
-│   ├── daily/       # 日报
-│   ├── weekly/      # 周报
-│   ├── monthly/     # 月报
-│   └── docs/        # 项目管理文档
-├── papers/          # 论文搜集体系（参考 SeekVerse）
-│   ├── config/      # 数据源配置、分类规则
-│   ├── data/        # 论文数据库（已 gitignore）
-│   ├── cache/       # 抓取缓存（已 gitignore）
-│   ├── scripts/     # 搜集与处理脚本
-│   └── docs/        # 论文笔记与综述
-├── evaluation/      # 动作识别模型评测
-│   ├── models/      # 模型定义与实现
-│   ├── datasets/    # 数据集加载与预处理
-│   ├── configs/     # 评测实验配置
-│   ├── scripts/     # 训练与评测脚本
-│   └── results/     # 评测结果（已 gitignore）
-└── docs/            # 其他相关文档
+├── server/                      # FastAPI 后端（:8788）
+├── web/                         # Vue 3 前端（:3000）
+├── configs/                     # mmaction2 训练配置
+├── models/mmaction2/            # vendored mmaction2（只读）
+├── petlib/                      # 管线可替换模块
+├── datasets/                    # 数据集（cats v1 等）
+├── scripts/                     # 训练/测试/推理/批处理脚本
+├── checkpoints/                 # 本地空目录（权重在远程 pet 服务器）
+├── results/                     # 训练/测试/批处理产物
+├── live/                        # Live 模块数据
+├── data/                        # 论文库 + 备份
+├── management/                  # 项目管理 + Wiki（11 篇）
+│   ├── docs/                    # 本套 wiki 11 篇
+│   ├── projects/                # 项目树 + tasks.json
+│   ├── daily/weekly/monthly/    # 报表
+│   ├── meetings/                # 会议纪要
+│   └── team/                    # 团队成员
+├── papers/                      # 论文模块
+├── evaluation/                  # 评测模块
+├── openspec/                    # OpenSpec change 体系
+│   ├── changes/                 # 活跃 change
+│   ├── specs/                   # 主 spec
+│   └── archive/                 # 归档 change
+├── docs/                        # 设计文档
+├── third-party/                 # 第三方库借鉴
+├── templates/                   # 模板
+└── .claude/skills/              # agent 技能（15 个）
 ```
 
 ## 各模块说明
 
-### `management/` — 项目管理
+### 八大模块
 
-参考 InternWiki 的多人协作文档体系，建立结构化的项目管理机制：
+| 模块 | 端口/路径 | 说明 |
+|---|---|---|
+| **Papers 论文搜集** | `server/routers/papers.py` / `web/src/views/papers/` | 239 篇论文库（SQLite）、分类筛选、笔记 |
+| **Training 训练** | `server/routers/training.py` / `web/src/views/training/` | mmaction2 训练，4 种模式，远程执行 |
+| **Evaluation 评测** | `server/routers/evaluation.py` / `web/src/views/evaluation/` | 正式测试 + 速度测试 + VLM |
+| **Speed Run** | `server/routers/speedrun.py` / `web/src/views/evaluation/SpeedRun.vue` | 批量标注视频 + 烟测指标 |
+| **Live 直播** | `server/routers/live.py` / `web/src/views/Live.vue` | 摄像头源管理 + SSE 实时推理 |
+| **Management 项目管理** | `server/routers/management.py` / `web/src/views/management/` | 团队/日报/周报/月报/会议/任务/里程碑/Wiki |
+| **Datasets 数据集** | `server/routers/datasets.py` / `web/src/views/datasets/` | 数据集浏览 |
+| **Pipeline 管线** | openspec changes | pet-motion-latent-pipeline 总管 + 子 change |
 
-- **团队成员**：成员档案、研究方向、技能特长
-- **日报 / 周报 / 月报**：记录研究进展、实验结果与阶段性总结
-- **管理文档**：任务规划、里程碑、会议纪要等
+### Wiki 11 篇（`management/docs/`）
 
-### `papers/` — 论文搜集
+1. **仓库资产盘点**（你正在读的这个 README 的扩展版）
+2. 数据集全景
+3. 模型（重要模型逐个条目：简介 + 实测结果）
+4. 训练体系
+5. Live 模块
+6. **系统架构**（完整结构 + 未来计划）
+7. **身份标识与检索**（定位追踪 + 猫 Re-ID + RAG 式物体标识）
+8. **身份-动作 Tokenizer 专篇**（FLOAT×TiTok 杂交）
+9. 研究结论与踩坑
+10. 第三方项目借鉴
+11. 交接与协作指南
 
-参考 [SeekVerse（寻章）](https://github.com/user/SeekVerse) 的自动化论文搜集体系，构建面向动作识别领域的论文追踪系统：
+详见 [仓库资产盘点](management/docs/repo-inventory.md)。
 
-- **多源聚合**：arXiv、Semantic Scholar、OpenAlex 等
-- **智能分类**：按技术路线（2D CNN / 3D CNN / Transformer / Skeleton / VFM / 多模态）自动分类
-- **论文笔记**：精读笔记、综述整理
+### Claude Code Skills（15 个，`.claude/skills/`）
 
-重点关注的会议/期刊：CVPR、ICCV、ECCV、NeurIPS、ICML、Nature Communications、IJCV、Animals
+- 仓库结构 / 数据集 / 设计原则 / 文档
+- 评测 / Live / 项目管理 / 论文
+- 远程服务器（纪律）
+- 测试 / Speed Run / 训练 / 上游同步
+- mmaction2 深度指南 / Web 全栈
 
-### `evaluation/` — 模型评测
-
-存放动作识别模型的评测代码，覆盖以下模型族：
-
-| 模型 | 类型 | 备注 |
-|------|------|------|
-| SlowFast | 3D CNN 双路径 | 粗粒度基线 |
-| I3D | 3D CNN | 经典基线 |
-| VideoMamba | SSM | 边缘部署候选（74M） |
-| SkeleTR | 骨架 Transformer | 细粒度识别 |
-| PMTNet | 部件级时序 | 猫行为专用（93.1%） |
-| InternVideo2 | VFM | 6B 参数，SOTA |
-
-主要评测数据集：Animal Kingdom、MammalNet、CVB、PBRD
-
-### `docs/` — 其他文档
-
-存放不属于以上模块的相关文档，包括：
-- 技术调研报告
-- 方案设计文档
-- 工具链使用指南
-- 会议/比赛相关记录
-
-## Claude Code Skills
-
-本项目提供配套的 Claude Code skills，可自动触发使用指南：
-
-| Skill | 功能 |
-|-------|------|
-| `pet-action-recognition-web` | Web 全栈开发、服务启动、调试 |
-| `pet-action-recognition-management` | 项目树、团队、报表、任务看板、里程碑、会议纪要 |
-| `pet-action-recognition-papers` | 论文导入、分类、笔记、搜索筛选 |
-| `pet-action-recognition-evaluation` | 模型、数据集、评测配置、运行、结果对比 |
-
-当你在项目中使用 Claude Code 时，相关 skills 会自动加载，提供操作指导。
+详细见 `.claude/skills/` 与 [交接与协作指南](management/docs/handover-guide.md)。
 
 ## 快速开始
 
@@ -102,17 +93,28 @@ pet-action-recognition/
 git clone <repo-url>
 cd pet-action-recognition
 
-# 各模块独立使用，详见各子目录说明
+# 一键启动（后端 8788 + 前端 3000）
+bash start_services.sh
+
+# 打开网页
+open http://localhost:3000
 ```
 
-## 相关资源
+各模块独立使用，详见各子目录说明与本仓库 wiki 11 篇（从 [仓库资产盘点](management/docs/repo-inventory.md) 开始读）。
 
-- [动作识别系列文章](https://gongshangzheng.github.io/action-recognition-hub.html)
-- [DeepLabCut](https://github.com/DeepLabCut/DeepLabCut) — 多动物姿态估计
-- [SuperAnimal](https://www.nature.com/articles/s41467-024-48792-2) — 跨物种零样本姿态估计
-- [MMAction2](https://github.com/open-mmlab/mmaction2) — 视频理解工具箱
-- [Animal Kingdom Dataset](https://github.com/sutdcv/Animal-Kingdom) — CVPR 2022 动物行为数据集
+## 工作纪律
 
-## License
+1. **三阶段 OpenSpec 流程**（最高优先级）：Plan → Review → Apply
+2. **远程服务器只读**：所有改动本地完成 → git push → 远程 git pull
+3. **不写明文凭证**：API Key 等走环境变量
+4. **GPU 共享**：训练前 `nvidia-smi` 看显存，不一次性占满两卡
+5. **脚本先进仓库**：禁止 `/tmp` 放脚本
+6. **完整纪律**见 [交接与协作指南](management/docs/handover-guide.md) 与 `AGENTS.md`
 
-MIT
+## 文档与 OpenSpec
+
+- **本仓库 wiki 11 篇**：`management/docs/`（按 frontmatter `id` 1-11 排序）
+- **OpenSpec change 体系**：`openspec/changes/`（活跃）+ `openspec/specs/`（主 spec）
+- **agent skills**：`.claude/skills/`（agent 操作指南，与 wiki 分工）
+
+详细说明见 [仓库资产盘点](management/docs/repo-inventory.md)。
