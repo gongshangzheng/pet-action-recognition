@@ -63,6 +63,10 @@
            ③ 瓶颈结构（身份 tokens 少而共享、z_t 低维而逐帧）
 骨干初始化：V-JEPA 2 fpc16 / VideoMAE；解码器轻量（ViT-S 级）；3k 段语料，4090 可训
 附赠能力：任意身份 × 任意动作序列 → 可控猫视频生成（FLOAT 同款应用）
+
+**VQ 码本取代说明（2026-09-16）**：原 D3 自训版的"模型内可学习 VQ 码本"由 HuBERT 式
+离线伪标签 CE 取代——判别式目标更直接（用户定调"区分动作为第一性"）、无码本塌缩风险；
+VQ-VAE 量化保留为伪标签迭代不稳定时的备选。实施主体 = 子 change `identity-action-tokenizer`。
 ```
 
 **这个合流回应"FLOAT 内容是否丢失"**：没有——D3 的双分解全程保留，0B 后仅输入由关键点换为视频特征；与 L6 合流后，身份处理从"仅 GRL 推开"升级为"E_id 正向子空间 + GRL 辅助"，身份信息被分流复用而非丢弃。
@@ -241,7 +245,7 @@ VideoMAE v1/v2 预训练权重（通用起点，即视频界的 Wav2vec）
   ├─ 身份 register tokens（K_id≈8-32 个可学习 token，register 风格）
   │    与 patch tokens 共同注意力 → 池化 = E_id → InfoNCE(track 级 ID)
   │    （TiTok/register 思想：紧凑潜码承载个体信息；分流进登记-检索支线）
-  └─ 动作 tokens：patch tokens 池化 → VQ 量化 = 行为素 → CatHuBERT 伪标签 CE
+  └─ 动作 tokens：patch tokens 池化 → k-means 量化（HuBERT 式）= 行为素 → 伪行为素 CE
        （区分动作；AdapTok 启发：token 预算可内容自适应——静止行为少分配，
         运动行为多分配；一期固定 K_act，自适应留二期）
 解耦：E_id × E_mot 正交/GRL 互斥 + 各自监督（L3 合流）
