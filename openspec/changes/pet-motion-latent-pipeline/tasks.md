@@ -18,6 +18,7 @@
 | 2.2 | `batch-followcam-extraction` | 全量批处理 34 段（运动校正降为可选默认禁用，design B2） | ✅ 1.1-1.6 闭环（34/34 ok；告警段=超短红外低在场片段；语料事实：34 段共 14.7 分钟，行为发现主粮在 mammal_v0/cats v1） |
 | 2.3 | `video-feature-latent` | 视频特征主表示选型 + 聚类 + 探针评测 | ⏳ 待 2.2 |
 | 2.4 | `spot-check-cli` | 抽查式推理 CLI + 猫身份登记 | ⏳ 待 2.3 |
+| 2.5 | `identity-action-tokenizer` | 🔬 研究型：FLOAT×TiTok 双 token 视频重建 tokenizer（UCF101→猫语料两阶段） | ⏸️ 研究型，条件启动（video-feature-latent 阶段二闸门失败时，或用户指定提前） |
 
 - [x] 2.1 multi-object-detect-gate 验收并 archive（2026-09-15，归档为 2026-09-15-multi-object-detect-gate；主 spec motion-pipeline 建立）
 - [ ] 2.2 batch-followcam-extraction 验收并 archive

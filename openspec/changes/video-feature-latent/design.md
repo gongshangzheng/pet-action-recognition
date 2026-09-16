@@ -18,6 +18,8 @@
 > **读者指引**：想懂"为什么这么做"→ 读下方 L1-L8 各决策节；想知道"现在执行到哪一步"→ 读 tasks.md；想知道"最终产品长什么样"→ 读 proposal.md 和 specs/。
 
 > 继承总管（pet-motion-latent-pipeline）D5（环境隔离）、D6（petlib 接口）；关键点降级裁定见 `batch-followcam-extraction` D2。**总管 D2b/D3/D8/A5/A6 已物理迁入本文件（ID 不变）**。
+>
+> **⚠️ 路线实施注记（2026-09-16）**：阶段三的自监督训练路线（L3 v2 架构 + L5 目标 + L6 CatHuBERT + L7 跨域 + L8 双 token 流）已**拆为独立研究 change `identity-action-tokenizer`**（含更详细设计 + UCF101→猫语料两阶段策略）。本文件的 L 系列保留为研究笔记与谱系出处；任务 1.7/1.10/1.11 已改指该 change。
 
 ## Decisions
 
