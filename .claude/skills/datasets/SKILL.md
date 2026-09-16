@@ -14,6 +14,21 @@ description: |
 - 数据集 + checkpoint 都在 **pet**（远程训练机），本地不存。`checkpoints/` 同样被 `.gitignore`（`/checkpoints/`）忽略。
 - 配置入口：`server/config.py` 的 `QUADRUPED_DATASET_NAME` / `QUADRUPED_DATASET_DIR` / `QUADRUPED_CLASSES_FILE` / `CHECKPOINTS_DIR`。
 
+## 本 skill 脚本（.claude/skills/datasets/scripts/，2026-09-15 自 scripts/ 迁入）
+
+| 脚本 | 用途 |
+|---|---|
+| download_checkpoint.py | 预训练权重下载（registry 驱动，含 hf-mirror 回退） |
+| slice_cats_clips.py | 猫标注切片（quadruped_cats_v1 构建脚本） |
+| build_k400_val_list.py | K400 val 清单生成 |
+| generate_synthetic_quadruped.py | quadruped_action 合成冒烟数据生成 |
+| convert_keypoints_posec3d.py | 关键点 → PoseC3D pkl 转换 |
+| prefilter_videos.py | 视频预筛选 |
+| extract_superanimal_keypoints.py | SuperAnimal 零样本关键点提取 |
+| extract_keypoints_dlc.py | DLC 关键点提取 |
+| infer_ap10k_pose.py | AP-10K 姿态推理（依赖 scripts/_infer.py，路径已适配） |
+| visualize_keypoints.py | 关键点可视化 |
+
 ## 软链约定
 
 - **NAS 挂载**：`/home/wyy/mnt/` 是 CIFS 挂载（NAS @ `192.168.110.4`），pet 可达；大数据集放 NAS，从 `datasets/<name>` 软链到 NAS 子目录。
@@ -72,7 +87,7 @@ description: |
   videos_{train,val,test}/<name>.mp4
   ```
 - 状态：`pending_collection`（无真实数据）。`server/routers/training.py` 的 `_split_has_videos(split)` 检查 `videos_<split>/` 内是否有实际视频文件——有才置 `status=collected`，否则 `pending_collection`。
-- 冒烟用合成生成器：`scripts/generate_synthetic_quadruped.py`（默认 2 类 `sit`/`walk`，64×64 mp4，`--root/--train-per-class/--val-per-class/--test-per-class`）。
+- 冒烟用合成生成器：`.claude/skills/datasets/scripts/generate_synthetic_quadruped.py`（默认 2 类 `sit`/`walk`，64×64 mp4，`--root/--train-per-class/--val-per-class/--test-per-class`）。
 - 训练入口 `scripts/train_model.py` 等会自动定位上述文件并 `--cfg-options` 覆盖 `ann_file` / `data_prefix.video`；类别数从 `classes.txt` 推断并覆盖 `model.cls_head.num_classes`。
 
 ## Label maps（per-model）
@@ -97,12 +112,12 @@ label_map 文件在 vendor `models/mmaction2/tools/data/<dataset>/` 下：
 
 ## 预训练 checkpoint 下载
 
-- 脚本：`scripts/download_checkpoint.py`
+- 脚本：`.claude/skills/datasets/scripts/download_checkpoint.py`
   ```bash
-  python3 scripts/download_checkpoint.py --list                       # 列出 registry
-  python3 scripts/download_checkpoint.py --model-id tsn-resnet50      # 单个
-  python3 scripts/download_checkpoint.py --all                       # 全部
-  python3 scripts/download_checkpoint.py --model-id <id> --force     # 强制重下
+  python3 .claude/skills/datasets/scripts/download_checkpoint.py --list                       # 列出 registry
+  python3 .claude/skills/datasets/scripts/download_checkpoint.py --model-id tsn-resnet50      # 单个
+  python3 .claude/skills/datasets/scripts/download_checkpoint.py --all                       # 全部
+  python3 .claude/skills/datasets/scripts/download_checkpoint.py --model-id <id> --force     # 强制重下
   ```
 - 产物（`checkpoints/`，按 model 分子目录，与 trained 分开）：
   - `checkpoints/<model_id>/<model_id>_pretrained.pth`

@@ -279,7 +279,7 @@ _MMACTION2_REGISTRY = [
         "pretrained_source": "（无预训练，小数据从头训练）",
         "pretrained_url": "",
         "mmaction2_config": "configs/pet_mammal_posec3d_slowonly_quadruped.py",
-        "description": "姿态桥接路线：SuperAnimal 零样本提取关键点（scripts/extract_superanimal_keypoints.py）→ 转 PYSKL pkl（scripts/convert_keypoints_posec3d.py）→ 17 点 heatmap 训练。数据集用 datasets/pet_action_mammal_v0/skeleton/skeleton.pkl。对背景/光照/遮挡鲁棒。",
+        "description": "姿态桥接路线：SuperAnimal 零样本提取关键点（.claude/skills/datasets/scripts/extract_superanimal_keypoints.py）→ 转 PYSKL pkl（.claude/skills/datasets/scripts/convert_keypoints_posec3d.py）→ 17 点 heatmap 训练。数据集用 datasets/pet_action_mammal_v0/skeleton/skeleton.pkl。对背景/光照/遮挡鲁棒。",
     },
     {
         "id": "tsn-resnet50-quadruped",

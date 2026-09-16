@@ -16,7 +16,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[4]
 
 
 def main() -> int:

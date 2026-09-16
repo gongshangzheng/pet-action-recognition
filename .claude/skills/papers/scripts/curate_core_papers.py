@@ -14,10 +14,10 @@ import sys
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 
-DB_PATH = Path(__file__).parent.parent / "data" / "papers.db"
-DEFAULT_CONFIG = Path(__file__).parent.parent / "papers" / "config" / "core_papers.json"
+DB_PATH = Path(__file__).resolve().parents[4] / "data" / "papers.db"
+DEFAULT_CONFIG = Path(__file__).resolve().parents[4] / "papers" / "config" / "core_papers.json"
 MARKER = "[核心]"
 
 

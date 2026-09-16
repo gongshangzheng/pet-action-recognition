@@ -18,7 +18,7 @@ import sys
 import time
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPO))
 
 

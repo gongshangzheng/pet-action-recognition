@@ -166,18 +166,18 @@ DeepLabCut → SLEAP → SuperAnimal    MARS/B-SOiD/A-SOiD    MoSeq/Keypoint-MoS
 
 ```bash
 # 权重下载（registry 驱动）
-python3 scripts/download_checkpoint.py --model-id videomae-v1
-python3 scripts/download_checkpoint.py --model-id uniformerv2-base
+python3 .claude/skills/datasets/scripts/download_checkpoint.py --model-id videomae-v1
+python3 .claude/skills/datasets/scripts/download_checkpoint.py --model-id uniformerv2-base
 # aim-vitb-adapter 复用 videomae-v1 的权重路径，无需单独下载
 
 # AIM 冻结校验（应打印 <10% 可训练 + PASS）
 python3 scripts/assert_aim_frozen.py
 
 # 姿态桥接（需 deeplabcut）
-python3 scripts/extract_superanimal_keypoints.py --list-points   # 先核对关键点名
-python3 scripts/extract_superanimal_keypoints.py --input <视频目录>
-python3 scripts/convert_keypoints_posec3d.py                    # NPZ → PYSKL pkl
-python3 scripts/visualize_keypoints.py --npz <npz> --video <mp4> # 人工抽查映射
+python3 .claude/skills/datasets/scripts/extract_superanimal_keypoints.py --list-points   # 先核对关键点名
+python3 .claude/skills/datasets/scripts/extract_superanimal_keypoints.py --input <视频目录>
+python3 .claude/skills/datasets/scripts/convert_keypoints_posec3d.py                    # NPZ → PYSKL pkl
+python3 .claude/skills/datasets/scripts/visualize_keypoints.py --npz <npz> --video <mp4> # 人工抽查映射
 
 # 冒烟训练（示例，1 epoch）
 python3 models/mmaction2/tools/train.py configs/pet_mammal_videomae_v1_base_16x4.py \

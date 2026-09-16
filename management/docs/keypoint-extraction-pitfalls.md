@@ -127,7 +127,7 @@ t13-1（YOLO11 猫域检测微调）与 t13-2（BoT-SORT + ReID 多猫跟踪）�
 ### 复活验证实验（约一天，全部现成组件）
 
 1. 前置：t13-1 微调检测模型就绪
-2. 检测框 → BoT-SORT → 贴边门控 → 通过帧跑现有 AP-10K 权重（`scripts/infer_ap10k_pose.py`，pet 上 dlc / mmpose 环境仍在）
+2. 检测框 → BoT-SORT → 贴边门控 → 通过帧跑现有 AP-10K 权重（`.claude/skills/datasets/scripts/infer_ap10k_pose.py`，pet 上 dlc / mmpose 环境仍在）
 3. 产出三个数：门控通过率、通过帧姿态 conf 分布、10 段人工抽检
 4. 视结果决定是否立项姿态微调（猫域标几百帧；固定机位下同类画面极多，预期收益高）
 

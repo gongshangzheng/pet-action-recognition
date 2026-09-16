@@ -144,7 +144,7 @@ GET /api/papers/stats/summary
 ### 从 arXiv 导入
 
 ```bash
-python scripts/import_papers.py
+python .claude/skills/papers/scripts/import_papers.py
 ```
 
 脚本会：
@@ -156,7 +156,7 @@ python scripts/import_papers.py
 ### 导出论文
 
 ```bash
-python scripts/export_papers.py --output exported.json
+python .claude/skills/papers/scripts/export_papers.py --output exported.json
 ```
 
 ---
@@ -296,3 +296,14 @@ sqlite3 data/papers.db "UPDATE papers SET starred = 0, pinned = 0 WHERE 1=1;"
 - [[training]] — 训练模块
 - [[evaluation]] — 评测模块
 - [[management]] — 项目管理
+
+## 本 skill 脚本（.claude/skills/papers/scripts/，2026-09-15 自 scripts/ 迁入）
+
+| 脚本 | 用途 |
+|---|---|
+| import_papers.py | arXiv 等来源导入 papers.db（含 OpenAlex/INES 检索） |
+| curate_core_papers.py | 核心论文清单策划（core_papers.json） |
+| backfill_metadata_openalex.py | OpenAlex 元数据回填 |
+| export_papers.py | 导出 papers.json 到 web 前端 |
+| vlm_cost.py | VLM 处理成本估算 |
+| search_papers.py | 本地论文库检索（既有工具） |

@@ -29,7 +29,7 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[4]
 MAPPING = REPO / "scripts" / "keypoint_mapping_quadruped.json"
 
 

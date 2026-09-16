@@ -95,9 +95,9 @@ flowchart LR
 ### 分类模型
 ```bash
 # 单个
-python3 scripts/download_checkpoint.py --model-id tsn-resnet50
+python3 .claude/skills/datasets/scripts/download_checkpoint.py --model-id tsn-resnet50
 # 全部 21 个
-python3 scripts/download_checkpoint.py --all
+python3 .claude/skills/datasets/scripts/download_checkpoint.py --all
 ```
 - 下到 `checkpoints/<model_id>/<model_id>_pretrained.pth` + JSON 元数据（`type=pretrained`）
 - openmmlab 直链（pet 实测可达）；HF 权重 → `hf-mirror.com`
@@ -131,7 +131,7 @@ flowchart TD
 1. **查 config**：在 `models/mmaction2/configs/` 找到模型 config 路径。
 2. **查 checkpoint URL**：从对应 `metafile.yml` 的 `Weights:` 拿；`curl -I` 测试可达性。
 3. **加 registry 条目**：在 `_MMACTION2_REGISTRY` 加 dict（分类=默认字段；检测=加 `type/det_config/det_checkpoint`）。
-4. **下 checkpoint**：`python3 scripts/download_checkpoint.py --model-id <id>`（分类）或手动 curl（检测）。
+4. **下 checkpoint**：`python3 .claude/skills/datasets/scripts/download_checkpoint.py --model-id <id>`（分类）或手动 curl（检测）。
 5. **选 label_map**：K400 默认；非 K400 头（UCF101/K700/SSv2/AVA）加 `label_map` 字段。
 6. **测试**：`python3 scripts/speedrun.py --videos <test_video> --models <id> --device cuda:0 --force` → 检查标注视频 + results.json。
 

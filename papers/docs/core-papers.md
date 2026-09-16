@@ -1,7 +1,7 @@
 # 核心论文清单（Core Papers）
 
 > 与数据库标记同步生成（starred=核心收藏，pinned=最重要·置顶展示）。
-> 维护方式：修改 `papers/config/core_papers.json` 后运行 `python3 scripts/curate_core_papers.py`。
+> 维护方式：修改 `papers/config/core_papers.json` 后运行 `python3 .claude/skills/papers/scripts/curate_core_papers.py`。
 > 生成日期：2026-08-29
 
 ## 筛选标准
@@ -67,5 +67,5 @@
 # 校验清单与标记一致
 sqlite3 data/papers.db "SELECT id, title, pinned, starred FROM papers WHERE starred=1 ORDER BY pinned DESC;"
 # 重新同步标记
-python3 scripts/curate_core_papers.py
+python3 .claude/skills/papers/scripts/curate_core_papers.py
 ```

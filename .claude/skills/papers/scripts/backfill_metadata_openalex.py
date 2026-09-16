@@ -16,9 +16,9 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 
-DB_PATH = Path(__file__).parent.parent / "data" / "papers.db"
+DB_PATH = Path(__file__).resolve().parents[4] / "data" / "papers.db"
 OA_API = "https://api.openalex.org/works/https://doi.org/10.48550/arXiv.{arxiv_id}"
 HEADERS = {"User-Agent": "pet-action-recognition-papers/1.0 (mailto:research@example.com)"}
 

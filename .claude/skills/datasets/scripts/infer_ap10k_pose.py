@@ -22,8 +22,8 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+REPO = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "scripts"))
 from _infer import _transcode_h264  # noqa: E402
 
 # mmdet COCO 类别索引中的动物类（0-indexed）

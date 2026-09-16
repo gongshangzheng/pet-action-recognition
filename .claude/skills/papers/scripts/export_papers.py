@@ -4,10 +4,10 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from server.db import init_db, query_papers
 
-OUTPUT = Path(__file__).parent.parent / "web" / "public" / "data" / "papers.json"
+OUTPUT = Path(__file__).resolve().parents[4] / "web" / "public" / "data" / "papers.json"
 
 
 def main():
