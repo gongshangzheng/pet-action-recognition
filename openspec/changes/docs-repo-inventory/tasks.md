@@ -30,13 +30,13 @@
 
 ## 4. 删除与重写（独立 commit，可单点回滚）
 
-- [ ] 4.1 `git rm` 8 篇被吸收 wiki + tasks.md（commit：`docs: remove wiki docs absorbed into unified set`）
-- [ ] 4.2 `git rm` docs/plans/ 两篇计划（commit：`docs: remove landed plans absorbed into wiki`）
-- [ ] 4.3 重写根 README.md：8 大模块总览 + 指向 repo-inventory（commit：`docs: rewrite README module overview`）
+- [x] 4.1 `git rm` 8 篇被吸收 wiki + tasks.md（commit：`docs: remove wiki docs absorbed into unified set`，含 plans 两篇）
+- [x] 4.2 `git rm` docs/plans/ 两篇计划（已合并到 commit 0a21eac 中执行）
+- [x] 4.3 重写根 README.md：8 大模块总览 + 指向 repo-inventory（commit：`docs: rewrite README module overview`）
 
 ## 5. 验证
 
-- [ ] 5.1 打开 web（localhost:3000）Wiki 页：11 篇按 id 1–11 排序、旧文档消失、frontmatter 标题/摘要正确
-- [ ] 5.2 全库文档清点：docs/ 仅剩 docx；management/docs/ = 11 篇新文档；`git log` 删除/重写 commit 独立可 revert
-- [ ] 5.3 以新人视角走查 handover-guide：引用的每条路径/脚本/skill 均存在，全文无明文凭证
-- [ ] 5.4 提交 change 目录更新（tasks 勾选）并收尾汇报
+- [x] 5.1 打开 web（localhost:3000）Wiki 页：11 篇按 id 1–11 排序、旧文档消失、frontmatter 标题/摘要正确
+- [x] 5.2 全库文档清点：docs/ 仅剩 docx；management/docs/ = 11 篇新文档；`git log` 删除/重写 commit 独立可 revert
+- [x] 5.3 以新人视角走查 handover-guide：引用的每条路径/脚本/skill 均存在，全文无明文凭证
+- [x] 5.4 提交 change 目录更新（tasks 勾选）并收尾汇报
