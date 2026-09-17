@@ -15,7 +15,7 @@
 - [ ] 2.1 **FLOAT 式身份-运动分解骨架**：视频编码器（全片段提特征，保证运动有时序上下文）→ 逐帧 latent → 正交基投影得 `λ_t`；参考输入编码得 `w_identity`（**TivTok SIF 双 token 暂不采用**，见 design 谱系 + `papers/docs/tivtok-reference.md`）
 - [ ] 2.2 动作通道：FLOAT/LIA 正交运动基（可学习矩阵 + 每次前向 `torch.linalg.qr`）→ z_t = Σ λ_m(t)·v_m；系数 λ 可闭式提取（λ_m = <z_t, v_m>）
 - [ ] 2.3 解码器 + 重建损失（L1 + perceptual + adversarial，TivTok 口径）
-- [ ] 2.4 **身份通道：参考输入 + register tokens 读出（T-A5）** —— 单图 / 3–5 张多视角图 / 短视频**共用一套结构**：`patchify → [register tokens ⊕ 输入 tokens] → 编码器 → 只保留 register tokens` → 固定 K 个身份 token；身份监督由重建承担（无需独立身份损失）
+- [ ] 2.4 **身份通道：参考输入 + FLOAT 式读出（T-A5）** —— 身份编码器（卷积编码器 → 512 维全局向量）**只吃参考**；单图直接用，多图/视频逐图编码后**平均**；与运动分支**独立前向**；身份监督由重建承担（无需独立身份损失）
 - [ ] 2.4b 参考输入数据准备：为每只猫收集参考（单图/多图/短视频）；单猫语料只需一份；建“片段→参考”配属表
 - [ ] 2.5 跨猫交换重建（解耦验证）：**换参考输入即得**（`decode(参考_B, A 的 λ)`）——无需专门训练目标
 - [ ] 2.6 `configs/identity_action_tokenizer/` 配置 + 训练脚本（bf16 + 梯度检查点）
