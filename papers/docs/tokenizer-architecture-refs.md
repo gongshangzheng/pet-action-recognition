@@ -358,3 +358,54 @@ z_{s→t} = (z_{s→r} + w_{r→s}) + (w_{r→t} − w_{r→1})
 | 1 | **`feats` 通道不是"重建质量"通道，而是分离机制的一环**——外观靠 warp【搬】而非【合成】，运动通道（20 维）只需表达"搬到哪"。→ **C28「不补 feats」需要重审** |
 | 2 | **扩展到多图的两条 LIA-faithful 路线**：<br>**路线 1（最贴）**：逐图算残差 `id_i = E(x_i) − Σ_m a_i,m d_m`，再聚合。性质：`id_i ⊥ span(V)` **由构造保证** → 同身份不同图**天然接近**，聚合（含平均）也不互相污染<br>**路线 2**：register 聚合 + 显式约束「`w_identity` 在 V 上投影 ≈ 0」 |
 | 3 | **路线 1 的风险（必须实测）**：它要求运动子空间**吃掉每张图的姿态**。人脸姿态≈低维（成立）；**猫姿态维度高得多（身体关节多）→ M=20 可能不够 → 残差残留姿态 → 同身份不同图不再接近** |
+
+---
+
+## 5f. 「多参考图/视频提身份」的后续工作（2026-09-17 联网核查）
+
+**先澄清**：**LIA 本身不支持多图**——其 **TPAMI 2024 扩展版摘要与 ICLR 2022 实质相同、无多图内容**；本地代码 `repos/lia/run_demo.py` / `predict.py` 均为单 `img_source`。多参考这条线在**其他团队**的工作里。
+
+### A. Slot-ID（arXiv 2601.01352，2026-01）—— 用**参考视频**
+
+> *"Conditioning on a single image completely ignores the **temporal signature**, which leads to **pose-locked motions, unnatural warping, and 「average」 faces** when viewpoints and expressions change."*
+> *"A short clip reveals **subject-specific patterns**, e.g., **how smiles form**, across poses and lighting."*
+
+**做法**：短参考视频 → **Sinkhorn-routed encoder** → 紧凑 **identity tokens**（捕获特征性动态），仅轻量条件。
+**对本项目**：**直接支持 C13＝B（参考视频）**，并给出单图的三种具体病症（pose-locked / 平均脸 / 异常 warping）。
+
+### B. Durian（arXiv 2509.04434）—— **一个或多个参考图**
+
+**做法**：双参考分工（一个「属性参考」+ 一个「身份参考」，分开处理后 spatial attention 融合）+ **互补掩码（complementary masking）** 使每个参考成为**专门流** + 自重建训练（同视频两帧当 pseudo pair）+ 推理时 mask expansion / augmentation。
+**对本项目**：**「用掩码强制分工」** 是除容量闸门之外的第二道强制手段，可直接借用。
+
+### C. ST-DRC（arXiv 2606.02441）—— IPVG，三条可借
+
+| # | 机制 | 说明 |
+|---|---|---|
+| ① | **latent in-context injection** | 参考图用 **视频 VAE** 编码 → 与噪声 video latent **拼接**；*"rich low-level identity details accessed **without additional adapters**"* → **正是本项目 C29 的 A2 方案（VAE latent + in-context）** |
+| ② | **TASS-RoPE**（Temporal-Adjacent **Spatial-Shifted** RoPE）| 参考 token **时间相邻但空间错位** → 参考信息经 spatio-temporal attention 流动，同时**抑制 pixel-level copy-paste 捷径**。**比 OmniMate 的负 RoPE 更强**（负 RoPE 只隔离位置，TASS-RoPE 还防抄袭捷径）|
+| ③ | appearance-invariant reference augmentation + face-guided identity objectives | 防 shortcut learning、加强身份监督 |
+
+### ⚠️ 必须保持清醒的一点
+
+**这三篇都是生成模型（diffusion），目标是「生成得像」，不是「可解耦、可复用的表征」**：
+
+| | 它们 | 本项目 |
+|---|---|---|
+| 目标 | 身份保持的生成 | `λ` 可解释 + 身份可复用 + **`λ` 无身份（审计）** |
+| 分离强度 | 「抑制 shortcut」（软）| 需可审计的半硬/硬保证 |
+| 有 `w_identity` 吗 | ❌（in-context 方案没有）| ✅ 需要 |
+
+→ **借它们的机制（TASS-RoPE / 掩码分工 / VAE 编码），不借它们的目标定位。**
+
+### 🔶 一条新暴露的张力（Slot-ID 引出，待定）
+
+Slot-ID 指出身份**包含「特征性动态」**（*"how smiles form"*）。但本项目要求 **`λ` 无身份**——那「个体特有的动作风格」该放哪？
+
+| 选项 | 后果 |
+|---|---|
+| A. 全放身份码 | `λ` 少了「个体风格」；且身份码含动态成分 → 破坏「身份是常量」 |
+| B. 全放 `λ` | `λ` 含身份信息 → 违反泄漏审计 |
+| C. **明确忽略个体风格** | 只做「动作类别」层面的解耦（**当前设计的隐含假设，此前未被显式承认**）|
+
+→ 记为待定项（架构 **C32**）。
