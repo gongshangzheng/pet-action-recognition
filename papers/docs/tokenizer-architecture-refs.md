@@ -275,6 +275,8 @@ AdapTok 的 mask 是**块因果**（同块或前块可见），而 TivTok SIF �
 
 **它是什么**：开放域实时流式音视频生成（交互式虚拟人）。与本项目**任务不同**（它是条件生成，不是表征学习），但**参考图的用法值得借鉴**。
 
+**⚠️ 本项目定位（2026-09-17 用户裁定）**：OmniMate 的纯 in-context 做法作为**对照组（A0）**、**不是主线**——因为它**不产生身份潜变量**（没有 `w_id`），「同身份潜变量接近」这个要求无处施加。主线候选见架构 §2.5 **C29**（A1 3D patchify + register / A2 VAE latent + register → 1D tokens）。
+
 **MRCM（Multi-Reference Conditioning Module）机制**：
 
 ```
