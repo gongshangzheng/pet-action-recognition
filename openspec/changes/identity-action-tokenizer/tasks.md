@@ -12,7 +12,7 @@
 
 ## 2. Tokenizer 实现
 
-- [ ] 2.1 **FLOAT 式身份-运动分解骨架**：视频编码器（全片段提特征，保证运动有时序上下文）→ 逐帧 latent → 正交基投影得 `λ_t`；参考输入编码得 `w_identity`（**TivTok SIF 双 token 暂不采用**，见 design 谱系 + `papers/docs/tivtok-reference.md`）
+- [ ] 2.1 **FLOAT 式身份-运动分解骨架**：视频编码器（全片段提特征，3D tubelet t=4）→ 逐 tubelet 特征 → 正交基投影得 `λ_j`（每 t 帧一份）；参考输入编码得 `w_identity`（**TivTok SIF 双 token 暂不采用**，见 design 谱系 + `papers/docs/tivtok-reference.md`）
 - [ ] 2.2 动作通道：FLOAT/LIA 正交运动基（可学习矩阵 + 每次前向 `torch.linalg.qr`）→ z_t = Σ λ_m(t)·v_m；系数 λ 可闭式提取（λ_m = <z_t, v_m>）
 - [ ] 2.3 解码器 + 重建损失（L1 + perceptual + adversarial，TivTok 口径）
 - [ ] 2.4 **身份通道：参考输入 + register tokens 联合融合（T-A5）** —— `[register tokens ⊕ 参考全部 tokens] → 编码器 → 只保留 register → 投影成 w_identity ∈ R^d`；单图/多图/视频**共用一套结构**；与运动分支**独立前向**；身份监督由重建承担（无需独立身份损失）
