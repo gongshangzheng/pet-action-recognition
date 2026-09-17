@@ -4,7 +4,7 @@
 
 ## Decisions
 
-### C1: CLI 形态
+### SC1: CLI 形态（本文件局部编号，与架构 §4 的 `Cxx` 无关）
 
 `scripts/spot_check_actions.py --camera C --from T --to T`：拉录像 → 复用预处理管线（multi prompt 检测 + 运动校正 + 跟随裁剪）→ 隐码（video-feature-latent 选型胜出编码器 + 簇映射）→ 动作报告（JSON/Markdown）。分钟级延迟可接受。
 
@@ -15,7 +15,7 @@
 - 推送：SSE（复用 live 基础设施）；秒级延迟目标
 - Open Questions：延迟预算具体数值？簇分配的滑动平滑窗口？低置信分配如何呈现（"疑似"态）？
 
-### C2: 身份登记
+### SC2: 身份登记
 
 登记照（每猫 3–5 张清晰 crop）→ **embedding（模型选型待实测）** → **向量库（规模决定，默认 numpy 暴力检索）**；新 crop 最近邻检索；未登记个体标「未知猫 #N」。与物品识别共用 `petlib/identity/` 抽象（总管 D9）。
 
