@@ -50,7 +50,7 @@ flowchart TD
     S1 --> S2
 
     subgraph S2["② 跟随视角生成"]
-        B1[follow_adaptive 跟随裁剪] --> B2[512×512 H.264 短片]
+        B1[自适应跟随裁剪] --> B2[512×512 H.264 短片]
     end
 
     S2 --> S3
@@ -110,7 +110,7 @@ flowchart TD
 |---|---|
 | 输入 | 轨迹 JSON |
 | 输出 | 512×512 以猫为中心的 H.264 短片 |
-| 算法 | follow_adaptive 自适应裁剪 + 尺寸离群过滤 + 渲染层漂移过滤 |
+| 算法 | 自适应跟随裁剪（猫居中）+ 尺寸离群过滤 + 渲染层漂移过滤 |
 | 代码 | `scripts/make_followcam.py`、`scripts/pet_batch_run.py` |
 | 状态 | ✅ 34/34 段完成（共 14.7 分钟）|
 
@@ -276,7 +276,7 @@ flowchart LR
 | C5 | 量化器 | **无量化（连续 + KL）** / SoftVQ 软正则 / FSQ / VQ | **已定：无量化**（2026-09-17）——下游全需连续表征；先例：TiTok 官方 VAE 模式（重建反优于 VQ：0.84 vs 1.49）、SoftVQ-VAE 本就是 continuous tokenizer、MAR/AR-video 去 VQ 先例 |
 | C6 | TIV : TV 比例 | 3:1 / 1:1 / 1:3 等 | **3:1**（TivTok 实测口径：TIV 96 + TV 32 @16 帧）|
 | C7 | token 数量 | N_TIV / N_TV / 正交基元数 M | 待定：起点 N_TIV 96、N_TV 2/帧、M 20–32，做缩放消融 |
-| C8 | 正交基实现 | QR（`torch.linalg.qr`）/ 经典 Gram-Schmidt | **QR**——与 LIA/FLOAT 代码一致，数值更稳；论文称 Gram-Schmidt 指同一数学对象 |
+| C8 | 正交基实现 | QR 分解 / 经典 Gram-Schmidt | **QR 分解**——与 LIA/FLOAT 实现一致，数值更稳；论文称 Gram-Schmidt 指同一数学对象 |
 | C9 | 基的符号 | 自由 / 训练后固定 | 冻结基时必须固定符号，否则 λ 语义漂移 |
 | C10 | 对齐教师 | 无 / DINOv3（外观）/ V-JEPA 2 或 InternVideo2（动作）/ 加 SACP | 待定：先不加（纯架构解耦），训练不稳再上 DeRA 式对齐 |
 | C11 | 训练粒度 | 阶段 A1 冻结骨干 → A2 端到端 | **两段都做**，实测 A1 是否够用 |
