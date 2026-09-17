@@ -84,8 +84,11 @@
 
 ## 2. FLOAT / LIA（正交运动基）
 
-### ⚠️ 最重要修正：论文说 Gram-Schmidt，代码实际用 QR
+### 正交化实现：论文说 Gram-Schmidt，代码用 QR（**非矛盾**）
 - 论文（LIA `txt/2203.09043` §3.1）："implement `D_m` as a learnable matrix and **apply the Gram-Schmidt process during each forward pass**"
+- **结论（2026-09-16 修正）**：**Gram-Schmidt 就是计算 QR 分解的算法**，二者是同一数学对象。论文用经典算法名描述，代码用 LAPACK 的 Householder QR（数值更稳定）。全仓库无任何 `gram_schmidt`/`parametrizations.orthogonal` 实现 → 确认就是 QR。
+- **λ 由 MLP 学习**（非内积提取），因此 Q 列符号差异会被训练吸收 → 功能等价
+- **需要注意的两点**：(a) Householder QR 数值稳定性优于经典 GS（代码选择的合理理由）；(b) 若要冻结基当 tokenizer 组件，需显式固定 Q 符号（代码未做）
 - **代码实际**（`repos/lia/networks/styledecoder.py:439-458`）：
   ```python
   self.weight = nn.Parameter(torch.randn(512, motion_dim))
@@ -167,11 +170,44 @@
 
 ---
 
+## 5b. AdapTok 深读（推荐代码基座，2026-09-16 精读）
+
+### 论文结构（`txt/2505.17011_adaptok.txt` §3.1）
+```
+3D patchify (t×p×p) → patch embeddings e (L 个)
+  ↓ Block-Causal Encoder E：e ⊕ q_enc → 块因果注意力（同块/前块可见）→ 取 latent 位输出
+  ↓ Block-mask Sampler：每块随机保留前 ℓ_i 个 latent（尾部丢弃）
+  ↓ SVQ 量化 → z_q
+  ↓ Block-Causal Decoder D：q_dec ⊕ z_q → 取后 L 位 → 重建
+```
+
+### 代码地图
+| 文件 | 内容 |
+|---|---|
+| `models/mask_generator.py:452+` | **`generate_attention_mask(num_img_tok_each, num_latent_each, num_groups, attn_type)`**；支持 `full_causal_type1/2/3`、`full_bi_attn`；附带 `reorder_attention_mask` / `decoder_attn_mask_with_latent_mask` / `rearrange_drop_mask` / ILP 求解 |
+| `models/block.py:36-61` | `Attention.forward(x, attn_mask)`：fused SDPA 直传 + 回退 `masked_fill(~mask, -inf)` |
+| `models/transformer.py:34-69` | `TransformerEncoderParallel.forward(context, query, attn_mask)` |
+| `models/adaptok.py:704-711` | `encode()`：patch embed + latent query → encoder(x, q_emb, attn_mask) → bottleneck |
+| `models/adaptok.py:750-761` | `decode_with_mask()`：latent_mask → decoder mask |
+| `models/bottleneck.py` | SVQ（stochastic，codebook 8192，τ=0.03，commitment 0.25） |
+| `cfgs/adaptok.yaml` | **12 层 / 768 hidden / 12 heads / patch t=4,p=8 / bottleneck_token_num=1024 / dim=16**（与 TivTok 同形） |
+| `cfgs/adaptok.yaml` 训练 | Adam lr 1e-4 β=(0.5,0.9)、400 epochs、L1+LPIPS+GAN(transformer disc, w=0.3)+LeCAM 0.001 |
+
+### 实现 SIF 的落地路径（**关键**）
+AdapTok 的 mask 是**块因果**（同块或前块可见），而 TivTok SIF 要求 **TIV 看全部帧（含未来）** →
+**不是改配置，而是新增 mask 类型**：
+```
+新增 attn_type = "tiv_tv"：
+  TIV tokens  → 全部 patch（所有帧）+ 全部 TIV + 全部 TV   （全局，非因果）
+  TV tokens(t) → 第 t 帧 patch + 全部 TIV + 自己            （局部）
+```
+`encoder_attn_type` / `decoder_attn_type` 是配置字符串 → 新类型可直接接入；`full_bi_attn` 可作参考实现。
+
 ## 6. 对现有 OpenSpec 设计的修正清单
 
 | # | 现有设计 | 调研结论 | 建议 |
 |---|---|---|---|
-| 1 | 正交基用 "Gram-Schmidt" | 代码实际是 **QR**（论文与代码不一致） | 改为 QR（并注明论文口径为 Gram-Schmidt） |
+| 1 | 正交基用 "Gram-Schmidt" | QR 与 Gram-Schmidt 是同一数学对象（GS 是计算 QR 的算法）；代码用 LAPACK Householder QR | 实现用 `torch.linalg.qr`；若要冻结基需固定符号 |
 | 2 | `N_TIV=16, N_TV=1~4`（TIV:TV ≈ 1:2~1:8） | TivTok 最优 **TIV:TV = 3:1** | 调整为 TIV 主导，做比例消融 |
 | 3 | 编码器初始化"从零训 ViT 或 SoftVQ 权重（待查）" | **SoftVQ 权重公开可得**（HF `SoftVQVAE/*`）；AdapTok MIT 可跑 | 用 SoftVQ 权重初始化 / AdapTok 代码基座 |
 | 4 | V-JEPA 2 角色已修正为"对齐教师/伪标签源" | V-JEPA 2 可作动作对齐教师；DINOv3/InternVideo2 是 DeRA 实证选择 | 保留，教师候选排序：DINOv3（外观）→ V-JEPA2/InternVideo2（动作） |
