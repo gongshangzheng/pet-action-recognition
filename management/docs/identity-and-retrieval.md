@@ -18,14 +18,16 @@ id: 7
 | 层 | 解决什么问题 | 路线 | 深入 |
 |---|---|---|---|
 | ① 定位追踪 | 这只猫在每帧哪、同一只猫在跨帧是否保持同一 id | GroundingDINO 多 prompt 抽样 + 插值 + 运动校正 v5（可选，默认禁用） | 本篇 §1 |
-| ② 个体身份 | 这只猫是登记过的哪只猫？还是新面孔？ | DINOv2 提特征 + FAISS 检索（对比学习视角） | 本篇 §3 |
-| ③ 物体实例 | 这个碗是不是上次那只、摄像头是不是同一个机位 | SAM 分割候选 + DINOv2 特征 + FAISS 检索（同一原理） | 本篇 §4 |
+| ② 个体身份 | 这只猫是登记过的哪只猫？还是新面孔？ | **embedding 检索**：登记照 → embedding → 向量库最近邻（模型/向量库待实测） | 本篇 §3 |
+| ③ 物体实例 | 这个碗是不是上次那只、摄像头是不是同一个机位 | SAM 分割候选 + embedding 检索（同上，待实测） | 本篇 §4 |
 
 **贯穿三层的统一原理——对比学习（contrastive learning）**：
 - 同一只猫在走路/睡觉/跑酷的不同视频帧里，提取的特征要**相似**（positive invariance，正样本对拉近）
 - 两只不同猫在同一个沙发上，特征要**区分**（negative discrimination，负样本对推远）
 - 同一个物体（碗）放在厨房/客厅/被端着走，特征也要相似
-- 这个性质在工程上的两种实现：FAISS 相似度检索 / track 级 InfoNCE 对比损失（详 [8 号](../wiki/identity-tokenizer) §3）
+- 这个性质在工程上的实现：**embedding 相似度检索**（登记照→embedding→向量库）
+- ⚠️ **模型与向量库未定**：具体用哪个 embedding 模型（DINOv2/DINOv3/CLIP/SuperAnimal/猫专用 Re-ID）与哪个向量库（numpy/FAISS）**在 `registry-retrieval` 实施时实测**；DINOv2+FAISS 仅为默认候选
+- 身份-动作 Tokenizer 的**身份通道不再用对比损失**（改为参考输入条件化 + 重建，详 [8 号](../wiki/identity-tokenizer) §4.6）——对比学习作为**原理**仍然贯穿两条路线
 
 ## §1 宠物定位与跟踪
 
@@ -118,8 +120,8 @@ Re-ID 本质就是对比学习的**检索实现**：
 | | 猫 Re-ID（本篇 §3） | 身份-动作 Tokenizer（[8 号](../wiki/identity-tokenizer)） |
 |---|---|---|
 | 目标 | 判"谁是谁" | 解耦"身份与动作"，用于重建/生成 |
-| 原理 | DINOv2 检索 | 身份 tokens + 动作 latent + 解码器 |
-| 对比损失 | 隐式（DINOv2 训练时已有） | **显式** track 级 InfoNCE |
+| 原理 | embedding 检索（模型待实测）| **参考输入条件化** + 容量闸门 + 重建 |
+| 对比损失 | 隐式（embedding 模型训练时已有） | **不需要**（参考输入使身份"给定"）|
 | 输出 | "未知猫 #N" / 某只已登记猫 | 视频重建 / 可控生成 |
 | 状态 | 0/4 待批准实施（`registry-retrieval`） | 0/9 研究型（`identity-action-tokenizer`） |
 

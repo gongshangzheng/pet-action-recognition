@@ -17,7 +17,9 @@
 
 ### C2: 身份登记
 
-登记照（每猫 3–5 张清晰 crop）→ DINOv2 embedding → FAISS；新 crop 最近邻检索；未登记个体标「未知猫 #N」。与物品识别共用 `petlib/identity/` 抽象（总管 D9）。
+登记照（每猫 3–5 张清晰 crop）→ **embedding（模型选型待实测）** → **向量库（规模决定，默认 numpy 暴力检索）**；新 crop 最近邻检索；未登记个体标「未知猫 #N」。与物品识别共用 `petlib/identity/` 抽象（总管 D9）。
+
+> **模型选型不在本 change 定**（2026-09-17）：候选与判据见 `registry-retrieval/design.md` D9b；架构层只定槽位/接口/判据。
 
 
 ---

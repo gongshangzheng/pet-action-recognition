@@ -13,10 +13,12 @@
 ## 2. Tokenizer 实现
 
 - [ ] 2.1 双 token 骨架：TIV tokens（attend 整段）+ TV tokens（每帧 local scope），实现 TivTok SIF 的非对称 attention scope
+  - ⚠️ **阻塞依赖**：T-A5c 的 Q1/Q2（参考输入下视频内 TIV 是否还需要、TV 如何获得时间上下文）需先裁定，否则本任务口径不稳
 - [ ] 2.2 动作通道：FLOAT/LIA 正交运动基（可学习矩阵 + 每次前向 `torch.linalg.qr`）→ z_t = Σ λ_m(t)·v_m；系数 λ 可闭式提取（λ_m = <z_t, v_m>）
-- [ ] 2.3 解码器 + 重建损失（L1 + perceptual + adversarial，TivTok 口径；Invariant Broadcasting 复用 TIV）
-- [ ] 2.4 身份通道：TIV 池化 → identity embedding + track ID InfoNCE（τ=0.07，memory bank）
-- [ ] 2.5 跨猫交换重建（解耦验证）：猫 A 的 TV × 猫 B 的 TIV → 重建"B 做 A 的动作"
+- [ ] 2.3 解码器 + 重建损失（L1 + perceptual + adversarial，TivTok 口径）
+- [ ] 2.4 **身份通道：参考输入（T-A5）** —— 身份编码器（单图 / 3–5 张多视角图 / 短视频）→ `w_identity`（固定向量）；**不使用 track InfoNCE**（用户裁定 2026-09-17；仅作可选度量增强保留）
+- [ ] 2.4b 参考输入数据准备：为每只猫收集参考（单图/多图/短视频）；单猫语料只需一份；建“片段→参考”配属表
+- [ ] 2.5 跨猫交换重建（解耦验证）：**换参考输入即得**（`decode(参考_B, A 的 λ)`）——无需专门训练目标
 - [ ] 2.6 `configs/identity_action_tokenizer/` 配置 + 训练脚本（bf16 + 梯度检查点）
 
 ## 3. 阶段 A（UCF101，人类数据）
