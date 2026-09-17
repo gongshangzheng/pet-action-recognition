@@ -1,7 +1,7 @@
 # Proposal: video-action-segmentation
 
 > ⚠️ **职责修订（2026-09-17 用户裁定）**：本 change **只负责 L5 动作分割（找边界）**，**不贴标签**。
-> **L6 动作识别（每段 → 类别）** 由 `video-feature-latent`（行为簇聚类 + 命名）承接；拆开理由见架构 §4.5/§4.6。
+> **L6 动作识别（每段 → 类别）** 由 `video-feature-latent`（行为簇聚类 + 命名）承接；拆开理由见架构 §5.5/§5.6。
 
 > 子 change，总管：`pet-motion-latent-pipeline`（**2.4b 主线**）。**性质：研究型**（2026-09-17 用户裁定正式立项）。
 
@@ -64,7 +64,7 @@
 
 ## Impact
 
-- **管线新增两环**：架构 §4 新增 L5「动作分割」+ L6「动作识别」（原 L5 身份识别 → **L7**、L6 出口 → **L8**）；本 change 只交付 L5，L6 归 `video-feature-latent`
+- **管线新增两环**：架构 §5 新增 L5「动作分割」+ L6「动作识别」（原 L5 身份识别 → **L7**、L6 出口 → **L8**）；本 change 只交付 L5，L6 归 `video-feature-latent`
 - **依赖**：`identity-action-tokenizer`（提供 `λ`）、`video-feature-latent`（提供行为素/段表征）
 - **被依赖**：`spot-check-cli`（报告的"标签 + 起止秒"直接来自本环）
 - **`video-feature-latent` 阶段划分需调整**：其"序列层/分词层"目前挂在**阶段三（条件启动）**，按本 change 应**提为主线必要一层**

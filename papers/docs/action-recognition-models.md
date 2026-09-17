@@ -93,7 +93,7 @@
 | **骨架** | ST-GCN、**PoseC3D**、CTR-GCN | 关键点热图/图 → 时空图卷积（对人/动物都适用）|
 
 **与本项目相关的两条观察**：
-1. **ViT 族的 tubelet embedding** 正是我们编码器借用的 patchify 思路（见 [6 号 §4.4](../management/docs/architecture.md)）。
+1. **ViT 族的 tubelet embedding** 正是我们编码器借用的 patchify 思路（见 [6 号 §5.4](../management/docs/architecture.md)）。
 2. **VideoMAE 用 sin-cos 3D 位置编码**（`use_learnable_pos_emb=False`）⇒ **换 T 不必重训位置编码**（需重建模型 + 重微调），这对"多时间尺度"很有用。
 
 ## §4 训练数据与标注形态
@@ -147,7 +147,7 @@ A1 输出：[num_classes]                       ← 全程只输出这个
 | **OAD**（LSTR / OadTR）| 因果逐帧预测 | 在线标注 |
 | **音频范式迁移** | pause/VAD 预分段（"静音当标点"）+ 联合分割与词表发现（arXiv 1603.02845）| 无需标注 |
 
-> **无监督 TAS 与本项目需求最贴**：输入长未裁剪视频 → 输出段边界 + 学到的类别，不需标注。详见 [6 号 §1.8](../management/docs/architecture.md)。
+> **无监督 TAS 与本项目需求最贴**：输入长未裁剪视频 → 输出段边界 + 学到的类别，不需标注。详见 [6 号 §1.5](../management/docs/architecture.md)。
 
 ## §8 与本项目的关系
 
@@ -159,4 +159,4 @@ A1 输出：[num_classes]                       ← 全程只输出这个
 | 无监督发现动作类型 | 无监督 TAS | 无需标注，成熟且直接可借鉴 |
 
 **核心结论**：本项目要的是 **A4 级输出**，而主流模型停在 **A1**——两者不是"谁更好"，是**任务不同**。
-主流的"定长片段分类"是 A1 的正确解；我们额外需要的是**分割/分词层**（见 [6 号 §1.8](../management/docs/architecture.md)、change `video-action-segmentation`）。
+主流的"定长片段分类"是 A1 的正确解；我们额外需要的是**分割/分词层**（见 [6 号 §1.5](../management/docs/architecture.md)、change `video-action-segmentation`）。
