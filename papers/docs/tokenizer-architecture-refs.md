@@ -409,3 +409,58 @@ Slot-ID 指出身份**包含「特征性动态」**（*"how smiles form"*）。�
 | C. **明确忽略个体风格** | 只做「动作类别」层面的解耦（**当前设计的隐含假设，此前未被显式承认**）|
 
 → 记为待定项（架构 **C32**）。
+
+---
+
+## 5g. 「用解耦运动码做识别」这条路线的工作盘点（2026-09-17 联网核查）
+
+**起因**：反向思考——LIA 的目标就是**拆开动作与身份**，那它是否天然适合**表情区分**之类的识别任务？有没有已有工作？
+
+### 结论：**没有**「LIA 解耦运动码 → 表情 / AU 分类」的直接工作
+
+但有四条相邻路线，各走了一部分：
+
+| 路线 | 代表 | 做了什么 | 缺什么 |
+|---|---|---|---|
+| **① 潜动作模型（LAM）** | **CLAM**（arXiv 2505.04999）| 从**无标注视频**学抽象动作码——「expert demonstrations available only as observation sequences **without action labels**」| 服务机器人**控制**，不是识别 |
+| **② 解耦 + 世界模型** | **DiLA**（arXiv 2605.15725）| 明确点出「**动作抽象 vs 生成保真**」的根本权衡，并用解耦解决 | 服务世界模型 |
+| **③ 运动聚焦自监督** | **MOFO**（arXiv 2308.12447）| 指出「SSL methods often do not explicitly consider motion information」，做**运动为中心的自监督**并用于**动作识别** | 无身份-动作解耦 |
+| **④ 解耦 + 自监督** | DRESS（arXiv 2503.09679）| 解耦表示 + 自监督 | 面向少样本 |
+
+### 为什么表情领域少有人做（推测，待验证）
+
+```
+人脸表情：标注极充足（AffectNet ~1M / RAF-DB ~30k / FER2013 ~35k）
+  → 直接监督已足够 → 无人需要解耦自监督
+  → 与架构 §1.7「标签充足时直接监督更优」一致
+
+微表情：标注确实稀缺（SAMM / CASME 仅数百样本）
+  → 但难点是「强度极低、时长极短」，检索到的仍以光流 / 手工特征为主
+  → 与「身份-动作解耦」不是同一个问题
+```
+
+→ **本项目走在一条「因为不需要所以没人走」的路上**：是机会（少人涉足），也意味着**没有现成经验可抄**。
+
+### ⭐ DiLA 的核心洞察（本轮最有价值）
+
+原文：「**disentanglement and latent action learning are co-evolving**: the **predictive bottleneck** inherent in latent action learning **serves as a driving force for disentanglement**, compelling the model to **distill spatial layouts into the structure pathway while offloading visual details to a separate content pathway**」
+
+**含义**：**潜动作学习固有的预测瓶颈本身就是解耦的驱动力**——逼模型把空间布局塞进结构通路、把**视觉细节卸载到独立的内容通路**。
+
+**对本项目是理论升级**：
+
+| | 机制 | 性质 |
+|---|---|---|
+| 我们现有 | 正交基容量闸门 + 输入流隔离 | **外部约束** |
+| DiLA 给的 | 预测 / 重建瓶颈逼出解耦 | **内生驱动力** |
+
+→ 若目标是用低维 `λ` 重建，`λ` 只能装「可预测的变化」（＝运动），不可预测的细节必须走别的通路 → **解耦是被逼出来的**。
+
+**并且它直接支持 C31「补 feats」**：原文「offloading visual details to a **separate content pathway**」——**细节必须有独立卸载通路**，否则会挤进动作码。
+
+### 另外两条对本项目有用
+
+| 工作 | 用途 |
+|---|---|
+| **MOFO**（2308.12447）| 若走自监督，**运动聚焦的预训练目标**比普通对比学习更适合动作识别 |
+| **DECOWAM**（2608.20114）| 明确要区分「**相机自运动 vs 本体动作**」——与本项目 followcam **相机运动污染**是同一个问题 |
