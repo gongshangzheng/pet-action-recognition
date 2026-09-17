@@ -61,20 +61,22 @@ id: 8
 flowchart TD
     R["参考输入<br/>单图 / 多视角图 / 短视频"] --> RT["⊕ 可学习 register tokens"]
     RT --> E0["身份编码器<br/>只吃参考 · 与运动分支独立前向"]
-    E0 --> L["只保留 register → 投影<br/>w_identity ∈ R^d（跨视角联合融合）"]
+    E0 --> L["只保留 register → 投影<br/>身份向量（固定，跨视角联合融合）"]
 
     A[猫本体视频<br/>上游抠像产物] --> B["3D patchify<br/>patch t=4,p=8"]
-    B --> C["视频编码器 E_mot<br/>整段提特征 · 含时序上下文"]
+    B --> C["视频编码器<br/>整段提特征（含时序上下文）"]
 
-    C --> F[逐帧 latent z_t<br/>「这一帧在动什么」]
+    C --> F["逐帧动作特征<br/>「这一帧在动什么」"]
 
-    F --> H["正交运动基投影<br/>容量闸门 z_t = Σ λ_m·v_m"]
-    H --> I["λ_m 基元强度序列<br/>可解释动作表示"]
+    F --> H["正交运动基投影<br/>容量闸门：只留 M 个方向的系数"]
+    H --> I["动作基元强度曲线<br/>可解释（M 条曲线）"]
 
-    F --> J["解码器<br/>decode(w_identity + Σλ_m·v_m)"]
+    F --> J["解码器<br/>用「身份向量 + 动作系数」重建"]
     L --> J
     J --> K[重建视频帧]
 ```
+
+**图的读法（符号对照）**：见 [6 号 §2.4](./architecture.md) 的对照表（`w_identity` = 身份向量、`λ_t` = 逐帧动作系数、`V` = 正交运动基）。
 
 > 上图 = **FLOAT 式**（2026-09-17 重心转向）。TivTok 的 SIF 双 token 已移除（备档见 `papers/docs/tivtok-reference.md`）。
 
@@ -358,7 +360,7 @@ register： reg attend 所有图的全部 token ← 跨视角关系推理
 flowchart TD
     subgraph PA["阶段 A：人类数据验证架构"]
         A1[UCF101 13320 段] --> A2[A1 快速验证<br/>骨干冻结]
-        A2 --> A3["中期检查点<br/>z_t 线性探针 top1<br/>λ 基元可视化"]
+        A2 --> A3["中期检查点<br/>动作特征线性探针 top1<br/>动作基元可视化"]
         A3 --> A4[A2 端到端<br/>全量解冻]
     end
 
