@@ -169,6 +169,7 @@ flowchart TD
 |---|---|
 | 基座 | **视频编码器代码基座候选**：AdapTok（MIT，12L/768d/patch 4×8×8）/ VidTok（MIT）/ LARP（MIT）；⚠️ SIF 移除后其 mask 框架不再需要 |
 | 分解骨架 | **FLOAT 式**：`w_identity`（参考输入）+ `Σ λ_m·v_m`（视频逐帧）→ 解码；对应 FLOAT Eq. 8-9 |
+| 视频 patchify | **3D patchify / tubelet**（`t×p×p` = 4×8×8）——**t 帧拼成三维体再整体切块**，不是逐帧切二维块；运动直接进 patch、token 数降 t 倍（借 AdapTok）|
 | 量化器 | **无量化**（连续潜变量 + KL 正则，TiTok VAE 模式同思路）；SoftVQ 软码本仅作备用正则 |
 | 动作通道 | FLOAT/LIA 正交运动基：`z_t = Σ λ_m·v_m`，基由 QR 每次前向正交化；λ 曲线即动作基元强度 |
 | 离散化 | **不在帧级做**——交给行为聚类（HDBSCAN + 命名，序列级）|
