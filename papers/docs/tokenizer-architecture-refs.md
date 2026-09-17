@@ -301,3 +301,60 @@ AdapTok 的 mask 是**块因果**（同块或前块可见），而 TivTok SIF �
 | 3 | **反面对照**：OmniMate **故意**让参考 token 与生成帧同处一个注意力（身份要影响生成）；而我们**禁止** patch/tubelet attend register（审计要求 λ 无身份）。**同一结构选择在两个目标下结论相反** → 隔离约束是**目标驱动**，不是通用最佳实践 |
 
 **不能照搬的原因**：它是**条件生成**——参考图只是"条件"，不需要把身份提取成可解释、可复用的向量；我们要 λ 可解释 + 身份可复用，**必须显式分解**。
+
+---
+
+## 5e. LIA 的「身份-动作分离」机制（源码+论文级，2026-09-17 精读）
+
+**材料**：论文 `txt/2203.09043_lia.txt`、代码 `repos/lia/`（**无训练脚本**，仅推理）。
+
+**论文核心表述**（§1）：*"we design LIA to **disentangle motion and appearance within a single encoder-generator architecture**. Deviating from existing methods using **separate networks** to learn disentangled features, LIA integrates both... in a **single encoder**"* → **不是双编码器**（此前一次误读已纠正）。
+
+### 机制五条
+
+**① 单编码器两个头**（`networks/encoder.py`）
+
+```python
+net_app = EncoderApp(size, dim)          # 卷积编码器（共用同一套参数）
+fc      = 5-layer MLP                    # 运动头
+h_source, feats = self.net_app(x_source)  # 身份：全局向量 h(512) + 【多尺度特征金字塔 feats】
+h_target, _     = self.net_app(x_target)
+a_target = self.fc(h_target)              # 运动：幅度向量（M=20 维）
+```
+
+**② 参考帧桥接**（Eq.1）：把 `x_s → x_d` 拆成 `x_s → x_r → x_d`
+```
+z_{s→d} = z_{s→r} + w_{r→d}                    (Eq.1)
+          ↑源图编码   ↑运动路径
+```
+
+**③ 正交基线性分解**（Eq.2-3）：
+```
+w_{r→d} = Σ_{i=1}^{M} a_i · d_i                (Eq.2)
+<d_i, d_j> = 0 (i≠j), 1 (i=j)                  (Eq.3，Gram-Schmidt 每前向；代码实为 QR)
+a = fc(E(x_d))   ← 运动幅度【只从驱动图】算
+```
+
+**④ 解码器用 warp 搬运外观**：`G` 先解出光流场 `φ_{s→d}`，再 **warp 源图及其 `feats`**。论文：*"G decodes it as a dense flow field φ and uses φ to warp x_s"*。
+
+**⑤ 训练 = 自重建，只有重建类损失**：源图与驱动图**从同一段视频随机取**，目标是重建驱动图。损失 = `L_recon + λ·L_vgg + L_adv`（Eq.10）——**没有对比损失、没有身份损失**。
+
+### 推理时的「相对迁移」（Eq.12）——身份保持的关键
+
+```
+z_{s→t} = (z_{s→r} + w_{r→s}) + (w_{r→t} − w_{r→1})
+        = z_{s→s} + (w_{r→t} − w_{r→1})        (Eq.12)
+          ↑xs 自身的重建      ↑x1→xt 的运动
+```
+论文：*"the original pose is preserved in x_s, at the same time motion is transferred from V_d"*。
+代码：`h_start = gen.enc.enc_motion(vid_target[:, 0])`（驱动视频第一帧）。
+
+**⚠️ 因此 LIA 的"身份"里含源图自己的姿态**——`wa = E(x_source)` 携带源图姿态，靠 `+w_{r→s} − w_{r→1}` 把姿态对齐到驱动起点。**身份 = "身份在源图姿态下的版本"，运动相对它做差。**
+
+### 对本项目的三条结论
+
+| # | 结论 |
+|---|---|
+| 1 | **`feats` 通道不是"重建质量"通道，而是分离机制的一环**——外观靠 warp【搬】而非【合成】，运动通道（20 维）只需表达"搬到哪"。→ **C28「不补 feats」需要重审** |
+| 2 | **扩展到多图的两条 LIA-faithful 路线**：<br>**路线 1（最贴）**：逐图算残差 `id_i = E(x_i) − Σ_m a_i,m d_m`，再聚合。性质：`id_i ⊥ span(V)` **由构造保证** → 同身份不同图**天然接近**，聚合（含平均）也不互相污染<br>**路线 2**：register 聚合 + 显式约束「`w_identity` 在 V 上投影 ≈ 0」 |
+| 3 | **路线 1 的风险（必须实测）**：它要求运动子空间**吃掉每张图的姿态**。人脸姿态≈低维（成立）；**猫姿态维度高得多（身体关节多）→ M=20 可能不够 → 残差残留姿态 → 同身份不同图不再接近** |
