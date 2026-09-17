@@ -1,0 +1,142 @@
+# Task for researcher
+
+# 任务：调研市场上现有「动作识别产品 / 生产级框架」的整体架构
+
+## 一、背景（委托方是谁、为什么要这个）
+
+我是一个「宠物（猫）动作识别研究平台」项目。我们的端到端管线是：
+
+    监控视频 → ① 定位与跟踪 → ② 跟随视角裁剪 → ③ 背景移除（抠像）
+             → ④ 动作表征（学出低维动作码 λ）→ ⑤ 动作分割（行为素 → 动作段）
+             → ⑥ 身份识别 → ⑦ 应用出口（抽查报告 / 实时监控 / 异常告警）
+
+我们刚刚确认了一件事：**主流学术动作识别模型（VideoMAE/UniformerV2/SlowFast 等）都是「定长片段分类」**——
+输入固定 T 帧（16/32/64），输出恒定 1 个标签，**给不出时间戳、也不支持一段视频多个动作**。
+
+我们的出口形态要求的是「段列表 + 时间戳」（例：『3:00–3:15 舔毛，3:15–3:40 走动，3:40–4:10 睡觉』），
+所以必须额外做一层「分段 → 逐段识别」。
+
+## 二、核心问题（必须回答）
+
+**委托方的假设**：市面上的动作识别产品/框架，应该都采用「先对动作分段，再对每一段做动作识别」的两段式架构。
+
+请验证或证伪这个假设，并回答：
+
+1. **它们真实的整体 pipeline 是什么？**（逐环节列清：解码 → 检测 → 跟踪 → 分段 → 识别 → 输出）
+2. **是不是「先分段再识别」？** 还是别的组织方式（例如：滑窗逐窗分类 + 后处理、逐帧分类、事件触发、端到端 TAD）？请给证据。
+3. **分段是怎么做的？** 靠运动能量/静止检测？靠 shot/change-point 检测？靠专门的 temporal action detection/segmentation 模型？靠人工/规则？
+4. **每段怎么做识别？** 用什么模型族？输入多少帧？多段如何并行/批处理？
+5. **有没有「分层」设计？**（类似我们说的：细粒度单元 → 组合成动作；或 low-level 动作 → 语义事件）
+6. **工程形态**：流式/实时 vs 批处理？边缘 vs 云？延迟/吞吐有公开数字吗？
+7. **闭源产品公开的技术描述**（博客/白皮书/工程博客）里，有没有可借鉴的架构决策与踩坑经验？
+
+## 三、调研对象（按优先级，每类给 2-4 个代表）
+
+### A. 云视频理解 API（最可能有公开架构文档）
+- AWS Rekognition Video（Label Detection / Segment Detection / Person Tracking）
+- Azure AI Video Indexer
+- Google Cloud Video Intelligence API（Shot Change Detection / Label Detection）
+- Twelve Labs（Marengo/Pegasus 系列，专门做视频理解）
+- VideoDB / Clarifai / Hive AI（若能查到）
+
+### B. 边缘 / VMS 视频分析平台（工程架构最完整）
+- NVIDIA Metropolis / DeepStream / TAO（特别是 ActionRecognitionNet）
+  ※ 重点：DeepStream 的 pipeline 设计（decode→batch→infer→track→analytics）与多流架构
+- 开源 NVR / 视频分析：Frigate、Viseron、Viso Suite、DeepStack
+- 安防：BriefCam、Avigilon、IntelliVision、Agent Vi
+
+### C. 体育动作/事件分析（分段做得很成熟）
+- Second Spectrum、Stats Perform / SportVU、Hawk-Eye、Sportlogiq、Pixellot、Veo
+  ※ 重点：它们怎么把连续比赛切成『事件』（event detection = 分段 + 分类）
+
+### D. 畜牧 / 动物行为识别（★ 与本项目最贴近，务必查）
+- Connecterra、Cainthus（被收购？）、Halter、Lely、Afimilk、SCR Dairy / Allflex
+- 学术→产业转化的动物行为识别公司
+  ※ 重点：它们怎么定义「行为」、怎么分段、用什么传感器/模型、部署形态
+
+### E. 开源生产级框架
+- NVIDIA TAO（ActionRecognitionNet / GestureRecognition）
+- OpenMMLab mmaction2 的 inference/demo 工具（滑窗、长视频 demo 是怎么做的）
+- 其他有生产级 inference 封装的视频动作识别项目
+
+## 四、输出要求
+
+1. **写入文件**：`papers/docs/action-recognition-products.md`（相对项目根 `/Users/zhengxinyu/pet-action-recognition`）
+   - 文首写：调研日期、调研人（AI researcher）、范围、一句结论
+   - 按上面 A/B/C/D/E 分节，每个对象一小节
+   - **每个对象尽量给：整体 pipeline（能画就用 Mermaid flowchart）· 是否先分段再识别 · 分段方法 · 识别模型 · 推理形态 · 来源 URL**
+   - 分节末尾给「对本项目的可借鉴点」与「查不到的东西（明确标注未公开）」
+   - 最后一节写「结论：委托方假设是否成立」+「可分出的 3-5 条通用架构模式」
+2. **引用规范**：每个事实性结论**必须带来源 URL**；查不到就写「未公开」，不要编。
+3. **不要修改除上述新文件之外的任何文件。**
+
+## 五、环境与工具（重要）
+
+- 网络：本机 VPN 是 TUN 全局接管，**国际站直连可达**（Google/arXiv/GitHub 都通）。先用 `~/.venv/bin/python ~/.agents/skills/web-search/scripts/search.py --probe` 确认（预期输出 TUN_OK）。
+- **必须使用现成脚本，不要手写临时爬虫**：`~/.agents/skills/web-search/scripts/` 下有
+  `search.py`（DDG 搜索，三态自动探测）、`openalex.py`（学术检索，不限流）、`arxiv.py`（论文，注意 3s 限流）、`hf.py`（HuggingFace）
+  统一用 `~/.venv/bin/python`。
+- 商业产品信息优先来源：官方文档站、工程博客（AWS Blog / Azure Blog / NVIDIA Technical Blog / Twelve Labs Blog）、白皮书、GitHub README、以及厂商的架构图文章。
+- 若某对象确实查不到架构细节，**如实写「未公开」并说明查了哪些地方**——这本身是有价值的信息。
+- 建议先读一遍 `~/.agents/skills/web-search/SKILL.md` 了解通道与防坑。
+
+## 六、时间与深度
+- 目标：覆盖 A/B/C/D/E 五类，每类至少 2 个对象有实质结论；能给 Mermaid 架构图的优先。
+- 不必穷尽，**优先给有公开架构描述的对象**，其余按类给一段话概括。
+
+---
+**Output:**
+Write your findings to exactly this path: /Users/zhengxinyu/pet-action-recognition/.pi/subagents/artifacts/outputs/c627d6f4/research.md
+This path is authoritative for this run.
+Ignore any other output filename or output path mentioned elsewhere, including output destinations in the base agent prompt, system prompt, or task instructions.
+
+## Acceptance Contract
+Acceptance level: attested
+Completion is not accepted from prose alone. End with a structured acceptance report.
+
+Criteria:
+- criterion-1: Return concrete findings with file paths and severity when applicable
+
+Required evidence: review-findings, residual-risks
+
+Finish with a fenced JSON block tagged `acceptance-report` in this shape:
+Use empty arrays when no items apply; array fields contain strings unless object entries are shown.
+`criteriaSatisfied[].status` must be exactly one of: satisfied, not-satisfied, not-applicable.
+`commandsRun[].result` must be exactly one of: passed, failed, not-run.
+`manualNotes` and `notes` are optional strings; an empty string means no note and does not satisfy `manual-notes` evidence.
+```acceptance-report
+{
+  "criteriaSatisfied": [
+    {
+      "id": "criterion-1",
+      "status": "satisfied",
+      "evidence": "specific proof"
+    }
+  ],
+  "changedFiles": [
+    "src/file.ts"
+  ],
+  "testsAddedOrUpdated": [
+    "test/file.test.ts"
+  ],
+  "commandsRun": [
+    {
+      "command": "command",
+      "result": "passed",
+      "summary": "short result"
+    }
+  ],
+  "validationOutput": [
+    "validation output or concise summary"
+  ],
+  "residualRisks": [
+    "none"
+  ],
+  "noStagedFiles": true,
+  "diffSummary": "short description of the diff",
+  "reviewFindings": [
+    "blocker: file.ts:12 - issue found, or no blockers"
+  ],
+  "manualNotes": "anything else the parent should know"
+}
+```

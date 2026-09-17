@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "id": "c9177f02-7534-4cbf-b6ad-9c50d8d12acc",
+  "title": "# 任务：调研市场上现有「动作识别产品 / 生产级框架」的整体架构",
+  "objective": "# 任务：调研市场上现有「动作识别产品 / 生产级框架」的整体架构\n\n## 一、背景（委托方是谁、为什么要这个）\n\n我是一个「宠物（猫）动作识别研究平台」项目。我们的端到端管线是：\n\n    监控视频 → ① 定位与跟踪 → ② 跟随视角裁剪 → ③ 背景移除（抠像）\n             → ④ 动作表征（学出低维动作码 λ）→ ⑤ 动作分割（行为素 → 动作段）\n             → ⑥ 身份识别 → ⑦ 应用出口（抽查报告 / 实时监控 / 异常告警）\n\n我们刚刚确认了一件事：**主流学术动作识别模型（VideoMAE/UniformerV2/SlowFast 等）都是「定长片段分类」**——\n输入固定 T 帧（16/32/64），输出恒定 1 个标签，**给不出时间戳、也不支持一段视频多个动作**。\n\n我们的出口形态要求的是「段列表 + 时间戳」（例：『3:00–3:15 舔毛，3:15–3:40 走动，3:40–4:10 睡觉』），\n所以必须额外做一层「分段 → 逐段识别」。\n\n## 二、核心问题（必须回答）\n\n**委托方的假设**：市面上的动作识别产品/框架，应该都采用「先对动作分段，再对每一段做动作识别」的两段式架构。\n\n请验证或证伪这个假设，并回答：\n\n1. **它们真实的整体 pipeline 是什么？**（逐环节列清：解码 → 检测 → 跟踪 → 分段 → 识别 → 输出）\n2. **是不是「先分段再识别」？** 还是别的组织方式（例如：滑窗逐窗分类 + 后处理、逐帧分类、事件触发、端到端 TAD）？请给证据。\n3. **分段是怎么做的？** 靠运动能量/静止检测？靠 shot/change-point 检测？靠专门的 temporal action detection/segmentation 模型？靠人工/规则？\n4. **每段怎么做识别？** 用什么模型族？输入多少帧？多段如何并行/批处理？\n5. **有没有「分层」设计？**（类似我们说的：细粒度单元 → 组合成动作；或 low-level 动作 → 语义事件）\n6. **工程形态**：流式/实时 vs 批处理？边缘 vs 云？延迟/吞吐有公开数字吗？\n7. **闭源产品公开的技术描述**（博客/白皮书/工程博客）里，有没有可借鉴的架构决策与踩坑经验？\n\n## 三、调研对象（按优先级，每类给 2-4 个代表）\n\n### A. 云视频理解 API（最可能有公开架构文档）\n- AWS Rekognition Video（Label Detection / Segment Detection / Person Tracking）\n- Azure AI Video Indexer\n- Google Cloud Video Intelligence API（Shot Change Detection / Label Detection）\n- Twelve Labs（Marengo/Pegasus 系列，专门做视频理解）\n- VideoDB / Clarifai / Hive AI（若能查到）\n\n### B. 边缘 / VMS 视频分析平台（工程架构最完整）\n- NVIDIA Metropolis / DeepStream / TAO（特别是 ActionRecognitionNet）\n  ※ 重点：DeepStream 的 pipeline 设计（decode→batch→infer→track→analytics）与多流架构\n- 开源 NVR / 视频分析：Frigate、Viseron、Viso Suite、DeepStack\n- 安防：BriefCam、Avigilon、IntelliVision、Agent Vi\n\n### C. 体育动作/事件分析（分段做得很成熟）\n- Second Spectrum、Stats Perform / SportVU、Hawk-Eye、Sportlogiq、Pixellot、Veo\n  ※ 重点：它们怎么把连续比赛切成『事件』（event detection = 分段 + 分类）\n\n### D. 畜牧 / 动物行为识别（★ 与本项目最贴近，务必查）\n- Connecterra、Cainthus（被收购？）、Halter、Lely、Afimilk、SCR Dairy / Allflex\n- 学术→产业转化的动物行为识别公司\n  ※ 重点：它们怎么定义「行为」、怎么分段、用什么传感器/模型、部署形态\n\n### E. 开源生产级框架\n- NVIDIA TAO（ActionRecognitionNet / GestureRecognition）\n- OpenMMLab mmaction2 的 inference/demo 工具（滑窗、长视频 demo 是怎么做的）\n- 其他有生产级 inference 封装的视频动作识别项目\n\n## 四、输出要求\n\n1. **写入文件**：`papers/docs/action-recognition-products.md`（相对项目根 `/Users/zhengxinyu/pet-action-recognition`）\n   - 文首写：调研日期、调研人（AI researcher）、范围、一句结论\n   - 按上面 A/B/C/D/E 分节，每个对象一小节\n   - **每个对象尽量给：整体 pipeline（能画就用 Mermaid flowchart）· 是否先分段再识别 · 分段方法 · 识别模型 · 推理形态 · 来源 URL**\n   - 分节末尾给「对本项目的可借鉴点」与「查不到的东西（明确标注未公开）」\n   - 最后一节写「结论：委托方假设是否成立」+「可分出的 3-5 条通用架构模式」\n2. **引用规范**：每个事实性结论**必须带来源 URL**；查不到就写「未公开」，不要编。\n3. **不要修改除上述新文件之外的任何文件。**\n\n## 五、环境与工具（重要）\n\n- 网络：本机 VPN 是 TUN 全局接管，**国际站直连可达**（Google/arXiv/GitHub 都通）。先用 `~/.venv/bin/python ~/.agents/skills/web-search/scripts/search.py --probe` 确认（预期输出 TUN_OK）。\n- **必须使用现成脚本，不要手写临时爬虫**：`~/.agents/skills/web-search/scripts/` 下有\n  `search.py`（DDG 搜索，三态自动探测）、`openalex.py`（学术检索，不限流）、`arxiv.py`（论文，注意 3s 限流）、`hf.py`（HuggingFace）\n  统一用 `~/.venv/bin/python`。\n- 商业产品信息优先来源：官方文档站、工程博客（AWS Blog / Azure Blog / NVIDIA Technical Blog / Twelve Labs Blog）、白皮书、GitHub README、以及厂商的架构图文章。\n- 若某对象确实查不到架构细节，**如实写「未公开」并说明查了哪些地方**——这本身是有价值的信息。\n- 建议先读一遍 `~/.agents/skills/web-search/SKILL.md` 了解通道与防坑。\n\n## 六、时间与深度\n- 目标：覆盖 A/B/C/D/E 五类，每类至少 2 个对象有实质结论；能给 Mermaid 架构图的优先。\n- 不必穷尽，**优先给有公开架构描述的对象**，其余按类给一段话概括。",
+  "status": "failed",
+  "createdAt": "2026-09-17T12:21:09.719Z",
+  "updatedAt": "2026-09-17T12:24:55.324Z",
+  "runs": [
+    {
+      "runId": "bf6d136c-3af5-472a-b7f2-cd70eb0150f9",
+      "mode": "workflow",
+      "asyncDir": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/bf6d136c-3af5-472a-b7f2-cd70eb0150f9",
+      "status": "failed",
+      "startedAt": "2026-09-17T12:21:09.723Z",
+      "completedAt": "2026-09-17T12:24:55.324Z"
+    }
+  ],
+  "workflowChildren": [
+    {
+      "workflowRunId": "bf6d136c-3af5-472a-b7f2-cd70eb0150f9",
+      "key": "research",
+      "status": "failed",
+      "startedAt": "2026-09-17T12:21:09.803Z",
+      "updatedAt": "2026-09-17T12:24:55.264Z",
+      "artifactPaths": [
+        "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/c627d6f4/run-0/session.jsonl"
+      ],
+      "runId": "c627d6f4",
+      "agent": "researcher",
+      "task": "# 任务：调研市场上现有「动作识别产品 / 生产级框架」的整体架构\n\n## 一、背景（委托方是谁、为什么要这个）\n\n我是一个「宠物（猫）动作识别研究平台」项目。我们的端到端管线是：\n\n    监控视频 → ① 定位与跟踪 → ② 跟随视角裁剪 → ③ 背景移除（抠像）\n             → ④ 动作表征（学出低维动作码 λ）→ ⑤ 动作分割（行为素 → 动作段）\n             → ⑥ 身份识别 → ⑦ 应用出口（抽查报告 / 实时监控 / 异常告警）\n\n我们刚刚确认了一件事：**主流学术动作识别模型（VideoMAE/UniformerV2/SlowFast 等）都是「定长片段分类」**——\n输入固定 T 帧（16/32/64），输出恒定 1 个标签，**给不出时间戳、也不支持一段视频多个动作**。\n\n我们的出口形态要求的是「段列表 + 时间戳」（例：『3:00–3:15 舔毛，3:15–3:40 走动，3:40–4:10 睡觉』），\n所以必须额外做一层「分段 → 逐段识别」。\n\n## 二、核心问题（必须回答）\n\n**委托方的假设**：市面上的动作识别产品/框架，应该都采用「先对动作分段，再对每一段做动作识别」的两段式架构。\n\n请验证或证伪这个假设，并回答：\n\n1. **它们真实的整体 pipeline 是什么？**（逐环节列清：解码 → 检测 → 跟踪 → 分段 → 识别 → 输出）\n2. **是不是「先分段再识别」？** 还是别的组织方式（例如：滑窗逐窗分类 + 后处理、逐帧分类、事件触发、端到端 TAD）？请给证据。\n3. **分段是怎么做的？** 靠运动能量/静止检测？靠 shot/change-point 检测？靠专门的 temporal action detection/segmentation 模型？靠人工/规则？\n4. **每段怎么做识别？** 用什么模型族？输入多少帧？多段如何并行/批处理？\n5. **有没有「分层」设计？**（类似我们说的：细粒度单元 → 组合成动作；或 low-level 动作 → 语义事件）\n6. **工程形态**：流式/实时 vs 批处理？边缘 vs 云？延迟/吞吐有公开数字吗？\n7. **闭源产品公开的技术描述**（博客/白皮书/工程博客）里，有没有可借鉴的架构决策与踩坑经验？\n\n## 三、调研对象（按优先级，每类给 2-4 个代表）\n\n### A. 云视频理解 API（最可能有公开架构文档）\n- AWS Rekognition Video（Label Detection / Segment Detection / Person Tracking）\n- Azure AI Video Indexer\n- Google Cloud Video Intelligence API（Shot Change Detection / Label Detection）\n- Twelve Labs（Marengo/Pegasus 系列，专门做视频理解）\n- VideoDB / Clarifai / Hive AI（若能查到）\n\n### B. 边缘 / VMS 视频分析平台（工程架构最完整）\n- NVIDIA Metropolis / DeepStream / TAO（特别是 ActionRecognitionNet）\n  ※ 重点：DeepStream 的 pipeline 设计（decode→batch→infer→track→analytics）与多流架构\n- 开源 NVR / 视频分析：Frigate、Viseron、Viso Suite、DeepStack\n- 安防：BriefCam、Avigilon、IntelliVision、Agent Vi\n\n### C. 体育动作/事件分析（分段做得很成熟）\n- Second Spectrum、Stats Perform / SportVU、Hawk-Eye、Sportlogiq、Pixellot、Veo\n  ※ 重点：它们怎么把连续比赛切成『事件』（event detection = 分段 + 分类）\n\n### D. 畜牧 / 动物行为识别（★ 与本项目最贴近，务必查）\n- Connecterra、Cainthus（被收购？）、Halter、Lely、Afimilk、SCR Dairy / Allflex\n- 学术→产业转化的动物行为识别公司\n  ※ 重点：它们怎么定义「行为」、怎么分段、用什么传感器/模型、部署形态\n\n### E. 开源生产级框架\n- NVIDIA TAO（ActionRecognitionNet / GestureRecognition）\n- OpenMMLab mmaction2 的 inference/demo 工具（滑窗、长视频 demo 是怎么做的）\n- 其他有生产级 inference 封装的视频动作识别项目\n\n## 四、输出要求\n\n1. **写入文件**：`papers/docs/action-recognition-products.md`（相对项目根 `/Users/zhengxinyu/pet-action-recognition`）\n   - 文首写：调研日期、调研人（AI researcher）、范围、一句结论\n   - 按上面 A/B/C/D/E 分节，每个对象一小节\n   - **每个对象尽量给：整体 pipeline（能画就用 Mermaid flowchart）· 是否先分段再识别 · 分段方法 · 识别模型 · 推理形态 · 来源 URL**\n   - 分节末尾给「对本项目的可借鉴点」与「查不到的东西（明确标注未公开）」\n   - 最后一节写「结论：委托方假设是否成立」+「可分出的 3-5 条通用架构模式」\n2. **引用规范**：每个事实性结论**必须带来源 URL**；查不到就写「未公开」，不要编。\n3. **不要修改除上述新文件之外的任何文件。**\n\n## 五、环境与工具（重要）\n\n- 网络：本机 VPN 是 TUN 全局接管，**国际站直连可达**（Google/arXiv/GitHub 都通）。先用 `~/.venv/bin/python ~/.agents/skills/web-search/scripts/search.py --probe` 确认（预期输出 TUN_OK）。\n- **必须使用现成脚本，不要手写临时爬虫**：`~/.agents/skills/web-search/scripts/` 下有\n  `search.py`（DDG 搜索，三态自动探测）、`openalex.py`（学术检索，不限流）、`arxiv.py`（论文，注意 3s 限流）、`hf.py`（HuggingFace）\n  统一用 `~/.venv/bin/python`。\n- 商业产品信息优先来源：官方文档站、工程博客（AWS Blog / Azure Blog / NVIDIA Technical Blog / Twelve Labs Blog）、白皮书、GitHub README、以及厂商的架构图文章。\n- 若某对象确实查不到架构细节，**如实写「未公开」并说明查了哪些地方**——这本身是有价值的信息。\n- 建议先读一遍 `~/.agents/skills/web-search/SKILL.md` 了解通道与防坑。\n\n## 六、时间与深度\n- 目标：覆盖 A/B/C/D/E 五类，每类至少 2 个对象有实质结论；能给 Mermaid 架构图的优先。\n- 不必穷尽，**优先给有公开架构描述的对象**，其余按类给一段话概括。",
+      "completedAt": "2026-09-17T12:24:55.264Z",
+      "sessionPath": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/c627d6f4/run-0/session.jsonl",
+      "heartbeat": {
+        "updatedAt": "2026-09-17T12:24:55.264Z",
+        "status": "failed"
+      }
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "status",
+      "path": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/bf6d136c-3af5-472a-b7f2-cd70eb0150f9/status.json"
+    },
+    {
+      "kind": "other",
+      "path": "/var/folders/cw/1tpwlnqd7pv_k8z_jfl1ls600000gn/T/pi-subagents-uid-501/async-subagent-runs/bf6d136c-3af5-472a-b7f2-cd70eb0150f9/events.jsonl",
+      "description": "Lifecycle events"
+    },
+    {
+      "kind": "output",
+      "path": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2/c627d6f4/run-0/session.jsonl"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/Users/zhengxinyu/pet-action-recognition",
+  "ownerSessionId": "/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-pet-action-recognition--/2026-08-29T13-38-02-192Z_01a04dbd-d750-71e2-839b-bc845f9a4ee2.jsonl",
+  "summary": "Error: Run 'research' failed: Agent 'researcher' requested unavailable child tools: web_search, fetch_content, get_search_content.\nThe `tools` field is a strict allowlist; it does not load extension code.\nFor extension tools, add the provider path to `subagentOnlyExtensions` (child-only), `extensions`, or as a path-like entry in `tools`, while keeping each registered tool name in `tools`.\nFor MCP tools, verify the MCP adapter configuration and selected tool names. For builtin tools, verify the name against the installed Pi version.\n\nOutput:\n交付完成。文件已写入权威路径。\n\n## 做了什么\n\n由于本会话工具集只有 `read/write/contact_supervisor/intercom`（**无 shell、无 HTTP**），无法运行委托方指定的 `web-search/scripts/*`。我用两条腿走完了任务：**(a) 从仓库内读出可复现的一手证据**（mmaction2 vendored 快照、本项目脚本、本库论文 JSON、wiki），**(b) 叠加公开文档记忆**，并全文按 🟩一手 / 🟨公开文档记忆（未联网核对）/ ⚪未公开 三档标注可信度。\n\n## 核心裁定（对委托方假设）\n\n**「先分段再识别」不是行业普遍架构——作为普遍规律不成立，只在少数处字面成立。**\n\n| 结论 | 一手证据 |\n|---|---|\n| 主流框架默认只有「定长片段分类」，分段是**另一个任务族** | `models/mmaction2/mmaction/apis/inference.py`（单段→单分布，API 无时间维）；`models/mmaction2/demo/README.md`（识别 / STAD / TAL 分族） |\n| 官方\"长视频\"方案是**滑窗逐窗分类**，无段、无时间戳、无平滑，抽帧甚至 `random.choice` | `models/mmaction2/demo/long_video_demo.py` L120-236、L157 |\n| 时空动作检测（最接近生产形态）是**检测 + 8 帧窗口分类 → 逐帧框** | `models/mmaction2/demo/README.md` L460-745（Faster R-CNN + SlowOnly-AVA，`--predict-stepsize 8`） |\n| 云 API 里唯一字面\"先分段再识别\"是 **Google `labelDetectionMode=SHOT_MODE`**，但**段 = 镜头段**；AWS SegmentDetection 只给 SHOT/TECHNICAL_CUE | 🟨 Google / AWS 官方文档（待联网复核） |\n| 畜牧（最贴近本项目的产业）是**「窗口分类 → 时间聚合为行为块」**，顺序与假设**相反**；Keypoint-MoSeq 的 **syllable→motif** 是\"行为素→动作段\"的现成无监督先例 | `data/researched_papers_identity.json`、`management/docs/third-party-notes.md` §3.2 |\n| 安防四家 + 体育公司 + 云厂商的模型/分段算法**普遍未公开**（\"未公开\"本身是结论） | 文档 §B4/§C5/§F.3 |\n\n提炼出 **5 条通用架构模式**（门控-精算级联 / 跟踪区间即段 / 窗口分类+时序聚合 / 先段后判（非语义切分）/ 联合定位-分类），并按优先级给出 5 条落地建议（其中\"引入音频门控\"是本项目当前零成本即可采用的空白点）。\n\n## 关键提醒\n\n- 任务原要求的 `papers/docs/action-recognition-products.md` **我没有创建**：本次运行的输出路径覆盖规则明确声明\"仅 `.pi/subagents/artifacts/outputs/c627d6f4/research.md` 权威，忽略"
+}
