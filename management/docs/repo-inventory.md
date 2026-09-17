@@ -118,7 +118,7 @@ scripts 按用途分组：
 | `pet-motion-latent-pipeline` | **总管**——管线全景+主线/旁支总览 | 5/11 任务 | 主线 |
 | `batch-followcam-extraction` | 34 段白天批处理（多 prompt 检测+运动校正+跟随视频） | 5/6 | 待归档 |
 | `video-feature-latent` | 行为表征学习（窗口特征+UMAP+HDBSCAN+CatHuBERT） | 1/14 | 主线 |
-| `identity-action-tokenizer` | FLOAT×TiTok 杂交，UCF101→猫两阶段 | 0/9 | 研究型 |
+| `identity-action-tokenizer` | FLOAT 式参考输入 + 正交运动基，UCF101→猫两阶段 | 0/9 | 研究型 |
 | `spot-check-cli` | 抽查报告 CLI | 0/4 | 主线（待前置） |
 | `registry-retrieval` | 统一登记-检索（猫 Re-ID + 物体实例） | 0/4 | 条件启动（用户批准触发） |
 | `tracker-selection` | 多猫场景下的跟踪器选型 | 0/4 | 条件启动（多猫数据出现触发） |

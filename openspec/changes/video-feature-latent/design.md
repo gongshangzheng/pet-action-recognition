@@ -13,13 +13,15 @@
 > 闸门：①探针达标 ②可命名率 ≥60% ③码本不塌缩 ④身份泄漏接近随机——**全过则路线成立，阶段三不用做**。
 >
 > **阶段三：判别式自监督升级**（任务 1.7/1.9/1.10/1.11，对应 L3+L5+L6+L7+L8，条件启动）
-> 仅当阶段二闸门失败才做：在我们 3k 段无标注语料上，用 CatHuBERT 迭代伪标签 + TiTok 式双 token 流（身份 register tokens × 动作 tokens）+ Wav2vec2 式对比目标，训练"懂猫"的编码器，然后回到阶段二重新验收。
+> 仅当阶段二闸门失败才做：在我们 3k 段无标注语料上，用 CatHuBERT 迭代伪标签 + **FLOAT 式参考输入 + 正交运动基**（身份由 register tokens 从参考融合、动作由 3D tubelet + QR 正交基得到）训练"懂猫"的编码器，然后回到阶段二重新验收。
 >
 > **读者指引**：想懂"为什么这么做"→ 读下方 L1-L8 各决策节；想知道"现在执行到哪一步"→ 读 tasks.md；想知道"最终产品长什么样"→ 读 proposal.md 和 specs/。
 
 > 继承总管（pet-motion-latent-pipeline）D5（环境隔离）、D6（petlib 接口）；关键点降级裁定见 `batch-followcam-extraction` D2。**总管 D2b/D3/D8/A5/A6 已物理迁入本文件（ID 不变）**。
 >
 > **⚠️ 路线实施注记（2026-09-16）**：阶段三的自监督训练路线（L3 v2 架构 + L5 目标 + L6 CatHuBERT + L7 跨域 + L8 双 token 流）已**拆为独立研究 change `identity-action-tokenizer`**（含更详细设计 + UCF101→猫语料两阶段策略）。本文件的 L 系列保留为研究笔记与谱系出处；任务 1.7/1.10/1.11 已改指该 change。
+>
+> **📌 免责说明（2026-09-17 补）**：该 change 的架构此后经**多轮迭代**——TivTok SIF 双 token 已退出主线（降为备档）、全面去量化、身份改由**参考输入**提供（FLOAT 式）、动作侧用 3D tubelet + QR 正交基。**本文件 L 系列不随之更新，仅作历史研究笔记**；一切以 `identity-action-tokenizer/design.md` 为准。（同理，本文件 L3/L5/L8 里的「TiTok 式 / 双 token / FLOAT×TiTok 杂交」等表述均为**当时的**方案记录。）
 
 ## Decisions
 

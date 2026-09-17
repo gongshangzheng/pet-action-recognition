@@ -391,7 +391,7 @@ flowchart LR
 | D2 | 关键点选型裁定（降级为辅助）| `batch-followcam-extraction/design.md` |
 | D2b | HQSAM 定位 | `video-feature-latent/design.md` |
 | D3 | 隐空间架构 | `video-feature-latent/design.md` |
-| D4 | 推理形态（抽查 + 实时双模式）| `pet-motion-latent-pipeline/design.md` |
+| D4 | 推理形态（抽查 + 实时双模式，2026-09-16 修订）| `spot-check-cli/design.md` |
 | D5 | 环境隔离 | `pet-motion-latent-pipeline/design.md` |
 | D6 | petlib 接口 | `pet-motion-latent-pipeline/design.md` |
 | D7 | 身份体系 | `spot-check-cli/design.md` |

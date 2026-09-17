@@ -8,7 +8,7 @@
 - [ ] 1.4 可命名率报告：各簇代表帧（叠加关键点辅助参考）+ 人工抽 30 簇判定（**用户验收节点**）
 - [ ] 1.5 `scripts/discover_behaviors.py`：聚类 → 代表帧 → 人工命名表；NMI/ARI 报告（聚类 vs 5 类人工标注）
 - [ ] 1.6 `scripts/train_linear_probe.py`：线性探针 top1——主对照 = 同一编码器原始整帧特征；参考 = VideoMAEv2 全量微调基线
-- [ ] 1.7 （条件）自训版：**已拆为独立研究 change `identity-action-tokenizer`**（FLOAT×TiTok 双 token 流 + 视频重建，先 UCF101 后猫语料两阶段）；本 change 只消费其产出的编码器（回到第 1 层作为新骨干重新聚类）
+- [ ] 1.7 （条件）自训版：**已拆为独立研究 change `identity-action-tokenizer`**（**FLOAT 式参考输入 + 正交运动基**，先 UCF101 后猫语料两阶段）；本 change 只消费其产出的编码器（回到第 1 层作为新骨干重新聚类）
 - [ ] 1.8 （可选）消融：HQSAM mask 清洗 crop；摄像机策略对比（follow_adaptive vs follow_locked vs fixed）
 - [ ] 1.9 （可选）决策树蒸馏：簇命名后用 (特征→簇名) 训浅决策树（可读运动学特征优先），验证规则可读性 + spot-check 免聚类推理；备选无监督树（预测聚类树/层次聚类多粒度）见 design L4
 - [x] 1.10 路线 W 方案设计定稿：**CatHuBERT 式行为素迭代预训练**（design L6）——首选 HuBERT 式迭代伪标签 CE（无负样本陷阱），Wav2vec2 InfoNCE 留作对照；骨干冻结 + <10M 小 Transformer（符合参数高效目标）

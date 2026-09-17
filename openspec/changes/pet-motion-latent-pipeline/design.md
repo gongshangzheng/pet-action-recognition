@@ -11,11 +11,11 @@
 **Goals:**
 - 离线猫居中预处理（检测→跟踪→稳定裁剪→关键点）跑通全部 79 段 + live 录像
 - motion latent 提取器训练 + L3 聚类发现 + L1 线性探针评测
-- 抽查式推理 CLI（非实时），输出结构化动作报告
+- **双模式推理出口**（2026-09-16 用户修订）：① 非实时抽查 CLI ② 实时监控（SSE 流式）；两者**共享同一份行为簇字典**（离线发现 / 在线分配）
 
 **Non-Goals:**
-- live 实时路径改动（保持现状：YOLO11 + 轻量头）
-- 7×24 连续监测；GroundingDINO 在线化
+- **7×24 全自动无人值守**（实时模式 = 按需开启的在线推理，不是全时连续监测）
+- GroundingDINO 在线化（重模型不挂实时路径；实时路径复用 live 模块流式设施）
 - 动作码条件生成（扩散头）——二期
 
 ## Decisions
@@ -28,7 +28,7 @@ GroundingDINO/HQSAM/ViTPose 依赖重且与 mmaction2 的 mmcv 约束冲突风�
 
 - [AP-10K 关键点域差（已实测裁定，2026-09-14）] → 关键点降级辅助信号，主表示切换视频编码器特征（D8）；关键点 NPZ 仍产出供辅助/消融
 - [GroundingDINO 对白天遮挡/猫出画的边界情况] → 插值 + 猫在场率统计（spec 已约束）
-- [VQ 码本塌缩] → 利用率监控 + 重置机制（spec 已约束）
+- [~~VQ 码本塌缩~~ 已不适用] → 2026-09-17 全面去量化（连续潜变量 + KL 正则），无码本；改为监控「潜空间各向异性 / λ 方差谱」
 - [activity 伞类导致聚类簇与人工标签对不齐] → NMI 只作参考指标，簇的语义由人工看代表帧命名；管线目标就是发现更好的类别表
 - [三套环境（pet/plf/live）运维复杂] → 每套一个 conda env + README 锁版本；subprocess 交接全部走落盘文件
 
@@ -72,7 +72,7 @@ petlib/
 | D1 检测/跟踪/居中工程形态、D2 关键点选型裁定、A1 检测、A3 关键点 | `batch-followcam-extraction/design.md` |
 | D1b GatedTracker 否决、D1c 候选跟踪器原理、A4 跟踪 | `tracker-selection/design.md` |
 | D2b HQSAM 定位、D3 隐空间架构、D8 主表示选型、A5/A6 隐空间原理 | `video-feature-latent/design.md` |
-| D4 抽查 CLI、D7 身份体系、A7 推理头 | `spot-check-cli/design.md` |
+| D4 推理形态（双模式，2026-09-16 修订）、D7 身份体系、A7 推理头 | `spot-check-cli/design.md` |
 | D9 登记-检索架构、A2 分割 | `registry-retrieval/design.md` |
 | D5 环境隔离、D6 petlib 接口（跨切面）、Risks/Migration/Open Questions | 本文件（见上） |
 

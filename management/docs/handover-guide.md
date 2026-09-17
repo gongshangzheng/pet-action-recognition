@@ -26,7 +26,7 @@ id: 11
 | `batch-followcam-extraction` | 5/6 待归档（34/34 已完成） |
 | `video-feature-latent` | 1/14（行为表征选型中） |
 | `spot-check-cli` | 0/4（待前置） |
-| `identity-action-tokenizer` | 0/9（研究型，FLOAT×TiTok） |
+| `identity-action-tokenizer` | 0/9（研究型，FLOAT 式参考输入 + 正交运动基）|
 
 日常进度变动看 `management/projects/*/tasks.json`（任务看板）。
 
@@ -88,7 +88,7 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 
 - `mmaction2`：训练用
 - `plf`：GroundingDINO/HQSAM/ViTPose 管线用（独立环境，避免 mmcv 冲突）
-- `pet_vjepa`：V-JEPA 2 fpc16 用（transformers ≥4.55）
+- `pet_tokenizer`：tokenizer 训练/推理用（原 `pet_vjepa`，2026-09-16 按用途改名；需 transformers ≥4.55）
 
 环境隔离纪律详见 [6 号 §3.1](../wiki/architecture) D5。
 

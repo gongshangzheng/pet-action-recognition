@@ -12,7 +12,7 @@
 
 | 文件 | arXiv | 角色 |
 |---|---|---|
-| `2606.17590_tivtok.pdf` | 2606.17590 | **骨架主源**：TIV/TV 双 token（SIF） |
+| `2606.17590_tivtok.pdf` | 2606.17590 | ~~骨架主源~~ → **已降为备档**（TIV/TV 双 token SIF，暂不采用；备档见 `tivtok-reference.md`）|
 | `2412.01064_float.pdf` | 2412.01064 | **正交运动基主源** |
 | `2203.09043_lia.pdf` | 2203.09043 | 正交基原始出处（FLOAT 继承） |
 | `2512.04483_dera.pdf` | 2512.04483 | 双流 + 显式对齐（对照方案） |
@@ -266,5 +266,5 @@ AdapTok 的 mask 是**块因果**（同块或前块可见），而 TivTok SIF �
 | 4 | V-JEPA 2 角色已修正为"对齐教师/伪标签源" | V-JEPA 2 可作动作对齐教师；DINOv3/InternVideo2 是 DeRA 实证选择 | 保留，教师候选排序：DINOv3（外观）→ V-JEPA2/InternVideo2（动作） |
 | 5 | 未记录许可风险 | FLOAT **ND** 禁令、RVM **GPL** 传染、SoftVQ 仓库**无 LICENSE** | 明确"只借鉴算法/自行实现"，写入 design 风险节 |
 | 6 | SIF 实现未定 | TiTok 代码无 attention mask；`rar.py` 有可参考实现 | 实现方案落成显式任务 |
-| 7 | 抠像方案"SAM2/RVM 实测后定" | SAM2 在接口/时序/许可/动物泛化上全面占优 | 保持实测，但明确 SAM2 为默认主选 |
+| 7 | 抠像方案"SAM2/RVM 实测后定" | ~~SAM2 为默认主选~~ → **2026-09-17 改判**：抠像改用 `rembg` 类**实时小模型**（显著物体分割）；SAM 退出抠像、改用于背景对象层（关键帧）| 见 `pet-background-removal` D2 |
 | 8 | 量化器 = SoftVQ | **TiTok 官方 VAE 模式（无 VQ）重建更好 0.84 vs 1.49**；SoftVQ-VAE 本就是 continuous tokenizer；MAR/AR-video 去 VQ 先例 | **全面去量化**：连续潜变量 + KL；SoftVQ 降为备用正则（2026-09-17 已调整） |
