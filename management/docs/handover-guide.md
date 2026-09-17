@@ -32,7 +32,7 @@ id: 11
 
 ### §1.3 11 月中期验收 KPI
 
-来自 2026-08-15 二期计划（已整合到 [6 号《系统架构》§8.3](../wiki/architecture)）：
+来自 2026-08-15 二期计划（已整合到 [6 号《系统架构》§7.3](../wiki/architecture)）：
 
 - P0 精度攻坚：8-9 月，5 个训练 run 全 error（数据/接口问题），k400 烟测 top1 0.77 已验证管线
 - P1 端侧 pipeline：9-11 月，34 段白天已处理，夜间红外段待做
@@ -90,7 +90,7 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 - `plf`：GroundingDINO/HQSAM/ViTPose 管线用（独立环境，避免 mmcv 冲突）
 - `pet_vjepa`：V-JEPA 2 fpc16 用（transformers ≥4.55）
 
-环境隔离纪律详见 [6 号 §7](../wiki/architecture) D5。
+环境隔离纪律详见 [6 号 §3.1](../wiki/architecture) D5。
 
 ## §3 工作纪律（三阶段 OpenSpec + 远程纪律）
 
@@ -211,7 +211,7 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 ## §7 上手速查（30 分钟版）
 
 1. **读**：[1 号《仓库资产盘点》](../wiki/repo-inventory) 5 分钟
-2. **看图**：[6 号《系统架构》§1 总览表](../wiki/architecture) 3 分钟
+2. **看图**：[6 号《系统架构》§1 端到端总图](../wiki/architecture) 3 分钟
 3. **跑起来**：`bash start_services.sh`，打开 http://localhost:3000 看一眼 5 分钟
 4. **看训练**：[4 号《训练体系》](../wiki/training-guide) 8 分钟
 5. **看管线**：[7 号《身份标识与检索》](../wiki/identity-and-retrieval) 8 分钟

@@ -11,7 +11,7 @@ id: 8
 
 > **一句话**：把一段视频压成两组 token——"这是哪只猫"（TIV，整段共享）与"这帧在动什么"（TV，逐帧一份）；解码器能把两者组合还原视频，说明分解成立。
 >
-> **定位**：本项目 L4「动作表征」环节的模型设计底稿。上层架构见 [12 号《架构设计》](./architecture-design.md)，工程实施见 `openspec/changes/identity-action-tokenizer/`。
+> **定位**：本项目 L4「动作表征」环节的模型设计底稿。上层架构见 [6 号《系统架构》](./architecture.md)，工程实施见 `openspec/changes/identity-action-tokenizer/`。
 
 ## §1 设计目标与非目标
 
@@ -301,7 +301,7 @@ flowchart TD
 
 ## 相关文档
 
-- [[architecture-design|架构设计：完整设计框架]]（上层：全项目设计框架与待定选择）
+- [[architecture|系统架构：结构 · 设计 · 进度]]（上层：全项目结构、设计与待定选择）
 - [[architecture|系统架构：完整结构总览]]（读者导读）
 - [[identity-and-retrieval|身份标识与检索]]（身份路线对比）
 - [[datasets|数据集全景]]（UCF101 / 猫语料）

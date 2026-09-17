@@ -75,7 +75,7 @@ Kinetics-400 上的教训与猫语料惊人相似：
 | 条件 | 当前状态 | 复活需要 |
 |---|---|---|
 | 检测器稳定 | ✅ GroundingDINO 检出率 0.939 | — |
-| 单猫白天场景稳定 | ✅ 抽样+插值+运动校正 v5 | — |
+| 单猫白天场景稳定 | ✅ 抽样+插值（+可选运动校正 v5）| — |
 | 多猫身份切换 | ❌ tracker-selection 0/4 延后 | 多猫数据 + 跟踪器选型完成 |
 | 高质量关键点估计 | ❌ 0.367 mean_conf 不足 | 或换 backbone（HRNet-pretrained on mammals / SuperAnimal 优化版） / 或加专用微调 |
 
