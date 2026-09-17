@@ -54,7 +54,12 @@
 
 ---
 
-## 1. TivTok（骨架主源）
+## 1. TivTok（⬇️ 已降为备档，2026-09-17）
+
+> **本节内容已整理并扩充到独立文档**：[`tivtok-reference.md`](./tivtok-reference.md)
+>
+> **状态**：TivTok 曾是骨架主源，现**暂不采用**——身份改由**参考输入**提供后，视频内 TIV 与身份通道职责重叠，SIF 的存在意义消失。主线已转向 **FLOAT**。
+> 保留下方简记供快速查阅；完整版（含实现路径、论文行号、不采用理由）见上方链接。
 
 ### SIF（Scope-Induced Factorization）
 - **TIV tokens**：attend 全部帧 patch + 全部 TV tokens（全局 scope，`G = [Z_TIV, Z_TV^(1..T), X_1..X_T]`）

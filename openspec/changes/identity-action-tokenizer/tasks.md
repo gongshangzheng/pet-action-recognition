@@ -12,8 +12,7 @@
 
 ## 2. Tokenizer 实现
 
-- [ ] 2.1 双 token 骨架：TIV tokens（attend 整段）+ TV tokens（每帧 local scope），实现 TivTok SIF 的非对称 attention scope
-  - ⚠️ **阻塞依赖**：T-A5c 的 Q1/Q2（参考输入下视频内 TIV 是否还需要、TV 如何获得时间上下文）需先裁定，否则本任务口径不稳
+- [ ] 2.1 **FLOAT 式身份-运动分解骨架**：视频编码器（全片段提特征，保证运动有时序上下文）→ 逐帧 latent → 正交基投影得 `λ_t`；参考输入编码得 `w_identity`（**TivTok SIF 双 token 暂不采用**，见 design 谱系 + `papers/docs/tivtok-reference.md`）
 - [ ] 2.2 动作通道：FLOAT/LIA 正交运动基（可学习矩阵 + 每次前向 `torch.linalg.qr`）→ z_t = Σ λ_m(t)·v_m；系数 λ 可闭式提取（λ_m = <z_t, v_m>）
 - [ ] 2.3 解码器 + 重建损失（L1 + perceptual + adversarial，TivTok 口径）
 - [ ] 2.4 **身份通道：参考输入（T-A5）** —— 身份编码器（单图 / 3–5 张多视角图 / 短视频）→ `w_identity`（固定向量）；**不使用 track InfoNCE**（用户裁定 2026-09-17；仅作可选度量增强保留）

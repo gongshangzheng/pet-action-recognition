@@ -26,7 +26,7 @@ id: 6
 - **HDBSCAN**：基于密度的聚类算法，把一堆向量自动分成若干簇，不用事先指定要分几类
 - **ByteTrack**：经典的多目标跟踪算法，给检测框配上身份 id、维持轨迹
 - **CatHuBERT**：借用 HuBERT 语音预训练范式，给视频里"行为素"打伪码再自监督预训练
-- **TivTok**：视频 tokenizer，用 **TIV**（时间不变，管身份）+ **TV**（时间可变，管动作）两组 token 表达一段视频；其 SIF 机制靠注意力范围差异实现分解
+- **TivTok / SIF**：视频 tokenizer，用 TIV（时间不变）+ TV（时间可变）两组 token 表达视频。⬇️ **已降为备档**（身份改由参考输入提供后 TIV 冗余）——备档见 [`papers/docs/tivtok-reference.md`](../../papers/docs/tivtok-reference.md)
 - **FLOAT / LIA**：身份-动作解耦方法；运动 latent = 正交运动基的线性组合 `z_t = Σ λ_m·v_m`
 - **TiTok**：视觉 tokenizer，用几十个 token 就能表达一张图（而不是动辄几百个 patch token）
 - **正交运动基**：M 个两两正交的运动方向（QR 硬约束）；每帧的动作 = 这些方向的加权和，系数 `λ_m(t)` 可读
@@ -65,7 +65,7 @@ flowchart TD
     S3 --> S5
 
     subgraph S4["④ 动作表征"]
-        D1[AdapTok 基座<br/>+ TivTok SIF 双 token] --> D2[连续潜变量<br/>无量化]
+        D1["参考输入 → w_identity<br/>+ 视频 → λ_t（FLOAT 式）"] --> D2[连续潜变量<br/>无量化]
         D2 --> D3[FLOAT/LIA 正交运动基]
     end
 
@@ -150,27 +150,25 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    M1[猫本体视频<br/>16 帧窗口] --> M2[ViT 编码器<br/>12 层 / 768 维 / patch 4×8×8]
-    M2 --> M3{TivTok SIF<br/>非对称注意力 scope}
+    M1[猫本体视频<br/>16 帧窗口] --> M2["视频编码器 E_mot<br/>整段提特征 · 含时序上下文"]
+    M2 --> M5[逐帧 latent z_t<br/>这一帧在动什么]
 
-    M3 -->|attend 全部帧| M4[TIV tokens<br/>时间不变 → 身份]
-    M3 -->|只 attend 本帧| M5[TV tokens<br/>时间可变 → 动作]
+    M5 --> M7["正交运动基投影<br/>容量闸门 z_t = Σ λ_m·v_m"]
+    M7 --> M8["λ 基元强度序列<br/>可解释动作表示"]
 
-    M4 --> M6[连续潜变量<br/>无量化 · KL 正则]
-    M5 --> M6
-
-    M5 --> M7[FLOAT/LIA 正交运动基<br/>z_t = Σ λ_m·v_m]
-    M7 --> M8[λ 基元强度序列<br/>可解释动作表示]
-
-    M6 --> M9["解码器<br/>decode(w_identity, λ_t)"]
+    M5 --> M6[连续潜变量<br/>无量化 · KL 正则]
+    M6 --> M9["解码器<br/>decode(w_identity + Σλ_m·v_m)"]
     R1["参考输入<br/>单图 / 多视角图 / 短视频"] --> M10["w_identity 固定向量<br/>身份无需 InfoNCE"]
     M10 --> M9
+    M7 --> M9
 ```
+
+> **架构主源 = FLOAT**（2026-09-17 重心转向）。TivTok 的 SIF 双 token **暂不采用**（身份改由参考输入提供后 TIV 冗余）——备档见 [`papers/docs/tivtok-reference.md`](../../papers/docs/tivtok-reference.md)。
 
 | 项 | 设计 |
 |---|---|
-| 基座 | **AdapTok**（MIT，12 层 / 768 维 / patch 4×8×8，与 TivTok 同形，自带完整 attention mask 框架）|
-| 双 token | TivTok 的 SIF：TIV 看全部帧（身份）、TV 只看本帧（动作），分解由架构诱导而非损失约束 |
+| 基座 | **视频编码器代码基座候选**：AdapTok（MIT，12L/768d/patch 4×8×8）/ VidTok（MIT）/ LARP（MIT）；⚠️ SIF 移除后其 mask 框架不再需要 |
+| 分解骨架 | **FLOAT 式**：`w_identity`（参考输入）+ `Σ λ_m·v_m`（视频逐帧）→ 解码；对应 FLOAT Eq. 8-9 |
 | 量化器 | **无量化**（连续潜变量 + KL 正则，TiTok VAE 模式同思路）；SoftVQ 软码本仅作备用正则 |
 | 动作通道 | FLOAT/LIA 正交运动基：`z_t = Σ λ_m·v_m`，基由 QR 每次前向正交化；λ 曲线即动作基元强度 |
 | 离散化 | **不在帧级做**——交给行为聚类（HDBSCAN + 命名，序列级）|
@@ -198,9 +196,9 @@ flowchart LR
         P7 -->|是| P8[判定为同一只]
         P7 -->|否| P9[新个体]
     end
-    subgraph R2["路线二：Token 式"]
-        Q1[猫视频] --> Q2[TIV tokens] --> Q3[InfoNCE 训练]
-        Q3 --> Q4[身份嵌入]
+    subgraph R2["路线二：参考输入条件化"]
+        Q1["参考输入<br/>单图/多视角图/短视频"] --> Q2["身份编码器<br/>w_identity 固定向量"]
+        Q2 --> Q3["作为解码条件<br/>无独立损失"]
     end
 ```
 
@@ -286,8 +284,8 @@ flowchart LR
 |---|---|---|---|
 | C4 | 编码器初始化 | AdapTok 权重 / SoftVQ-VAE 权重 / 从零训 | **AdapTok 权重**（同形、MIT）；从零训可接受（SoftVQ 权重为次选）|
 | C5 | 量化器 | **无量化（连续 + KL）** / SoftVQ 软正则 / FSQ / VQ | **已定：无量化**（2026-09-17）——下游全需连续表征；先例：TiTok 官方 VAE 模式（重建反优于 VQ：0.84 vs 1.49）、SoftVQ-VAE 本就是 continuous tokenizer、MAR/AR-video 去 VQ 先例 |
-| C6 | TIV : TV 比例 | 3:1 / 1:1 / 1:3 等 | **3:1**（TivTok 实测口径：TIV 96 + TV 32 @16 帧）|
-| C7 | token 数量 | N_TIV / N_TV / 正交基元数 M | 待定：起点 N_TIV 96、N_TV 2/帧、M 20–32，做缩放消融 |
+| C6 | ~~TIV : TV 比例~~ | — | **已移除**（随 TivTok SIF 退出；2026-09-17）|
+| C7 | token 数量 | 正交基元数 M（N_TIV/N_TV 已移除）| 待定：M 起点 20–32（LIA/FLOAT 用 20），做缩放消融 |
 | C8 | 正交基实现 | QR 分解 / 经典 Gram-Schmidt | **QR 分解**——与 LIA/FLOAT 实现一致，数值更稳；论文称 Gram-Schmidt 指同一数学对象 |
 | C9 | 基的符号 | 自由 / 训练后固定 | 冻结基时必须固定符号，否则 λ 语义漂移 |
 | C10 | 对齐教师 | 无 / DINOv3（外观）/ V-JEPA 2 或 InternVideo2（动作）/ 加 SACP | 待定：先不加（纯架构解耦），训练不稳再上 DeRA 式对齐 |
@@ -310,7 +308,9 @@ flowchart LR
 | C21 | **身份 embedding 模型** | DINOv2 / DINOv3 / CLIP·SigLIP / SuperAnimal / 猫专用 Re-ID / 登记集弱监督微调 | **默认候选 DINOv2，未实测**（判据：登记集自测 rank-1/rank-5 + 跨视角稳健性 + 许可）。**在 `registry-retrieval` 实施时实测** |
 | C22 | **向量库** | numpy 暴力检索 / FAISS | **numpy 暴力检索**（登记库 = 2–5 只猫 × 3–5 张 ≈ 几十个向量，暴力检索毫秒级且零依赖）；FAISS 仅当场景常物清单长起来才需要 |
 | C23 | **参考输入形态** | 单张全身图 / 3–5 张多视角图 / 参考短视频 | **三种均允许，推荐多视角**（猫是非刚体，花纹分布在大形变表面，单视角信息不全）|
-| C24 | **参考输入架构的连带问题** | 视频内 TIV 去留 / TV 如何获得时序上下文 / 编码器是否共享权重 / 多参考如何聚合 | **待裁定**（阻塞 T-A3 定稿，详见 `identity-action-tokenizer/design.md` T-A5c）|
+| C24 | **参考输入架构落地** | 视频内 TIV 去留 / TV 时序上下文 / 编码器是否共享权重 / 多参考聚合 | **Q1/Q2 已裁定**（去 TIV；由视频编码器整段提特征供给时序上下文，2026-09-17）；**Q3/Q4 待定**（见 §4.6 C25）|
+| C25 | 参考编码器 vs 视频编码器共享权重（Q3）| 共享 / 分开 | **待定**（训练时试）|
+| C26 | 多参考聚合为 `w_identity`（Q4）| 池化 / 注意力聚合 / 均值 | **待定**（影响可控）|
 
 ### §4.4 跨环节：输入域（夜间红外）——**待确认**
 
@@ -426,6 +426,7 @@ flowchart LR
 | 2026-09-17 | 抠像模型由 SAM2 改为 **rembg 类实时小模型**；SAM 移至背景对象层（关键帧）| L1/L3 |
 | **2026-09-17** | **身份改为参考输入（默认设定）**：不要求从待分析视频推断身份；用户事先拍参考（单图/多视角图/短视频）。连带：**InfoNCE 移出主监督**（FLOAT 全文 0 次，且判别式目标不保完整性）；**正交基升为容量闸门**（逼身份承担外观）| L4/L5 |
 | 2026-09-17 | 新增 **§5b 选型状态标注约定**；身份 embedding 从"DINOv2+FAISS"改为待实测槽位 | 全篇 |
+| **2026-09-17** | **架构主源转向 FLOAT，TivTok SIF 退出主线**：身份由参考输入提供后，视频内 TIV 与身份通道职责重叠 → SIF 存在意义消失。TivTok 材料已整理为备档 [`papers/docs/tivtok-reference.md`](../../papers/docs/tivtok-reference.md)；C6/C7（TIV:TV 比例、N_TIV/N_TV）随之一并移除 | L4 |
 
 ## §7 当前进度与未来计划
 
@@ -437,7 +438,7 @@ flowchart LR
 |---|---|---|---|---|
 | 2.1 | `multi-object-detect-gate` | 多目标检测（五类）+ 空间关系状态层 | — | ✅ 已归档（2026-09-15）|
 | 2.2 | `batch-followcam-extraction` | 全量批处理 34 段 + followcam 产出 | 2.1 | ✅ 34/34 闭环（14.7 分钟），**待归档** |
-| 2.3 | `identity-action-tokenizer` | 🔬 升主线（encoder 优先）：TivTok SIF 双 token + FLOAT/LIA 正交运动基（UCF101→猫语料两阶段）| 2.2 | ⏳ 待 2.2 归档 |
+| 2.3 | `identity-action-tokenizer` | 🔬 升主线（encoder 优先）：**FLOAT 式参考输入 + 正交运动基**（UCF101→猫语料两阶段）| 2.2 | ⏳ 待 2.2 归档 |
 | 2.3b | `pet-background-removal` | 猫本体抠像——消除背景运动对动作通道的污染 | 可并行 2.3 阶段 A；**2.3 阶段 B 前必须完成** | 📋 已创建待启动 |
 | 2.4 | `video-feature-latent` | 消费 2.3 编码器做行为发现 + 探针评测（现成 backbone 降为回退）| 2.3 | ⏳ 待 2.3 |
 | 2.5 | `spot-check-cli` | 抽查 CLI + 实时监控模式 + 猫身份登记 | 2.4 | ⏳ 待 2.4 |
