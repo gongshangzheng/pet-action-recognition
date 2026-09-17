@@ -464,3 +464,57 @@ Slot-ID 指出身份**包含「特征性动态」**（*"how smiles form"*）。�
 |---|---|
 | **MOFO**（2308.12447）| 若走自监督，**运动聚焦的预训练目标**比普通对比学习更适合动作识别 |
 | **DECOWAM**（2608.20114）| 明确要区分「**相机自运动 vs 本体动作**」——与本项目 followcam **相机运动污染**是同一个问题 |
+
+---
+
+## 5h. 「行为素 → 动作段」：音频分词范式与无监督 TAS（2026-09-17 联网核查）
+
+**起因**：用户提出类比「**行为素 = 单词，动作 = 句子**」，并追问音频领域怎么把音素聚成音节/单词、以及有没有成熟的「动作分段」模型。
+
+### 层级对照
+
+```
+音频：波形 → 帧特征 → 音素(离散单元) → 音节 → 单词 → 句子
+我们：λ（0.27 s）   → 行为素          →        动作段
+```
+
+**关键**：**行为素 ≠ 动作**。`video-feature-latent` 阶段一/二的「窗口特征 → 聚类 → 行为簇 + 命名」建的是**行为素词表（词层）**，未到「句层」。
+
+### 音频侧可借鉴的四条
+
+| 工作 | 做法 | 对本项目 |
+|---|---|---|
+| **arXiv 1603.02845**（无监督分词 + 词表发现，2016）| *"a potential word segment (of **arbitrary length**) is embedded in a **fixed-dimensional** acoustic vector space... builds a whole-word acoustic model **while jointly performing segmentation**"*；**不预设词表大小** | **联合分割 + 类型发现**——正对应主线 |
+| **arXiv 1806.01665**（层次 HMM，2018）| 两层 HMM 推断音节/音素边界；**时长先验作转移概率**；*"no phoneme class labels are used"* | 等价于「最小段长约束」，但更严格 |
+| ⚠️ **arXiv 2106.04298**（离散单元做无监督分词，2021）| *"neural models for speech discretization are **difficult to exploit**... necessary to **adapt them to limit sequence length**"*；最佳来自**高压缩 Bayesian 表示** | **不要先把 λ 离散化**——序列越长越难分词（支持「去量化」）|
+| **NLP unigram 分词** | 用词表对序列做**最优切分**（`Σ log P(段) + log P(长度)`），DP/Viterbi | C20 选项② 的严格版 |
+
+### 视觉侧已有成熟模型：无监督时序动作分割（Unsupervised TAS）
+
+| 工作 | 要点 |
+|---|---|
+| **TAEC**（arXiv 2303.05166）| *"annotating action classes and **frame-wise boundaries** is extremely time consuming... proposes an **unsupervised** approach"* |
+| **Temporally-Weighted Hierarchical Clustering**（arXiv 2103.11264）| *"Action segmentation refers to **inferring boundaries of semantically consistent visual concepts**"* |
+| CTE（2019）· ASAL（2023）| 连续嵌入 / optimal transport |
+| MS-TCN · ASFormer · DiffAct（有监督对照）| 需**逐帧标注**，本项目不具备 |
+
+→ **输入输出与本项目完全一致**（长视频 → 段边界 + 学到的类别，无需标注）⇒ **可直接借鉴，优于自研后处理**。
+
+### 「静止段作为分隔符」的评估
+
+**支持**：pause-based segmentation / VAD 确是音频常用前置。
+**音频已知局限**（arXiv 2203.15479）：*"pauses **do not necessarily coincide with semantic boundaries**. **Over-segmentation**"*。
+
+**本项目需额外处理两点**：
+1. **静止既是「分隔符」又是「一种行为」**——蹲 3 s 是停顿、蹲 20 min 是「睡觉」⇒ 需**时长阈值**
+2. **不是所有切换都有停顿**——走→跑是连续过渡
+
+**我们的优势**：L3 抠像后画面只剩猫 ⇒「画面运动能量」≈「猫的运动能量」，无需背景建模；且 `λ` 本身即运动系数 ⇒ `Σ_m|λ_m(j)|` **直接是能量曲线**（零成本边界信号）。
+
+### 推荐组合
+
+```
+① λ 运动能量曲线 → 低能量段作【强边界候选】→ 切成若干「行为块」   （零成本）
+② 每块内用【无监督 TAS】细分段 + 类型聚类                        （成熟模型）
+③ 人工命名段类型
+```
