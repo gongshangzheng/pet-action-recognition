@@ -1,6 +1,6 @@
 ## 1. 选型与准备
 
-- [ ] 1.1 **许可核验**：确认候选权重许可（`u2net`/`u2netp`/`silueta`/`isnet-general-use` = Apache-2.0；`birefnet-general*` = MIT）；**明确禁用 `bria-rmbg`（rembg 默认值，BRIA 商用需付费）与 RMBG 系权重**；结论回写 design D2
+- [ ] 1.1 **许可核验与分档**（架构 §5b）：确认候选权重许可（`u2net`/`u2netp`/`silueta`/`isnet-general-use` = 🟢 Apache-2.0；`birefnet-general*` = 🟢 MIT）→ 作交付路径；`bria-rmbg`/RMBG 系 = 🟡 CC BY-NC（**科研可用**，可作质量上限对照，登记「商业化前必须替换」）；RVM = 🔴 GPL（不引入代码）。结论回写 design D2
 - [ ] 1.2 获取候选权重（`rembg` + ONNX Runtime，pet）+ 验证可加载（GPU 前 `nvidia-smi` 查占用）
 - [ ] 1.3 小规模选型实测：3-5 段样本（followcam / mammal_v0 / cats_v1 各取样）跑对比，按**许可 + 掩码质量 + 时序稳定性（帧间闪烁）+ 速度**四项裁决 → 定选型并回写 design D2
 - [ ] 1.4 定掩码后处理参数（膨胀/腐蚀像素、面积阈值、帧间 IoU 漂移阈值、掩码质心/框内占比阈值），记录到 design D3

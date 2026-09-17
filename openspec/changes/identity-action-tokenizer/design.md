@@ -33,7 +33,7 @@
    │
    ▼
 ① 背景移除（**`rembg` 类实时小模型**主选，见 pet-background-removal design D2；SAM 已移出抠像）
-   ※ 许可硬门槛：禁用 rembg 默认模型 `bria-rmbg`（BRIA 商用需付费）
+   ※ 许可分档（架构 §5b）：交付路径用 🟢 权重；`bria-rmbg` = 🟡 CC BY-NC（科研可用，商用需协议，作对照）
    → 猫本体 + 白背景（纯色常量；损失只在掩码内计算 → 背景色对训练无关）
    │  ※ 理由：followcam 相机随猫移动 → 背景持续变化 →
    │    TivTok 原假设"背景稳定"不成立，若不抠像，
@@ -98,7 +98,7 @@ FLOAT/LIA 正交运动基分解（正交坐标系 + **容量闸门**）：
 | 项 | 决策 |
 |---|---|
 | 方案 | **`rembg` 类实时小模型**（显著物体分割；候选 `u2net`/`u2netp`/`silueta`/`isnet-general-use`/`birefnet-general-lite`）——**SAM 已移出抠像** |
-| 许可 | ⚠️ 禁用 rembg 默认模型 `bria-rmbg`（BRIA 商用需付费）；RVM（GPL）/ RMBG 系（非商用）红线 |
+| 许可 | 交付路径用 🟢 权重（`u2net`/`isnet-general-use`/`birefnet-general-lite`）；`bria-rmbg` = 🟡 CC BY-NC（科研可用，商用需 BRIA 协议）→ 作对照；RVM = 🔴 GPL（不引入代码）。见架构 §5b 分档 |
 | 输出 | 猫本体 + **白背景**（纯色常量）|
 | 掩码质量 | 不要求完美；特征提取对边缘误差容忍度高；但**必须消除背景运动** |
 | 批处理 | 对全语料一次性生成抠像版（阶段 B 前完成）|
