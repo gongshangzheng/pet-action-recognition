@@ -47,4 +47,5 @@
 |---|---|---|---|
 | 4A | `tracker-selection` | 多猫数据出现 | ⏸️ 延后（0/4） |
 | 4B | `registry-retrieval` | 用户批准实施（碗/摄像头实例识别 + 猫 Re-ID） | ⏸️ 延后（0/4） |
+| 4D | `background-object-memory`（暂名，待立项）| L1 背景对象层：SAM 关键帧分割 + 场景常驻物体清单 + 纠正/补全 GDINO | 待用户审定 C23（触发信号）后立项 | 🔍 待登记（机制成稿在 `registry-retrieval` R1/R2/R2b）|
 | 4C | `behavior-anomaly-detection` | video-feature-latent 归档 + 用户发起深入调研 | ⏸️ 延后（0/5） |
