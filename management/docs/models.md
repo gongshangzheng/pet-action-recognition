@@ -136,7 +136,7 @@ id: 3
   - **碗**：100% 全误框（text 路线不通）
   - **摄像头**：召回 4/1859（千分之 2.2，不可用）
   - **猫**：表现良好（>90% 检出）
-- **结论**：文字提示路线仅保留 "cat" / "person" / "litter_box" / "door_window" 等可用类；碗/摄像头改走 RAG 式（SAM + DINOv2 检索），详 [7 号《身份标识与检索》§4](../wiki/identity-and-retrieval)
+- **结论**：文字提示路线仅保留 "cat" / "person" / "litter_box" / "door_window" 等可用类；碗/摄像头改走 RAG 式（SAM 候选 + embedding 检索），详 [7 号《身份标识与检索》§4](../wiki/identity-and-retrieval)
 
 ### §4.2 YOLO11
 

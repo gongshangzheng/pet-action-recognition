@@ -8,9 +8,9 @@
 
 ## What Changes
 
-- 统一登记-检索库：登记照 → DINOv2 embedding → FAISS（猫与物品共用一套抽象）
+- 统一登记-检索库：登记照 → **embedding（模型选型待实测）** → **向量库（规模决定，默认 numpy 暴力检索）**（猫与物品共用一套抽象）
 - 静态物体候选生成：SAM 一次性分割（固定机位缓存 + 定期重分割）+ 帧差变更触发
-- 物品实例识别闭环：mask/粗框候选 → DINOv2 检索判定；OWLv2 图像引导作对照；GDINO LoRA 微调仅最后手段备档
+- 物品实例识别闭环：mask/粗框候选 → embedding 检索判定；OWLv2 图像引导作对照；GDINO LoRA 微调仅最后手段备档
 - 猫 Re-ID：与 `spot-check-cli` 的 register_cats.py 合并设计
 
 ## Capabilities
@@ -22,4 +22,4 @@
 ## Impact
 
 - 预计新增 `petlib/identity/` 抽象 + 登记 CLI；特征库 gitignore
-- 前置：video-feature-latent 的 DINOv2 依赖落地后可复用
+- 前置：图像 embedding 依赖落地后可复用（模型选型见 design D9b）
