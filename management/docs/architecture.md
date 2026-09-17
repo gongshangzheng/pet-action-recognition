@@ -99,6 +99,43 @@ frame_inds = np.mod(frame_inds, total_frames) # 越界即循环重复
 → 单一时间尺度无法两头兼顾
 ```
 
+#### §1.1.1b 补充：VideoMAE 的「输入长度可配置」≠「处理变长」
+
+**常见误解**：「VideoMAE 能处理变长视频吧？」——**对一半**。
+
+```
+VideoMAE：输入长度【可配置】（T 是超参）  ✅
+        ≠ 输入长度【可变】（一次前向吃任意长）        ❌
+        ≠ 输出长度随输入变化（多段 + 时间戳）         ❌
+```
+
+**为什么它对输入长度友好（代码级原因）**：
+
+```python
+# models/mmaction2/mmaction/models/backbones/vit_mae.py
+use_learnable_pos_emb: bool = False     # 本仓 config 未设 → 默认 False
+num_patches = (img_size // patch_size) ** 2 * (num_frames // tubelet_size)
+pos_embed = get_sinusoid_encoding(num_patches, embed_dims)   # 按 grid【算】出来
+self.register_buffer('pos_embed', pos_embed)                 # 不是学出来的
+```
+
+→ **sin-cos 位置编码是算出来的、不是学出来的** ⇒ 换 T 时**位置编码不必重训**（按新 grid 重算即可）。
+**论文佐证**：*"Our VideoMAE can easily scale up with more powerful backbones (e.g. ViT-Large and ViT-Huge) and **more frames (e.g. 32)**."*
+
+**但换 T 仍不是免费的**：
+
+| 步骤 | 代价 |
+|---|---|
+| ① 重建模型（改 `num_frames`）| ✅ 免费（sin-cos 自动算）|
+| ② 迁移 transformer 权重 | ✅ 免费（权重不含 T 维度）|
+| ③ **重新微调** | ⚠️ **不免费**——分类头与所有层均在原 T 下训得；实践中换 T 通常需重新微调 |
+
+（若 `use_learnable_pos_emb=True`，还须**插值**学出来的位置编码，更麻烦。）
+
+**⭐ 对本项目最有用的推论**：**多时间尺度变便宜了**——同一套权重换 T 只差一次微调 ⇒ **C19「多时间尺度」可用「同一骨干的不同 T 变体」实现，不必两套架构**。
+
+**但仍需注意**：本仓 `num_frames=16` ⇒ 该 checkpoint **固定看 16 帧（≈2.1 s）**，长视频其余部分**从未进入模型**，要出多个结果仍须**在外面滑窗**。
+
 #### §1.1.2 我们的 `λ` 能处理变长吗 —— 能，且输出天然变长
 
 ```
