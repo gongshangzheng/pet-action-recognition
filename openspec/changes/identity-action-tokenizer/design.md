@@ -435,7 +435,7 @@ h_source, feats = self.net_app(input_source)   # EncoderApp：逐级下采样 �
 |---|---|
 | 抠像质量差（猫毛/遮挡）| 掩码膨胀 + 对误差鲁棒（特征级任务容忍度高）|
 | 正交基在猫的大姿态变化下学不出有意义基元 | 备选：降低 M / 退化到软正交（余弦惩罚）|
-| TIV tokens 抓不到"个体身份"（只抓到"猫"这个类别）| 加 track ID 监督（本设计已含）；阶段 B 实测 |
+| **动作分支混入身份**（λ 可被用来判个体）| 容量闸门（M 维）+ **双向泄漏审计**；不过再给 λ 加对抗约束（GRL）。见 T-A4a |
 | UCF101（人类）动作基元迁移到猫 | 阶段 B 迁移实验先探；基元数可重训 |
 | 训练成本（重建+对抗+双臂）| 阶段 A 先冻结部分模块跑通，再全量 |
 | **去 VQ 后潜空间各向异性/尺度失衡** | 沿用 TiTok VAE 模式的 KL 正则；聚类前 whitening；监控 λ 方差谱 |
@@ -448,7 +448,7 @@ h_source, feats = self.net_app(input_source)   # EncoderApp：逐级下采样 �
 
 - TivTok: https://arxiv.org/abs/2606.17590 （SIF §3.3、TIV 分析 §4.5）
 - FLOAT: https://arxiv.org/abs/2412.01064 （Eq.8-9、§5.2 参数）
-- LIA: https://arxiv.org/abs/2203.09043 （Eq.3 Gram-Schmidt、Eq.10 损失）
+- LIA: https://arxiv.org/abs/2203.09043 （Eq.3 正交分解；实现用 QR = Gram-Schmidt 的算法形式；Eq.10 损失）
 - DeRA: https://arxiv.org/abs/2512.04483 （§3.1-3.3）
 - MAR（无 VQ 连续 token）: https://arxiv.org/abs/2406.11838
 - AR Video w/o VQ: https://arxiv.org/abs/2412.14169

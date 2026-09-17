@@ -24,7 +24,7 @@ id: 1
 | 5 | [Live 模块](../wiki/live-module) | 直播源管理 + 实时推理 |
 | 6 | [系统架构](../wiki/architecture) | 结构与设计 + 决策 + 待定选择 + 进度（唯一架构文档）|
 | 7 | [身份标识与检索](../wiki/identity-and-retrieval) | 定位追踪+猫 Re-ID+RAG 式物体标识 |
-| 8 | [身份-动作 Tokenizer 专篇](../wiki/identity-tokenizer) | TivTok SIF + 正交运动基（连续潜空间）|
+| 8 | [身份-动作 Tokenizer 专篇](../wiki/identity-tokenizer) | FLOAT 式参考输入 + 正交运动基（连续潜空间）|
 | 9 | [研究结论与踩坑](../wiki/lessons) | 关键点五大问题 + 标注体系教训 + 用户裁定时间线 |
 | 10 | [第三方项目借鉴](../wiki/third-party-notes) | pet-videos / remix-petra 等借鉴与反模式 |
 | 11 | [交接与协作指南](../wiki/handover-guide) | 新协作者上手入口 |

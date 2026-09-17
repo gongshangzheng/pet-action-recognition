@@ -437,7 +437,7 @@ flowchart TD
 
 | 主题 | 位置 |
 |---|---|
-| TivTok SIF 定义 | `txt/2606.17590_tivtok.txt` §3.3 |
+| ~~TivTok SIF 定义~~ | 已移入备档 [`papers/docs/tivtok-reference.md`](../../papers/docs/tivtok-reference.md)（暂不采用）|
 | TIV 语义分析（捕获身份而非像素静止） | 同上 §4.5 |
 | 正交基实现（QR） | `repos/lia/networks/styledecoder.py:439-458` |
 | 正交基在 FLOAT 中 | `repos/float/models/float/styledecoder.py:418-434` |
