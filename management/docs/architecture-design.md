@@ -40,7 +40,7 @@ flowchart TD
     S3 --> S5
 
     subgraph S4["④ 动作表征"]
-        D1[AdapTok 基座<br/>+ TivTok SIF 双 token] --> D2[SoftVQ 量化]
+        D1[AdapTok 基座<br/>+ TivTok SIF 双 token] --> D2[连续潜变量<br/>无量化] 
         D2 --> D3[FLOAT/LIA 正交运动基]
     end
 
@@ -118,7 +118,7 @@ flowchart TD
     M3 -->|attend 全部帧| M4[TIV tokens<br/>时间不变 → 身份]
     M3 -->|只 attend 本帧| M5[TV tokens<br/>时间可变 → 动作]
 
-    M4 --> M6[SoftVQ 量化]
+    M4 --> M6[连续潜变量<br/>无量化 · KL 正则]
     M5 --> M6
 
     M5 --> M7[FLOAT/LIA 正交运动基<br/>z_t = Σ λ_m·v_m]
@@ -132,8 +132,9 @@ flowchart TD
 |---|---|
 | 基座 | **AdapTok**（MIT，12 层 / 768 维 / patch 4×8×8，与 TivTok 同形，自带完整 attention mask 框架） |
 | 双 token | TivTok 的 SIF：TIV 看全部帧（身份）、TV 只看本帧（动作），分解由架构诱导而非损失约束 |
-| 量化器 | **SoftVQ**（连续软量化，全可微、无码本塌缩；线性探针表现优于 VQ/AE） |
+| 量化器 | **无量化**（连续潜变量 + KL 正则，TiTok VAE 模式同思路）；SoftVQ 软码本仅作备用正则 |
 | 动作通道 | FLOAT/LIA 正交运动基：`z_t = Σ λ_m·v_m`，基由 QR 每次前向正交化；λ 曲线即动作基元强度 |
+| 离散化 | **不在帧级做**——交给行为聚类（HDBSCAN + 命名，序列级）|
 | 身份通道 | TIV 池化 + track 级 InfoNCE（同猫拉近、异猫推远） |
 | 监督 | 重建（L1 + 感知 + 对抗）+ 动作伪行为素 CE + 身份 InfoNCE + 跨猫交换重建（解耦验证） |
 | 两阶段 | A：UCF101（13320 段，NAS）验证架构 → B：猫语料迁移 + 身份监督 |
@@ -231,8 +232,8 @@ flowchart LR
 
 | # | 选择项 | 选项 | 倾向与理由 |
 |---|---|---|---|
-| C4 | 编码器初始化 | SoftVQ 公开权重 / AdapTok 权重 / 从零训 | **AdapTok 权重**（同形、MIT）或 SoftVQ 权重 |
-| C5 | 量化器 | SoftVQ / FSQ / VQ | **SoftVQ**——有线性探针优于 VQ/AE 的实验证据，且无码本塌缩 |
+| C4 | 编码器初始化 | AdapTok 权重 / SoftVQ-VAE 权重 / 从零训 | **AdapTok 权重**（同形、MIT）；从零训可接受（SoftVQ 权重为次选）|
+| C5 | 量化器 | **无量化（连续 + KL）** / SoftVQ 软正则 / FSQ / VQ | **已定：无量化**（2026-09-17）——下游全需连续表征；先例：TiTok 官方 VAE 模式（重建反优于 VQ：0.84 vs 1.49）、SoftVQ-VAE 本就是 continuous tokenizer、MAR/AR-video 去 VQ 先例 |
 | C6 | TIV : TV 比例 | 3:1 / 1:1 / 1:3 等 | **3:1**（TivTok 实测口径：TIV 96 + TV 32 @16 帧）；现有草稿的 16:1~4 方向相反，需修正 |
 | C7 | token 数量 | N_TIV / N_TV / 正交基元数 M | 待定：起点 N_TIV 96、N_TV 2/帧、M 20–32，做缩放消融 |
 | C8 | 正交基实现 | QR（`torch.linalg.qr`）/ 经典 Gram-Schmidt | **QR**——与 LIA/FLOAT 代码一致，数值更稳；论文称 Gram-Schmidt 指同一数学对象 |
@@ -280,6 +281,8 @@ flowchart LR
 | 2026-09-16 | 架构收敛：TivTok（骨架）+ FLOAT/LIA（正交基）+ AdapTok（基座）+ SoftVQ（量化） | L4 |
 | 2026-09-16 | 新增 L3 背景移除环节（独立 change） | 全链路 |
 | 2026-09-16 | 方案否证记录：参考帧机制、纯 register tokens、双独立编码器、模型内 VQ 码本 | L4 |
+| **2026-09-17** | **全面去量化**：移除 VQ/SoftVQ，改连续潜变量 + KL；正交仅加在运动基（M≈20–32 方向），不加在码本（R^d 中最多 d 个正交向量，码本 8192 个不可能正交）；离散化交给序列级行为聚类 | L4 |
+| 2026-09-17 | 先例核查（联网）：TiTok 官方 `quantize_mode: "vae"` 已有预训练权重且重建更好（0.84 vs 1.49）；SoftVQ-VAE 论文标题即 "Continuous Tokenizer"；MAR / AR-Video-w/o-VQ 跨域印证 | L4 |
 
 ## 相关文档
 

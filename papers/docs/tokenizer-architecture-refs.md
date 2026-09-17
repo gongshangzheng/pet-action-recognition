@@ -166,7 +166,7 @@
 - **VQ 最差**：VidTok Table 3 显示 VQ-262144 利用率仅 **0.2%**，PSNR 23.22（塌缩）
 - **FSQ**：利用率 99.8–100%，无码本学习需求 → 离散备选
 
-**建议**：骨架 = **AdapTok 代码库（MIT）+ 自己实现 SIF mask**；量化器 = **SoftVQ（算法自写，权重可初始化）**；重建基线 = VidTok；长视频分块 = VidTok v1.1。
+**建议**：骨架 = **AdapTok 代码库（MIT）+ 自己实现 SIF mask**；~~量化器 = **SoftVQ**~~ **量化器 = 无（2026-09-17 去量化，见 §5c）**；重建基线 = VidTok；长视频分块 = VidTok v1.1。
 
 ---
 
@@ -203,6 +203,52 @@ AdapTok 的 mask 是**块因果**（同块或前块可见），而 TivTok SIF �
 ```
 `encoder_attn_type` / `decoder_attn_type` 是配置字符串 → 新类型可直接接入；`full_bi_attn` 可作参考实现。
 
+## 5c. 去量化（连续 tokenizer）先例核查（2026-09-17 联网，TUN_OK）
+
+**问题来源**：用户追问“为什么我们要在正交坐标空间里量化？”→ 结论：**不应该量化**。
+
+### 决定性证据（逐条有源）
+
+| # | 事实 | 来源/出处 |
+|---|---|---|
+| 1 | **TiTok 官方支持无 VQ 的 VAE 模式**：`quantize_mode: "vae"`，`token_size: 16`（对角高斯 + KL），`num_latent_tokens: 128` | `configs/infer/TiTok/titok_bl128_vae_c16.yaml` |
+| 2 | **官方已发布 VAE 模式预训练权重**（`titok_ll32/bl64/bl128_vae_c16_imagenet`）与对应重建指标 | `README_TiTok.md` 模型表 / HF |
+| 3 | **连续模式重建反而更好**：ImageNet rFID — BL-128 **VAE 0.84** vs VQ 1.49；BL-64 VAE 1.25 vs VQ 2.06；LL-32 VAE 1.61 | `README_TiTok.md` |
+| 4 | TiTok 论文结论把 "**1D-VAE**" 列为 tokenizer 的泛化方向 | `txt/2406.07550_titok.txt` L1050 |
+| 5 | **SoftVQ-VAE 是连续 tokenizer**：论文标题 "1-Dimensional **Continuous** Tokenizer"；`z_q = Σ p_k·c_k` 为连续加权和，前向**无 straight-through / 无 argmax**（argmax 仅用于 usage 统计） | `repos/softvqvae/modelling/quantizers/softvq.py` |
+| 6 | **TivTok 基于 SoftVQ-VAE 构建** → 其“量化”本就是软的；论文虽写 "discrete code space" 但实现连续 | `txt/2606.17590_tivtok.txt` L203 / L356 |
+| 7 | **MAR**（NeurIPS 2024）："discrete-valued space … is **not a necessity** for autoregressive modeling"——连续 token + 扩散损失 | arXiv 2406.11838 |
+| 8 | **视频域先例**：AR Video Generation **without** Vector Quantization（非量化自回归：逐帧 + 空间集合预测） | arXiv 2412.14169 |
+| 9 | **TA-TiTok** 官方声明同时处理 discrete 与 continuous token | GitHub `bytedance/1d-tokenizer` |
+| 10 | FlexTok 用 **register tokens**（“外接 register tokens”的先例）| arXiv 2502.13967 |
+
+### 术语陷阱（重要）
+
+文献普遍把 SoftVQ 类输出仍叫 "quantized" / "discrete code space"（TivTok 原文即如此），但**实现是连续的**。
+→ **不要把论文用词当成实现事实**；判断是否真离散，看代码有没有 `argmax` / straight-through。
+
+### 为什么“正交”与“量化”不该混
+
+```
+正交性 → 基 V 的性质（M 个方向两两正交，QR 硬约束）
+量化   → 系数的近似（破坏分解精度，不破坏基的正交性）
+```
+
+**数学硬限制**：R^d 中互相正交的非零向量**最多 d 个**。SoftVQ 码本 = 8192 个 32 维向量（`nn.Parameter(shape=[4, 8192, 32])`）→ **正交不可能**。
+→ 所以“让码本正交”这条路在数学上就堵死了；正交只能加在 M（≈20）个基方向上。
+
+### 去量化的代价（已知项）
+
+| 代价 | 对策 |
+|---|---|
+| 失去离散词表（AR 生成用不了） | 未来生成走 flow matching（FLOAT 路线）|
+| 潜空间可能各向异性 / 尺度失衡 | KL 正则（TiTok VAE 模式）+ 聚类前 whitening |
+| 无码本利用率可观测 | 用 λ 方差谱 + 重激活统计 |
+
+### 结论
+
+> **去量化有充分先例且质量不降**；我们的“帧级离散化”需求与“行为聚类（序列级）”重叠，属于冗余 —— **v1 移除 VQ/SoftVQ**，软码本仅作备用正则器。
+
 ## 6. 对现有 OpenSpec 设计的修正清单
 
 | # | 现有设计 | 调研结论 | 建议 |
@@ -214,3 +260,4 @@ AdapTok 的 mask 是**块因果**（同块或前块可见），而 TivTok SIF �
 | 5 | 未记录许可风险 | FLOAT **ND** 禁令、RVM **GPL** 传染、SoftVQ 仓库**无 LICENSE** | 明确"只借鉴算法/自行实现"，写入 design 风险节 |
 | 6 | SIF 实现未定 | TiTok 代码无 attention mask；`rar.py` 有可参考实现 | 实现方案落成显式任务 |
 | 7 | 抠像方案"SAM2/RVM 实测后定" | SAM2 在接口/时序/许可/动物泛化上全面占优 | 保持实测，但明确 SAM2 为默认主选 |
+| 8 | 量化器 = SoftVQ | **TiTok 官方 VAE 模式（无 VQ）重建更好 0.84 vs 1.49**；SoftVQ-VAE 本就是 continuous tokenizer；MAR/AR-video 去 VQ 先例 | **全面去量化**：连续潜变量 + KL；SoftVQ 降为备用正则（2026-09-17 已调整） |

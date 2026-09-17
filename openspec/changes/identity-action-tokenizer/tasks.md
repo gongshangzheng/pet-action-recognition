@@ -1,19 +1,19 @@
 # Tasks: identity-action-tokenizer
 
 > 总管：`pet-motion-latent-pipeline`（**2.3 主线**，encoder 优先）。两阶段：A 人类 UCF101 → B 猫语料。
-> 架构 = **TivTok SIF 双 token + FLOAT/LIA 正交运动基**（详见 design.md）。严格按编号顺序；GPU 任务前 `nvidia-smi` 查占用。
+> 架构 = **TivTok SIF 双 token + FLOAT/LIA 正交运动基（连续潜空间，无量化）**（详见 design.md）。严格按编号顺序；GPU 任务前 `nvidia-smi` 查占用。
 > 前置：`pet_tokenizer` 环境（待建）；`pet-background-removal` 抠像语料（阶段 B 需要）。
 
 ## 1. 准备
 
-- [ ] 1.1 配方精读：TivTok SIF（2606.17590）/ LIA Gram-Schmidt（2203.09043）/ FLOAT 分解（2412.01064）/ DeRA 对齐（2512.04483）/ SoftVQ-VAE 基础，沉淀训练配方笔记
+- [ ] 1.1 配方精读：TivTok SIF（2606.17590）/ LIA 正交基（2203.09043，代码用 QR）/ FLOAT 分解（2412.01064）/ DeRA 对齐（2512.04483）/ **无量化先例（TiTok VAE 模式 / MAR 2406.11838）**，沉淀训练配方笔记
 - [ ] 1.2 `pet_tokenizer` 环境：独立 conda（不污染 plf），安装依赖 + 验证 GPU 可用
 - [ ] 1.3 UCF101 manifest：NAS UCF-101 → 16 帧窗口清单（stride 8），核对总量与可用性
 
 ## 2. Tokenizer 实现
 
 - [ ] 2.1 双 token 骨架：TIV tokens（attend 整段）+ TV tokens（每帧 local scope），实现 TivTok SIF 的非对称 attention scope
-- [ ] 2.2 动作通道：FLOAT/LIA 正交运动基（可学习矩阵 + 每次前向 Gram-Schmidt）→ z_t = Σ λ_m(t)·v_m；系数 λ 可闭式提取
+- [ ] 2.2 动作通道：FLOAT/LIA 正交运动基（可学习矩阵 + 每次前向 `torch.linalg.qr`）→ z_t = Σ λ_m(t)·v_m；系数 λ 可闭式提取（λ_m = <z_t, v_m>）
 - [ ] 2.3 解码器 + 重建损失（L1 + perceptual + adversarial，TivTok 口径；Invariant Broadcasting 复用 TIV）
 - [ ] 2.4 身份通道：TIV 池化 → identity embedding + track ID InfoNCE（τ=0.07，memory bank）
 - [ ] 2.5 跨猫交换重建（解耦验证）：猫 A 的 TV × 猫 B 的 TIV → 重建"B 做 A 的动作"
