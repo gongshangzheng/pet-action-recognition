@@ -587,6 +587,37 @@ CV/NLP 的经验结论：**标签充足 → 两者接近（监督可能更好）
 
 **理由**：静止边界把问题**降维**（长视频 → 若干净块），使第 2 步的模型工作在**更短、更同质**的片段上——正好回应 arXiv 2106.04298 的「序列过长时神经方法难以分词」警示。
 
+
+#### §1.8.6 行业架构模式（联网调研 2026-09-17）
+
+完整调研见 [`papers/docs/action-recognition-products.md`](../../papers/docs/action-recognition-products.md)。**核心结论：委托方假设「先分段再逐段识别」作为普遍规律不成立**——业界主流是「门控/跟踪/规则 → 定长窗口分类 → 时序后处理聚合成段」。
+
+| 模式 | 谁在用 | 关键取舍 |
+|---|---|---|
+| **1 门控-精算级联** | Frigate / Viseron / VideoPipe | 算力省 1–2 个数量级；**门控漏了则后面全漏** |
+| **2 跟踪区间即段** | DeepStream / 安防 | 天然带 ID；但**段 = 轨迹区间**，多动作重合无法表达 |
+| **3 窗口分类 + 时序聚合** | mmaction2 长视频 demo / Google `FRAME_MODE` / 畜牧 | 改造量最小；**与本项目现状 100% 兼容** |
+| **4 先段后判（非语义切分）** | Google `SHOT_MODE` / 视频索引产品 | 段可控；但**段 = 镜头段 ≠ 动作** |
+| **5 联合定位-分类** | 学术界 / 体育事件（TAD、action spotting）| 唯一真给时间戳；**标注成本高、缺生产级封装** |
+
+**已核实的关键事实**（🟩）：Google 的 `LabelDetectionMode` = `SHOT_MODE` / `FRAME_MODE` / `SHOT_AND_FRAME_MODE`（另提供 `stationary_camera` 选项，固定机位可用）；AWS 的 `SegmentType` 只有 `SHOT` / `TECHNICAL_CUE`；Frigate 的 review item = *"segments of time … that bundle together the objects and audio that were active at once"*，即**活动区间聚合**；本仓 vendored mmaction2 **确实含 TAL 配置**（`configs/localization/{bmn,bsn,drn,tcanet}`），但属**另一任务族**。
+
+**⭐ 最贴近本项目的动物行为先例：Keypoint-MoSeq**（本仓已 vendored `third-party/keypoint-moseq/`，一手可核）
+
+```
+姿态/关键点序列 → [HDP-HMM] → syllable（细粒度单元）→ 组合 → motif（动作）
+```
+
+| 我们的层级 | Keypoint-MoSeq | 备注 |
+|---|---|---|
+| `λ`（t=4 帧 ≈ **0.27 s** @15fps）| **syllable**（鼠类目标 **400 ms**）| **粒度惊人接近** |
+| 行为素 | syllable | 同层 |
+| 动作段 | **motif** | 同层 |
+| `T_pause`（停顿 vs 静止型行为）| **`target syllable duration`**（由 `kappa` 调）| 同一种「时长先验」|
+
+其**已知风险**亦印证我们的担忧：*"Substantial size variation … may cause **syllables to become over-fractionated**, i.e. the same behaviors may be split into multiple syllables"*。
+→ **我们不是没有先例**：这是「细粒度单元 → 组合动作」的成熟无监督范式，且**用 HDP-HMM**（正好对应 design D5 的路径 B）。
+
 ## §2 待决策登记表（**唯一权威**）
 
 > **规则**
@@ -1219,6 +1250,7 @@ flowchart LR
 ## §10 相关文档
 
 - [`papers/docs/action-recognition-models.md`](../../papers/docs/action-recognition-models.md)（**现有动作识别模型综述**：方法与输入细节）
+- [`papers/docs/action-recognition-products.md`](../../papers/docs/action-recognition-products.md)（**现有动作识别产品/框架架构调研**：云 API / 边缘 VMS / 体育 / 畜牧 / 开源；5 条行业架构模式）
 
 - [8 号《身份-动作 Tokenizer》（模型层深入设计）](./identity-tokenizer.md)
 - [7 号《身份标识与检索》](./identity-and-retrieval.md)（定位追踪 / 猫 Re-ID / 物体标识）

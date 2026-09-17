@@ -88,6 +88,34 @@
 | **C. DP/Viterbi 最优分词** | NLP unigram 范式：`max Σ log P(段) + log P(长度)` | 备选（轻量）|
 | **D. 联合分割 + 词表发现** | 任意长度段 → 固定维嵌入，同时学边界与类型；不预设词表大小（音频 1603.02845 范式）| **最贴本需求，但实现最重** |
 
+## 行业调研结论（2026-09-17 联网核实，见 `papers/docs/action-recognition-products.md`）
+
+**关键结论：合同方假设「先分段再逐段识别」不是行业普遍架构。** 业界主流是：
+
+```
+① 门控（运动/镜头/轨迹/规则）→ ② 定长窗口分类 → ③ 时序后处理聚合成段
+```
+
+**已核实（🟩）**：Google `LabelDetectionMode` = `SHOT_MODE`/`FRAME_MODE`/`SHOT_AND_FRAME_MODE`（段=镜头段）；AWS `SegmentType` 只有 `SHOT`/`TECHNICAL_CUE`；Frigate 的 review item = 活动区间聚合（`Alert`/`Detection`/`Motion` 三档）；本仓 vendored mmaction2 含 TAL 配置（`configs/localization/{bmn,bsn,drn,tcanet}`）但属另一任务族。
+
+**五条行业模式**（1 门控级联 / 2 跟踪区间即段 / 3 窗口分类+时序聚合 / 4 先段后判非语义 / 5 联合定位-分类）→ 本 change 采用 **模式 3 的升级版**（在 `λ` 低维码序列上做变化点检测 + 聚合），**风险最低且与现状兼容**。
+
+**⭐ 最近先例：Keypoint-MoSeq**（本仓 vendored，一手可核）
+
+```
+姿态序列 → [HDP-HMM] → syllable（400 ms @鼠类）→ motif（动作组合）
+```
+
+| 我们的设计 | Keypoint-MoSeq |
+|---|---|
+| `λ` 粒度 t=4 帧 ≈ **0.27 s** | **syllable 目标 400 ms** |
+| **`T_pause`**（D3 的时长阈值）| **`target syllable duration`**（由 `kappa` 调） |
+| 过分割风险 | 已实证：*"syllables to become **over-fractionated**"* |
+
+→ **design D5 的路径 B（层次 HMM + 时长先验）直接对标该实现**，且它**已有成熟代码与超参经验**，应优先细读。
+
+**另一条零成本发现**：行业模式 1（门控）在本项目**天然免费**——`λ` 能量曲线就是门控信号，无需额外组件。已写进 D2。
+
 ## 输入契约
 
 | 输入 | 来源 | 形态 |
