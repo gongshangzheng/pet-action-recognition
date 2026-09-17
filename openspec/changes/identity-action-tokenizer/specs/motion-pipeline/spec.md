@@ -1,32 +1,38 @@
 ## MODIFIED Requirements
 
-### Requirement: 身份-动作双 token 视频 tokenizer（研究）
+### Requirement: 身份-动作解耦视频 tokenizer（研究）
 
-系统 SHALL 提供双 token 视频重建 tokenizer，骨架采用 **TivTok 式 Scope-Induced Factorization（SIF）**：
+系统 SHALL 提供身份-动作解耦的视频重建 tokenizer，骨架采用 **FLOAT 式参考输入 + 正交运动基**：
 
-- **TIV tokens（时间不变，身份通道）**：attention scope MUST 覆盖整段视频的所有帧 patch（全局），承载个体身份/外观
-- **TV tokens（时间可变，动作通道）**：每个 token 的 attention scope MUST 限制在本帧 patch 与 TIV tokens（局部），承载逐帧动作
+- **身份通道**：身份表示 MUST 从**参考输入**（单图 / 3–5 张多视角图 / 参考短视频）提取，MUST NOT 从待分析视频推断；参考为多变体时 MUST 逐图编码后聚合（平均）为一个固定向量，使身份表示与参考形态、长度无关
+- **动作通道**：逐帧动作 latent MUST 表示为 `z_t = Σ_m λ_m(t)·v_m`，其中基 `V = {v_m}` MUST 通过 **QR 前向正交化**保持列正交（硬约束，非损失惩罚）；动作通道容量 MUST 受限（M 维，M ≪ d）
+- **分支独立性**：身份分支与动作分支 MUST 独立前向（身份编码器只吃参考、动作编码器只吃视频）——这是"身份不含动作"的架构级保证，MUST NOT 合并为共享注意力的一次前向
+- **时序上下文**：动作侧 MUST 采用 3D patchify（tubelet，时间维 t > 1）保证 `λ_t` 具备多帧上下文
+- **解码**：解码器 SHALL 以 `w_identity + Σ_m λ_m(t)·v_m` 重建第 t 帧
 
-动作通道 SHALL 采用 **FLOAT/LIA 式正交运动基**：动作 latent 表示为 z_t = Σ_m λ_m(t)·v_m，其中基 V = {v_m} MUST 通过 **Gram-Schmidt 前向正交化**保持正交（硬约束，非损失惩罚）。解码器 SHALL 以 (TIV, TV_t) 重建视频帧。
+训练 MUST 分两阶段：**先大规模人类动作数据集（UCF101），后猫语料迁移**；猫语料 MUST 为抠像（背景移除）后的视频。评测 MUST 覆盖：重建质量、`λ_t` 动作判别性、`λ` 基元可解释性、**双向泄漏审计**（身份→动作 / 动作→身份）、换参考验证、视角无关性。
 
-训练 MUST 分两阶段：**先大规模人类动作数据集（UCF101），后猫语料迁移**；猫语料 MUST 为抠像（背景移除）后的视频。评测 MUST 覆盖：重建质量、z_t 动作判别性、λ 基元可解释性、身份检索、视角无关性、身份泄漏、跨身份交换重建。
+#### Scenario: 换参考验证解耦
 
-#### Scenario: 重建验证解耦
-
-- **WHEN** 用猫 A 的动作 TV tokens 序列 + 猫 B 的 TIV tokens 送入解码器
-- **THEN** 重建结果呈现"猫 B 做 A 的动作"——外观随 TIV 变、运动随 TV 保持
+- **WHEN** 用猫 A 的视频运动 `λ` + 猫 B 的参考输入送入解码器
+- **THEN** 重建结果呈现"猫 B 做 A 的动作"——外观随参考变、运动随 `λ` 保持
 
 #### Scenario: 正交运动基有效
 
-- **WHEN** 提取训练后的运动基 V 并计算两两内积
-- **THEN** 任意两个基向量内积接近 0（<v_i, v_j> ≈ 0, i≠j），且 λ_m(t) 可闭式提取用于动作可视化
+- **WHEN** 提取训练后的运动基 `V` 并计算两两内积
+- **THEN** 任意两个基向量内积接近 0（`<v_i, v_j> ≈ 0, i≠j`），且 `λ_m(t)` 可作为正交基坐标读出、用于动作可视化
 
-#### Scenario: 动作判别性与身份泄漏闸门
+#### Scenario: 双向身份-动作泄漏审计
+
+- **WHEN** 冻结 tokenizer 执行审计
+- **THEN** ① 在 `λ_t` 上训个体分类器（喂不同猫的视频）→ 准确率接近随机；② 固定参考、喂不同动作 → `w_identity` 变化量 ≈ 0；③ 固定动作、换参考 → `λ` 变化量 ≈ 0
+
+#### Scenario: 动作判别性与基元可解释性闸门
 
 - **WHEN** 冻结 tokenizer 并在标注子集上训线性探针
-- **THEN** z_t 线性探针 top1 达到可用水平；z_t / λ 上的个体分类器接近随机（身份泄漏闸门）
+- **THEN** `z_t` / `λ_t` 线性探针 top1 达到可用水平；且 `λ_m(t)` 曲线所对应的基元可被人工命名
 
 #### Scenario: 视角无关性
 
-- **WHEN** 对同一只猫的不同视角/距离片段提取 identity embedding
+- **WHEN** 对同一只猫的不同视角/距离片段提取身份表示
 - **THEN** 跨视角余弦相似度 MUST ≥ 0.7（低于则身份通道不达标）
