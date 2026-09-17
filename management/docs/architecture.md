@@ -10,6 +10,8 @@ id: 6
 # 系统架构：完整结构总览
 
 > **怎么读这篇**：先用五分钟看 §1 总览表把全貌记住；想深入哪个阶段就跳到对应 §，那里会再指到专篇文档。
+>
+> **想要设计细节而不是导读**：看 [12 号《架构设计：完整设计框架》](./architecture-design.md)——那里有端到端 Mermaid 结构图、各层设计决策与当前待定选择；模型层深入设计见 [8 号《身份-动作 Tokenizer》](./identity-tokenizer.md)。
 
 ## §0 术语表
 
@@ -135,4 +137,4 @@ id: 6
 
 ---
 
-**相关文档**：[1 号《仓库资产盘点》](../wiki/repo-inventory)（资产索引）/ [7 号《身份标识与检索》](../wiki/identity-and-retrieval) / [8 号《身份-动作 Tokenizer 专篇》](../wiki/identity-tokenizer) / [9 号《研究结论与踩坑》](../wiki/lessons)
+**相关文档**：[12 号《架构设计：完整设计框架》](../wiki/architecture-design)（设计底稿：结构图 + 决策 + 待定项）/ [1 号《仓库资产盘点》](../wiki/repo-inventory)（资产索引）/ [7 号《身份标识与检索》](../wiki/identity-and-retrieval) / [8 号《身份-动作 Tokenizer 专篇》](../wiki/identity-tokenizer) / [9 号《研究结论与踩坑》](../wiki/lessons)
