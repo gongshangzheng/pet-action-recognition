@@ -7,9 +7,10 @@ followcam 视频中相机随猫移动，**背景持续变化**——这破坏了
 ## What Changes
 
 - 新增**猫本体抠像（背景移除）预处理管线**：输入视频 → 输出"猫本体 + 黑背景"视频（沿用项目已有黑边约定）
-- **方案选型**（又快又好，实测后定）：SAM2（视频分割，时序一致，复用现有 GroundingDINO 检测框作 prompt）/ RVM（Robust Video Matting，毛发边缘更细）/ 其他
+- **方案选型（2026-09-17 修订）**：以 **实时小模型** 为主——`rembg`（MIT）承载的轻量背景移除模型（候选 `u2net` / `u2netp` / `silueta` / `isnet-general-use` / `birefnet-general-lite`），按**许可 + 掩码质量 + 时序稳定性 + 速度**四项实测后定
+- **移除方案**：**SAM 不再承担猫本体抠像**（用户裁定 2026-09-17）——SAM 改用于背景对象层（维护背景物件清单 + 纠正/补全 GroundingDINO，仅关键帧触发），属独立 change；RVM（GPL-3.0 传染）与 RMBG 系（非商用许可）否决
 - **全语料批处理**：followcam 34 段 + mammal_v0 2234 + cats v1 717
-- **质量门槛与兜底**：掩码面积异常、时序漂移、检测丢失帧的检出与回退
+- **质量门槛与兜底**：掩码面积异常、时序漂移（帧间闪烁）、**掩码与检测框不一致**、检测丢失帧的检出与回退
 - CLI + 产物约定（黑背景 mp4，与原视频并存，不覆盖）
 
 ## Capabilities
@@ -23,8 +24,9 @@ followcam 视频中相机随猫移动，**背景持续变化**——这破坏了
 
 ## Impact
 
-- 新增 `scripts/` 抠像 CLI + 模型依赖（SAM2 或 RVM 权重，pet 执行）
+- 新增 `scripts/` 抠像 CLI + 模型依赖（**`rembg` + ONNX Runtime + 小模型权重**，pet 执行）
 - 新增产物目录（抠像视频，独立于原视频）
+- **为 L6 实时模式预留**：选型为**实时可用级小模型**（GPU 几十毫秒/帧）；本 change 仍只交付离线批处理，不做在线服务
 - **消费方**：`identity-action-tokenizer`（阶段 B 猫语料训练）、`video-feature-latent`（可选对比）
 - 与原视频、followcam 产物并存，不破坏既有管线
 - GPU 任务在 pet 执行（4090）
