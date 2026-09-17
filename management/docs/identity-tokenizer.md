@@ -59,9 +59,9 @@ id: 8
 
 ```mermaid
 flowchart TD
-    R["参考输入<br/>单图 / 多视角图 / 短视频"] --> RT["⊕ 可学习 register tokens"]
-    RT --> E0["身份编码器<br/>只吃参考 · 与运动分支独立前向"]
-    E0 --> L["只保留 register → 投影<br/>身份向量（固定，跨视角联合融合）"]
+    R["参考视频"] --> RT["patchify ⊕ register tokens"]
+    RT --> E0["编码器（与输入侧同一套参数）"]
+    E0 --> L["取 register → 投影<br/>身份向量（固定，跨视角联合融合）"]
 
     A[猫本体视频<br/>上游抠像产物] --> B["3D patchify<br/>patch t=4,p=8"]
     B --> C["视频编码器<br/>整段提特征（含时序上下文）"]
@@ -90,7 +90,9 @@ flowchart TD
 
 **设计**：上游 change `pet-background-removal` 负责，输出"猫本体 + 白背景"视频。空间上下文（在床上/地上）由 L1 空间关系状态层承担，因此抠像不丢信息。
 
-### §4.2 视频编码器：**3D patchify（tubelet embedding）**（2026-09-17 新增）
+### §4.2 视频编码器：**3D patchify（tubelet embedding）**
+
+> ⚠️ **AdapTok 只能借代码、不能借结构**（2026-09-17）：可复用 **3D patchify 实现 / transformer block / 训练循环 / 数据管线 / 12L·768d 规模 / 训练配方**；**不能复用** **block-causal 掩码**（为自回归设计，我们离线能看整段 → 白白限制）、**SVQ 量化器**（已弃）、**1D 全局 latent 读出**（我们要逐 tubelet）、**block-mask 预算**（已弃）、**解码器量化输入接口**（我们喂连续 latent）。详见 6 号 §2.3 C03/C04。
 
 **决策**：视频编码器采用 **3D patchify**——把 **t 帧拼成三维张量 `t×H×W`，再在整个时空体上切块**（patch = `t×p×p`），而不是逐帧单独切二维块。
 
@@ -282,7 +284,11 @@ FLOAT 的身份**完整性**靠的是容量不对称：运动被限制在 M=20 �
 | 单猫语料 | 只需**一份参考**，**零额外标注** |
 | 交换验证 | **免费**：`decode(参考B, A 的 λ)` → “B 做 A 的动作” |
 
-**读出机制：register tokens（跨全部参考 token 联合融合）**
+**读出机制：对称架构 + register tokens（跨全部参考 token 联合融合）**
+
+> **2026-09-17 修订（用户提议）**：参考与输入视频**共用同一套结构与参数**（FLOAT 即如此），差别只在**取哪部分输出**——参考侧取 register（身份），输入侧取 tubelet 系数（动作）。详见 [6 号 §1.5](./architecture.md)。
+>
+> ⚠️ **隔离约束（关键）**：`register` 可 attend patch，但 **patch/tubelet 【不能】attend register**——否则身份信息会顺着注意力流进 λ（TivTok SIF 的 TV 会 attend TIV，我们的审计不允许）。两组输出**互不看**。
 
 ```
 参考输入（单图/多图/视频）→ patchify
