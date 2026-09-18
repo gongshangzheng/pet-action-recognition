@@ -275,7 +275,7 @@ AdapTok 的 mask 是**块因果**（同块或前块可见），而 TivTok SIF �
 
 **它是什么**：开放域实时流式音视频生成（交互式虚拟人）。与本项目**任务不同**（它是条件生成，不是表征学习），但**参考图的用法值得借鉴**。
 
-**⚠️ 本项目定位（2026-09-17 用户裁定）**：OmniMate 的纯 in-context 做法作为**对照组（A0）**、**不是主线**——因为它**不产生身份潜变量**（没有 `w_id`），「同身份潜变量接近」这个要求无处施加。主线候选见架构 §2.5 **C29**（A1 3D patchify + register / A2 VAE latent + register → 1D tokens）。
+**⚠️ 本项目定位（2026-09-17 用户裁定）**：OmniMate 的纯 in-context 做法作为**对照组（A0）**、**不是主线**——因为它**不产生身份潜变量**（没有 `w_id`），「同身份潜变量接近」这个要求无处施加。主线候选见架构 §2.5 **C22**（A1 3D patchify + register / A2 VAE latent + register → 1D tokens）。
 
 **MRCM（Multi-Reference Conditioning Module）机制**：
 
@@ -355,7 +355,7 @@ z_{s→t} = (z_{s→r} + w_{r→s}) + (w_{r→t} − w_{r→1})
 
 | # | 结论 |
 |---|---|
-| 1 | **`feats` 通道不是"重建质量"通道，而是分离机制的一环**——外观靠 warp【搬】而非【合成】，运动通道（20 维）只需表达"搬到哪"。→ **C28「不补 feats」需要重审** |
+| 1 | **`feats` 通道不是"重建质量"通道，而是分离机制的一环**——外观靠 warp【搬】而非【合成】，运动通道（20 维）只需表达"搬到哪"。→ **C21「不补 feats」需要重审** |
 | 2 | **扩展到多图的两条 LIA-faithful 路线**：<br>**路线 1（最贴）**：逐图算残差 `id_i = E(x_i) − Σ_m a_i,m d_m`，再聚合。性质：`id_i ⊥ span(V)` **由构造保证** → 同身份不同图**天然接近**，聚合（含平均）也不互相污染<br>**路线 2**：register 聚合 + 显式约束「`w_identity` 在 V 上投影 ≈ 0」 |
 | 3 | **路线 1 的风险（必须实测）**：它要求运动子空间**吃掉每张图的姿态**。人脸姿态≈低维（成立）；**猫姿态维度高得多（身体关节多）→ M=20 可能不够 → 残差残留姿态 → 同身份不同图不再接近** |
 
@@ -371,7 +371,7 @@ z_{s→t} = (z_{s→r} + w_{r→s}) + (w_{r→t} − w_{r→1})
 > *"A short clip reveals **subject-specific patterns**, e.g., **how smiles form**, across poses and lighting."*
 
 **做法**：短参考视频 → **Sinkhorn-routed encoder** → 紧凑 **identity tokens**（捕获特征性动态），仅轻量条件。
-**对本项目**：**直接支持 C13＝B（参考视频）**，并给出单图的三种具体病症（pose-locked / 平均脸 / 异常 warping）。
+**对本项目**：**直接支持 参考输入形态（原C13，已决）＝B（参考视频）**，并给出单图的三种具体病症（pose-locked / 平均脸 / 异常 warping）。
 
 ### B. Durian（arXiv 2509.04434）—— **一个或多个参考图**
 
@@ -382,7 +382,7 @@ z_{s→t} = (z_{s→r} + w_{r→s}) + (w_{r→t} − w_{r→1})
 
 | # | 机制 | 说明 |
 |---|---|---|
-| ① | **latent in-context injection** | 参考图用 **视频 VAE** 编码 → 与噪声 video latent **拼接**；*"rich low-level identity details accessed **without additional adapters**"* → **正是本项目 C29 的 A2 方案（VAE latent + in-context）** |
+| ① | **latent in-context injection** | 参考图用 **视频 VAE** 编码 → 与噪声 video latent **拼接**；*"rich low-level identity details accessed **without additional adapters**"* → **正是本项目 C22 的 A2 方案（VAE latent + in-context）** |
 | ② | **TASS-RoPE**（Temporal-Adjacent **Spatial-Shifted** RoPE）| 参考 token **时间相邻但空间错位** → 参考信息经 spatio-temporal attention 流动，同时**抑制 pixel-level copy-paste 捷径**。**比 OmniMate 的负 RoPE 更强**（负 RoPE 只隔离位置，TASS-RoPE 还防抄袭捷径）|
 | ③ | appearance-invariant reference augmentation + face-guided identity objectives | 防 shortcut learning、加强身份监督 |
 
@@ -408,7 +408,7 @@ Slot-ID 指出身份**包含「特征性动态」**（*"how smiles form"*）。�
 | B. 全放 `λ` | `λ` 含身份信息 → 违反泄漏审计 |
 | C. **明确忽略个体风格** | 只做「动作类别」层面的解耦（**当前设计的隐含假设，此前未被显式承认**）|
 
-→ 记为待定项（架构 **C32**）。
+→ 记为待定项（架构 **C25**）。
 
 ---
 
@@ -456,7 +456,7 @@ Slot-ID 指出身份**包含「特征性动态」**（*"how smiles form"*）。�
 
 → 若目标是用低维 `λ` 重建，`λ` 只能装「可预测的变化」（＝运动），不可预测的细节必须走别的通路 → **解耦是被逼出来的**。
 
-**并且它直接支持 C31「补 feats」**：原文「offloading visual details to a **separate content pathway**」——**细节必须有独立卸载通路**，否则会挤进动作码。
+**并且它直接支持 C24「补 feats」**：原文「offloading visual details to a **separate content pathway**」——**细节必须有独立卸载通路**，否则会挤进动作码。
 
 ### 另外两条对本项目有用
 
@@ -487,7 +487,7 @@ Slot-ID 指出身份**包含「特征性动态」**（*"how smiles form"*）。�
 | **arXiv 1603.02845**（无监督分词 + 词表发现，2016）| *"a potential word segment (of **arbitrary length**) is embedded in a **fixed-dimensional** acoustic vector space... builds a whole-word acoustic model **while jointly performing segmentation**"*；**不预设词表大小** | **联合分割 + 类型发现**——正对应主线 |
 | **arXiv 1806.01665**（层次 HMM，2018）| 两层 HMM 推断音节/音素边界；**时长先验作转移概率**；*"no phoneme class labels are used"* | 等价于「最小段长约束」，但更严格 |
 | ⚠️ **arXiv 2106.04298**（离散单元做无监督分词，2021）| *"neural models for speech discretization are **difficult to exploit**... necessary to **adapt them to limit sequence length**"*；最佳来自**高压缩 Bayesian 表示** | **不要先把 λ 离散化**——序列越长越难分词（支持「去量化」）|
-| **NLP unigram 分词** | 用词表对序列做**最优切分**（`Σ log P(段) + log P(长度)`），DP/Viterbi | C20 选项② 的严格版 |
+| **NLP unigram 分词** | 用词表对序列做**最优切分**（`Σ log P(段) + log P(长度)`），DP/Viterbi | C14 选项② 的严格版 |
 
 ### 视觉侧已有成熟模型：无监督时序动作分割（Unsupervised TAS）
 
