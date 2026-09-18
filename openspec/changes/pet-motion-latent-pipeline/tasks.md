@@ -48,5 +48,5 @@
 |---|---|---|---|
 | 4A | `tracker-selection` | **重启（2026-09-17）**：触发由「等出现多猫」改为「**主动核实**」——「单猫」是未核实假设（批处理报告自己打了「多猫？」问号未答）；且单猫也有收益（lost 语义/误报抑制）。新增前置闸门 tasks 0.x 多猫核实 | ⏳ **待核实**（0/6，含前置闸门）|
 | 4B | `registry-retrieval` | 用户批准实施（碗/摄像头实例识别 + 猫 Re-ID） | ⏸️ 延后（0/4） |
-| 4D | `background-object-memory`（暂名，待立项）| L1 背景对象层：SAM 关键帧分割 + 场景常驻物体清单 + 纠正/补全 GDINO | 待用户审定 C23（触发信号）后立项 | 🔍 待登记（机制成稿在 `registry-retrieval` R1/R2/R2b）|
+| 4D | `background-object-memory`（**已立项 2026-09-17**）| L1 背景对象层：SAM 关键帧分割 + 场景常驻物体清单 + 纠正/补全 GDINO | 待用户审定 C23（触发信号）后立项 | 🔍 待登记（机制成稿在 `registry-retrieval` R1/R2/R2b）|
 | 4C | `behavior-anomaly-detection` | video-feature-latent 归档 + 用户发起深入调研 | ⏸️ 延后（0/5） |
