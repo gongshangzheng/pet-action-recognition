@@ -1,0 +1,178 @@
+{
+  "changelog": [
+    {
+      "date": "2026-09-15",
+      "note": "管线定型：多目标检测 + 空间关系状态层（L1）",
+      "commit": null
+    },
+    {
+      "date": "2026-09-16",
+      "note": "推理形态修订为抽查 + 实时双模式；编码器优先",
+      "commit": null
+    },
+    {
+      "date": "2026-09-16",
+      "note": "新增 L3 背景移除环节；架构收敛 TivTok + FLOAT/LIA + AdapTok",
+      "commit": null
+    },
+    {
+      "date": "2026-09-17",
+      "note": "身份改参考输入；架构主源转 FLOAT，TivTok 归档",
+      "commit": "1b1e10a"
+    },
+    {
+      "date": "2026-09-17",
+      "note": "全面去量化：连续潜变量 + KL 正则",
+      "commit": "6b04c70"
+    },
+    {
+      "date": "2026-09-17",
+      "note": "L5 动作分割 + L6 动作识别拆分；总图新增在场门控与早退分支",
+      "commit": "067bc2d"
+    },
+    {
+      "date": "2026-09-17",
+      "note": "实时形态裁定（C18）：分段流式 + 判别非流式；「低延迟内核」取消",
+      "commit": "f1695f2"
+    },
+    {
+      "date": "2026-09-17",
+      "note": "模型内部设计（聚合粒度 / 离散化 / 对称架构）移交 8 号；全文重组",
+      "commit": "f1695f2"
+    },
+    {
+      "date": "2026-09-17",
+      "note": "决策登记表重建为唯一权威（C01–C35）",
+      "commit": "cf7254a"
+    },
+    {
+      "date": "2026-09-17",
+      "note": "元数据 sidecar 化（changelog / progress / appendix / related）",
+      "commit": "ded3e31"
+    }
+  ],
+  "progress": {
+    "roadmap": [
+      {
+        "id": "2.1",
+        "change": "multi-object-detect-gate",
+        "status": "✅ 已归档"
+      },
+      {
+        "id": "2.2",
+        "change": "batch-followcam-extraction",
+        "status": "✅ 34/34 完成，待归档"
+      },
+      {
+        "id": "2.3",
+        "change": "identity-action-tokenizer",
+        "status": "⏳ 待 2.2 归档"
+      },
+      {
+        "id": "2.3b",
+        "change": "pet-background-removal",
+        "status": "📋 已创建待启动"
+      },
+      {
+        "id": "2.4",
+        "change": "video-feature-latent",
+        "status": "⏳ 待 2.3"
+      },
+      {
+        "id": "2.4b",
+        "change": "video-action-segmentation",
+        "status": "📋 已创建待启动"
+      },
+      {
+        "id": "2.5",
+        "change": "spot-check-cli",
+        "status": "⏳ 待 2.4"
+      },
+      {
+        "id": "4A",
+        "change": "tracker-selection",
+        "status": "⏸️ 延后"
+      },
+      {
+        "id": "4B",
+        "change": "registry-retrieval",
+        "status": "⏸️ 延后"
+      },
+      {
+        "id": "4C",
+        "change": "behavior-anomaly-detection",
+        "status": "⏸️ 延后"
+      }
+    ],
+    "gates": [
+      "video-feature-latent 四闸门：线性可分性 / 可命名率 / 码本健康度 / 身份泄漏审计",
+      "identity-action-tokenizer 阶段 A 中期检查点：UCF101 探针 top1@101 + 身份消融",
+      "11 月中期验收 KPI（二期计划 P0）"
+    ]
+  },
+  "appendix": [
+    {
+      "title": "双环境隔离",
+      "body": "依赖冲突无法在一个环境里共存，按用途切分：`plf`（检测 / 关键点 / 分割）、`pet_tokenizer`（tokenizer 训练 / 推理）、`mmaction2`（传统动作识别训练）。**原则**：环境间不 import 跨用，靠产物落盘交接；管线脚本用 subprocess + 环境切换调用。"
+    },
+    {
+      "title": "部署与数据拓扑",
+      "body": "NAS（UCF101 / 大语料）→ 本地开发机（代码 + 规划）→ git push → pet 服务器（RTX 4090 ×2，训练 / 推理）→ results/ 产物 → 回本地。**纪律**：远程 = 只读执行环境，所有文件改动在本地完成、经 git 同步；GPU 任务前查占用。"
+    },
+    {
+      "title": "可替换模块（petlib）",
+      "body": "检测 / 跟踪 / 关键点三大能力封装在 `petlib/` 下，以抽象基类 + 契约测试保障可替换（13 项契约测试通过）。"
+    },
+    {
+      "title": "许可分档",
+      "body": "**🟢 无条件可用**（MIT / Apache-2.0：u2net、ISNet、BiRefNet、SAM2、AdapTok、LARP、rembg 库）；**🟡 有条件可用**（CC BY-NC：BRIA RMBG 系、LIA / FLOAT——科研可用，必须登记「商业化前替换」，建议作对照不作交付）；**🔴 避免引入代码**（GPL-3.0：RVM——不复制代码，只借鉴算法）。🟡 可逆、🔴 基本不可逆，「非商用」≠「禁用」。"
+    },
+    {
+      "title": "选型状态约定",
+      "body": "✅ 已实测（有数据支撑）· 🎯 默认候选（有倾向未实测，须写「候选 / 预计」）· 🔍 待调研。**原则**：架构层定槽位 / 接口 / 判据，模型选型在实施对应 change 时实测。"
+    },
+    {
+      "title": "重点决策说明",
+      "body": "**C13 参考输入**：身份由用户事先拍摄的参考视频提供（对称架构下参考也走同一套分解）；**C18 实时形态**：分段流式 + 判别非流式（RTF<1 软要求），否决帧级流式识别；**C30–C32 身份三连**：多图聚合 / 解码器 feats 路径 / 个体动作风格归属——均待审定，判据见登记表。"
+    }
+  ],
+  "related": [
+    {
+      "title": "8 号《身份-动作 Tokenizer》",
+      "slug": "identity-tokenizer",
+      "desc": "模型层深入设计（聚合粒度 / 离散化 / 对称架构）"
+    },
+    {
+      "title": "7 号《身份标识与检索》",
+      "slug": "identity-and-retrieval",
+      "desc": "定位追踪 / 猫 Re-ID / 物体标识"
+    },
+    {
+      "title": "papers/docs 动作识别模型综述",
+      "slug": "../../papers/docs/action-recognition-models.md",
+      "desc": "模型族与输入契约",
+      "external": true
+    },
+    {
+      "title": "papers/docs 产品 / 框架架构调研",
+      "slug": "../../papers/docs/action-recognition-products.md",
+      "desc": "五条行业架构模式",
+      "external": true
+    },
+    {
+      "title": "2 号《数据集全景》",
+      "slug": "datasets",
+      "desc": ""
+    },
+    {
+      "title": "4 号《训练体系》",
+      "slug": "training-guide",
+      "desc": ""
+    },
+    {
+      "title": "9 号《研究结论与踩坑》",
+      "slug": "lessons",
+      "desc": ""
+    }
+  ]
+}

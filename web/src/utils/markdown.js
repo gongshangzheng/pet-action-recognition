@@ -23,7 +23,7 @@ export function extractToc(body) {
     if (match) {
       items.push({
         level: match[1].length,
-        text: match[2].trim(),
+        text: match[2].trim().replace(/\*\*/g, ''),
         slug: slugify(match[2].trim()),
       })
     }

@@ -58,10 +58,30 @@
               >{{ tag }}</n-tag>
             </div>
             <p v-if="currentDoc.summary" class="doc-summary">{{ currentDoc.summary }}</p>
+            <div v-if="hasSidecarUI" class="doc-side-btns">
+              <n-button v-if="sidecar?.changelog?.length" size="tiny" secondary @click="showChangelog = true">演进记录</n-button>
+              <n-button v-if="sidecar?.progress" size="tiny" secondary @click="showProgress = true">进度</n-button>
+            </div>
           </header>
           <div class="doc-body">
             <MarkdownRenderer :content="bodyContent" />
           </div>
+          <section v-if="sidecar?.related?.length" class="doc-related">
+            <h3>相关文档</h3>
+            <ul>
+              <li v-for="r in sidecar.related" :key="r.slug">
+                <router-link :to="`/management/docs/${r.slug}`">{{ r.title }}</router-link>
+                <span v-if="r.desc" class="rel-desc">—— {{ r.desc }}</span>
+              </li>
+            </ul>
+          </section>
+          <section v-if="sidecar?.appendix?.length" class="doc-appendix">
+            <h3>附录</h3>
+            <div v-for="(a, i) in sidecar.appendix" :key="i" class="appendix-item">
+              <h4>{{ a.title }}</h4>
+              <MarkdownRenderer :content="a.body || ''" />
+            </div>
+          </section>
         </div>
         <div v-else-if="!loading" class="doc-empty">
           <EmptyState description="请从左侧选择一篇文档" />
@@ -86,13 +106,38 @@
         </nav>
       </div>
     </aside>
+
+    <!-- Sidecar modals -->
+    <n-modal v-model:show="showChangelog" preset="card" title="演进记录" style="max-width: 600px;">
+      <n-timeline v-if="sidecar?.changelog?.length">
+        <n-timeline-item
+          v-for="(c, i) in sidecar.changelog"
+          :key="i"
+          :title="c.date"
+          :content="c.note + (c.commit ? '　·　' + c.commit : '')"
+        />
+      </n-timeline>
+    </n-modal>
+    <n-modal v-model:show="showProgress" preset="card" title="进度" style="max-width: 600px;">
+      <template v-if="sidecar?.progress">
+        <ul class="progress-list">
+          <li v-for="(p, i) in (sidecar.progress.roadmap || [])" :key="i">
+            <strong>{{ p.id }} {{ p.change }}</strong> — {{ p.status }}
+          </li>
+        </ul>
+        <h4 v-if="sidecar.progress.gates?.length" class="progress-gates-title">当前闸门</h4>
+        <ul class="progress-list">
+          <li v-for="(g, i) in (sidecar.progress.gates || [])" :key="'g' + i">{{ g }}</li>
+        </ul>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NSpin, NTag, NSelect } from 'naive-ui'
+import { NSpin, NTag, NSelect, NButton, NModal, NTimeline, NTimelineItem } from 'naive-ui'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
 import { getDocList, getDocDetail } from '../../api/management'
@@ -105,6 +150,11 @@ const docsList = ref([])
 const currentDoc = ref(null)
 const loading = ref(false)
 const listLoading = ref(false)
+const showChangelog = ref(false)
+const showProgress = ref(false)
+
+const sidecar = computed(() => currentDoc.value?.sidecar || null)
+const hasSidecarUI = computed(() => !!(sidecar.value?.changelog?.length || sidecar.value?.progress))
 
 const currentSlug = computed(() => route.params.slug || '')
 const tocItems = computed(() => currentDoc.value ? extractToc(currentDoc.value.content) : [])
@@ -372,6 +422,66 @@ watch(currentSlug, (slug) => {
 
 .doc-body {
   line-height: 1.7;
+}
+
+.doc-side-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.doc-related,
+.doc-appendix {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  li {
+    font-size: 13px;
+    line-height: 1.9;
+  }
+}
+
+.rel-desc {
+  color: var(--color-text-dim);
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.appendix-item {
+  margin-bottom: 16px;
+
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+}
+
+.progress-list {
+  margin: 0;
+  padding-left: 18px;
+
+  li {
+    font-size: 13px;
+    line-height: 2;
+  }
+}
+
+.progress-gates-title {
+  margin: 14px 0 6px;
+  font-size: 13px;
 }
 
 .doc-empty {
