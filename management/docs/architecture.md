@@ -32,6 +32,8 @@ flowchart TD
     subgraph S1["① 定位与跟踪（§3）"]
         direction LR
         A1["抽样检测<br/>每 10 帧"] --> A2["逐帧猫框 + 轨迹 id"]
+        T1{"视点变化 / 超时"} --> A3["背景对象层<br/>SAM 关键帧分割<br/>→ 常驻物体清单"]
+        A3 -.->|"纠正 / 补全检测"| A2
     end
 
     subgraph S2["② 跟随视角生成（§4）"]
