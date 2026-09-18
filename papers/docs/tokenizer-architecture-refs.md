@@ -382,7 +382,7 @@ z_{s→t} = (z_{s→r} + w_{r→s}) + (w_{r→t} − w_{r→1})
 
 | # | 机制 | 说明 |
 |---|---|---|
-| ① | **latent in-context injection** | 参考图用 **视频 VAE** 编码 → 与噪声 video latent **拼接**；*"rich low-level identity details accessed **without additional adapters**"* → **正是本项目 C25 的 A2 方案（VAE latent + in-context）** |
+| ① | **latent in-context injection** | 参考图用 **视频 VAE** 编码 → 与噪声 video latent **拼接**；*"rich low-level identity details accessed **without additional adapters**"* → **正是架构 §2「参考身份通路」的 A2 方案（VAE latent + in-context）** |
 | ② | **TASS-RoPE**（Temporal-Adjacent **Spatial-Shifted** RoPE）| 参考 token **时间相邻但空间错位** → 参考信息经 spatio-temporal attention 流动，同时**抑制 pixel-level copy-paste 捷径**。**比 OmniMate 的负 RoPE 更强**（负 RoPE 只隔离位置，TASS-RoPE 还防抄袭捷径）|
 | ③ | appearance-invariant reference augmentation + face-guided identity objectives | 防 shortcut learning、加强身份监督 |
 
