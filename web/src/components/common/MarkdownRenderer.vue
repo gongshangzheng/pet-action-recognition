@@ -48,7 +48,7 @@ function handleClick(e) {
     return
   }
   // ③ wiki 内相对 .md 链接（./xxx.md、xxx.md、子目录/x.md，可带 #anchor）
-  const m = /^(?!\.\./)([\w\-./]+\.md)(#[^)]*)?$/.exec(href)
+  const m = /^(?!\.\.\/)([\w\-.\/]+\.md)(#[^)]*)?$/.exec(href)
   if (m) {
     e.preventDefault()
     const slug = m[1].replace(/\.md$/, '')

@@ -41,7 +41,7 @@ flowchart TD
 
     subgraph S3["③ 背景移除"]
         direction LR
-        C1["显著物分割"] --> C2["只留猫本体"]
+        C1["显著物分割"] --> C2["猫本体 + 白色背景"]
     end
 
     subgraph S4["④ 动作表征"]
