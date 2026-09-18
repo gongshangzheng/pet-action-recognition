@@ -18,14 +18,45 @@ const containerRef = ref(null)
 const themeStore = useThemeStore()
 const router = useRouter()
 
+function scrollToId(id) {
+  const el = document.getElementById(id)
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function go(to) {
+  const [path, hash] = to.split('#')
+  router.push(path).then(() => {
+    if (hash) setTimeout(() => scrollToId(hash), 300)
+  })
+}
+
 function handleClick(e) {
   const anchor = e.target.closest('a')
   if (!anchor) return
   const href = anchor.getAttribute('href')
-  if (href && href.startsWith('/management/')) {
+  if (!href) return
+  // ① 站内路由链接
+  if (href.startsWith('/management/')) {
     e.preventDefault()
-    router.push(href)
+    go(href)
+    return
   }
+  // ② 页内锚点
+  if (href.startsWith('#')) {
+    e.preventDefault()
+    scrollToId(href.slice(1))
+    return
+  }
+  // ③ wiki 内相对 .md 链接（./xxx.md、xxx.md、子目录/x.md，可带 #anchor）
+  const m = /^(?!\.\./)([\w\-./]+\.md)(#[^)]*)?$/.exec(href)
+  if (m) {
+    e.preventDefault()
+    const slug = m[1].replace(/\.md$/, '')
+    go(`/management/docs/${slug}${m[2] || ''}`)
+    return
+  }
+  // ④ 跨目录 .md（papers/docs 等，wiki 外）：不可跳转，阻止原生跳转避免白屏
+  if (href.endsWith('.md')) e.preventDefault()
 }
 
 const md = new MarkdownIt({
@@ -47,7 +78,7 @@ const defaultHeadingRender = md.renderer.rules.heading_open ||
 
 md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
   const token = tokens[idx]
-  if (token.tag === 'h2' || token.tag === 'h3') {
+  if (['h2', 'h3', 'h4', 'h5'].includes(token.tag)) {
     const nextToken = tokens[idx + 1]
     if (nextToken && nextToken.type === 'inline') {
       const text = nextToken.content || ''

@@ -152,18 +152,6 @@
       "desc": "定位追踪 / 猫 Re-ID / 物体标识"
     },
     {
-      "title": "papers/docs 动作识别模型综述",
-      "slug": "../../papers/docs/action-recognition-models.md",
-      "desc": "模型族与输入契约",
-      "external": true
-    },
-    {
-      "title": "papers/docs 产品 / 框架架构调研",
-      "slug": "../../papers/docs/action-recognition-products.md",
-      "desc": "五条行业架构模式",
-      "external": true
-    },
-    {
       "title": "2 号《数据集全景》",
       "slug": "datasets",
       "desc": ""

@@ -36,7 +36,7 @@ flowchart TD
 
     subgraph S2["② 跟随视角生成"]
         direction LR
-        B1["以猫为中心裁剪"] --> B2["与坐标轴对齐的小片"]
+        B1["以猫为中心裁剪"] --> B2["猫居中的方形小片<br/>（只平移、不旋转）"]
     end
 
     subgraph S3["③ 背景移除"]
@@ -224,7 +224,7 @@ SAM 在关键帧上分割（自动网格 prompt / 已有检测框 prompt）
 |---|---|
 | 输入 | 轨迹 JSON |
 | 输出 | 512×512 以猫为中心的 H.264 短片 |
-| 算法 | 自适应跟随裁剪（猫居中）+ 尺寸离群过滤 + 渲染层漂移过滤 |
+| 算法 | 自适应跟随裁剪（猫居中）+ 尺寸离群过滤 + 渲染层漂移过滤。裁剪窗是**正置的方形**（与画面坐标轴对齐）：**只平移跟随、不随猫朝向旋转**——旋转会引入插值模糊，还会丢掉「猫相对房间的朝向」 |
 | 代码 | `scripts/make_followcam.py`、`scripts/pet_batch_run.py` |
 | 状态 | ✅ 34/34 段完成（共 14.7 分钟）|
 
@@ -276,7 +276,7 @@ flowchart TD
 
 **图中的读法（符号含义）**：见本章开头的**符号速查表**（`w_identity` = 身份向量 · `λ_j` = 动作系数 · `V` = 正交运动基 · `z_j` = 动作特征）。
 
-> **架构主源 = FLOAT**（2026-09-17 重心转向）。TivTok 的 SIF 双 token **暂不采用**（身份改由参考输入提供后 TIV 冗余）——备档见 [`papers/docs/tivtok-reference.md`](../../papers/docs/tivtok-reference.md)。
+> **架构主源 = FLOAT**（2026-09-17 重心转向）。TivTok 的 SIF 双 token **暂不采用**（身份改由参考输入提供后 TIV 冗余）——备档见 [`papers/docs/tivtok-reference.md`（wiki 外，见仓库）。
 
 | 项 | 设计 |
 |---|---|
@@ -653,7 +653,7 @@ A0 基础识别
 > ✅ **框定：主流做法不是错，是另一个任务的正确解。**
 > A1 的任务定义就是「给一个**已裁剪好、只含一个动作**的片段，输出它的类别」。在那个定义下，**固定 T 帧 + 1 个标签是正确且高效的**。
 > 我们不是要「纠正」它，而是**任务不同**：我们要从**未裁剪的长视频**里切出**多个段 + 时间戳**（A4 级输出）。两者不可互相替代，也不存在谁更先进。
-> 更完整的模型族、输入契约与数据集细节见 [`papers/docs/action-recognition-models.md`](../../papers/docs/action-recognition-models.md)。
+> 更完整的模型族、输入契约与数据集细节见 [`papers/docs/action-recognition-models.md`（wiki 外，见仓库）。
 
 **我们落在哪层 ／ 目标哪层**：
 
@@ -691,7 +691,7 @@ A0 基础识别
 #### 本环节设计
 
 > **正式立项**（2026-09-17 用户裁定）：独立 change `video-action-segmentation`（总管 2.4b）。
-> 概念与音频类比见下文；领域背景见 [`papers/docs/action-recognition-models.md`](../../papers/docs/action-recognition-models.md)。
+> 概念与音频类比见下文；领域背景见 [`papers/docs/action-recognition-models.md`（wiki 外，见仓库）。
 
 **为什么需要这一层**：**行为素 ≠ 动作**（行为素=单词，动作=句子）。`video-feature-latent` 的阶段一/二建的是**行为素词表**；若不补这一层，就只能输出「这一瞬间是第 7 号行为素」，给不出「猫在舔毛」。
 
@@ -777,7 +777,7 @@ A0 基础识别
 
 ##### 6 行业架构模式（联网调研 2026-09-17）
 
-完整调研见 [`papers/docs/action-recognition-products.md`](../../papers/docs/action-recognition-products.md)。**核心结论：委托方假设「先分段再逐段识别」作为普遍规律不成立**——业界主流是「门控/跟踪/规则 → 定长窗口分类 → 时序后处理聚合成段」。
+完整调研见 [`papers/docs/action-recognition-products.md`（wiki 外，见仓库）。**核心结论：委托方假设「先分段再逐段识别」作为普遍规律不成立**——业界主流是「门控/跟踪/规则 → 定长窗口分类 → 时序后处理聚合成段」。
 
 | 模式 | 谁在用 | 关键取舍 |
 |---|---|---|
