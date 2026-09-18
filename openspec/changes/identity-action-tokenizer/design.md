@@ -134,8 +134,8 @@ FLOAT/LIA 正交运动基分解（正交坐标系 + **容量闸门**）：
 
 ```
 视频 → patchify → patches
-   ├─ TIV / register tokens：全局注意力，注意每一帧 → 身份信息（数量有限 = 压缩）
-   └─ 每个 tubelet + TV token：局部注意力 → 动作信息（正交约束）
+   ├─ TIV / register tokens：全局注意力，注意每一帧 → 身份潜变量（数量有限 = 压缩）
+   └─ 每个 tubelet + TV token：局部注意力 → 行为素（正交约束）
         ↓
    整合 → 解码 → 重建视频
 ```

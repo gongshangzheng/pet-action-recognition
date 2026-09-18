@@ -27,7 +27,7 @@ id: 8
 
 ```mermaid
 flowchart TB
-    REF["参考输入（图 / 多图 / 视频）"] --> IDC["身份编码（§3）"]
+    REF["参考输入<br/>（图 / 多图 / 视频）"] --> IDC["身份编码（§3）"]
     IDC --> ID1["方案一：模型内 register / TIV"]
     IDC --> ID2["方案二：外挂编码器<br/>DINOv2 / DINOv3 / OmniMate VAE"]
 
@@ -145,7 +145,7 @@ flowchart TB
 
 > **修订（用户提议）**：参考与输入视频**共用同一套结构与参数**（FLOAT 即如此），差别只在**取哪部分输出**——参考侧取 register（身份），输入侧取 t 帧块系数（动作）。完整版见下文「对称架构与隔离约束」。
 >
-> ⚠️ **隔离约束（关键）**：`register` 可 attend patch，但 **patch/t 帧块 【不能】attend register**——否则身份信息会顺着注意力流进 λ（TivTok SIF 的 TV 会 attend TIV，我们的审计不允许）。两组输出**互不看**。
+> ⚠️ **隔离约束（关键）**：`register` 可 attend patch，但 **patch/t 帧块 【不能】attend register**——否则身份潜变量会顺着注意力流进行为素（TivTok SIF 的 TV 会 attend TIV，我们的审计不允许）。两组输出**互不看**。
 
 ```
 参考输入（单图/多图/视频）→ patchify
@@ -209,11 +209,11 @@ register： reg attend 所有图的全部 token ← 跨视角关系推理
 
 ```mermaid
 flowchart TB
-    REF["参考视频（用户事先拍的同一只猫）"] --> P1["3D patchify"]
+    REF["参考视频<br/>（用户事先拍的同一只猫）"] --> P1["3D patchify"]
     IN["待分析视频（监控片段）"] --> P2["3D patchify"]
     P1 --> ENC["编码器（同一套参数，跑两次）"]
     P2 --> ENC
-    ENC --> REG["register tokens"]
+    ENC --> REG["register<br/>tokens"]
     ENC --> TUB["t 帧块 tokens"]
     REG --> ID["身份（变长参考 → 定长向量）"]
     TUB --> LAM["行为素序列（λ，动作系数，每 t 帧一份）"]
@@ -227,9 +227,9 @@ flowchart TB
 ```mermaid
 flowchart TB
     subgraph REF["① 参考支路（身份：用户事先拍的同一只猫）"]
-        R1["参考输入<br/>单图 / 3–5 张多视角图 / 短视频"] --> R2["3D patchify（t 帧块，t=4）"]
+        R1["参考输入<br/>单图 / 3–5 张多视角图<br/>短视频"] --> R2["3D patchify（t 帧块，t=4）"]
         R2 --> R3["参考 tokens（变长）"]
-        RK["K 个可学习 register tokens"] --> CAT["拼接"]
+        RK["K 个可学习<br/>register tokens"] --> CAT["拼接"]
         R3 --> CAT
     end
     subgraph VID["② 视频支路（动作：监控片段）"]
@@ -253,7 +253,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    RG["register tokens"] -->|"✅ 可以 attend"| PT["patch / t 帧块 tokens"]
+    RG["register<br/>tokens"] -->|"✅ 可以 attend"| PT["patch / t 帧块 tokens"]
     PT -.->|"❌ 不能 attend"| RG
 ```
 
@@ -279,7 +279,7 @@ flowchart LR
 
 #### 隔离约束：两组输出**互不看**（关键）
 
-TivTok 的 SIF 里 `TV tokens` 的 scope **包含 TIV tokens**——即**身份 tokens 参与动作 tokens 的注意力**。**在我们这里这是一个泄漏通道**：身份信息会顺着注意力流进 λ，而我们的审计要求「λ 上训个体分类器应接近随机」。
+TivTok 的 SIF 里 `TV tokens` 的 scope **包含 TIV tokens**——即**身份 tokens 参与行为素 tokens 的注意力**。**在我们这里这是一个泄漏通道**：身份信息会顺着注意力流进 λ，而我们的审计要求「λ 上训个体分类器应接近随机」。
 
 **因此本设计必须与 SIF 不同**：
 
@@ -343,7 +343,7 @@ patch / t 帧块 tokens → 【不能】attend register tokens     ← 关键约
 - **多图与视频如何聚合**：平均池化 / 注意力加权 / 逐图残差再聚合
 - **是否需要独立的身份损失**：当前设计不需要（身份监督由重建承担）
 
-**组合约束**：**TIV token 与卷积式动作编码不能共存**——TIV/register 是 attention 载体上的概念，卷积式没有 token 可供它注意；反之卷积式动作编码必须搭配**外挂身份**（方案二）。可行组合只有三组（§6.4）。
+**组合约束**：**TIV token 与卷积式编码不能共存**——TIV/register 是 attention 载体上的概念，卷积式没有 token 可供它注意；反之卷积式动作编码必须搭配**外挂身份**（方案二）。可行组合只有三组（§6.4）。
 
 > 完整论证与开口项清单见 `openspec/changes/identity-action-tokenizer/` design T-A5d。
 
@@ -774,7 +774,7 @@ flowchart TD
     end
 
     subgraph PB["阶段 B：猫语料落地"]
-        SB1[抠像后猫语料<br/>mammal_v0 + cats v1 + followcam] --> SB2[继承 A 权重继续训练]
+        SB1["抠像后猫语料<br/>mammal_v0 + cats v1<br/>+ followcam"] --> SB2[继承 A 权重继续训练]
         SB2 --> SB3["接入参考输入条件化<br/>+ 换参考验证"]
         SB3 --> SB4[评测矩阵全表<br/>用户验收]
     end

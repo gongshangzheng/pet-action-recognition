@@ -152,6 +152,9 @@ id: 1
 
 ## 3. Mermaid 图表
 
+> **标签必须主动换行**：节点/泳道标签**不要写成一行长文本**——中文每行 ≤ 14 字（拉丁按半宽折算），超出用 `<br/>` 主动换行。理由：渲染器的自动换行/裁切行为不受我们控制（`foreignObject` 会把超宽文本裁掉），主动换行是唯一稳定的做法。
+>
+
 Mermaid 是文档中表达流程、时序、架构的首选方式。完整速查见 `.claude/skills/documentation/references/mermaid-cheatsheet.md`。
 
 常用场景：
