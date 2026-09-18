@@ -36,7 +36,7 @@ id: 8
 |---|---|---|
 | **FLOAT** ⭐**主源** | arXiv 2412.01064 | **整套身份-动作分解架构**：`w_S = w_{S→r}(身份) + Σ λ_m·v_m(运动)`（Eq. 8-9）；身份来自**源输入**；训练 = 同片段内 S→D 重建（A.3）|
 | **LIA** | arXiv 2203.09043 | 正交基的具体实现（QR 每前向正交化）+ 加法分解 |
-| **TivTok** | arXiv 2606.17590 | ⬇️ **已降为备档**（SIF 双 token **暂不采用**）——身份改由参考输入提供后，视频内 TIV 与身份通道职责重叠。备档：[`papers/docs/tivtok-reference.md`（wiki 外，见仓库） |
+| **TivTok** | arXiv 2606.17590 | ⬇️ **已降为备档**（SIF 双 token **暂不采用**）——身份改由参考输入提供后，视频内 TIV 与身份通道职责重叠。备档：`papers/docs/tivtok-reference.md`（wiki 外，见仓库） |
 | **AdapTok** | arXiv 2505.17011 | **代码基座候选**（MIT）：视频 ViT 自编码器（12 层/768 维/patch 4×8×8）+ 训练脚本；⚠️ 其 mask 框架已不需要（SIF 已移除）|
 | **SoftVQ-VAE** | arXiv 2412.10958 | （已降级）其“**连续** tokenizer”定位作为去 VQ 的佐证；其软码本仅作**可选正则器** |
 | **MAR** | arXiv 2406.11838 | 反面印证："discrete-valued space … is not a necessity"——连续 token 可行 |
@@ -191,7 +191,7 @@ AdapTok 的 latent   = 1D 全局 token（整段给一组 L 个）
 | `attn_type = "tiv_tv"` 自定义 mask | 随 SIF 一并移除；视频编码器用常规注意力 |
 | `N_TIV = 96 / N_TV = 2`（3:1） | 超参不再存在 |
 
-> 完整备档见 [`papers/docs/tivtok-reference.md`（wiki 外，见仓库）（若将来"必须从视频内推断身份"的需求复活，材料现成）。
+> 完整备档见 `papers/docs/tivtok-reference.md`（wiki 外，见仓库）（若将来"必须从视频内推断身份"的需求复活，材料现成）。
 
 ### §4.4 潜空间：连续，**无量化**（2026-09-17 修订）
 
@@ -595,7 +595,7 @@ flowchart TD
 
 **本地材料**（`third-party/refs/`，已 gitignore）：`papers/`（18 篇 PDF）、`txt/`（转文本，便于引用行号）、`repos/`（14 个代码库）。
 
-**精读笔记**：[`papers/docs/tokenizer-architecture-refs.md`（wiki 外，见仓库）——含逐篇结论、代码文件行号、对设计的修正清单。
+**精读笔记**：`papers/docs/tokenizer-architecture-refs.md`（wiki 外，见仓库）——含逐篇结论、代码文件行号、对设计的修正清单。
 
 **关键行号索引**
 
