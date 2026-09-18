@@ -292,18 +292,20 @@ AdapTok 的 latent = 1D 全局 token（整段一组 L 个）
 
 **两条路线**：
 
-| | **A：3D t 帧块 + ViT**（现设计）| **B：逐帧 2D 编码 + 时序模块**（FLOAT/LIA 式）|
+| | **A：3D t 帧块 + ViT**（现设计）| **B：卷积式**（2D CNN 逐帧 + 时序模块，或 3D CNN 聚合 t 帧）|
 |---|---|---|
-| 时序信息从哪来 | patch 本身跨 t 帧 | 时序模块（temporal conv / attention）|
+| 时序信息从哪来 | patch 本身跨 t 帧（+ 局部注意力）| B1：时序模块（temporal conv / attention）；B2：**3D 卷积核在时间维滑动** |
 | patchify | **需要** | **不需要** |
-| 骨干来源 | AdapTok / VidTok / LARP（视频骨干）| 成熟 2D 骨干（DINOv2 等）|
-| 与「方案二 外挂 DINOv2」契合度 | 一般 | **高**（身份与动作骨干同家族）|
-| 风险 | 视频预训练权重的可迁移性待测 | **必须补时序模块**，否则单帧特征说不出「在怎么动」|
+| 骨干来源 | AdapTok / VidTok / LARP（视频 ViT）| 成熟 CNN：B1 可复用 2D 骨干（DINOv2 / ConvNeXt）；B2 用 I3D / SlowFast / X3D 等 3D CNN |
+| 与「方案二 外挂 DINOv2」契合度 | 一般 | **B1 高**（身份与动作骨干同家族）|
+| 风险 | 视频预训练权重的可迁移性待测 | B1 必须补时序模块，否则单帧特征说不出「在怎么动」；B2 感受野局部、时序建模粒度粗于注意力 |
+
+> **澄清**：LIA / FLOAT 的编码器**就是 2D 卷积网络**（逐帧），动作系数由卷积特征经头算出——所以「LIA 式」= B1。而把 t 帧聚合成块用 **3D CNN**（B2）是同一家族里的另一选择，比 patchify 更简单。
 
 > T-A3b 的五条理由（运动直进 patch / token 降 t 倍 / 天然回答 Q2 / 与主流一致 / 补 FLOAT-LIA 缺口）**仍然成立**——它们是「为何 A 好」，不是「为何 B 不可行」。
 
-**待裁定**：选 A 还是 B；若选 B，时序模块选型（temporal conv / factorized attention / 轻量 transformer）。
-**影响面**：章节名（“视频编码器”）与 §4 动作提取的写法；与 T-A5d 方案二的组合优势。
+**待裁定**：选 A / B1 / B2；若选 B1，时序模块选型（temporal conv / factorized attention / 轻量 transformer）。
+**影响面**：《动作识别模型设计》§4 动作编码的写法（方案一 TV token / 方案二 卷积式）；与 T-A5d 方案二的组合优势。
 
 ### T-A4: 动作通道——FLOAT/LIA 正交运动基（用户裁定 2026-09-16）
 
