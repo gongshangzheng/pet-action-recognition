@@ -10,7 +10,7 @@
 | 4 | training-guide | 训练体系 | mmaction2 训练 | — |
 | 6 | **architecture** | **系统架构** | **结构 / 设计 / 决策的唯一入口**（跨模型视角） | `docs-architecture` |
 | 7 | identity-and-retrieval | 身份标识与检索 | 定位追踪 / Re-ID / 物体标识原理 | — |
-| 8 | identity-tokenizer | 身份-动作 Tokenizer | **单模型内部设计**（聚合粒度 / 离散化 / 对称架构归此） | 待开 |
+| 8 | identity-tokenizer | 身份-动作 Tokenizer | **单模型内部设计**（聚合粒度 / 离散化 / 对称架构归此） | `docs-identity-tokenizer` |
 | 9 | lessons | 研究结论与踩坑 | 实验教训 | — |
 | 10 | third-party-notes | 第三方项目借鉴 | 外部仓库笔记 | — |
 | 11 | handover-guide | 交接与协作指南 | 交接 | — |
