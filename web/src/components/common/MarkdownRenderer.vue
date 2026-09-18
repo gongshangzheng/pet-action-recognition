@@ -135,11 +135,19 @@ async function renderMermaid() {
   try {
     // mermaid 体积大，按需动态加载（仅页面含 mermaid 图时才下载）
     const mermaid = (await import('mermaid')).default
+    // 字体：用页面真实计算字体——mermaid 量文字宽度与实际渲染必须一致，
+    // 否则中文/符号标签会超出节点框被裁
+    const fontFamily =
+      (containerRef.value && getComputedStyle(containerRef.value).fontFamily) ||
+      'system-ui, -apple-system, sans-serif'
     mermaid.initialize({
       startOnLoad: false,
       theme: themeStore.isDark ? 'dark' : 'default',
       securityLevel: 'loose',
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily,
+      // 关键：不用 foreignObject 装标签，避免文本被裁（中文/→ 等符号量宽与实渲不一致）
+      flowchart: { htmlLabels: false, useMaxWidth: true, padding: 12 },
+      themeVariables: { fontSize: '14px' },
     })
     await mermaid.run({ nodes: Array.from(nodes) })
   } catch (e) {

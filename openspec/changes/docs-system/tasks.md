@@ -17,3 +17,7 @@
 - [x] 3.1 TOC 强调符号处理：章节列表丢弃（或渲染）标题中的 `**`，不显示符号字符（`extractToc`）
 - [x] 3.2 **sidecar json 约定**：字段 schema（changelog / progress / appendix / related）+ 后端 `get_doc_detail` 读取同名 `<slug>.json` 一并返回
 - [x] 3.3 **渲染**：DocPage 顶部按钮（演进记录 / 进度，弹层）+ 底部独立块（相关文档 / 附录）；架构文档（《系统架构》）元数据迁入 sidecar（`architecture.json` 已建，尾章已迁出）
+
+## 渲染层修复
+
+- [x] Mermaid 文本截断：`htmlLabels: false` + fontFamily 取页面计算字体（中文/符号标签不再被裁）

@@ -26,21 +26,24 @@ id: 8
 ### §1.1 完整结构图
 
 ```mermaid
-flowchart LR
-    subgraph SCH1["方案一：单模型（TIV + TV）"]
-        direction TB
-        V1[待分析视频] --> P1["patchify（3D t 帧块）"]
-        P1 --> TIV["TIV / register tokens<br/>全局注意力注意每一帧 → 身份"]
-        P1 --> TV["TV tokens<br/>每 tubelet 局部注意力 → 动作"]
-    end
-    subgraph SCH2["方案二：双模型"]
-        direction TB
-        R2[参考输入] --> EXT["外挂预训练编码器<br/>DINOv2 / DINOv3 / OmniMate 式 VAE → 身份"]
-        V2[待分析视频] --> ACT["动作编码器<br/>token 式 或 卷积式 → 动作"]
-    end
-    SCH1 --> DEC["解码器<br/>身份 + 正交基系数 → 重建帧（proxy）"]
-    SCH2 --> DEC
-    DEC --> DOWN["下游：行为素序列 → 分段 → 动作识别分类 → 动作段 + 类别"]
+flowchart TB
+    REF["参考输入（图 / 多图 / 视频）"] --> IDC["身份编码（§3）"]
+    IDC --> ID1["方案一：模型内 register / TIV"]
+    IDC --> ID2["方案二：外挂编码器<br/>DINOv2 / DINOv3 / OmniMate VAE"]
+
+    VID["待分析视频"] --> ACC["动作编码（§4）"]
+    ACC --> AC1["方案一：TV token<br/>3D patchify + 局部注意力"]
+    ACC --> AC2["方案二：卷积式<br/>2D CNN + 时序 / 3D CNN"]
+
+    ID1 --> WID["身份向量"]
+    ID2 --> WID
+    AC1 --> LAM["行为素序列（每 t 帧一份）"]
+    AC2 --> LAM
+
+    WID --> DEC["解码与重建（proxy）"]
+    LAM --> DEC
+    LAM --> DOWN["下游（§8）<br/>分段 → 动作识别分类"]
+    DEC -.-> DOWN
 ```
 
 | 图里的块 | 看哪章 |
@@ -52,31 +55,9 @@ flowchart LR
 | 训练 / 评测 | §6 / §7 |
 | 分段 → 动作识别分类 | §8 下游 |
 
+**数据流说明**：身份来自**参考输入**（固定向量），运动来自**待分析视频**（行为素序列，每 t 帧一份）；**无量化层**——连续潜变量直入解码器。第 t 帧由 `身份 + Σλ_m(t)·v_m` 重建（FLOAT 的加法广播）。**重建只是 proxy**，交付物是下游的动作段 + 类别。
 
-```mermaid
-flowchart TD
-    R["参考视频"] --> RT["patchify ⊕ register tokens"]
-    RT --> E0["编码器（与输入侧同一套参数）"]
-    E0 --> L["取 register → 投影<br/>身份向量（固定，跨视角联合融合）"]
-
-    A[猫本体视频<br/>上游抠像产物] --> B["3D patchify<br/>patch t=4,p=8"]
-    B --> C["视频编码器<br/>整段提特征（含时序上下文）"]
-
-    C --> F["动作特征（每 t 帧一份）<br/>「这段时间在动什么」"]
-
-    F --> H["正交运动基投影<br/>容量闸门：只留 M 个方向的系数"]
-    H --> I["动作基元强度曲线<br/>可解释（M 条曲线）"]
-
-    F --> J["解码器<br/>用「身份向量 + 动作系数」重建"]
-    L --> J
-    J --> K[重建视频帧]
-```
-
-**图的读法（符号对照）**：见本文件附录「符号速查」（`w_identity` = 身份向量、`λ_j` = 动作系数（每 t 帧一份）、`V` = 正交运动基）。
-
-> 上图 = **FLOAT 式**（重心转向，详见 changelog）。TivTok 的 SIF 双 token 已移除（备档见 `papers/docs/tivtok-reference.md`）。
-
-**数据流说明**：身份来自**参考输入**（固定向量），运动来自**待分析视频**（`λ_j`，每 t 帧一份）；**无量化层**——连续潜变量直入解码器。第 t 帧由 `w_identity + Σλ_m(t)·v_m` 重建（FLOAT 的加法广播）。
+> 符号对照见本文件附录「符号速查」（`w_identity` = 身份向量、`λ_j` = 动作系数、`V` = 正交运动基）。
 
 ### §1.2 设计目标与非目标
 
