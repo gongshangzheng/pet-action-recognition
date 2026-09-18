@@ -6,7 +6,7 @@
 > **主线架构已改为参考 FLOAT**（身份来自参考输入 + 正交运动基），TivTok 的 SIF **暂不采用**——原因见 §7。
 > 保留本文的目的：① 决策可追溯；② 若将来"身份必须从视频内推断"的需求复活，材料现成。
 >
-> 相关：[`tokenizer-architecture-refs.md`](./tokenizer-architecture-refs.md)（全谱系调研）、[8 号《身份-动作 Tokenizer》](../../management/docs/identity-tokenizer.md)（现主线设计）
+> 相关：[`tokenizer-architecture-refs.md`](./tokenizer-architecture-refs.md)（全谱系调研）、[《动作识别模型设计》](../../management/docs/action-model-design.md)（现主线设计）
 
 ## §1 是什么
 

@@ -129,14 +129,14 @@ id: 3
 **简介**：开放词汇检测器——给它文字提示（如"cat"），它就在图里框出对应的物体。pipeline 主力检测器。
 
 **实测结果**：
-- 34 段白天视频批处理（详 [2 号《数据集全景》§5](../wiki/datasets)）
+- 34 段白天视频批处理（详 [《数据集全景》《数据集全景》§5](../wiki/datasets)）
   - **检出率 mean 0.939**（每 10 帧抽样中含猫帧占比）
   - 插值率 0.905 / 校正率 0.334
 - **重要裁定（multi-object-detect-gate）**：
   - **碗**：100% 全误框（text 路线不通）
   - **摄像头**：召回 4/1859（千分之 2.2，不可用）
   - **猫**：表现良好（>90% 检出）
-- **结论**：文字提示路线仅保留 "cat" / "person" / "litter_box" / "door_window" 等可用类；碗/摄像头改走 RAG 式（SAM 候选 + embedding 检索），详 [7 号《身份标识与检索》§4](../wiki/identity-and-retrieval)
+- **结论**：文字提示路线仅保留 "cat" / "person" / "litter_box" / "door_window" 等可用类；碗/摄像头改走 RAG 式（SAM 候选 + embedding 检索），详 [《身份标识与检索》《身份标识与检索》§4](../wiki/identity-and-retrieval)
 
 ### §4.2 YOLO11
 
@@ -152,7 +152,7 @@ id: 3
 
 **实测结果**：
 - 作为 GroundingDINO 碗/摄像头裁定的对照（图像引导 "拿这个碗的照片当查询"）
-- 结论：详见 [7 号 §4.5](../wiki/identity-and-retrieval)——碗/摄像头裁定撤下 GDINO 文本路线
+- 结论：详见 [《身份标识与检索》 §4.5](../wiki/identity-and-retrieval)——碗/摄像头裁定撤下 GDINO 文本路线
 
 ## §5 注册库其余模型速览（未实测）
 
@@ -201,4 +201,4 @@ id: 3
 
 ---
 
-**相关文档**：[4 号《训练体系》](../wiki/training-guide)（训练机制与配置）/ [6 号《系统架构》](../wiki/architecture)（模型在管线中的位置）/ [7 号《身份标识与检索》](../wiki/identity-and-retrieval)（检测模型应用场景）
+**相关文档**：[《训练体系》](../wiki/training-guide)（训练机制与配置）/ [《系统架构》](../wiki/architecture)（模型在管线中的位置）/ [《身份标识与检索》](../wiki/identity-and-retrieval)（检测模型应用场景）

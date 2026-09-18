@@ -66,8 +66,8 @@ cd third-party/pet-videos
 
 ### §1.8 交叉引用
 
-- [5 号《Live 模块》](../wiki/live-module)（落地点详述）
-- [6 号《系统架构》§4.6](../wiki/architecture)（Live 在管线中的角色）
+- [《Live 模块》](../wiki/live-module)（落地点详述）
+- [《系统架构》《系统架构》§4.6](../wiki/architecture)（Live 在管线中的角色）
 
 ---
 
@@ -105,7 +105,7 @@ third-party/remix-petra/
 | 前端 UI 风格（卡片化/暖色调） | `web/src/views/Live.vue` / `Home.vue` 风格基调 |
 | 宠物档案字段设计（基本信息/健康/活动） | `web/src/views/management/` 团队档案参考 |
 | AI 日报生成的"摘要 + 时间轴"思路 | 未来 `spot-check-cli` 报告格式参考 |
-| 视频播放器与"模拟"播放切换 | Live 模块演示视频回放（详见 5 号） |
+| 视频播放器与"模拟"播放切换 | Live 模块演示视频回放（详见 《Live 模块》） |
 
 ### §2.5 明确不学/反模式
 
@@ -126,7 +126,7 @@ cd third-party/remix-petra
 
 ### §2.8 交叉引用
 
-- [10 号《交接与协作指南》](../wiki/handover-guide)（UI 风格在新成员培训时提及）
+- [《第三方项目借鉴》](../wiki/handover-guide)（UI 风格在新成员培训时提及）
 
 ---
 
@@ -169,4 +169,4 @@ cd third-party/remix-petra
 
 ---
 
-**相关文档**：`.claude/skills/live/`（Live 操作）/ [5 号《Live 模块》](../wiki/live-module)（pet-videos 落地）/ [10 号《交接与协作指南》](../wiki/handover-guide)（remix-petra UI 风格参考）
+**相关文档**：`.claude/skills/live/`（Live 操作）/ [《Live 模块》](../wiki/live-module)（pet-videos 落地）/ [《第三方项目借鉴》](../wiki/handover-guide)（remix-petra UI 风格参考）

@@ -1,7 +1,7 @@
 # Tasks: video-action-segmentation
 
 > 总管：`pet-motion-latent-pipeline` **2.4b**（位于 2.4 `video-feature-latent` 与 2.5 `spot-check-cli` 之间）。
-> 领域背景见 [`papers/docs/action-recognition-models.md`](../../../papers/docs/action-recognition-models.md)；概念见 [6 号 §1.8](../../../management/docs/architecture.md)。
+> 领域背景见 [`papers/docs/action-recognition-models.md`](../../../papers/docs/action-recognition-models.md)；概念见 [《系统架构》 §1.8](../../../management/docs/architecture.md)。
 > 前置：`identity-action-tokenizer`（提供 `λ`）、`video-feature-latent`（提供段/窗口表征）。GPU 任务前 `nvidia-smi`。
 
 ## 1. 准备与调研

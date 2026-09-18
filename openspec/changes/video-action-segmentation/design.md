@@ -1,7 +1,7 @@
 # Design: video-action-segmentation
 
 > 总管：`pet-motion-latent-pipeline` **2.4b**（插在 2.4 `video-feature-latent` 与 2.5 `spot-check-cli` 之间）。
-> 领域背景与既有模型的做法见 [`papers/docs/action-recognition-models.md`](../../../papers/docs/action-recognition-models.md)；概念与音频类比见 [6 号《系统架构》§1.8](../../../management/docs/architecture.md)。
+> 领域背景与既有模型的做法见 [`papers/docs/action-recognition-models.md`](../../../papers/docs/action-recognition-models.md)；概念与音频类比见 [《系统架构》《系统架构》§1.8](../../../management/docs/architecture.md)。
 
 ## Context
 

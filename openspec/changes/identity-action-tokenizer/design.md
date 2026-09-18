@@ -128,7 +128,7 @@ FLOAT/LIA 正交运动基分解（正交坐标系 + **容量闸门**）：
 - 运动被压在 M 维正交子空间（**容量闸门**）→ 外观无处可藏 → **身份必须完整**（T-A4）
 - 身份是**固定常量** → 同一只猫的所有片段共享同一身份条件
 - **无 SIF、无 TIV/TV、无 N_TIV/N_TV 超参**（随 TivTok 一并移除）
-- 视频编码器**看整段**（Q2）→ `λ_j` 自带时序上下文；**粒度 = tubelet（每 t 帧一份）**，见 8 号《身份-动作 Tokenizer》§4.2a
+- 视频编码器**看整段**（Q2）→ `λ_j` 自带时序上下文；**粒度 = tubelet（每 t 帧一份）**，见 《动作识别模型设计》《身份-动作 Tokenizer》§4.2a
 
 ### T-A3b: 视频编码器用 **3D patchify（tubelet embedding）**（2026-09-17 新增，借鉴 AdapTok）
 
@@ -326,7 +326,7 @@ FLOAT 的 `alpha = fc(net_app(target))` 是**从单帧**算的：它编码的是
 
 > **对称架构**：参考与输入视频**共用同一套参数与结构**（FLOAT 即如此——其 `net_app`/`fc` 对 source 与 target 是同一套），差别只在取哪部分输出。
 > **参考形态已定 = B（参考视频）**：对称分解使「参考运动污染」不再是问题；视频能覆盖猫前后左右全部方向。
-> ⚠️ **隔离约束**：`register` 可 attend patch，但 **patch/tubelet 【不能】attend register**——否则身份信息会流入 λ。详见 8 号《身份-动作 Tokenizer》§4.6b。
+> ⚠️ **隔离约束**：`register` 可 attend patch，但 **patch/tubelet 【不能】attend register**——否则身份信息会流入 λ。详见 《动作识别模型设计》《身份-动作 Tokenizer》§4.6b。
 
 **决策**：身份**不从待分析视频里推断**，而由**独立的参考输入**提供：
 

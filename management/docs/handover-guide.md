@@ -32,7 +32,7 @@ id: 11
 
 ### §1.3 11 月中期验收 KPI
 
-来自 2026-08-15 二期计划（已整合到 [6 号《系统架构》§9.3](../wiki/architecture)）：
+来自 2026-08-15 二期计划（已整合到 [《系统架构》《系统架构》§9.3](../wiki/architecture)）：
 
 - P0 精度攻坚：8-9 月，5 个训练 run 全 error（数据/接口问题），k400 烟测 top1 0.77 已验证管线
 - P1 端侧 pipeline：9-11 月，34 段白天已处理，夜间红外段待做
@@ -90,7 +90,7 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 - `plf`：GroundingDINO/HQSAM/ViTPose 管线用（独立环境，避免 mmcv 冲突）
 - `pet_tokenizer`：tokenizer 训练/推理用（原 `pet_vjepa`，2026-09-16 按用途改名；需 transformers ≥4.55）
 
-环境隔离纪律详见 [6 号 §5.1](../wiki/architecture) D5。
+环境隔离纪律详见 [《系统架构》 §5.1](../wiki/architecture) D5。
 
 ## §3 工作纪律（三阶段 OpenSpec + 远程纪律）
 
@@ -189,11 +189,11 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 | 后端 8788 报错 | `/tmp/backend.log` 末尾 + `server/main.py` |
 | 论文列表为空 | 后端运行？`data/papers.db` 存在？ |
 | 连不上 pet | `.claude/skills/remote-servers/` |
-| 训练报错 | [4 号《训练体系》](../wiki/training-guide) §6 + `.claude/skills/training/` |
-| 批处理报错 | [7 号《身份标识与检索》](../wiki/identity-and-retrieval) §1.4 + `.claude/skills/live/` |
+| 训练报错 | [《训练体系》](../wiki/training-guide) §6 + `.claude/skills/training/` |
+| 批处理报错 | [《身份标识与检索》](../wiki/identity-and-retrieval) §1.4 + `.claude/skills/live/` |
 | 推理报错 | `.claude/skills/testing/` |
 | Speed Run 问题 | `.claude/skills/speedrun/` |
-| 文档找不到 | [1 号《仓库资产盘点》](../wiki/repo-inventory) 导航表 |
+| 文档找不到 | [《仓库资产盘点》](../wiki/repo-inventory) 导航表 |
 
 ## §6 风格与约定（贯穿本套 11 篇 wiki）
 
@@ -201,7 +201,7 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 
 1. **老师腔**：每段先点目的（"为什么有这一步"），再讲方法，最后给坑
 2. **术语首次出现必定义**：括注（"X（…）"）或紧跟一句通俗定义
-3. **架构文档带术语表**：[6 号《系统架构》§0](../wiki/architecture) 是范例
+3. **架构文档带术语表**：[《系统架构》《系统架构》§0](../wiki/architecture) 是范例
 4. **类比与示例**：抽象概念配生活类比
 5. **避免**：缩写堆叠、长从句、"显然"之类的不解释
 6. **结论带四要素**（D6）：日期/来源/关键数字/证据路径
@@ -210,15 +210,15 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 
 ## §7 上手速查（30 分钟版）
 
-1. **读**：[1 号《仓库资产盘点》](../wiki/repo-inventory) 5 分钟
-2. **看图**：[6 号《系统架构》§3 端到端总图](../wiki/architecture) 3 分钟
+1. **读**：[《仓库资产盘点》](../wiki/repo-inventory) 5 分钟
+2. **看图**：[《系统架构》《系统架构》§3 端到端总图](../wiki/architecture) 3 分钟
 3. **跑起来**：`bash start_services.sh`，打开 http://localhost:3000 看一眼 5 分钟
-4. **看训练**：[4 号《训练体系》](../wiki/training-guide) 8 分钟
-5. **看管线**：[7 号《身份标识与检索》](../wiki/identity-and-retrieval) 8 分钟
-6. **试一把**：在 pet 上跑一个 k400 烟测（详见 [4 号 §6](../wiki/training-guide)）
+4. **看训练**：[《训练体系》](../wiki/training-guide) 8 分钟
+5. **看管线**：[《身份标识与检索》](../wiki/identity-and-retrieval) 8 分钟
+6. **试一把**：在 pet 上跑一个 k400 烟测（详见 [《训练体系》 §6](../wiki/training-guide)）
 
 之后就可以开 OpenSpec change 做第一个任务了。
 
 ---
 
-**配套**：[1 号《仓库资产盘点》](../wiki/repo-inventory)（资产索引）/ [6 号《系统架构》](../wiki/architecture)（结构总览）/ `.claude/skills/remote-servers/`（远程服务器）/ `.claude/skills/remote-server-discipline`（远程纪律）/ `.claude/skills/training/`（训练操作）/ `.claude/skills/live/`（Live 操作）/ `.claude/skills/speedrun/`（Speed Run）/ `.claude/skills/testing/`（测试）/ `.claude/skills/management/`（项目管理）/ `.claude/skills/papers/`（论文）/ `.claude/skills/datasets/`（数据集）/ `.claude/skills/evaluation/`（评测）/ `.claude/skills/upstream-sync/`（上下游同步）/ `.claude/skills/using-mmaction2/`（mmaction2 深度指南）/ `.claude/skills/repo-structure/`（仓库结构）
+**配套**：[《仓库资产盘点》](../wiki/repo-inventory)（资产索引）/ [《系统架构》](../wiki/architecture)（结构总览）/ `.claude/skills/remote-servers/`（远程服务器）/ `.claude/skills/remote-server-discipline`（远程纪律）/ `.claude/skills/training/`（训练操作）/ `.claude/skills/live/`（Live 操作）/ `.claude/skills/speedrun/`（Speed Run）/ `.claude/skills/testing/`（测试）/ `.claude/skills/management/`（项目管理）/ `.claude/skills/papers/`（论文）/ `.claude/skills/datasets/`（数据集）/ `.claude/skills/evaluation/`（评测）/ `.claude/skills/upstream-sync/`（上下游同步）/ `.claude/skills/using-mmaction2/`（mmaction2 深度指南）/ `.claude/skills/repo-structure/`（仓库结构）

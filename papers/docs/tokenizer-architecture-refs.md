@@ -179,7 +179,7 @@
 
 ### 论文结构（`txt/2505.17011_adaptok.txt` §3.1）
 
-> ⭐ **2026-09-17：本方案的 3D patchify 已被正式采用**（即使 SIF 已移出主线）——t 帧拼成三维体再整体切块（patch `t=4,p=8`），运动直接进 patch、token 数降 t 倍。详见 [`../../management/docs/identity-tokenizer.md`](../../management/docs/identity-tokenizer.md) §4.2 与 `identity-action-tokenizer/design.md` T-A3b。同样可借鉴：12L/768d 规模、训练配方、**block-causal attention（流式预留）**。
+> ⭐ **2026-09-17：本方案的 3D patchify 已被正式采用**（即使 SIF 已移出主线）——t 帧拼成三维体再整体切块（patch `t=4,p=8`），运动直接进 patch、token 数降 t 倍。详见 [`../../management/docs/action-model-design.md`](../../management/docs/action-model-design.md) §4.2 与 `identity-action-tokenizer/design.md` T-A3b。同样可借鉴：12L/768d 规模、训练配方、**block-causal attention（流式预留）**。
 ```
 3D patchify (t×p×p) → patch embeddings e (L 个)
   ↓ Block-Causal Encoder E：e ⊕ q_enc → 块因果注意力（同块/前块可见）→ 取 latent 位输出

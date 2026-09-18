@@ -15,7 +15,7 @@ id: 5
 
 **Live 模块**：连接一个或多个摄像头（或本地视频文件）→ 在浏览器里实时播放 → 同时调用 mmaction2 模型做**逐段动作推理**→ 把 top-k 结果实时回推给前端。
 
-**适用场景**：在线调试模型、演示能力、临时观察某路摄像头的实时行为。**不是生产形态**——生产是抽查（详 [6 号《系统架构》§4.6](../wiki/architecture)）。
+**适用场景**：在线调试模型、演示能力、临时观察某路摄像头的实时行为。**不是生产形态**——生产是抽查（详 [《系统架构》《系统架构》§4.6](../wiki/architecture)）。
 
 ## §2 落地架构
 
@@ -80,7 +80,7 @@ for frame in stream:
 
 ### §3.2 模型选择 UI（t11-9）
 
-前端 inference 启动面板里可下拉选模型（来自 [3 号《模型》§5](../wiki/models) registry），运行时加载不同 mmaction2 checkpoint。注：实际生产环境通常预加载一个，避免每请求重新加载。
+前端 inference 启动面板里可下拉选模型（来自 [《模型》《模型》§5](../wiki/models) registry），运行时加载不同 mmaction2 checkpoint。注：实际生产环境通常预加载一个，避免每请求重新加载。
 
 ### §3.3 SSE vs WebSocket
 
@@ -95,11 +95,11 @@ WebSocket 适合双向/低延迟场景——本模块不需要。
 
 ## §4 与第三方借鉴
 
-主要借鉴 **pet-videos**（详 [10 号《第三方项目借鉴》](../wiki/third-party-notes)）：
+主要借鉴 **pet-videos**（详 [《第三方项目借鉴》](../wiki/third-party-notes)）：
 
 - **借鉴**：多源切换 UI、视频播放器封装方式、截屏时序控制
 - **未借鉴**：pet-videos 的"实时分类 + 多模型同时推理"导致 GPU 内存爆——本项目只跑单一模型
 
 ---
 
-**相关文档**：`.claude/skills/live/`（操作指南）/ [10 号《第三方项目借鉴》](../wiki/third-party-notes)（pet-videos 借鉴细节）/ [6 号《系统架构》§4.6](../wiki/architecture)（Live 在管线中的角色）
+**相关文档**：`.claude/skills/live/`（操作指南）/ [《第三方项目借鉴》](../wiki/third-party-notes)（pet-videos 借鉴细节）/ [《系统架构》《系统架构》§4.6](../wiki/architecture)（Live 在管线中的角色）

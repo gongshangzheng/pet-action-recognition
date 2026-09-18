@@ -125,7 +125,7 @@ UCF101 上的"身份" = "这是哪个人"，与猫 Re-ID 同构。
 
 - 测试 ID：`k400-smoke-tsn`
 - 模型：`tsn_imagenet-pretrained-r50_8xb32-1x1x3-100e_kinetics400-rgb.py`
-- 结果：top1 0.77 / top5 0.925 / mean1 0.6712（详 [3 号《模型》](../wiki/models) §2）
+- 结果：top1 0.77 / top5 0.925 / mean1 0.6712（详 [《模型》](../wiki/models) §2）
 
 不参与猫语料训练，只验证"mmaction2 + 训练 pipeline 能跑通"。
 
@@ -257,4 +257,4 @@ videos_train/xxx.mp4 <label>
 
 ---
 
-**相关文档**：[3 号《模型》](../wiki/models)（用什么模型训这些数据）/ [4 号《训练体系》](../wiki/training-guide)（mmaction2 怎么加载这些数据）/ [6 号《系统架构》§4.4](../wiki/architecture)（数据如何进入管线）
+**相关文档**：[《模型》](../wiki/models)（用什么模型训这些数据）/ [《训练体系》](../wiki/training-guide)（mmaction2 怎么加载这些数据）/ [《系统架构》《系统架构》§4.4](../wiki/architecture)（数据如何进入管线）
