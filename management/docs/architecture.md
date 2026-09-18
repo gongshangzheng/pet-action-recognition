@@ -29,34 +29,34 @@ flowchart TD
     GATE -->|"无猫"| EMPTY["早退：空报告 + 在场率统计"]
     GATE -->|"有猫"| S1
 
-    subgraph S1["① 定位与跟踪"]
+    subgraph S1["① 定位与跟踪（§3）"]
         direction LR
         A1["抽样检测<br/>每 10 帧"] --> A2["逐帧猫框 + 轨迹 id"]
     end
 
-    subgraph S2["② 跟随视角生成"]
+    subgraph S2["② 跟随视角生成（§4）"]
         direction LR
         B1["以猫为中心裁剪"] --> B2["猫居中的视频流<br/>（方形画幅、只平移不旋转）"]
     end
 
-    subgraph S3["③ 背景移除"]
+    subgraph S3["③ 背景移除 · optional（§5）"]
         direction LR
         C1["显著物分割"] --> C2["猫本体 + 白色背景"]
     end
 
-    subgraph S46["④⑤⑥ 动作理解（方案两条路线见 §6–§8）"]
+    subgraph S46["④⑤⑥ 动作理解（§6–§8 · ④⑤ 顺序可互换）"]
         direction LR
-        D1["④ 动作表征"] <--> D2["⑤ 动作分割"]
-        D1 --> D3["⑥ 动作类别"]
+        D1["④ 动作表征（§6）"] <-->|"顺序可互换"| D2["⑤ 动作分割（§7）"]
+        D1 --> D3["⑥ 动作识别（§8）"]
         D2 --> D3
     end
 
-    subgraph S7["⑦ 身份识别"]
+    subgraph S7["⑦ 身份识别（§9）"]
         direction LR
         E1["段 + 参考输入"] --> E2["哪只猫"]
     end
 
-    subgraph S8["⑧ 应用出口"]
+    subgraph S8["⑧ 应用出口（§10）"]
         direction LR
         F1["抽查报告"] --- F2["实时监控"] --- F3["异常检测"]
     end
