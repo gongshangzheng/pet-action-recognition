@@ -546,6 +546,50 @@ flowchart TB
     DEC --> REC["重建 = 参考的身份 + 输入的动作"]
 ```
 
+**完整结构图**（含 patchify、register 拼接、正交基投影、解码与损失）：
+
+```mermaid
+flowchart TB
+    subgraph REF["① 参考支路（身份：用户事先拍的同一只猫）"]
+        R1["参考输入<br/>单图 / 3–5 张多视角图 / 短视频"] --> R2["3D patchify（t 帧块，t=4）"]
+        R2 --> R3["参考 tokens（变长）"]
+        RK["K 个可学习 register tokens"] --> CAT["拼接"]
+        R3 --> CAT
+    end
+    subgraph VID["② 视频支路（动作：监控片段）"]
+        V1["待分析视频"] --> V2["3D patchify（t 帧块）"]
+        V2 --> V3["视频 tokens"]
+    end
+    CAT --> ENC["共享编码器（同一套参数，跑两次）<br/>12L / 768d ViT + 3D patchify"]
+    V3 --> ENC
+    ENC -->|"只保留 register 输出"| AGG["registers 在参考【全部 token】上注意力<br/>→ 融合（K 份 → 1）→ 线性投影"]
+    ENC -->|"只保留 t 帧块输出"| ORT["正交运动基投影<br/>V 每次前向 QR 强制正交<br/>λ_j = 系数（每 t 帧一份）"]
+    AGG --> WID["w_identity ∈ R^d<br/>（固定向量：同一参考永远同一个）"]
+    ORT --> LAM["行为素序列<br/>λ_1 … λ_j …（每份 M 维）"]
+    WID --> DEC["解码器"]
+    LAM --> DEC
+    DEC --> REC2["重建帧<br/>decode(w_identity + Σ_m λ_m·v_m)"]
+    REC2 --> LOSS["损失：重建（L1 + 感知 + 对抗）<br/>身份无需独立损失 · 无对比损失"]
+    LOSS -.->|"梯度回传"| ENC
+```
+
+**隔离约束**（两组输出互不看，防身份泄进动作）：
+
+```mermaid
+flowchart LR
+    RG["register tokens"] -->|"✅ 可以 attend"| PT["patch / t 帧块 tokens"]
+    PT -.->|"❌ 不能 attend"| RG
+```
+
+**本图暴露的开口项**（均在 8 号末表登记）：
+
+| 开口项 | 说明 |
+|---|---|
+| 参考聚合方式 | registers 融合后再投影；平均 / 注意力 / 逐图残差聚合待选（🔴）|
+| register 数量 K | K 大→信息全但冗余，K 小→瓶颈（🟡）|
+| 是否共享权重 | 当前主线共享（两组 register：身份组 / 运动组）（🟡）|
+| **单图参考怎么走 3D patchify** | t 帧块需 4 帧——单图是**重复帧凑 t** 还是**单独 t=1 分支**（实现细节，待定）|
+
 **为什么两路共用一套参数**：FLOAT 本来就是对称的——`net_app`（外观编码）与 `fc`（运动头）**同一套参数**分别作用于 source 与 target（`float/models/float/encoder.py`），两个输入都算出「身份 + 运动系数」。我们把它推广为：**参考也输入一段视频**（而非单张图）。
 
 ```
