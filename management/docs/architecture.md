@@ -91,7 +91,7 @@ flowchart TD
 | ① 检测抽样 | 抽样间隔 | **每 10 帧**一次 | 插值补齐到逐帧 |
 | ① 检测抽样 | 抽样间隔 | **每 10 帧**一次 | 插值补齐到逐帧 |
 | ④ 表征 · **输入窗口** | 一次前向的**时间跨度** | **`clip_len=16` × `frame_interval=4` = 64 帧 ≈ 4.3 s** @15fps | 本仓 4 个 config（VideoMAE / VideoMAEv2 / AIM / VideoMAE-base）实测一致 |
-| ④ 表征 · **输出粒度** | 动作系数的**分辨率** | **tubelet `t=4` 帧 ≈ 0.27 s** | 一次前向 64 帧 → 出 **16 份**系数 |
+| ④ 表征 · **输出粒度** | 动作系数的**分辨率** | **t 帧块 `t=4` 帧 ≈ 0.27 s** | 一次前向 64 帧 → 出 **16 份**系数 |
 | ④ 表征 · 窗口步长 | stride | **待定**（重叠 vs 不重叠）| 见 **C05（patch 尺寸 t）/ C19** |
 | ⑤ 分段 · 段长 | 不定长 | 由变化点检测定 | 最小段长 / 滞回约束待定 |
 | ⑥ ⑦ | 每段一次 | — | 以段为单位 |
@@ -282,7 +282,7 @@ flowchart TD
 |---|---|
 | 基座 | **视频编码器代码基座候选**：AdapTok（MIT，12L/768d/patch 4×8×8）/ VidTok（MIT）/ LARP（MIT）；⚠️ SIF 移除后其 mask 框架不再需要 |
 | 分解骨架 | **FLOAT 式**：`w_identity`（参考输入）+ `Σ λ_m·v_m`（视频逐帧）→ 解码；对应 FLOAT Eq. 8-9 |
-| 视频 patchify | **3D patchify / tubelet**（`t×p×p` = 4×8×8）——**t 帧拼成三维体再整体切块**，不是逐帧切二维块；运动直接进 patch、token 数降 t 倍（借 AdapTok）|
+| 视频 patchify | **3D patchify / t 帧块**（`t×p×p` = 4×8×8）——**t 帧拼成三维体再整体切块**，不是逐帧切二维块；运动直接进 patch、token 数降 t 倍（借 AdapTok）|
 | 量化器 | **无量化**（连续潜变量 + KL 正则，TiTok VAE 模式同思路）；SoftVQ 软码本仅作备用正则 |
 | 动作通道 | FLOAT/LIA 正交运动基：`z_t = Σ λ_m·v_m`，基由 QR 每次前向正交化；λ 曲线即动作基元强度 |
 | 离散化 | **不在帧级做**——交给行为聚类（HDBSCAN + 命名，序列级）|
@@ -301,11 +301,11 @@ flowchart TD
 | 记号 | 读作 | 一句话 |
 |---|---|---|
 | `w_identity` | 身份向量 | 从**参考输入**（用户拍的猫图/短视频）提取的**固定向量**——"这是哪只猫"；与待分析视频无关 |
-| `z_j` | 动作特征 | 第 j 个 **tubelet**（覆盖 t 帧）编码出来的连续特征 |
+| `z_j` | 动作特征 | 第 j 个 **t 帧块**（覆盖 4 帧）编码出来的连续特征 |
 | `V = {v_1…v_M}` | 正交运动基 | **M 个互相垂直的运动方向**（每次前向做一次 QR 强制正交；M ≈ 20–32）|
-| `λ_j = (λ_1…λ_M)` | 动作系数 | `z_j` 在这 M 个方向上的**坐标**；**每 t 帧一份**（t = tubelet 跨度，默认 4）|
+| `λ_j = (λ_1…λ_M)` | 动作系数 | `z_j` 在这 M 个方向上的**坐标**；**每 t 帧一份**（t = t 帧块 跨度，默认 4）|
 | `λ_m(t)` | 动作基元曲线 | 第 m 个运动方向随时间的强度曲线（可画、可命名）|
-| `t` / `p` | tubelet 尺寸 | 3D patch 的时间跨度（默认 4 帧）/ 空间边长（默认 8×8）|
+| `t` / `p` | patch 尺寸 | 3D patch 的时间跨度（默认 4 帧）/ 空间边长（默认 8×8）|
 | 重建 | — | `decode(w_identity + Σ_m λ_m(t)·v_m)` → 第 t 帧 |
 
 > 与 **FLOAT** 的对应：`w_identity` ↔ FLOAT 的身份 latent `w_{S→r}`；`Σ_m λ_m·v_m` ↔ FLOAT 的运动 latent `w_{r→S}`。**命名提示**：FLOAT 论文写 `λ`，而其**代码变量名叫 `alpha`**——同一东西，**本文件统一写作 `λ`**。
@@ -314,7 +314,7 @@ flowchart TD
 #### 输入 / 输出时间尺度
 
 | ④ 表征 · **输入窗口** | 一次前向的**时间跨度** | **`clip_len=16` × `frame_interval=4` = 64 帧 ≈ 4.3 s** @15fps | 本仓 4 个 config（VideoMAE / VideoMAEv2 / AIM / VideoMAE-base）实测一致 |
-| ④ 表征 · **输出粒度** | 动作系数的**分辨率** | **tubelet `t=4` 帧 ≈ 0.27 s** | 一次前向 64 帧 → 出 **16 份**系数 |
+| ④ 表征 · **输出粒度** | 动作系数的**分辨率** | **t 帧块 `t=4` 帧 ≈ 0.27 s** | 一次前向 64 帧 → 出 **16 份**系数 |
 | ④ 表征 · 窗口步长 | stride | **待定**（重叠 vs 不重叠）| 见 **C05（patch 尺寸 t）/ C19** |
 | ⑤ 分段 · 段长 | 不定长 | 由变化点检测定 | 最小段长 / 滞回约束待定 |
 | ⑥ ⑦ | 每段一次 | — | 以段为单位 |
@@ -391,7 +391,7 @@ frame_inds = np.mod(frame_inds, total_frames) # 越界即循环重复
 ```python
 # models/mmaction2/mmaction/models/backbones/vit_mae.py
 use_learnable_pos_emb: bool = False     # 本仓 config 未设 → 默认 False
-num_patches = (img_size // patch_size) ** 2 * (num_frames // tubelet_size)
+num_patches = (img_size // patch_size) ** 2 * (num_frames // t 帧块_size)
 pos_embed = get_sinusoid_encoding(num_patches, embed_dims)   # 按 grid【算】出来
 self.register_buffer('pos_embed', pos_embed)                 # 不是学出来的
 ```
@@ -460,8 +460,8 @@ self.register_buffer('pos_embed', pos_embed)                 # 不是学出来�
 
 ```
 参考 → 编码 → w_identity（减掉运动子空间分量）
-驱动 → 编码 → λ（逐 tubelet，投影到 M 个正交方向）
-decode(w_identity + Σ_m λ_m·v_m) → 重建【驱动的第 j 个 tubelet】
+驱动 → 编码 → λ（逐 t 帧块，投影到 M 个正交方向）
+decode(w_identity + Σ_m λ_m·v_m) → 重建【驱动的第 j 个 t 帧块】
 损失 = 重建(L1) + 感知 + 对抗      ← 全是重建类：没有动作标签、没有对比损失
 ```
 
@@ -514,7 +514,7 @@ decode(w_identity + Σ_m λ_m·v_m) → 重建【驱动的第 j 个 tubelet】
 | 谁提供 | 什么 |
 |---|---|
 | **LIA / FLOAT** | 分解公式 + 正交基 + 自重建训练范式（= 阶段一的做法）|
-| **本项目额外要做的** | ① 参考 = 视频（多参考聚合）② 3D tubelet（运动需多帧）③ 参考身份通路（见 C29 / C30 / C31）|
+| **本项目额外要做的** | ① 参考 = 视频（多参考聚合）② 3D t 帧块（运动需多帧）③ 参考身份通路（见 C29 / C30 / C31）|
 
 
 #### 理论对比：解耦路线 vs 直接监督
