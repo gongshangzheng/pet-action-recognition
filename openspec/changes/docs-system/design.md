@@ -26,6 +26,13 @@
 - **引用必须闭合**：指向的标题必须真实存在；编号重映射后全仓核对
 - 正文中引用决策用「名字（Cxx）」，不裸用编号
 
+## 文档系统功能范围（渲染层 / 前端）
+
+| 功能 | 说明 | 涉及 |
+|---|---|---|
+| TOC 强调符号处理 | 章节列表对标题中的 `**` 丢弃（或渲染为强调），不显示符号字符 | `web/src/utils/markdown.js`（extractToc / slugify）|
+| 演进记录元数据化 | frontmatter `changelog`（日期 + 一句话 + commit）；正文无演进章；DocPage 头部按钮按需展示 | frontmatter 约定 + `server/routers/management.py`（透传）+ `DocPage.vue`（按钮 / 弹层）|
+
 ## 与其他路线的关系
 
 - 管线类 change（2.x / 4x）登记在 `pet-motion-latent-pipeline` 路线图，**不在**本 Change
