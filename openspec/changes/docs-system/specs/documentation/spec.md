@@ -23,14 +23,28 @@
 - **WHEN** 某标题为 `### §4.2 视频编码器：**3D patchify**`
 - **THEN** 章节列表显示「§4.2 视频编码器：3D patchify」（符号丢弃）或同等强调渲染，且不出现 `**` 字符
 
-### Requirement: 演进记录存于元数据并按需展示
+### Requirement: 文档元数据存于同名 sidecar json
 
-演进记录 SHALL NOT 作为正文章节；SHALL 支持在 YAML frontmatter（`changelog` 字段）以粗粒度（日期 + 一句话 + commit）写入；文档页头部 SHALL 提供按钮，点击后展示该文档的演进记录。
+每篇文档（`<slug>.md`）SHALL 支持同名 sidecar json（`<slug>.json`）承载元数据：`changelog`（演进：日期 + 一句话 + commit）、`progress`（进度）、`appendix`（附录设计说明）、`related`（相关文档）。这些元数据 SHALL NOT 出现在正文章节与章节列表中。
 
-#### Scenario: 查看演进记录
+#### Scenario: 更新演进记录
 
-- **WHEN** 读者打开带 `changelog` 的文档并点击头部的「演进记录」按钮
-- **THEN** 展示演进记录列表；正文与右侧章节列表中均不出现演进记录章节
+- **WHEN** 某文档发生一次值得记录的演进
+- **THEN** 只更新 `<slug>.json` 的 `changelog`（追加：日期 + 一句话 + commit），正文不变、不触发章节重排
+
+### Requirement: 元数据的渲染布局
+
+文档页 SHALL 在**文章顶部**提供按钮展示演进记录与进度（点击弹层）；SHALL 在**文章底部**以独立块渲染相关文档与附录；无对应字段的文档 MUST NOT 渲染空块。
+
+#### Scenario: 打开带完整 sidecar 的文档
+
+- **WHEN** 读者打开 `architecture.md`（其 `architecture.json` 含全部四字段）
+- **THEN** 顶部可见「演进记录」「进度」按钮，点击弹层展示；页面底部出现「相关文档」与「附录」独立块；正文与章节列表不含这些内容
+
+#### Scenario: 无 sidecar 的文档
+
+- **WHEN** 某文档没有同名 json 或 json 为空
+- **THEN** 不渲染顶部按钮与底部块，页面正常
 
 ### Requirement: 结构级变更走单篇 Change 且 design 先行
 

@@ -15,5 +15,5 @@
 ## 3. 文档系统功能（前端 / 渲染层）
 
 - [ ] 3.1 TOC 强调符号处理：章节列表丢弃（或渲染）标题中的 `**`，不显示符号字符（`extractToc`）
-- [ ] 3.2 演进记录元数据化：frontmatter `changelog`（日期 + 一句话 + commit）约定 + 后端透传 + DocPage 头部按钮按需展示
-- [ ] 3.3 架构文档（6 号）演进记录迁移至 frontmatter（配合 `docs-architecture` v6 实施）
+- [ ] 3.2 **sidecar json 约定**：字段 schema（changelog / progress / appendix / related）+ 后端 `get_doc_detail` 读取同名 `<slug>.json` 一并返回
+- [ ] 3.3 **渲染**：DocPage 顶部按钮（演进记录 / 进度，弹层）+ 底部独立块（相关文档 / 附录）；架构文档（6 号）元数据迁入 sidecar（配合 `docs-architecture` v7 实施）

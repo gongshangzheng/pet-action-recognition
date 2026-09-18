@@ -31,7 +31,8 @@
 | 功能 | 说明 | 涉及 |
 |---|---|---|
 | TOC 强调符号处理 | 章节列表对标题中的 `**` 丢弃（或渲染为强调），不显示符号字符 | `web/src/utils/markdown.js`（extractToc / slugify）|
-| 演进记录元数据化 | frontmatter `changelog`（日期 + 一句话 + commit）；正文无演进章；DocPage 头部按钮按需展示 | frontmatter 约定 + `server/routers/management.py`（透传）+ `DocPage.vue`（按钮 / 弹层）|
+| **sidecar json** | 每篇 `management/docs/<slug>.md` 配同名 `<slug>.json`：`changelog`（演进：日期 + 一句话 + commit）/ `progress`（进度）/ `appendix`（附录设计说明，markdown 字符串）/ `related`（相关文档：title + slug + desc）| `server/routers/management.py`（get_doc_detail 读取同名 json 一并返回）|
+| 渲染布局 | **顶部按钮**：演进记录、进度（点击弹层）；**底部独立块**：相关文档、附录；无字段不渲染空块 | `DocPage.vue` + 弹层 / 底部块组件 |
 
 ## 与其他路线的关系
 
