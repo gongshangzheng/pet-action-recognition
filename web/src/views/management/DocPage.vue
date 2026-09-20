@@ -1,9 +1,14 @@
 <template>
   <div class="doc-page">
     <!-- Left sidebar: doc list -->
-    <aside class="doc-sidebar">
-      <div class="doc-sidebar-inner">
-        <div class="doc-sidebar-title">文档</div>
+    <aside class="doc-sidebar" :class="{ collapsed: sidebarCollapsed }">
+      <div v-if="!sidebarCollapsed" class="doc-sidebar-inner">
+        <div class="panel-head">
+          <span class="doc-sidebar-title">文档</span>
+          <button class="panel-toggle" title="收起文档列表" @click="toggleSidebar">
+            <n-icon size="14"><chevron-back-outline /></n-icon>
+          </button>
+        </div>
         <nav class="doc-sidebar-nav">
           <template v-for="item in sidebarItems" :key="item.type === 'folder' ? item.path : item.slug">
             <a
@@ -27,6 +32,12 @@
           </template>
         </nav>
         <div v-if="!docsList.length && !listLoading" class="doc-sidebar-empty">暂无文档</div>
+      </div>
+      <div v-else class="panel-strip">
+        <button class="panel-expand" title="展开文档列表" @click="toggleSidebar">
+          <n-icon size="14"><chevron-forward-outline /></n-icon>
+        </button>
+        <span class="panel-strip-label">文档</span>
       </div>
     </aside>
 
@@ -90,9 +101,14 @@
     </article>
 
     <!-- Right TOC -->
-    <aside v-if="tocItems.length" class="doc-toc">
-      <div class="doc-toc-inner">
-        <div class="doc-toc-title">目录</div>
+    <aside v-if="tocItems.length" class="doc-toc" :class="{ collapsed: tocCollapsed }">
+      <div v-if="!tocCollapsed" class="doc-toc-inner">
+        <div class="panel-head">
+          <span class="doc-toc-title">目录</span>
+          <button class="panel-toggle" title="收起目录" @click="toggleToc">
+            <n-icon size="14"><chevron-forward-outline /></n-icon>
+          </button>
+        </div>
         <nav>
           <a
             v-for="item in tocItems"
@@ -104,6 +120,12 @@
             {{ item.text }}
           </a>
         </nav>
+      </div>
+      <div v-else class="panel-strip">
+        <button class="panel-expand" title="展开目录" @click="toggleToc">
+          <n-icon size="14"><chevron-back-outline /></n-icon>
+        </button>
+        <span class="panel-strip-label">目录</span>
       </div>
     </aside>
 
@@ -137,7 +159,8 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NSpin, NTag, NSelect, NButton, NModal, NTimeline, NTimelineItem } from 'naive-ui'
+import { NSpin, NTag, NSelect, NButton, NModal, NTimeline, NTimelineItem, NIcon } from 'naive-ui'
+import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
 import { getDocList, getDocDetail } from '../../api/management'
@@ -152,6 +175,30 @@ const loading = ref(false)
 const listLoading = ref(false)
 const showChangelog = ref(false)
 const showProgress = ref(false)
+
+const SIDEBAR_COLLAPSED_KEY = 'doc-page.sidebar-collapsed'
+const TOC_COLLAPSED_KEY = 'doc-page.toc-collapsed'
+
+function readStoredBool(key) {
+  try { return localStorage.getItem(key) === '1' } catch { return false }
+}
+
+function writeStoredBool(key, value) {
+  try { localStorage.setItem(key, value ? '1' : '0') } catch { /* ignore */ }
+}
+
+const sidebarCollapsed = ref(readStoredBool(SIDEBAR_COLLAPSED_KEY))
+const tocCollapsed = ref(readStoredBool(TOC_COLLAPSED_KEY))
+
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  writeStoredBool(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed.value)
+}
+
+function toggleToc() {
+  tocCollapsed.value = !tocCollapsed.value
+  writeStoredBool(TOC_COLLAPSED_KEY, tocCollapsed.value)
+}
 
 const sidecar = computed(() => currentDoc.value?.sidecar || null)
 const hasSidecarUI = computed(() => !!(sidecar.value?.changelog?.length || sidecar.value?.progress))
@@ -298,13 +345,81 @@ watch(currentSlug, (slug) => {
   padding-right: 8px;
 }
 
+.doc-sidebar.collapsed {
+  width: 28px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 4px 2px 4px 10px;
+  margin-bottom: 4px;
+}
+
+.panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 3px;
+  cursor: pointer;
+  color: var(--color-text-dim);
+  border-radius: 4px;
+  transition: all 0.15s;
+
+  &:hover {
+    background: var(--color-hover);
+    color: var(--color-text);
+  }
+}
+
+.panel-strip {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-expand {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 6px 0;
+  cursor: pointer;
+  color: var(--color-text-dim);
+  transition: all 0.15s;
+
+  &:hover {
+    background: var(--color-hover);
+    color: var(--color-text);
+  }
+}
+
+.panel-strip-label {
+  writing-mode: vertical-rl;
+  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-dim);
+  user-select: none;
+}
+
 .doc-sidebar-title {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-dim);
-  padding: 8px 10px 4px;
 }
 
 .doc-sidebar-empty {
@@ -509,13 +624,16 @@ watch(currentSlug, (slug) => {
   overflow-y: auto;
 }
 
+.doc-toc.collapsed {
+  width: 28px;
+}
+
 .doc-toc-title {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-dim);
-  padding: 8px 10px 4px;
 }
 
 .doc-toc-link {
