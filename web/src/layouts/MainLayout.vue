@@ -4,7 +4,7 @@
     <n-layout-sider
       bordered
       collapse-mode="width"
-      :collapsed-width="64"
+      :collapsed-width="56"
       :width="240"
       :collapsed="collapsed"
       show-trigger
@@ -17,8 +17,8 @@
       </div>
       <n-menu
         :collapsed="collapsed"
-        :collapsed-width="64"
-        :collapsed-icon-size="22"
+        :collapsed-width="56"
+        :collapsed-icon-size="18"
         :options="menuOptions"
         :value="activeKey"
         :expanded-keys="expandedKeys"
@@ -46,6 +46,45 @@
         </div>
         <div class="header-right">
           <span class="header-date">{{ today }}</span>
+          <n-popover trigger="click" placement="bottom-end" :show-arrow="false">
+            <template #trigger>
+              <n-button quaternary circle class="theme-toggle" title="主题与图标">
+                <template #icon>
+                  <n-icon size="18">
+                    <color-palette-outline />
+                  </n-icon>
+                </template>
+              </n-button>
+            </template>
+            <div class="theme-panel">
+              <div class="theme-panel-title">主题色</div>
+              <div class="accent-grid">
+                <button
+                  v-for="a in ACCENTS"
+                  :key="a.key"
+                  class="accent-swatch"
+                  :class="{ active: themeStore.accent === a.key }"
+                  :title="a.label"
+                  :style="{ backgroundColor: swatchColor(a), color: readableOn(swatchColor(a)) }"
+                  @click="themeStore.setAccent(a.key)"
+                >
+                  <n-icon v-if="themeStore.accent === a.key" size="14"><checkmark-outline /></n-icon>
+                </button>
+              </div>
+              <div class="theme-panel-title">图标</div>
+              <div class="favicon-grid">
+                <button
+                  v-for="f in FAVICONS"
+                  :key="f.key"
+                  class="favicon-option"
+                  :class="{ active: themeStore.favicon === f.key }"
+                  :title="f.label"
+                  @click="themeStore.setFavicon(f.key)"
+                  v-html="faviconSvg(f.key, themeStore.accentPrimary)"
+                ></button>
+              </div>
+            </div>
+          </n-popover>
           <n-button quaternary circle class="theme-toggle" @click="themeStore.toggle">
             <template #icon>
               <n-icon size="18">
@@ -76,7 +115,7 @@ import { ref, computed, h, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NLayout, NLayoutSider, NLayoutHeader, NLayoutContent,
-  NMenu, NBreadcrumb, NBreadcrumbItem, NButton, NIcon,
+  NMenu, NBreadcrumb, NBreadcrumbItem, NButton, NIcon, NPopover,
 } from 'naive-ui'
 import {
   HomeOutline, PeopleOutline, GitBranchOutline,
@@ -84,13 +123,37 @@ import {
   SearchOutline, SettingsOutline, FlaskOutline, BarChartOutline,
   CubeOutline, LayersOutline, SchoolOutline, FilmOutline, BookOutline,
   SunnyOutline, MoonOutline, VideocamOutline,
+  ColorPaletteOutline, CheckmarkOutline,
 } from '@vicons/ionicons5'
 import { useThemeStore } from '../stores/theme'
+import { SIDEBAR_DEFAULT_COLLAPSED } from '../config/layout'
+import { ACCENTS, readableOn } from '../config/theme'
+import { FAVICONS, faviconSvg } from '../config/favicon'
 
 const route = useRoute()
 const router = useRouter()
 const themeStore = useThemeStore()
-const collapsed = ref(false)
+
+const SIDEBAR_COLLAPSED_KEY = 'pet-action-recognition-sidebar-collapsed'
+
+function readCollapsed() {
+  try {
+    const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
+    if (stored === null) return SIDEBAR_DEFAULT_COLLAPSED
+    return stored === '1'
+  } catch {
+    return SIDEBAR_DEFAULT_COLLAPSED
+  }
+}
+
+const collapsed = ref(readCollapsed())
+
+// 持久化用户偏好（不设 immediate：避免初始化时把默认值写进存储，
+// 否则用户永远无法通过删除该 key 回到默认值）
+watch(collapsed, (value) => {
+  try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, value ? '1' : '0') } catch { /* ignore */ }
+})
+
 const manualExpanded = ref(null)
 
 const expandedKeys = computed(() => {
@@ -104,6 +167,11 @@ const expandedKeys = computed(() => {
 
 function handleExpandUpdate(keys) {
   manualExpanded.value = keys
+}
+
+// 调色盘色块取当前模式下的色值
+function swatchColor(accent) {
+  return themeStore.isDark ? accent.dark : accent.light
 }
 
 function renderIcon(icon) {
@@ -255,7 +323,7 @@ const today = computed(() => {
     white-space: nowrap;
   }
   .logo-icon {
-    font-size: 14px;
+    font-size: 13px;
   }
 }
 
@@ -282,6 +350,81 @@ const today = computed(() => {
 
 .theme-toggle {
   color: var(--color-text-secondary);
+}
+
+.theme-panel {
+  width: 172px;
+}
+
+.theme-panel-title {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin-bottom: 8px;
+
+  & + .accent-grid,
+  & + .favicon-grid {
+    margin-bottom: 14px;
+  }
+}
+
+.accent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.accent-swatch {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, border-color 0.15s;
+
+  &:hover {
+    transform: scale(1.08);
+  }
+
+  &.active {
+    border-color: var(--color-text);
+  }
+}
+
+.favicon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.favicon-option {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.15s, border-color 0.15s;
+
+  :deep(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  &:hover {
+    transform: scale(1.08);
+  }
+
+  &.active {
+    border-color: var(--color-text);
+  }
 }
 
 .app-content {

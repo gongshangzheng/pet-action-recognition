@@ -1,7 +1,7 @@
 // 颜色变量
-$primary-color: #4f46e5;
-$primary-light: #6366f1;
-$primary-dark: #4338ca;
+$primary-color: #4a4f57;   // 枪灰：与 config/theme.js 的默认强调色（gray.light）一致
+$primary-light: #60646b;   // = mix(#4a4f57, #fff, 0.12)
+$primary-dark: #41464d;    // = mix(#4a4f57, #000, 0.12)
 
 $bg-color: #f5f5f7;
 $bg-card: #ffffff;

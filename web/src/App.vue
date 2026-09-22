@@ -20,6 +20,7 @@ import {
   darkTheme,
 } from 'naive-ui'
 import { useThemeStore } from './stores/theme'
+import { accentThemeOverrides } from './config/theme'
 
 const themeStore = useThemeStore()
 themeStore.init()
@@ -27,14 +28,13 @@ themeStore.init()
 // Naive UI 跟随主题 store：dark 模式用 darkTheme，light 模式用 null
 const naiveTheme = computed(() => (themeStore.isDark ? darkTheme : null))
 
-const themeOverrides = {
+// Naive UI 主题覆盖：主色随强调色 + 明暗模式变化，与 CSS 变量同源（config/theme.js）
+const themeOverrides = computed(() => ({
   common: {
-    primaryColor: '#4f46e5',
-    primaryColorHover: '#6366f1',
-    primaryColorPressed: '#4338ca',
+    ...accentThemeOverrides(themeStore.accent, themeStore.isDark),
     borderRadius: '8px',
   },
-}
+}))
 
 // 主题切换时同步 <html data-theme>（store.toggle 已处理，这里做兜底）
 watch(() => themeStore.mode, (mode) => {
