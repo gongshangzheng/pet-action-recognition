@@ -163,7 +163,7 @@ import { NSpin, NTag, NSelect, NButton, NModal, NTimeline, NTimelineItem, NIcon 
 import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
-import { getDocList, getDocDetail } from '../../api/management'
+import { getDocList, getDocDetail } from '../../api/docs'
 import { extractToc, slugify } from '../../utils/markdown'
 
 const route = useRoute()

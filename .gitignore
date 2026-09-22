@@ -54,6 +54,9 @@ web/node_modules/
 web/dist/
 web/package-lock.json
 
+# 构建期生成的文档静态数据（web/scripts/build-docs-data.mjs 产出）
+web/public/docs-data.json
+
 # 根级 npm 空壳 stub 防复发（2026-09-15 清理后）
 /package-lock.json
 
