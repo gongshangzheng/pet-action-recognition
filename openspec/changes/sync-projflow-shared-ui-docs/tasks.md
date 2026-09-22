@@ -19,4 +19,4 @@
 
 - [x] 4.1 运行 Python 路由检查、静态/API 数据一致性检查、`git diff --check` 和前端生产构建。
 - [x] 4.2 检查产物中的 `docs-data.json`、文档资产及与 `index.html` 一致的 `404.html`。
-- [ ] 4.3 提交同步变更（注明 ProjFlow 来源），推送 `origin/main` 并确认 GitHub Pages 部署。
+- [x] 4.3 提交同步变更（注明 ProjFlow 来源），推送 `origin/main` 并确认 GitHub Pages 部署。
