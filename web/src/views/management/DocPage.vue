@@ -157,14 +157,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NSpin, NTag, NSelect, NButton, NModal, NTimeline, NTimelineItem, NIcon } from 'naive-ui'
 import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
 import { getDocList, getDocDetail } from '../../api/docs'
-import { extractToc, slugify } from '../../utils/markdown'
+import { extractToc } from '../../utils/markdown'
+import { attachScrollMemory, findScrollContainer, restoreOrReset } from '../../utils/scrollMemory'
 
 const route = useRoute()
 const router = useRouter()
@@ -175,6 +176,8 @@ const loading = ref(false)
 const listLoading = ref(false)
 const showChangelog = ref(false)
 const showProgress = ref(false)
+let pendingRestoreKey = null
+let scrollMemory = null
 
 const SIDEBAR_COLLAPSED_KEY = 'doc-page.sidebar-collapsed'
 const TOC_COLLAPSED_KEY = 'doc-page.toc-collapsed'
@@ -264,7 +267,18 @@ function navigateTo(slug) {
 
 function scrollToHeading(slug) {
   const el = document.getElementById(slug)
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  router.replace({ hash: `#${encodeURIComponent(slug)}` })
+}
+
+function scrollToRouteHash() {
+  const hash = route.hash ? decodeURIComponent(route.hash.slice(1)) : ''
+  if (!hash) return false
+  const el = document.getElementById(hash)
+  if (!el) return false
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  return true
 }
 
 async function fetchDoc(slug) {
@@ -281,6 +295,12 @@ async function fetchDoc(slug) {
     currentDoc.value = null
   }
   loading.value = false
+  await nextTick()
+  if (!scrollToRouteHash() && pendingRestoreKey) {
+    const key = pendingRestoreKey
+    pendingRestoreKey = null
+    restoreOrReset(key, () => !loading.value && !!currentDoc.value)
+  }
 }
 
 async function fetchDocList() {
@@ -294,16 +314,33 @@ async function fetchDocList() {
 }
 
 onMounted(async () => {
+  pendingRestoreKey = route.path
   await fetchDocList()
   if (currentSlug.value) {
     await fetchDoc(currentSlug.value)
   } else if (docsList.value.length) {
     router.replace(`/management/docs/${docsList.value[0].slug}`)
   }
+  scrollMemory = attachScrollMemory(findScrollContainer(), () => route.path)
+})
+
+onBeforeUnmount(() => {
+  scrollMemory?.dispose()
+  scrollMemory = null
 })
 
 watch(currentSlug, (slug) => {
   if (slug) fetchDoc(slug)
+})
+
+watch(() => route.path, (path, oldPath) => {
+  if (path === oldPath) return
+  scrollMemory?.noteRouteChange(path)
+  pendingRestoreKey = path
+})
+
+watch(() => route.hash, () => {
+  nextTick(scrollToRouteHash)
 })
 
 watch(currentSlug, (slug) => {

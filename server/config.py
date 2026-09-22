@@ -8,6 +8,9 @@ MANAGEMENT_DIR = os.path.join(BASE_DIR, "management")
 PAPERS_DIR = os.path.join(BASE_DIR, "papers")
 EVALUATION_DIR = os.path.join(BASE_DIR, "evaluation")
 
+# 文档列表中顶层目录的固定顺序。领域库可按需覆盖；未列目录随后按其文档元数据排序。
+DOCS_FOLDER_ORDER = []
+
 # Live 模块（摄像头源 + 截屏，独立 live.db）
 LIVE_DIR = os.path.join(BASE_DIR, "live")
 

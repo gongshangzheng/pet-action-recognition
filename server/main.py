@@ -7,7 +7,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from server.config import CORS_ORIGINS
+from fastapi.staticfiles import StaticFiles
+from server.config import CORS_ORIGINS, MANAGEMENT_DIR
 from server.routers import management, papers, evaluation, training, speedrun, datasets, live
 
 app = FastAPI(
@@ -32,6 +33,15 @@ app.include_router(training.router)
 app.include_router(speedrun.router)
 app.include_router(datasets.router)
 app.include_router(live.router)
+
+# 文档图片资产仅从 management/docs/_assets/ 只读提供。
+DOC_ASSETS_DIR = os.path.join(MANAGEMENT_DIR, "docs", "_assets")
+os.makedirs(DOC_ASSETS_DIR, exist_ok=True)
+app.mount(
+    "/api/management/docs-assets",
+    StaticFiles(directory=DOC_ASSETS_DIR, check_dir=False),
+    name="doc-assets",
+)
 
 
 @app.get("/")

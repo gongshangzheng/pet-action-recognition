@@ -9,7 +9,7 @@ import subprocess
 import yaml
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from server.config import MANAGEMENT_DIR
+from server.config import DOCS_FOLDER_ORDER, MANAGEMENT_DIR
 from server.utils.file_utils import read_file, safe_resolve, scan_directory
 from server.parsers.team_parser import parse_team_list, parse_member_profile
 from server.parsers.report_parser import get_report_list, get_report_detail
@@ -283,14 +283,22 @@ async def get_meeting_detail(date: str):
 # ========== 文档 (wiki) ==========
 
 _DOCS_DIR = os.path.join(MANAGEMENT_DIR, 'docs')
-_SLUG_RE = re.compile(r'^[a-zA-Z0-9_/-]+$')
+# Unicode 单词字符覆盖中文；safe_resolve 继续作为文件系统边界的第二道防线。
+_SLUG_RE = re.compile(r'^[\w][\w \-/]*$', re.UNICODE)
+
+
+def _valid_doc_slug(slug):
+    """允许 Unicode 文档 slug，拒绝空值和路径遍历段。"""
+    return bool(slug and _SLUG_RE.fullmatch(slug) and '..' not in slug.split('/'))
 
 
 def _normalize_date(value):
-    """YAML 会把 `2024-01-15` 解析成 datetime.date，统一转为 ISO 字符串。"""
+    """将 YAML date 统一为可排序的 ISO 字符串。"""
+    if value is None:
+        return ''
     if isinstance(value, (datetime.date, datetime.datetime)):
         return value.isoformat()
-    return value or ''
+    return str(value)
 
 
 def _parse_frontmatter(content):
@@ -308,17 +316,58 @@ def _parse_frontmatter(content):
     return meta, body
 
 
+def _doc_number(value):
+    """将 order/id 转为数字；缺失、布尔及非法值统一排最后。"""
+    if value is None or isinstance(value, bool):
+        return float('inf')
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float('inf')
+
+
+def _doc_date_ordinal(value):
+    """将 ISO 日期转为 ordinal；无效日期按最旧处理。"""
+    try:
+        return datetime.date.fromisoformat(str(value)[:10]).toordinal() if value else 0
+    except ValueError:
+        return 0
+
+
+def _doc_folder(meta, slug):
+    """优先使用 frontmatter folder；为空时退回 slug 的顶层目录。"""
+    folder = meta.get('folder')
+    if folder is None or folder == '':
+        return slug.split('/', 1)[0] if '/' in slug else ''
+    return str(folder)
+
+
+def _doc_sort_key(doc):
+    """稳定排序：folder → order → id → date(desc) → slug。"""
+    slug = doc.get('slug') or ''
+    folder = doc.get('folder') or (slug.split('/', 1)[0] if '/' in slug else '')
+    folder_rank = DOCS_FOLDER_ORDER.index(folder) if folder in DOCS_FOLDER_ORDER else len(DOCS_FOLDER_ORDER)
+    return (
+        folder_rank,
+        _doc_number(doc.get('order')),
+        _doc_number(doc.get('id')),
+        -_doc_date_ordinal(doc.get('date')),
+        slug,
+    )
+
+
 @router.get("/docs")
 async def get_docs():
-    """获取文档列表（management/docs/ 递归扫描所有 .md 文件）"""
+    """递归获取文档列表，跳过 `_assets` 等资产目录并保证顺序稳定。"""
     if not os.path.isdir(_DOCS_DIR):
         return []
     docs = []
-    for root, _dirs, files in os.walk(_DOCS_DIR):
-        for f in sorted(files):
-            if not f.endswith('.md'):
+    for root, dirs, files in os.walk(_DOCS_DIR):
+        dirs[:] = [directory for directory in dirs if not directory.startswith('_')]
+        for filename in sorted(files):
+            if not filename.endswith('.md'):
                 continue
-            filepath = os.path.join(root, f)
+            filepath = os.path.join(root, filename)
             content = read_file(filepath)
             meta, _ = _parse_frontmatter(content)
             rel = os.path.relpath(filepath, _DOCS_DIR)
@@ -327,20 +376,21 @@ async def get_docs():
                 'slug': slug,
                 'title': meta.get('title', slug),
                 'author': meta.get('author', ''),
-                'date': _normalize_date(meta.get('date', '')),
+                'date': _normalize_date(meta.get('date')),
                 'tags': meta.get('tags', []),
                 'summary': meta.get('summary', ''),
                 'id': meta.get('id'),
+                'order': meta.get('order'),
+                'folder': _doc_folder(meta, slug),
             })
-    docs.sort(key=lambda d: d.get('date') or '', reverse=True)
-    docs.sort(key=lambda d: float(d['id']) if d.get('id') is not None and str(d['id']).replace('.', '').replace('-', '').isdigit() else float('inf'))
+    docs.sort(key=_doc_sort_key)
     return docs
 
 
 @router.get("/docs/{slug:path}")
 async def get_doc_detail(slug: str):
-    """获取指定文档详情（支持子目录路径，如 architecture/api-design）"""
-    if not _SLUG_RE.match(slug):
+    """获取指定文档详情，支持子目录和 Unicode 文件名。"""
+    if not _valid_doc_slug(slug):
         raise HTTPException(status_code=400, detail="Invalid slug")
     filepath = safe_resolve(_DOCS_DIR, f"{slug}.md")
     if not filepath or not os.path.isfile(filepath):
@@ -358,10 +408,12 @@ async def get_doc_detail(slug: str):
         'slug': slug,
         'title': meta.get('title', slug),
         'author': meta.get('author', ''),
-        'date': _normalize_date(meta.get('date', '')),
+        'date': _normalize_date(meta.get('date')),
         'tags': meta.get('tags', []),
         'summary': meta.get('summary', ''),
         'id': meta.get('id'),
+        'order': meta.get('order'),
+        'folder': _doc_folder(meta, slug),
         'content': body,
         'sidecar': sidecar,
     }

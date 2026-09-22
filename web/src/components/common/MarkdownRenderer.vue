@@ -19,15 +19,8 @@ const themeStore = useThemeStore()
 const router = useRouter()
 
 function scrollToId(id) {
-  const el = document.getElementById(id)
+  const el = document.getElementById(decodeURIComponent(id))
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-function go(to) {
-  const [path, hash] = to.split('#')
-  router.push(path).then(() => {
-    if (hash) setTimeout(() => scrollToId(hash), 300)
-  })
 }
 
 function handleClick(e) {
@@ -35,32 +28,28 @@ function handleClick(e) {
   if (!anchor) return
   const href = anchor.getAttribute('href')
   if (!href) return
-  // ① 站内路由链接
-  if (href.startsWith('/management/')) {
-    e.preventDefault()
-    go(href)
-    return
-  }
-  // ② 页内锚点
   if (href.startsWith('#')) {
     e.preventDefault()
     scrollToId(href.slice(1))
     return
   }
-  // ③ wiki 内相对 .md 链接（./xxx.md、xxx.md、子目录/x.md，可带 #anchor）
-  const m = /^(?!\.\.\/)([\w\-.\/]+\.md)(#[^)]*)?$/.exec(href)
-  if (m) {
+  if (href.startsWith('/management/')) {
     e.preventDefault()
-    const slug = m[1].replace(/\.md$/, '')
-    go(`/management/docs/${slug}${m[2] || ''}`)
+    router.push(href)
     return
   }
-  // ④ 跨目录 .md（papers/docs 等，wiki 外）：不可跳转，阻止原生跳转避免白屏
+  // wiki 内相对 Markdown 链接，保留可选 hash 供 DocPage 的统一锚点逻辑处理。
+  const match = /^(?!\.\.\/)([\w\u4e00-\u9fff .\-/]+\.md)(#.*)?$/u.exec(href)
+  if (match) {
+    e.preventDefault()
+    router.push(`/management/docs/${match[1].replace(/\.md$/, '')}${match[2] || ''}`)
+    return
+  }
   if (href.endsWith('.md')) e.preventDefault()
 }
 
 const md = new MarkdownIt({
-  html: true,
+  html: false,
   linkify: true,
   typographer: true,
   breaks: true,
@@ -78,12 +67,13 @@ const defaultHeadingRender = md.renderer.rules.heading_open ||
 
 md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
   const token = tokens[idx]
-  if (['h2', 'h3', 'h4', 'h5'].includes(token.tag)) {
-    const nextToken = tokens[idx + 1]
-    if (nextToken && nextToken.type === 'inline') {
-      const text = nextToken.content || ''
-      token.attrSet('id', slugify(text))
-    }
+  const nextToken = tokens[idx + 1]
+  if (nextToken?.children) {
+    const text = nextToken.children
+      .filter((child) => child.type === 'text' || child.type === 'code_inline')
+      .map((child) => child.content)
+      .join('')
+    if (text) token.attrSet('id', slugify(text))
   }
   return defaultHeadingRender(tokens, idx, options, env, self)
 }
@@ -102,9 +92,55 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
   return defaultFence(tokens, idx, options, env, self)
 }
 
+md.renderer.rules.image = function (tokens, idx) {
+  const token = tokens[idx]
+  const src = md.utils.escapeHtml(token.attrGet('src') || '')
+  const alt = md.utils.escapeHtml(token.content || '')
+  const title = token.attrGet('title')
+  const titleAttr = title ? ` title="${md.utils.escapeHtml(title)}"` : ''
+  return `<img src="${src}" alt="${alt}" loading="lazy"${titleAttr}>`
+}
+
+const defaultParagraphOpen = md.renderer.rules.paragraph_open ||
+  function (tokens, idx, options, env, self) { return self.renderToken(tokens, idx, options) }
+const defaultParagraphClose = md.renderer.rules.paragraph_close ||
+  function (tokens, idx, options, env, self) { return self.renderToken(tokens, idx, options) }
+
+function figureImage(tokens, idx) {
+  const inline = tokens[idx + 1]
+  if (!inline?.children) return null
+  const children = inline.children.filter((token) => token.type !== 'text' || token.content.trim())
+  return children.length === 1 && children[0].type === 'image' && children[0].content ? children[0] : null
+}
+
+md.renderer.rules.paragraph_open = function (tokens, idx, options, env, self) {
+  const image = figureImage(tokens, idx)
+  if (!image) return defaultParagraphOpen(tokens, idx, options, env, self)
+  env.figureCaption = image.content
+  return '<figure>'
+}
+
+md.renderer.rules.paragraph_close = function (tokens, idx, options, env, self) {
+  if (!env?.figureCaption) return defaultParagraphClose(tokens, idx, options, env, self)
+  const caption = md.utils.escapeHtml(env.figureCaption)
+  delete env.figureCaption
+  return `<figcaption>${caption}</figcaption></figure>`
+}
+
+function documentAssetUrl(path) {
+  const normalized = path.replace(/^\.\//, '')
+  if (!normalized.startsWith('_assets/')) return path
+  const suffix = normalized.slice('_assets/'.length)
+  if (!suffix || suffix.split('/').some((part) => !part || part === '.' || part === '..')) return path
+  const base = import.meta.env.PROD ? `${import.meta.env.BASE_URL}docs-assets/` : '/api/management/docs-assets/'
+  return base + suffix.split('/').map(encodeURIComponent).join('/')
+}
+
 const rendered = computed(() => {
   if (!props.content) return '<p class="text-light">暂无内容</p>'
   let src = props.content
+  src = src.replace(/(!?\[[^\]]*\]\()((?:\.\/)?_assets\/[^)\s]+)(\))/g, (_, start, path, end) =>
+    `${start}${documentAssetUrl(path)}${end}`)
   // Task links: [[proj#t2-3]] or [[proj#t2-3|display]] → project tree with task selected
   src = src.replace(/\[\[([^#|\]]+)#([^|\]]+)\|([^\]]+)\]\]/g, (_, proj, task, text) =>
     `[${text.trim()}](/management/projects?slug=${proj.trim()}&task=${task.trim()})`)
@@ -167,6 +203,13 @@ watch(
 
 <style scoped lang="scss">
 .markdown-body {
+  :deep(h1),
+  :deep(h2),
+  :deep(h3),
+  :deep(h4) {
+    scroll-margin-top: 4rem;
+  }
+
   :deep(.task-list-item) {
     list-style: none;
     margin-left: -20px;

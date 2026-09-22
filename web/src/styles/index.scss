@@ -212,9 +212,34 @@ a {
   }
 
   blockquote {
-    border-left: 4px solid $primary-color;
+    border-left: 4px solid var(--color-primary);
     padding-left: 16px;
     margin-bottom: 16px;
-    color: $text-secondary;
+    color: var(--color-text-secondary);
+  }
+
+  figure {
+    margin: 20px 0;
+    text-align: center;
+  }
+
+  figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+  }
+
+  figcaption {
+    margin-top: 8px;
+    color: var(--color-text-dim);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
   }
 }
