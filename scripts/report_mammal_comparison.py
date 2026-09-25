@@ -113,7 +113,7 @@ def main():
         '- `models/<model_id>/protocol.json`、`resolved_config.py`、`forward_timings.json`：实际配置和原始计时。',
         '- `models/<model_id>/execution.log`、`result.json`：日志、加载验证、复杂度警告及完整指标。',
         '- `manifest.json`、`environment.json`、`dataset/`：权重选择、环境、数据来源和固定划分证据。',
-        '- `scripts/`：本批次脚本快照；源脚本也在仓库 `scripts/` 下。',
+        '- `scripts/`：本批次脚本快照；本地仓库 `scripts/` 下亦有源脚本。远程项目原有跟踪源码未修改。',
         '- `report_audit.json`：从逐视频预测独立重算样本数、Top-1 和混淆矩阵的校验。', '',
         '## 复现', '', '在远程项目根目录、同一环境中运行（新目录会完整重测，已有目录会跳过成功项）：', '',
         '```bash',
@@ -121,7 +121,7 @@ def main():
         '  --repo /home/wyy/pet-action-recognition \\',
         '  --out /home/wyy/pet-action-recognition/results/model_comparison/NEW_BATCH \\',
         '  --device cuda:0 --warmup 20 --repetitions 100',
-        '```', '', '若使用本批次源快照，将上述脚本路径替换为本结果目录下的 `scripts/compare_mammal_models.py`。']
+        '```', '', '远程使用本批次源快照时，将上述脚本路径替换为本结果目录下的 `scripts/compare_mammal_models_v2.py`。v2增加了TPN懒创建层和项目自定义损失的加载兼容，不更改预测协议；首轮环境记录另存 `environment_full_v1.json`。']
     (p/'REPORT.md').write_text('\n'.join(md)+'\n',encoding='utf-8')
 
     import matplotlib

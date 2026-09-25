@@ -30,11 +30,19 @@ def download(remote,local):
         if stat.S_ISDIR(item.st_mode): download(rp,lp)
         elif stat.S_ISREG(item.st_mode): sftp.get(rp,str(lp))
 
+def upload(local,remote):
+    if local.is_dir():
+        mkdir(remote)
+        for child in local.iterdir():
+            upload(child,posixpath.join(remote,child.name))
+    else:
+        mkdir(posixpath.dirname(remote))
+        sftp.put(str(local),remote)
+
 try:
     if a.operation=='upload':
         source=Path(a.local)
-        mkdir(posixpath.dirname(a.remote))
-        sftp.put(str(source),a.remote)
+        upload(source,a.remote)
         print('Uploaded',source,'to',a.remote)
     else:
         download(a.remote,Path(a.local))
