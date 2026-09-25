@@ -54,13 +54,13 @@ def main():
         audits.append(dict(model=r['model_id'],predictions=len(lines),metrics_verified=passed))
         if not passed: raise RuntimeError(f'Metric audit failed for {r["model_id"]}')
     (p/'report_audit.json').write_text(json.dumps(audits,indent=2),encoding='utf-8')
-    headers=['模型（按 Macro-F1 排序）','Top-1 %','Macro-F1 %','宏平均召回 %','参数 M','GFLOPs†',
+    headers=['模型（按 Macro-F1 排序）','输入形状（除batch）','Top-1 %','Macro-F1 %','宏平均召回 %','参数 M','GFLOPs†',
              '前向均值 ms','前向 P95 ms','整体均值 ms','测试数']
     table=[]
     for r in good:
         c=r['classification'];fl=r.get('flops',{})
         g=fmt(fl.get('gflops'))+('*' if fl.get('unsupported_ops') else '')
-        table.append([NAMES.get(r['model_id'],r['model_id']),fmt(c['top1']*100),fmt(c['macro_f1']*100),
+        table.append([NAMES.get(r['model_id'],r['model_id']),'×'.join(str(x) for x in r['input_shape'][1:]),fmt(c['top1']*100),fmt(c['macro_f1']*100),
           fmt(c['macro_recall']*100),fmt(r['parameters']/1e6),g,fmt(r['forward_host']['mean_ms']),
           fmt(r['forward_host']['p95_ms']),fmt(r['e2e']['mean_ms']),str(r['successful_samples'])])
     md=['# AnimalKingdom 哺乳动物子集模型对比', '',
@@ -140,10 +140,12 @@ def main():
         ax.set_title('Per-class recall | AnimalKingdom-derived mammal test (217 clips)')
         fig.colorbar(im,ax=ax,label='Recall');fig.tight_layout();fig.savefig(p/'class_recall.png',dpi=180);plt.close(fig)
         fig,ax=plt.subplots(figsize=(11,7))
+        offsets={'tsm-resnet50':(-22,-17),'tin-resnet50':(4,-14),'tanet-resnet50':(4,10),
+                 'timesformer-divst':(-30,-18),'videomae-base':(5,8),'swin-tiny':(-60,7)}
         for i,r in enumerate(good):
             x=r['forward_host']['mean_ms'];y=r['classification']['macro_f1']*100
             ax.scatter(x,y,s=45)
-            ax.annotate(NAMES.get(r['model_id'],r['model_id']).replace(' [ID: swin-tiny]',''),(x,y),xytext=(4,5 if i%2 else -10),textcoords='offset points',fontsize=8)
+            ax.annotate(NAMES.get(r['model_id'],r['model_id']).replace(' [ID: swin-tiny]',''),(x,y),xytext=offsets.get(r['model_id'],(4,5 if i%2 else -10)),textcoords='offset points',fontsize=8)
         ax.set_xlabel('Synchronized forward latency (ms, batch 1, FP32)');ax.set_ylabel('Macro-F1 (%)')
         ax.set_title('Existing fine-tuned checkpoints | single-view inference');ax.grid(alpha=.2)
         fig.tight_layout();fig.savefig(p/'accuracy_latency.png',dpi=180);plt.close(fig)
