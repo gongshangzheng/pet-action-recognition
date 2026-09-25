@@ -183,6 +183,7 @@ def worker(args):
     import mmaction.datasets  # noqa: F401
 
     torch.set_num_threads(4)
+    torch.cuda.set_device(torch.device(args.device))
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
     torch.backends.cudnn.benchmark = False
@@ -193,7 +194,8 @@ def worker(args):
     model_out.mkdir(parents=True, exist_ok=True)
     result = dict(model_id=args.model, status='running', run_id=item['run_id'],
                   checkpoint=item['checkpoint'], checkpoint_sha256=item['checkpoint_sha256'],
-                  historical_training=item['metadata'], protocol='single_view_fp32_batch1')
+                  historical_training=item['metadata'], protocol='single_view_fp32_batch1',
+                  source_script_sha256=sha256(__file__))
     write_json(model_out / 'result.json', result)
     try:
         cfg = Config.fromfile(item['config'])
@@ -213,12 +215,24 @@ def worker(args):
                    training=dict(train_cfg=cfg.get('train_cfg'), optim_wrapper=cfg.get('optim_wrapper'),
                                  train_batch_size=cfg.get('train_dataloader', {}).get('batch_size'), randomness=cfg.get('randomness'))))
         init_default_scope('mmaction')
+        if cfg.model.cls_head.get('loss_cls', {}).get('type') == 'LabelSmoothLoss':
+            # The saved config loses the import statement used by train_model.py.
+            import configs.hooks.label_smooth_loss  # noqa: F401
+            result['compatibility_notes'] = ['Registered the original project LabelSmoothLoss implementation']
         start = time.perf_counter()
         model = MODELS.build(cfg.model)
         checkpoint = torch.load(item['checkpoint'], map_location='cpu')
         state = checkpoint.get('state_dict', checkpoint)
         if state and all(k.startswith('module.') for k in state):
             state = {k[7:]: v for k, v in state.items()}
+        if cfg.model.cls_head.type == 'TPNHead' and 'cls_head.new_cls.weight' in state:
+            # TPN creates this Conv3d lazily during fcn_test; checkpoints saved after
+            # validation contain it. Materialize the module and load every key.
+            shape=state['cls_head.new_cls.weight'].shape
+            if tuple(shape[2:]) != (1, 1, 1) or shape[0] != 7:
+                raise RuntimeError('Unexpected TPN lazy classifier shape')
+            model.cls_head.new_cls=torch.nn.Conv3d(shape[1],shape[0],1)
+            result.setdefault('compatibility_notes',[]).append('Materialized original TPN lazy new_cls before strict loading; no weight keys discarded')
         model.load_state_dict(state, strict=True)
         del checkpoint, state
         model = model.to(args.device).float().eval()
