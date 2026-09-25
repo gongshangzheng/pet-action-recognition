@@ -1,0 +1,5 @@
+- [x] Verify AnimalKingdom provenance and existing fine-tuning artifacts.
+- [ ] Implement reproducible evaluation and reporting.
+- [ ] Run all eligible fine-tuned RGB models on the remote GPU.
+- [ ] Audit completeness, failures, metric calculations and report limitations.
+- [ ] Copy reports and raw results locally and provide output paths.
