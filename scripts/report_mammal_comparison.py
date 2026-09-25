@@ -1,6 +1,7 @@
 """Create a Chinese report, sortable standalone HTML, Excel and charts from a batch."""
 from __future__ import annotations
 import argparse
+import base64
 import csv
 import html
 import json
@@ -28,6 +29,13 @@ def main():
     good=sorted([r for r in data if r['status']=='completed'],key=lambda r:r['classification']['macro_f1'],reverse=True)
     other=[r for r in data if r['status']!='completed']
     dist=list(csv.DictReader((p/'dataset/class_distribution.csv').open(encoding='utf-8')))
+    video_meta={r['relative_path']:r for r in csv.DictReader((p/'dataset/video_manifest.csv').open(encoding='utf-8'))}
+    split_hashes={}
+    for split in ['train','val','test']:
+        paths=[line.rsplit(maxsplit=1)[0] for line in (p/'dataset'/f'{split}_public.txt').read_text().splitlines() if line.strip()]
+        split_hashes[split]={video_meta[path]['sha256'] for path in paths}
+    duplicate_hashes={a+'_'+b:sorted(split_hashes[a]&split_hashes[b]) for a,b in [('train','val'),('train','test'),('val','test')]}
+    (p/'dataset/content_overlap_audit.json').write_text(json.dumps(dict(source='stored video_manifest SHA256, not freshly rehashed',cross_split_duplicates=duplicate_hashes),indent=2),encoding='utf-8')
     all_class=[]
     for r in good:
         for row in r['classification']['per_class']:
@@ -64,7 +72,8 @@ def main():
         '- 原 AnimalKingdom 训练划分仍为训练；原测试划分中的筛选样本再划分为本项目验证/测试。',
         '- 这不是原始 AnimalKingdom 全物种、原标签体系的官方基准，也不是家猫五分类测试。',
         '- 七类为移动、跳跃、进食、饮水、梳理/舔毛、静止/休息、社会互动；`other_unknown` 无样本，不作为第八类。',
-        '- 片段未经人工视觉复核，继承源标签映射的局限；仅验证了清单路径不重叠，不能证明来源视频无关联。',
+        '- 片段未经人工视觉复核，继承源标签映射的局限；清单路径不重叠。另按原始视频清单中的 SHA256 检查跨划分相同内容；这不能排除来自同一个长视频的关联片段。',
+        '- 基于原始 SHA256 清单的跨划分相同内容数：'+str({k:len(v) for k,v in duplicate_hashes.items()})+'。',
         f'- 测试清单 SHA256：`{manifest["dataset_audit"]["test_sha256"]}`。', '',
         '| 类别 | 训练 | 验证 | 测试 |','|---|---:|---:|---:|']
     for r in dist:
@@ -72,6 +81,11 @@ def main():
     md += ['', '测试集多数类（移动）占 132/217 = 60.83%；始终预测移动即可得到该准确率。因此同时报告 Macro-F1 和各类召回率。饮水仅2条、梳理仅3条，逐类结论不稳定。', '',
         '## 主对比表', '', '| '+' | '.join(headers)+' |','|'+'|'.join(['---']+['---:']*(len(headers)-1))+'|']
     md += ['| '+' | '.join(row)+' |' for row in table]
+    if good:
+        best=good[0];best_acc=max(good,key=lambda x:x['classification']['top1'])
+        zero=[x['label'] for x in best['classification']['per_class'] if x['recall']==0]
+        md += ['',f'本批次 Macro-F1 最高：{NAMES.get(best["model_id"],best["model_id"])}，{best["classification"]["macro_f1"]*100:.2f}%；Top-1 最高：{NAMES.get(best_acc["model_id"],best_acc["model_id"])}，{best_acc["classification"]["top1"]*100:.2f}%。',
+               f'Macro-F1 最优模型的零召回类别：{", ".join(zero) if zero else "无"}。这只是当前 checkpoint 与当前测试划分的结果，不代表所有训练配方下的架构上限。']
     md += ['', '† FLOPs 使用 MMEngine JIT 统计，一个乘加计为一次运算；范围是输入对应的 backbone + neck + 分类头。带 * 的项目存在未支持算子，所报值是已支持算子的统计，不能当作精确完整 FLOPs。具体清单见各模型 `result.json`。', '',
         '## 测量口径', '',
         '- 每个模型使用现有 `best` 权重；同一模型有多次实验时，按历史验证 Top-1 选择。保留全部候选记录。历史训练配方/训练轮数不同，本表比较的是现有 checkpoint，而非严格同预算重训练。',
@@ -134,6 +148,9 @@ def main():
         ax.set_title('Existing fine-tuned checkpoints | single-view inference');ax.grid(alpha=.2)
         fig.tight_layout();fig.savefig(p/'accuracy_latency.png',dpi=180);plt.close(fig)
     # HTML contains the full report as escaped text plus the interactive table.
+    def embedded(name):
+        path=p/name
+        return 'data:image/png;base64,'+base64.b64encode(path.read_bytes()).decode() if path.exists() else ''
     tr=''.join('<tr>'+''.join('<td>'+html.escape(v)+'</td>' for v in row)+'</tr>' for row in table)
     head=''.join('<th onclick="sortTable('+str(i)+')">'+html.escape(v)+'</th>' for i,v in enumerate(headers))
     page='''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -146,6 +163,7 @@ body{font:15px/1.6 system-ui,sans-serif;margin:32px;color:#172b3a;background:#f5
 <h2>完整说明与复现信息</h2><pre>'''+html.escape('\n'.join(md))+'''</pre><script>
 let direction={};function sortTable(i){let b=document.querySelector('#t tbody');let rs=[...b.rows];direction[i]=-(direction[i]||-1);rs.sort((a,b)=>{let x=a.cells[i].textContent,y=b.cells[i].textContent;let n=parseFloat(x),m=parseFloat(y);return direction[i]*(Number.isNaN(n)||Number.isNaN(m)?x.localeCompare(y):n-m)});rs.forEach(r=>b.appendChild(r));}
 function filterRows(){let q=document.querySelector('#q').value.toLowerCase();document.querySelectorAll('#t tbody tr').forEach(r=>r.hidden=!r.textContent.toLowerCase().includes(q));}</script></html>'''
+    page=page.replace('src="class_recall.png"','src="'+embedded('class_recall.png')+'"').replace('src="accuracy_latency.png"','src="'+embedded('accuracy_latency.png')+'"')
     (p/'comparison.html').write_text(page,encoding='utf-8')
     from openpyxl import Workbook
     from openpyxl.styles import Font,PatternFill
@@ -153,8 +171,10 @@ function filterRows(){let q=document.querySelector('#q').value.toLowerCase();doc
     def sheet(name, rows):
         ws=wb.create_sheet(name)
         if not rows:return
-        ws.append(list(rows[0]));
-        for r in rows:ws.append([json.dumps(v,ensure_ascii=False) if isinstance(v,(dict,list)) else v for v in r.values()])
+        keys=list(dict.fromkeys(k for r in rows for k in r))
+        ws.append(keys)
+        for r in rows:
+            ws.append([json.dumps(r.get(k),ensure_ascii=False) if isinstance(r.get(k),(dict,list)) else r.get(k) for k in keys])
         ws.freeze_panes='A2';ws.auto_filter.ref=ws.dimensions
         for cell in ws[1]:cell.font=Font(bold=True,color='FFFFFF');cell.fill=PatternFill('solid',fgColor='284E70')
         for col in ws.columns:ws.column_dimensions[col[0].column_letter].width=min(55,max(14,max(len(str(c.value or '')) for c in list(col)[:30])+2))
