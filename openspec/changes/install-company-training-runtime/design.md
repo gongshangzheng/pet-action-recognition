@@ -48,3 +48,8 @@ Observed pip check reports only this platform-tag issue; Decord/native-library
 import succeeds on the installed Python 3.10. Retain the raw diagnostic and
 accept only this exact known warning after checking the metadata and import.
 Do not suppress other dependency/version errors or claim decoding was tested.
+
+Configuration audit found one pre-existing registry typo: LFB refers to
+`8xb16`, while the vendored config and authoritative LFB metafile use `8xb12`.
+Correct the project's config reference and corresponding pretrained URL to the
+metafile values. Do not change vendored code or download the checkpoint.
