@@ -58,10 +58,12 @@ printf 'STAGE offline_dependency_install\n'
 
 printf 'STAGE local_mmaction_install\n'
 "$PY" -m pip install --no-index --no-deps --no-build-isolation -e "$ROOT/models/mmaction2"
-# The legacy AVA visualization demo imports moviepy.editor (MoviePy 1.x).
+# AVA visualization uses MoviePy 1.x; MViT training uses PytorchVideoWrapper.
 "$PY" -m pip wheel --retries 12 --no-build-isolation --wheel-dir "$WHEELS" \
-    --constraint "$ROOT/configs/company_runtime_requirements.txt" 'moviepy==1.0.3'
-"$PY" -m pip install --no-index --find-links "$WHEELS" 'moviepy==1.0.3'
+    --constraint "$ROOT/configs/company_runtime_requirements.txt" \
+    'moviepy==1.0.3' 'pytorchvideo==0.1.5' 'lmdb==1.5.1'
+"$PY" -m pip install --no-index --find-links "$WHEELS" \
+    'moviepy==1.0.3' 'pytorchvideo==0.1.5' 'lmdb==1.5.1'
 
 "$PY" -m pip freeze > "$REPORT/pip-freeze.txt"
 "$PY" -m pip list --format=json > "$REPORT/packages.json"

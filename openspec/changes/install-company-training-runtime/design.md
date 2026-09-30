@@ -20,6 +20,9 @@ by project imports, FastAPI for scripts importing the model registry, and
 MMDetection 3.2.0 for registered AVA models. Inspect optional model integrations
 before expanding scope; separate detection/tracking, pose and hardware-export
 ecosystems are not implied by the core action-recognition environment.
+The registered MViT training config requires PytorchVideoWrapper: install
+PyTorchVideo 0.1.5 and verify its transforms import without applying transforms.
+Retain MoviePy 1.0.3 for the AVA demo's moviepy.editor API and LMDB 1.5.1 for LFB.
 
 Prefer binary wheels compatible with glibc 2.17. Pin older scientific/library
 versions when current wheels require newer glibc. Do not replace system CUDA or

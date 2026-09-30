@@ -50,7 +50,8 @@ def main():
     modules = ["torch", "torchvision", "numpy", "mmcv", "mmcv._ext", "mmcv.ops",
                "mmengine", "mmaction", "mmaction.apis", "mmdet", "mmdet.apis",
                "cv2", "decord", "av", "scipy", "sklearn", "pandas",
-               "imageio_ffmpeg", "moviepy.editor", "tensorboard", "fastapi",
+               "imageio_ffmpeg", "moviepy.editor", "pytorchvideo.transforms", "lmdb",
+               "tensorboard", "fastapi",
                "scripts.train_model", "scripts.inference", "scripts.run_test",
                "scripts._infer", "configs.hooks.optimizer_checkpoint_hook"]
     for name in modules:
@@ -93,6 +94,18 @@ def main():
     def parse_config(path):
         from mmengine.config import Config
         cfg = Config.fromfile(str(path))
+        def inspect_options(value):
+            if isinstance(value, dict):
+                if value.get("type") == "PytorchVideoWrapper":
+                    transforms = importlib.import_module("pytorchvideo.transforms")
+                    if not hasattr(transforms, value["op"]):
+                        raise RuntimeError("Missing video augmentation: " + value["op"])
+                for child in value.values():
+                    inspect_options(child)
+            elif isinstance(value, (list, tuple)):
+                for child in value:
+                    inspect_options(child)
+        inspect_options(cfg.to_dict())
         return dict(path=str(path.relative_to(root)), model_type=cfg.get("model", {}).get("type"),
                     has_train_dataloader="train_dataloader" in cfg,
                     has_test_dataloader="test_dataloader" in cfg,
