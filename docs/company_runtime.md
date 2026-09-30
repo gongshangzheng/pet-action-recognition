@@ -41,6 +41,11 @@ MMCV 2.1.0、MMEngine 0.10.7、本地 MMAction2 1.2.0、NumPy 1.26.4。
 - `wheels.sha256`：保留安装包的哈希清单。
 - `*.help.txt`、`ffmpeg-version.txt`：命令入口及编码工具检查。
 
+Decord 0.6.0 官方 `py3` wheel 内部错误标注为 `cp36`，新版 pip check 会报告
+平台不支持。本机已确认该包及其 ctypes 原生库能在 Python 3.10 导入。
+审计仅在原始输出恰好只有这一项、元数据符合已知问题且导入成功时记录为
+`passed_with_packaging_warning`，不会忽略其他依赖冲突；视频解码尚未执行。
+
 审计通过不代表已验证模型数值、显存需求、真实视频解码或数据标签正确性。
 实际训练、前向和评估留待数据准备完成并获准执行后进行。
 

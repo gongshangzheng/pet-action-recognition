@@ -67,7 +67,8 @@ printf 'STAGE local_mmaction_install\n'
 
 "$PY" -m pip freeze > "$REPORT/pip-freeze.txt"
 "$PY" -m pip list --format=json > "$REPORT/packages.json"
-"$PY" -m pip check | tee "$REPORT/pip-check.txt"
+# The audit records pip check verbatim and recognizes only Decord's known
+# cp36 internal wheel-tag error after its native-library import succeeds.
 find "$WHEELS" -maxdepth 1 -type f -name '*.whl' -print0 | sort -z | xargs -0 sha256sum > "$REPORT/wheels.sha256"
 printf 'STAGE dependency_only_audit\n'
 "$PY" "$ROOT/scripts/audit_company_runtime.py" --root "$ROOT" --out "$REPORT"

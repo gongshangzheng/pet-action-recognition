@@ -42,3 +42,9 @@ report under `results/deployment/company_runtime_20260930/`. Reusable install
 and audit scripts must be committed locally before being run on the server.
 Record the remaining data/label/checkpoint preparation and model execution checks
 in the handoff rather than declaring the full training workflow tested.
+
+The official Decord 0.6.0 py3 wheel contains a cp36-cp36m internal WHEEL tag.
+Observed pip check reports only this platform-tag issue; Decord/native-library
+import succeeds on the installed Python 3.10. Retain the raw diagnostic and
+accept only this exact known warning after checking the metadata and import.
+Do not suppress other dependency/version errors or claim decoding was tested.
