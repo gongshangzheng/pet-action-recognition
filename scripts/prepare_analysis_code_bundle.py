@@ -1,6 +1,7 @@
 """Build a scoped, checksummed source archive without importing project models."""
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--base-ref", help="Create a small overlay against a public Git revision")
     args = parser.parse_args()
     repo = args.repo.resolve()
     out = args.out.resolve()
@@ -98,6 +100,30 @@ def main():
     receipt = {"archive": str(archive_path), "archive_bytes": archive_path.stat().st_size,
                "archive_sha256": sha256(archive_path), "source_revision": revision,
                "file_count": len(records), "source_bytes": manifest["total_bytes"]}
+    if args.base_ref:
+        base_revision = subprocess.check_output(
+            ["git", "rev-parse", args.base_ref], cwd=str(repo), text=True).strip()
+        base_data = subprocess.check_output(
+            ["git", "archive", "--format=tar", base_revision], cwd=str(repo))
+        overlay_paths = []
+        with tarfile.open(fileobj=io.BytesIO(base_data), mode="r:") as base:
+            for path in paths:
+                relative = path.relative_to(repo).as_posix()
+                local = path.read_bytes()
+                try:
+                    original = base.extractfile(relative).read()
+                except (KeyError, AttributeError):
+                    original = None
+                if original is None or local.replace(b"\r\n", b"\n") != original.replace(b"\r\n", b"\n"):
+                    overlay_paths.append(path)
+        overlay_path = out / "local_overlay.tar.gz"
+        with tarfile.open(str(overlay_path), "w:gz", compresslevel=6) as overlay:
+            for path in overlay_paths:
+                overlay.add(str(path), arcname=path.relative_to(repo).as_posix())
+            overlay.add(str(manifest_path), arcname=".deployment/source_manifest.json")
+        receipt.update({"base_revision": base_revision, "overlay": str(overlay_path),
+                        "overlay_files": len(overlay_paths), "overlay_bytes": overlay_path.stat().st_size,
+                        "overlay_sha256": sha256(overlay_path)})
     (out / "bundle_receipt.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(receipt))
 
