@@ -15,6 +15,11 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def archive_name(name):
+    """Match tar member names to JSON's Unicode paths on Python 2 and 3."""
+    return name.decode("utf-8") if isinstance(name, bytes) else name
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", required=True)
@@ -27,10 +32,10 @@ def main():
         manifest = json.loads(manifest_bytes)
         base_files = {}
         for member in base.getmembers():
-            parts = member.name.split("/", 1)
+            parts = archive_name(member.name).split("/", 1)
             if member.isfile() and len(parts) == 2:
                 base_files[parts[1]] = member
-        overlay_files = {m.name: m for m in overlay.getmembers() if m.isfile()}
+        overlay_files = {archive_name(m.name): m for m in overlay.getmembers() if m.isfile()}
         installed = 0
         for record in manifest["files"]:
             name = record["path"]
