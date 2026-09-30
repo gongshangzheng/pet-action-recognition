@@ -11,6 +11,9 @@ deployment documentation and root metadata. Preserve MMAction2 config inheritanc
 requirements, tools, projects and label maps. Transfer a manifest of relative
 paths, byte counts and SHA256 hashes. Reading HTML and the user's two root input
 documents are excluded. The transfer artifact is generated under results/.
+Upstream demo media, documentation images and library unit-test data fixtures are
+excluded from this code-only transfer; their Python source is retained. These are
+not the company's training data or the project's model evaluation entry points.
 
 No local checkpoint or dataset directory exists. Document this and prepare
 public weight downloads explicitly; copying code is not a substitute for weights

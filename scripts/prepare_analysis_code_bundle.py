@@ -18,6 +18,7 @@ SKIP_DIRS = {
     ".pytest_cache", ".mypy_cache", "outputs", "work_dirs",
 }
 SKIP_SUFFIXES = {".html", ".htm", ".pyc", ".pyo", ".db", ".pth", ".pt", ".ckpt"}
+SAMPLE_MEDIA_SUFFIXES = {".gif", ".png", ".jpg", ".jpeg", ".mp4", ".avi", ".wav"}
 
 
 def sha256(path):
@@ -54,9 +55,13 @@ def main():
                              and not (base / d).is_symlink())
             for name in sorted(files):
                 path = base / name
+                relative = path.relative_to(repo).as_posix()
                 if (path.is_symlink() or path.suffix.lower() in SKIP_SUFFIXES
-                        or name.startswith(".env")):
-                    excluded.append(path.relative_to(repo).as_posix())
+                        or name.startswith(".env")
+                        or relative.startswith("models/mmaction2/tests/data/")
+                        or relative.startswith("models/mmaction2/resources/")
+                        or path.suffix.lower() in SAMPLE_MEDIA_SUFFIXES):
+                    excluded.append(relative)
                     continue
                 paths.append(path)
     paths.sort(key=lambda p: p.relative_to(repo).as_posix())

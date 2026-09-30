@@ -4,8 +4,8 @@
 - [x] Authenticate relay and identify actual company compute node.
 - [x] Inspect GPU/driver, OS, free space and existing target directory.
 - [x] Write source scope, deployment design and validation criteria.
-- [ ] Prepare and commit reusable deployment helpers before execution.
-- [ ] Build source bundle and exclusion/hash manifest.
+- [x] Prepare and commit reusable deployment helpers before execution.
+- [x] Build source bundle and exclusion/hash manifest.
 - [ ] Transfer and verify complete source bundle, including OpenSpec.
 - [ ] Report final source paths and integrity results, without claiming runtime readiness.
 
