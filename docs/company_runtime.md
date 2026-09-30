@@ -79,5 +79,8 @@ python scripts/audit_company_runtime.py --root /home/work/analysis_code \
 ```
 
 这套环境覆盖动作识别训练/推理/评估及注册的 AVA 动作检测依赖。
-GroundingDINO、BoxMOT、姿态提取、VLM 云 API 和 RV1126B/RKNN 工具链是
-不同的可选流程，不应直接视作已在本环境中验证或已准备离线权重。
+2026-09-30 又在同一环境补装了三个附加方向及 RV1126B/RKNN 的兼容依赖，
+并复查了上述 69 项检查，具体版本、变更和缓存见
+[附加依赖说明](company_auxiliary_runtime.md)。
+GroundingDINO、BoxMOT、姿态提取、VLM 云 API 等仍有各自的依赖或权重要求；
+依赖导入检查不能代替实际模型、数据集或板端运行验证。
