@@ -5,6 +5,11 @@
 本次只安装依赖并检查导入、命令入口和配置。没有构建模型、下载权重、
 运行前向/反向、训练或评估，也没有处理公司数据集。
 
+2026-09-30 已完成安装：69 项检查没有未解决的失败，32 份配置文件解析通过
+（含配置包初始化文件），4 张 A30 可见，MMCV 编译扩展导入正常。
+审计状态为 `passed_with_packaging_warning`，Decord 的包标签提示详见下文。
+已修正 LFB 注册项原有的 `8xb16` 文件名错误，使其指向实际存在的 `8xb12` 配置。
+
 ## 使用环境
 
 ```bash
@@ -35,7 +40,8 @@ MMCV 2.1.0、MMEngine 0.10.7、本地 MMAction2 1.2.0、NumPy 1.26.4。
 
 安装与审计文件：`results/deployment/company_runtime_20260930/`：
 
-- `install.log`：分阶段安装记录；成功结束标志是 `INSTALL_DEPENDENCIES_DONE`。
+- `install.log`、`install_v3.log`：分阶段安装和重试记录。
+- `audit_final.log`：修正 LFB 引用后的最终检查记录；以 `runtime_audit.json` 为准。
 - `runtime_audit.json`：逐项环境检查，明确记录未执行模型。
 - `pip-check.txt`、`pip-freeze.txt`、`packages.json`：一致性与版本信息。
 - `wheels.sha256`：保留安装包的哈希清单。
