@@ -131,6 +131,7 @@ def main():
                 sha = detail.get("digest") or ""
                 browser_url = detail.get("browser_download_url") or "https://github.com/" + repo + "/releases/download/" + tag + "/" + quote(name)
                 urls = ([detail["url"] + "?download=1", browser_url] if detail.get("url") else [browser_url])
+                urls = release.get("alternate_urls", {}).get(name, []) + urls
                 add("release:" + repo + ":" + name,
                     urls,
                     release["directory"] + "/" + name, release["purpose"],
@@ -216,10 +217,12 @@ def main():
                     selected.append(name)
                     suffix = rk["repo"] + "/" + commit + "/" + quote(name)
                     add("rknn-file:" + name,
-                        ["https://raw.githubusercontent.com/" + suffix,
+                        [item["url"], "https://raw.githubusercontent.com/" + suffix,
                          "https://media.githubusercontent.com/media/" + suffix],
                         "third-party/offline/rknn-toolkit2-2.3.2/" + name,
-                        "RKNN docs and board-side materials; archive only, not installed", revision=commit)
+                        "RKNN docs and board-side materials; archive only, not installed", revision=commit,
+                        request_headers={"Accept": "application/vnd.github.raw+json"},
+                        size=item["size"], git_blob_sha1=item["sha"])
             if not selected:
                 raise RuntimeError("No matching RKNN files")
         except Exception as exc:
@@ -291,6 +294,13 @@ def main():
             raise ValueError("Upstream SHA256 prefix mismatch")
         if item.get("md5") and digest(path, "md5") != item["md5"]:
             raise ValueError("Upstream MD5 mismatch")
+        if item.get("git_blob_sha1"):
+            git_hash = hashlib.sha1(("blob " + str(length) + "\0").encode())
+            with path.open("rb") as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    git_hash.update(block)
+            if git_hash.hexdigest() != item["git_blob_sha1"]:
+                raise ValueError("Upstream Git blob SHA1 mismatch")
         if item["path"].endswith((".zip", ".whl")):
             with zipfile.ZipFile(path) as archive:
                 bad = archive.testzip()
@@ -400,6 +410,8 @@ def main():
                 any(a["id"].startswith(prefix) for prefix in args.only.split(","))]
     if args.retry_failed:
         selected = [a for a in selected if results.get(a["id"], {}).get("status") != "verified"]
+    selected.sort(key=lambda a: (0 if a["id"].startswith("optional-package:") else 1,
+                                 a.get("size") or 32 * 1024 * 1024))
 
     def save():
         verified = [r for r in results.values() if r["status"] == "verified"]
