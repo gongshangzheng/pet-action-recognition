@@ -4,6 +4,11 @@
 本页说明文件用途和后续离线使用方法；最终下载数量及缺项以
 `results/deployment/company_assets_20260930/assets_status.json` 为准。
 
+最终结果：143/143 项通过核验，8,541,713,614 字节（7.96 GiB），包括 59 份
+模型权重/ONNX、14 份源码 ZIP、36 份 RKNN 文档及板端材料、19 份可选依赖安装包
+和其他配套文件。原有约 3.1 GiB 的依赖 wheel 缓存未计入这一容量。
+逐项 CSV 和汇总 Markdown 也已同步到本地同名结果目录。
+
 ## 文件位置
 
 下表路径均相对 `/home/work/analysis_code`。
@@ -29,6 +34,9 @@
 源码 ZIP 保留上游许可证和配置，不自动解压安装。U2-Net 训练权重的 Google Drive
 来源不可达时使用固定版本的公开社区镜像，校验 HF LFS SHA256；完整版在三个镜像
 中的哈希一致。它们没有在本次任务中加载执行。
+`pytorch-tcn` 上游没有请求的 `v1.2.3` 标签，源码归档固定到
+`3b3deac30c9f6a74b5cffbf614378a928268f9bd`，清单保留这条回退警告；环境中原有的
+1.2.3 安装版本和 wheel 不变。
 
 Rockchip 模型库采用标有 `source-only` 的源码快照：包含 540 个源码、配置和
 示例/校准图像，按官方固定 tree 的 Git blob SHA1 校验。ZIP 内
