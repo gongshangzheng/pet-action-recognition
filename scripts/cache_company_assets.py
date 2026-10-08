@@ -169,6 +169,7 @@ def main():
                         ["https://hf-mirror.com/" + repo + "/resolve/" + sha + "/" + name,
                          "https://huggingface.co/" + repo + "/resolve/" + sha + "/" + name],
                         hf["directory"] + "/" + name, "complete local model / tokenizer / processor files",
+                        aliases=[".runtime/cache/huggingface/hub/models--" + repo.replace("/", "--") + "/snapshots/" + sha + "/" + name],
                         size=item.get("size"), sha256=lfs.get("sha256") or lfs.get("oid"), revision=sha)
             except Exception as exc:
                 manifest["discovery_errors"].append("HF " + repo + ": " + str(exc))
@@ -273,6 +274,8 @@ def main():
             raise ValueError("Downloaded an error page, not an asset")
         if head.startswith(b"version https://git-lfs.github.com/spec/"):
             raise ValueError("Downloaded Git LFS pointer, not asset content")
+        if item["path"].endswith(".pdf") and not head.startswith(b"%PDF-"):
+            raise ValueError("Downloaded content is not a PDF")
         sha = digest(path)
         if item.get("sha256") and sha != item["sha256"]:
             raise ValueError("Upstream SHA256 mismatch")
