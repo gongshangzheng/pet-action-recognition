@@ -33,3 +33,15 @@ wheel/sdist（只缓存），以及 ModelScope 的原生 GroundingDINO+BERT 备�
 ModelScope 文件固定到 revision 并校验其 API 提供的完整 SHA256；原生格式不
 冒充 Transformers 格式，HF 路径失败仍在报告保留。rembg 已知 MD5 来自其源码。
 Google Drive 返回的网页不得当权重；无法完成的项必须列出，不得宣称全部离线可用。
+
+补充核验：已将 GroundingDINO Transformers 格式的 9 个文件固定到 HF revision
+`a2bb814dd30d776dcf7e30523b00659f4f141c71`，模型与 ModelScope 镜像完整 SHA256
+一致，配套小文件从 HF 镜像下载后逐项比对。RKNN 文件增加 GitHub blob API 入口，
+校验官方 tree 的大小和 Git blob SHA1。U2-Net ONNX 镜像仍需通过 rembg 原始 MD5。
+U2-Net/PyTorch 社区镜像固定 revision 与 LFS SHA256，完整版权重在三个镜像中的
+哈希一致；不将社区镜像说成作者直接发布。补存 PyTorch 权重仅检查封装与哈希。
+19 个候选依赖的有效基础 requirements 与已有/待缓存版本核对，没有未解决项；
+这不覆盖可选 extras 或任意最新源码分支的全部依赖，也不意味着已经安装它们。
+可隔离报告目录并行下载互不重叠的资产，最后合并到主清单并重新校验。Ultralytics
+保留项目 `weights/` 的硬链接供默认 AMP 自检，HF 保留 snapshot 和 refs/main，
+不修改全局用户配置。源码分支未提供指定标签时记录实际固定 commit，不隐瞒回退。

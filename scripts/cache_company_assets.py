@@ -136,8 +136,10 @@ def main():
                     urls,
                     release["directory"] + "/" + name, release["purpose"],
                     request_headers={"Accept": "application/octet-stream"},
+                    aliases=["weights/" + name] if repo == "ultralytics/assets" and name.endswith(".pt") else [],
                     md5=release.get("md5", {}).get(name),
-                    size=detail.get("size"), sha256=sha.removeprefix("sha256:") if sha.startswith("sha256:") else None)
+                    size=detail.get("size"), sha256=release.get("sha256", {}).get(name) or
+                    (sha.removeprefix("sha256:") if sha.startswith("sha256:") else None))
         for source in catalog["github_sources"]:
             repo, ref = source["repo"], source.get("ref", "HEAD")
             print("DISCOVER source " + repo + " " + ref, flush=True)
@@ -150,7 +152,9 @@ def main():
                     data = metadata("https://api.github.com/repos/" + repo + "/commits/HEAD")
                     manifest.setdefault("warnings", []).append(repo + " ref " + ref + " unavailable; snapshot HEAD " + data["sha"])
                 sha = data["sha"]
-                add("source:" + repo, "https://codeload.github.com/" + repo + "/zip/" + sha,
+                add("source:" + repo, ["https://codeload.github.com/" + repo + "/zip/" + sha,
+                                      "https://api.github.com/repos/" + repo + "/zipball/" + sha,
+                                      "https://codeload.github.com/" + repo + "/legacy.zip/" + sha],
                     "third-party/offline/sources/" + repo.replace("/", "--") + "-" + sha[:12] + ".zip",
                     "upstream source, configurations, license and examples", revision=sha, requested_ref=ref)
             except Exception as exc:
@@ -414,6 +418,17 @@ def main():
                                  a.get("size") or 32 * 1024 * 1024))
 
     def save():
+        for hf in catalog["huggingface"]:
+            prefix = "hf:" + hf["repo"] + ":"
+            group = [a for a in manifest["assets"] if a["id"].startswith(prefix)]
+            if group and all(results.get(a["id"], {}).get("status") == "verified" for a in group):
+                revision = group[0]["revision"]
+                ref = safe(".runtime/cache/huggingface/hub/models--" + hf["repo"].replace("/", "--") + "/refs/main")
+                if not ref.exists():
+                    ref.parent.mkdir(parents=True, exist_ok=True)
+                    ref.write_text(revision, encoding="utf-8")
+                elif ref.read_text(encoding="utf-8").strip() != revision:
+                    print("WARNING existing HF main ref differs; use explicit local model directory", flush=True)
         verified = [r for r in results.values() if r["status"] == "verified"]
         failed = [r for r in results.values() if r["status"] == "failed"]
         dump(result_path, dict(assets=results, verified=len(verified), failed=len(failed),

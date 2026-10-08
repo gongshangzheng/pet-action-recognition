@@ -12,47 +12,223 @@
     "resnet50-19c8e357.pth"
   ],
   "github_releases": [
-    {"repo": "ultralytics/assets", "tag": "v8.3.0", "files": ["yolo11n.pt", "yolo11s.pt", "yolo11n-seg.pt", "yolo11s-seg.pt", "yolo11n-cls.pt", "yolov8n.pt", "yolov8n-seg.pt"], "directory": "checkpoints/ultralytics", "purpose": "cat presence / segmentation / AMP self-test"},
-    {"repo": "ultralytics/assets", "tag": "v0.0.0", "files": ["Arial.ttf", "Arial.Unicode.ttf"], "directory": ".runtime/cache/ultralytics", "purpose": "offline plot fonts"},
-    {"repo": "ultralytics/yolov5", "tag": "v6.0", "files": ["yolov5n.pt", "yolov5s.pt"], "directory": "checkpoints/yolov5-original-v6", "purpose": "original YOLOv5, not YOLOv5u"},
-    {"repo": "danielgatis/rembg", "tag": "v0.0.0", "files": ["u2netp.onnx", "u2net.onnx", "silueta.onnx", "isnet-general-use.onnx"], "directory": ".runtime/cache/rembg-models", "purpose": "small foreground baseline and quality references", "md5": {"u2netp.onnx": "8e83ca70e441ab06c318d82300c84806", "u2net.onnx": "60024c5c889badc19c04ad937298a77b", "silueta.onnx": "55e59e0d8062d2f5d013f4725ee84782"}, "alternate_urls": {"u2net.onnx": ["https://www.modelscope.cn/models/AI-ModelScope/u2net/resolve/c500aa30b8191be3998b512c4efb372eedb9ea5e/u2net.onnx"]}},
-    {"repo": "RangiLyu/nanodet", "tag": "v1.0.0-alpha-1", "files": ["nanodet-plus-m_320.onnx", "nanodet-plus-m_320_checkpoint.ckpt", "nanodet-plus-m_416.onnx", "nanodet-plus-m_416_checkpoint.ckpt"], "directory": "checkpoints/nanodet", "purpose": "NanoDet-Plus small detector alternatives; published checkpoint and ONNX pair"}
+    {
+      "repo": "ultralytics/assets",
+      "tag": "v8.3.0",
+      "files": [
+        "yolo11n.pt",
+        "yolo11s.pt",
+        "yolo11n-seg.pt",
+        "yolo11s-seg.pt",
+        "yolo11n-cls.pt",
+        "yolov8n.pt",
+        "yolov8n-seg.pt"
+      ],
+      "directory": "checkpoints/ultralytics",
+      "purpose": "cat presence / segmentation / AMP self-test"
+    },
+    {
+      "repo": "ultralytics/assets",
+      "tag": "v0.0.0",
+      "files": [
+        "Arial.ttf",
+        "Arial.Unicode.ttf"
+      ],
+      "directory": ".runtime/cache/ultralytics",
+      "purpose": "offline plot fonts"
+    },
+    {
+      "repo": "ultralytics/yolov5",
+      "tag": "v6.0",
+      "files": [
+        "yolov5n.pt",
+        "yolov5s.pt"
+      ],
+      "directory": "checkpoints/yolov5-original-v6",
+      "purpose": "original YOLOv5, not YOLOv5u"
+    },
+    {
+      "repo": "danielgatis/rembg",
+      "tag": "v0.0.0",
+      "files": [
+        "u2netp.onnx",
+        "u2net.onnx",
+        "silueta.onnx",
+        "isnet-general-use.onnx"
+      ],
+      "directory": ".runtime/cache/rembg-models",
+      "purpose": "small foreground baseline and quality references",
+      "md5": {
+        "u2netp.onnx": "8e83ca70e441ab06c318d82300c84806",
+        "u2net.onnx": "60024c5c889badc19c04ad937298a77b",
+        "silueta.onnx": "55e59e0d8062d2f5d013f4725ee84782",
+        "isnet-general-use.onnx": "fc16ebd8b0c10d971d3513d564d01e29"
+      },
+      "alternate_urls": {
+        "u2net.onnx": [
+          "https://www.modelscope.cn/models/AI-ModelScope/u2net/resolve/c500aa30b8191be3998b512c4efb372eedb9ea5e/u2net.onnx"
+        ],
+        "isnet-general-use.onnx": [
+          "https://hf-mirror.com/BritishWerewolf/IS-Net/resolve/9783722d9f964c0286a411e7e8e6fede947d5a53/onnx/model.onnx"
+        ]
+      },
+      "sha256": {
+        "isnet-general-use.onnx": "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a"
+      }
+    },
+    {
+      "repo": "RangiLyu/nanodet",
+      "tag": "v1.0.0-alpha-1",
+      "files": [
+        "nanodet-plus-m_320.onnx",
+        "nanodet-plus-m_320_checkpoint.ckpt",
+        "nanodet-plus-m_416.onnx",
+        "nanodet-plus-m_416_checkpoint.ckpt"
+      ],
+      "directory": "checkpoints/nanodet",
+      "purpose": "NanoDet-Plus small detector alternatives; published checkpoint and ONNX pair"
+    }
   ],
   "github_sources": [
-    {"repo": "ultralytics/yolov5", "ref": "v6.0"},
-    {"repo": "ultralytics/ultralytics", "ref": "v8.3.0"},
-    {"repo": "RangiLyu/nanodet", "ref": "v1.0.0"},
-    {"repo": "xuebinqin/U-2-Net"},
-    {"repo": "danielgatis/rembg", "ref": "v2.0.59"},
-    {"repo": "yabufarha/ms-tcn"},
-    {"repo": "ChinaYi/ASFormer"},
-    {"repo": "yiskw713/asrf"},
-    {"repo": "paul-krug/pytorch-tcn", "ref": "v1.2.3"},
-    {"repo": "airockchip/rknn_model_zoo", "ref": "v2.3.2"},
-    {"repo": "airockchip/ultralytics_yolo11"},
-    {"repo": "airockchip/yolov5"},
-    {"repo": "IDEA-Research/GroundingDINO"},
-    {"repo": "mikel-brostrom/boxmot"}
+    {
+      "repo": "ultralytics/yolov5",
+      "ref": "v6.0"
+    },
+    {
+      "repo": "ultralytics/ultralytics",
+      "ref": "v8.3.0"
+    },
+    {
+      "repo": "RangiLyu/nanodet",
+      "ref": "v1.0.0"
+    },
+    {
+      "repo": "xuebinqin/U-2-Net"
+    },
+    {
+      "repo": "danielgatis/rembg",
+      "ref": "v2.0.59"
+    },
+    {
+      "repo": "yabufarha/ms-tcn"
+    },
+    {
+      "repo": "ChinaYi/ASFormer"
+    },
+    {
+      "repo": "yiskw713/asrf"
+    },
+    {
+      "repo": "paul-krug/pytorch-tcn",
+      "ref": "v1.2.3"
+    },
+    {
+      "repo": "airockchip/rknn_model_zoo",
+      "ref": "v2.3.2"
+    },
+    {
+      "repo": "airockchip/ultralytics_yolo11"
+    },
+    {
+      "repo": "airockchip/yolov5"
+    },
+    {
+      "repo": "IDEA-Research/GroundingDINO"
+    },
+    {
+      "repo": "mikel-brostrom/boxmot"
+    }
   ],
   "huggingface": [
-    {"repo": "IDEA-Research/grounding-dino-tiny", "directory": "checkpoints/grounding-dino-tiny", "patterns": ["*.json", "*.txt", "*.safetensors", "README.md"], "snapshot_file": "configs/company_groundingdino_snapshot.json", "modelscope_mirror": "IDEA-Research/grounding-dino-tiny"}
+    {
+      "repo": "IDEA-Research/grounding-dino-tiny",
+      "directory": "checkpoints/grounding-dino-tiny",
+      "patterns": [
+        "*.json",
+        "*.txt",
+        "*.safetensors",
+        "README.md"
+      ],
+      "snapshot_file": "configs/company_groundingdino_snapshot.json",
+      "modelscope_mirror": "IDEA-Research/grounding-dino-tiny"
+    }
   ],
-  "rknn_repository": {"repo": "airockchip/rknn-toolkit2", "ref": "v2.3.2"},
+  "rknn_repository": {
+    "repo": "airockchip/rknn-toolkit2",
+    "ref": "v2.3.2"
+  },
   "modelscope": [
-    {"repo": "AI-ModelScope/GroundingDINO", "directory": "checkpoints/groundingdino-native", "files": ["groundingdino_swint_ogc.pth", "groundingdino/config/GroundingDINO_SwinT_OGC.py", "bert-base-uncased/config.json", "bert-base-uncased/model.safetensors", "bert-base-uncased/tokenizer.json", "bert-base-uncased/tokenizer_config.json", "bert-base-uncased/vocab.txt"], "purpose": "Native GroundingDINO and local BERT fallback from ModelScope; NOT the Transformers converted model directory"}
+    {
+      "repo": "AI-ModelScope/GroundingDINO",
+      "directory": "checkpoints/groundingdino-native",
+      "files": [
+        "groundingdino_swint_ogc.pth",
+        "groundingdino/config/GroundingDINO_SwinT_OGC.py",
+        "bert-base-uncased/config.json",
+        "bert-base-uncased/model.safetensors",
+        "bert-base-uncased/tokenizer.json",
+        "bert-base-uncased/tokenizer_config.json",
+        "bert-base-uncased/vocab.txt"
+      ],
+      "purpose": "Native GroundingDINO and local BERT fallback from ModelScope; NOT the Transformers converted model directory"
+    }
   ],
   "extra_assets": [
-    {"identifier": "rockchip-onnx:yolo11n", "url": "https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolo11/yolo11n.onnx", "path": "checkpoints/rockchip-onnx/yolo11n.onnx", "purpose": "Rockchip Model Zoo v2.3.2 optimized YOLO11n export; upstream examples/yolo11/README.md"},
-    {"identifier": "rockchip-onnx:yolo11s", "url": "https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolo11/yolo11s.onnx", "path": "checkpoints/rockchip-onnx/yolo11s.onnx", "purpose": "Rockchip Model Zoo v2.3.2 optimized YOLO11s export; upstream examples/yolo11/README.md"},
-    {"identifier": "u2net-training:u2netp", "url": "https://drive.usercontent.google.com/download?id=1rbSTGKAE-MTxBYHd-51l2hMOQPT_7EPy&export=download&confirm=t", "path": "checkpoints/u2net-training/u2netp.pth", "purpose": "Original PyTorch U2-NetP training weights; official U-2-Net README Drive link"},
-    {"identifier": "u2net-training:u2net", "url": "https://drive.usercontent.google.com/download?id=1ao1ovG1Qtx4b7EoskHXmi2E9rp5CHLcZ&export=download&confirm=t", "path": "checkpoints/u2net-training/u2net.pth", "purpose": "Original PyTorch U2-Net training weights; official U-2-Net README Drive link"}
+    {
+      "identifier": "rockchip-onnx:yolo11n",
+      "url": "https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolo11/yolo11n.onnx",
+      "path": "checkpoints/rockchip-onnx/yolo11n.onnx",
+      "purpose": "Rockchip Model Zoo v2.3.2 optimized YOLO11n export; upstream examples/yolo11/README.md"
+    },
+    {
+      "identifier": "rockchip-onnx:yolo11s",
+      "url": "https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolo11/yolo11s.onnx",
+      "path": "checkpoints/rockchip-onnx/yolo11s.onnx",
+      "purpose": "Rockchip Model Zoo v2.3.2 optimized YOLO11s export; upstream examples/yolo11/README.md"
+    },
+    {
+      "identifier": "u2net-training:u2netp",
+      "url": [
+        "https://hf-mirror.com/netradrishti/u2net-saliency/resolve/7f1d3b18bcf55a010ec4526087978d89bccd3097/models/u2netp.pth",
+        "https://drive.usercontent.google.com/download?id=1rbSTGKAE-MTxBYHd-51l2hMOQPT_7EPy&export=download&confirm=t"
+      ],
+      "path": "checkpoints/u2net-training/u2netp.pth",
+      "purpose": "U2-Net PyTorch training weights: pinned public community mirror; original author Drive link retained; full model hash cross-checked across three repositories",
+      "size": 4683258,
+      "sha256": "e7567cde013fb64813973ce6e1ecc25a80c05c3ca7adbc5a54f3c3d90991b854"
+    },
+    {
+      "identifier": "u2net-training:u2net",
+      "url": [
+        "https://hf-mirror.com/netradrishti/u2net-saliency/resolve/7f1d3b18bcf55a010ec4526087978d89bccd3097/models/u2net.pth",
+        "https://drive.usercontent.google.com/download?id=1ao1ovG1Qtx4b7EoskHXmi2E9rp5CHLcZ&export=download&confirm=t"
+      ],
+      "path": "checkpoints/u2net-training/u2net.pth",
+      "purpose": "U2-Net PyTorch training weights: pinned public community mirror; original author Drive link retained; full model hash cross-checked across three repositories",
+      "size": 176290937,
+      "sha256": "10025a17f49cd3208afc342b589890e402ee63123d6f2d289a4a0903695cce58"
+    }
   ],
   "optional_packages": [
-    "transformers==4.44.2", "tokenizers==0.19.1", "regex==2024.9.11",
-    "pytest==8.3.3", "iniconfig==2.0.0", "pluggy==1.5.0", "exceptiongroup==1.2.2", "tomli==2.0.1",
-    "gdown==5.2.0", "beautifulsoup4==4.12.3", "soupsieve==2.6", "PySocks==1.7.1",
-    "loguru==0.7.2", "filterpy==1.4.5", "Cython==0.29.37", "cython-bbox==0.1.5",
-    "tensorboardX==2.6.2.2", "thop==0.1.1.post2209072238", "onnxslim==0.1.34"
+    "transformers==4.44.2",
+    "tokenizers==0.19.1",
+    "regex==2024.9.11",
+    "pytest==8.3.3",
+    "iniconfig==2.0.0",
+    "pluggy==1.5.0",
+    "exceptiongroup==1.2.2",
+    "tomli==2.0.1",
+    "gdown==5.2.0",
+    "beautifulsoup4==4.12.3",
+    "soupsieve==2.6",
+    "PySocks==1.7.1",
+    "loguru==0.7.2",
+    "filterpy==1.4.5",
+    "Cython==0.29.37",
+    "cython-bbox==0.1.5",
+    "tensorboardX==2.6.2.2",
+    "thop==0.1.1.post2209072238",
+    "onnxslim==0.1.34"
   ],
   "notes": [
     "Public pretrained checkpoints do not include private AnimalKingdom finetuned checkpoints.",
