@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import fnmatch
 import hashlib
@@ -454,6 +455,40 @@ def main():
             print(result["status"].upper() + " " + item["id"] + " " +
                   (str(result.get("size", "")) if result["status"] == "verified" else result["error"]), flush=True)
     save()
+    inventory = []
+    for item in manifest["assets"]:
+        result = results.get(item["id"], {})
+        inventory.append(dict(id=item["id"], status=result.get("status", "not_checked"),
+                              path=item["path"], size=result.get("size", ""),
+                              sha256=result.get("sha256", ""), purpose=item["purpose"],
+                              revision=item.get("revision", ""), error=result.get("error", "")))
+    with (out / "asset_inventory.csv").open("w", newline="", encoding="utf-8-sig") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(inventory[0]) if inventory else
+                                ["id", "status", "path", "size", "sha256", "purpose", "revision", "error"])
+        writer.writeheader()
+        writer.writerows(inventory)
+    categories = {}
+    for row in inventory:
+        group = categories.setdefault(row["id"].split(":", 1)[0], dict(total=0, verified=0, size=0))
+        group["total"] += 1
+        if row["status"] == "verified":
+            group["verified"] += 1
+            group["size"] += row["size"]
+    verified_count = sum(row["status"] == "verified" for row in inventory)
+    total_bytes = sum(row["size"] for row in inventory if row["status"] == "verified")
+    lines = ["# 公司离线文件准备清单", "", "生成时间：" + time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+             "", f"已校验 {verified_count}/{len(inventory)} 项，{total_bytes:,} 字节（{total_bytes / 1024**3:.2f} GiB）。",
+             "硬链接别名未重复计入。模型、训练、前向、RKNN 和公司数据处理均未执行。", "",
+             "| 类别 | 校验/总项数 | 已校验字节 |", "|---|---:|---:|"]
+    lines.extend(f"| {name} | {group['verified']}/{group['total']} | {group['size']:,} |" for name, group in categories.items())
+    missing = [row for row in inventory if row["status"] != "verified"]
+    lines.extend(["", "缺项：" + ("无（仅指本清单）。" if not missing else "见下列路径。")])
+    lines.extend("- " + row["path"] + ": " + row["error"].replace("\n", " ") for row in missing)
+    lines.extend(["", "每项用途、路径、大小、SHA256 和错误见 asset_inventory.csv；",
+                  "完整来源、固定版本和别名见 manifest.json；当前状态见 assets_status.json。",
+                  "模型库 source-only 快照的省略项在 ZIP 内 SOURCE_SNAPSHOT_MANIFEST.json 中。",
+                  "私有 AnimalKingdom 微调产物、公司数据、板卡 BSP/驱动及云服务不在公共文件清单内。"])
+    (out / "asset_inventory.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("ASSET_CACHE_PASS_FINISHED", flush=True)
     return int(any(r["status"] == "failed" for r in results.values()) or bool(manifest["discovery_errors"]))
 
