@@ -241,11 +241,15 @@ def main() -> int:
         from mmengine import Config
         from mmengine.dataset import pseudo_collate
         from mmengine.optim import OptimWrapper
+        from mmengine.registry import init_default_scope
         from mmaction.apis import init_recognizer
         from mmaction.datasets.base import BaseActionDataset
         from torch.utils.data import DataLoader
         check('records' in state, 'Company data preparation failed')
         cfg = Config.fromfile(str(root / 'models/mmaction2/configs/recognition' / config_name))
+        # Dataset construction precedes init_recognizer, so establish the
+        # transform registry scope before Compose builds the training pipeline.
+        init_default_scope(cfg.get('default_scope', 'mmaction'))
         classes = len(state['labels'])
         cfg.model.cls_head.num_classes = classes
         cfg.model.cls_head.topk = (1,)
