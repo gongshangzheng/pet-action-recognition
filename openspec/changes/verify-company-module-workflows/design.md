@@ -111,6 +111,16 @@ RKNN 优先尝试目标支持的非量化路径；若 RV1126B 路径要求 INT8�
 单个小网络跑通只证明这个网络的路径，不能推导所有 YOLO/分割/动作模型均可转换。
 服务器耗时可用于定位故障，不能当作 RV1126B 实机速度。
 
+### 2026-10-08 模拟器只读核对
+
+用户询问仿真含义与当前可用性，本次只核对官方材料和导入，不新增转换、构建或推理。服务器现有 RKNN-Toolkit2 2.3.2 API 当前导入成功；已缓存的官方 README 和 API 手册明确支持 RV1126B。此前 PyTorch 前向/训练检查没有执行 RKNN build/init_runtime/inference，因此模拟推理仍是未验证状态。
+
+官方 API 手册 `03_Rockchip_RKNPU_API_Reference_RKNN_Toolkit2_V2.3.2_EN.pdf` §2.6–2.9：`init_runtime(target=None)` 使用软件模拟器，需要同一模型对象先完成 build 或 hybrid_quantization。构建时以 `config(target_platform='rv1126b')` 指定目标，不能把 simulator 初始化的 target 参数错误设为板卡目标；指定 target 是连接相应硬件。直接 `load_rknn` 载入导出的 RKNN 文件仅能用于连接 NPU 的推理/性能获取，不能替代从原始模型构建的模拟路径。
+
+软件模拟用于转换/算子兼容、浮点或量化输出及预后处理验证，不负责整板系统、摄像头、视频解码、缓存队列、功耗或真实帧率的模拟。手册 §2.9 明确 `eval_perf` 要求连接实际 NPU 设备；没有板卡时不能用该接口得到 RV1126B 实测性能。
+
+后续最小验证可先选已缓存的 MobileNetV3-Small 或 Rockchip YOLO11n：源模型/ONNX → 指定 RV1126B 构建 → PC 模拟推理 → 与原后端对照。此处仅沉淀计划，不因导入通过将模拟器状态改为已验证；真实 INT8 效果需要代表性校准/测试数据，板端速度需硬件后再测。
+
 ## 7. 报告与运行预算
 
 每项记录 status、implementation、真实/注入输入、shape、dtype、设备、权重来源、
