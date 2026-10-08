@@ -121,6 +121,8 @@ RKNN 优先尝试目标支持的非量化路径；若 RV1126B 路径要求 INT8�
 
 后续最小验证可先选已缓存的 MobileNetV3-Small 或 Rockchip YOLO11n：源模型/ONNX → 指定 RV1126B 构建 → PC 模拟推理 → 与原后端对照。此处仅沉淀计划，不因导入通过将模拟器状态改为已验证；真实 INT8 效果需要代表性校准/测试数据，板端速度需硬件后再测。
 
+后续用户另行授权「简单测可行性，不保存结果」，已在限定 change `check-rv1126b-simulator-in-memory` 完成一个极小 Conv/ReLU/Pool 网络的 RV1126B 非量化构建和 PC 模拟推理，临时 tmpfs 工作区已清理。这只补齐最小工具链可行性验证，不代表本完整方案、真实候选模型转换、INT8 或板端性能已完成。
+
 ## 7. 报告与运行预算
 
 每项记录 status、implementation、真实/注入输入、shape、dtype、设备、权重来源、
