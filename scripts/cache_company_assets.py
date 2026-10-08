@@ -40,6 +40,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, required=True)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--report-dir", default="results/deployment/company_assets_20260930",
+                    help="Project-relative report directory; separate only for disjoint asset sets")
     ap.add_argument("--only", help="Comma-separated asset id prefixes")
     ap.add_argument("--discover-only", action="store_true")
     ap.add_argument("--retry-failed", action="store_true")
@@ -47,7 +49,8 @@ def main():
     ap.add_argument("--verify-only", action="store_true", help="Verify files without network downloads")
     args = ap.parse_args()
     root = args.root.resolve()
-    out = root / "results/deployment/company_assets_20260930"
+    out = (root / args.report_dir).resolve()
+    out.relative_to(root)
     out.mkdir(parents=True, exist_ok=True)
     catalog = json.loads((root / "configs/company_offline_assets.json").read_text(encoding="utf-8"))
     manifest_path = out / "manifest.json"
