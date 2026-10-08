@@ -21,3 +21,15 @@
    不为了候选项目自动升级核心环境。未准备好或无公共资产的路径如实标记。
 
 验收是“清单中资产下载与文件完整性”，不等同于离线运行/精度/实机测速验收。
+
+## 2026-10-08 续传核对
+
+首次清单 99 项，其中 86 项已校验（5,658,538,035 字节）。MMAction2 的
+25 份去重权重全部存在；部分失败来自网络，也有旧版 ResNet TAR 封装误判。
+续传保留原下载，修复 TAR 校验，并在已记录 SHA256 的约束下复用文件。
+NanoDet 改用实际含权重的 v1.0.0-alpha-1，Rockchip YOLO11 源码仓库为
+airockchip/ultralytics_yolo11。补官方优化 ONNX、U2-Net 可训练权重、候选依赖
+wheel/sdist（只缓存），以及 ModelScope 的原生 GroundingDINO+BERT 备用。
+ModelScope 文件固定到 revision 并校验其 API 提供的完整 SHA256；原生格式不
+冒充 Transformers 格式，HF 路径失败仍在报告保留。rembg 已知 MD5 来自其源码。
+Google Drive 返回的网页不得当权重；无法完成的项必须列出，不得宣称全部离线可用。

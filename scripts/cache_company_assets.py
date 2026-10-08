@@ -11,11 +11,14 @@ import os
 from pathlib import Path
 import re
 import shutil
+import tarfile
 import time
 from urllib.parse import quote, urlparse
 import zipfile
 
 import requests
+from packaging.tags import sys_tags
+from packaging.utils import parse_wheel_filename
 
 
 def digest(path, algorithm="sha256"):
@@ -40,6 +43,8 @@ def main():
     ap.add_argument("--only", help="Comma-separated asset id prefixes")
     ap.add_argument("--discover-only", action="store_true")
     ap.add_argument("--retry-failed", action="store_true")
+    ap.add_argument("--refresh-manifest", action="store_true", help="Repeat discovery using cached upstream metadata")
+    ap.add_argument("--verify-only", action="store_true", help="Verify files without network downloads")
     args = ap.parse_args()
     root = args.root.resolve()
     out = root / "results/deployment/company_assets_20260930"
@@ -59,12 +64,16 @@ def main():
         if cached.exists():
             return json.loads(cached.read_text(encoding="utf-8"))["response"]
         error = None
-        for attempt in range(3):
+        candidates = [url]
+        if url.startswith("https://huggingface.co/"):
+            candidates = [url.replace("https://huggingface.co/", "https://hf-mirror.com/"), url]
+        for attempt in range(max(3, len(candidates))):
             try:
-                response = requests.get(url, headers=headers, timeout=(15, 45))
+                selected_url = candidates[min(attempt, len(candidates) - 1)]
+                response = requests.get(selected_url, headers=headers, timeout=(15, 45))
                 response.raise_for_status()
                 data = response.json()
-                dump(cached, {"url": url, "retrieved_at": time.time(), "response": data})
+                dump(cached, {"url": url, "retrieved_from": selected_url, "retrieved_at": time.time(), "response": data})
                 return data
             except Exception as exc:
                 error = exc
@@ -117,9 +126,13 @@ def main():
             for name in sorted(selected):
                 detail = names.get(name, {})
                 sha = detail.get("digest") or ""
+                browser_url = detail.get("browser_download_url") or "https://github.com/" + repo + "/releases/download/" + tag + "/" + quote(name)
+                urls = ([detail["url"] + "?download=1", browser_url] if detail.get("url") else [browser_url])
                 add("release:" + repo + ":" + name,
-                    detail.get("browser_download_url") or "https://github.com/" + repo + "/releases/download/" + tag + "/" + quote(name),
+                    urls,
                     release["directory"] + "/" + name, release["purpose"],
+                    request_headers={"Accept": "application/octet-stream"},
+                    md5=release.get("md5", {}).get(name),
                     size=detail.get("size"), sha256=sha.removeprefix("sha256:") if sha.startswith("sha256:") else None)
         for source in catalog["github_sources"]:
             repo, ref = source["repo"], source.get("ref", "HEAD")
@@ -150,11 +163,27 @@ def main():
                         continue
                     lfs = item.get("lfs") or {}
                     add("hf:" + repo + ":" + name,
-                        "https://huggingface.co/" + repo + "/resolve/" + sha + "/" + name,
+                        ["https://hf-mirror.com/" + repo + "/resolve/" + sha + "/" + name,
+                         "https://huggingface.co/" + repo + "/resolve/" + sha + "/" + name],
                         hf["directory"] + "/" + name, "complete local model / tokenizer / processor files",
                         size=item.get("size"), sha256=lfs.get("sha256") or lfs.get("oid"), revision=sha)
             except Exception as exc:
                 manifest["discovery_errors"].append("HF " + repo + ": " + str(exc))
+        for mirror in catalog.get("modelscope", []):
+            repo = mirror["repo"]
+            print("DISCOVER ModelScope " + repo, flush=True)
+            try:
+                data = metadata("https://www.modelscope.cn/api/v1/models/" + repo + "/repo/files?Revision=master&Recursive=true")
+                items = {entry["Path"]: entry for entry in data["Data"]["Files"] if entry["Type"] == "blob"}
+                for name in mirror["files"]:
+                    entry = items[name]
+                    revision = entry["Revision"]
+                    add("modelscope:" + repo + ":" + name,
+                        "https://www.modelscope.cn/models/" + repo + "/resolve/" + revision + "/" + quote(name),
+                        mirror["directory"] + "/" + name, mirror["purpose"],
+                        size=entry["Size"], sha256=entry["Sha256"], revision=revision)
+            except Exception as exc:
+                manifest["discovery_errors"].append("ModelScope " + repo + ": " + str(exc))
         rk = catalog["rknn_repository"]
         print("DISCOVER RKNN platform files", flush=True)
         try:
@@ -185,10 +214,37 @@ def main():
             manifest["discovery_errors"].append("RKNN files: " + str(exc))
         for item in catalog.get("extra_assets", []):
             add(**item)
+        tag_rank = {tag: rank for rank, tag in enumerate(sys_tags())}
+        for requirement in catalog.get("optional_packages", []):
+            name, version = requirement.split("==", 1)
+            print("DISCOVER optional package " + requirement, flush=True)
+            try:
+                data = metadata("https://pypi.org/pypi/" + name + "/" + version + "/json")
+                choices = []
+                for entry in data["urls"]:
+                    if entry["packagetype"] == "bdist_wheel":
+                        wheel_tags = parse_wheel_filename(entry["filename"])[3]
+                        ranks = [tag_rank[tag] for tag in wheel_tags if tag in tag_rank]
+                        if ranks:
+                            choices.append((min(ranks), entry))
+                    elif entry["packagetype"] == "sdist":
+                        choices.append((1000000, entry))
+                if not choices:
+                    raise RuntimeError("No matching wheel or source distribution")
+                entry = min(choices, key=lambda pair: pair[0])[1]
+                add("optional-package:" + requirement, entry["url"],
+                    ".runtime/cache/optional-wheels/" + entry["filename"],
+                    "optional candidate dependency, cache only; not installed",
+                    size=entry["size"], sha256=entry["digests"]["sha256"],
+                    distribution_type=entry["packagetype"],
+                    requires_dist=data["info"].get("requires_dist"),
+                    requires_python=data["info"].get("requires_python"))
+            except Exception as exc:
+                manifest["discovery_errors"].append("optional package " + requirement + ": " + str(exc))
         manifest["created_at"] = time.time()
         dump(manifest_path, manifest)
 
-    if manifest_path.exists():
+    if manifest_path.exists() and not args.refresh_manifest:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     else:
         discover()
@@ -198,6 +254,11 @@ def main():
     result_path = out / "assets_status.json"
     previous = json.loads(result_path.read_text(encoding="utf-8")) if result_path.exists() else {"assets": {}}
     results = previous["assets"]
+    for item in manifest["assets"]:
+        old = results.get(item["id"], {})
+        if old.get("status") == "verified" and old.get("path") == item["path"]:
+            if not item.get("sha256"):
+                item["sha256"] = old["sha256"]
 
     def validate(path, item):
         length = path.stat().st_size
@@ -221,7 +282,7 @@ def main():
                 bad = archive.testzip()
                 if bad:
                     raise ValueError("ZIP CRC failure: " + bad)
-        if item["path"].endswith((".pt", ".pth")) and not (head.startswith(b"PK") or head.startswith(b"\x80")):
+        if item["path"].endswith((".pt", ".pth", ".ckpt")) and not (head.startswith(b"PK") or head.startswith(b"\x80") or tarfile.is_tarfile(path)):
             raise ValueError("Unrecognized PyTorch checkpoint envelope")
         return dict(size=length, sha256=sha)
 
@@ -236,16 +297,31 @@ def main():
             if target.exists():
                 detail = validate(target, item)
             else:
+                if args.verify_only:
+                    raise FileNotFoundError("Asset is not cached")
+                # Older versions rejected valid legacy tar-format PyTorch checkpoints.
+                for rejected in sorted(target.parent.glob(target.name + ".part.rejected.*")):
+                    try:
+                        detail = validate(rejected, item)
+                        os.link(rejected, target)
+                        break
+                    except (ValueError, OSError):
+                        continue
                 success = False
-                for url in item["urls"]:
+                if target.exists():
+                    success = True
+                for url in ([] if success else item["urls"]):
                     for attempt in range(3):
                         try:
                             offset = part.stat().st_size if part.exists() else 0
                             request_headers = dict(headers)
+                            request_headers.update(item.get("request_headers", {}))
                             if offset:
                                 request_headers["Range"] = "bytes=" + str(offset) + "-"
                             with requests.get(url, headers=request_headers, timeout=(20, 75), stream=True) as response:
                                 if response.status_code == 416 and offset:
+                                    if response.headers.get("Content-Range") != "bytes */" + str(offset):
+                                        raise ValueError("Cannot validate completed range length")
                                     detail = validate(part, item)
                                 else:
                                     response.raise_for_status()
