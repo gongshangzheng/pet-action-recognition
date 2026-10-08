@@ -158,19 +158,27 @@ def main():
             repo = hf["repo"]
             print("DISCOVER HF " + repo, flush=True)
             try:
-                data = metadata("https://huggingface.co/api/models/" + repo + "/revision/main?blobs=true")
+                if hf.get("snapshot_file"):
+                    data = json.loads(safe(hf["snapshot_file"]).read_text(encoding="utf-8"))
+                    if data["repo"] != repo:
+                        raise ValueError("Snapshot repository mismatch")
+                else:
+                    data = metadata("https://huggingface.co/api/models/" + repo + "/revision/main?blobs=true")
                 sha = data["sha"]
                 for item in data["siblings"]:
                     name = item["rfilename"]
                     if not any(fnmatch.fnmatch(name, p) for p in hf["patterns"]):
                         continue
                     lfs = item.get("lfs") or {}
-                    add("hf:" + repo + ":" + name,
-                        ["https://hf-mirror.com/" + repo + "/resolve/" + sha + "/" + name,
-                         "https://huggingface.co/" + repo + "/resolve/" + sha + "/" + name],
+                    urls = ["https://hf-mirror.com/" + repo + "/resolve/" + sha + "/" + name,
+                            "https://huggingface.co/" + repo + "/resolve/" + sha + "/" + name]
+                    if hf.get("modelscope_mirror") and item.get("modelscope_revision"):
+                        urls.insert(0, "https://www.modelscope.cn/models/" + hf["modelscope_mirror"] +
+                                    "/resolve/" + item["modelscope_revision"] + "/" + quote(name))
+                    add("hf:" + repo + ":" + name, urls,
                         hf["directory"] + "/" + name, "complete local model / tokenizer / processor files",
                         aliases=[".runtime/cache/huggingface/hub/models--" + repo.replace("/", "--") + "/snapshots/" + sha + "/" + name],
-                        size=item.get("size"), sha256=lfs.get("sha256") or lfs.get("oid"), revision=sha)
+                        size=item.get("size"), sha256=item.get("sha256") or lfs.get("sha256") or lfs.get("oid"), revision=sha)
             except Exception as exc:
                 manifest["discovery_errors"].append("HF " + repo + ": " + str(exc))
         for mirror in catalog.get("modelscope", []):

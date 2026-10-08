@@ -35,7 +35,7 @@
     {"repo": "mikel-brostrom/boxmot"}
   ],
   "huggingface": [
-    {"repo": "IDEA-Research/grounding-dino-tiny", "directory": "checkpoints/grounding-dino-tiny", "patterns": ["*.json", "*.txt", "*.safetensors", "README.md"]}
+    {"repo": "IDEA-Research/grounding-dino-tiny", "directory": "checkpoints/grounding-dino-tiny", "patterns": ["*.json", "*.txt", "*.safetensors", "README.md"], "snapshot_file": "configs/company_groundingdino_snapshot.json", "modelscope_mirror": "IDEA-Research/grounding-dino-tiny"}
   ],
   "rknn_repository": {"repo": "airockchip/rknn-toolkit2", "ref": "v2.3.2"},
   "modelscope": [
