@@ -45,3 +45,10 @@ U2-Net/PyTorch 社区镜像固定 revision 与 LFS SHA256，完整版权重在�
 可隔离报告目录并行下载互不重叠的资产，最后合并到主清单并重新校验。Ultralytics
 保留项目 `weights/` 的硬链接供默认 AMP 自检，HF 保留 snapshot 和 refs/main，
 不修改全局用户配置。源码分支未提供指定标签时记录实际固定 commit，不隐瞒回退。
+
+官方 Model Zoo 固定 tree 共有 1,469 个文件、743,075,762 字节，大量空间来自
+Android OpenCV 静态 SDK。改为明确标记的 source-only ZIP，保留 540 个源码、
+配置、许可证及示例/校准图像，按官方 Git blob SHA1 校验后组装；492 个去重 blob
+共 41,402,243 字节。省略 OpenCV SDK 和二进制模型/runtime，逐项 included/excluded
+列表随 ZIP 保存。所需 runtime 已从 RKNN-Toolkit2 另存，指定模型权重独立储备。
+新快照不冒充上游完整 ZIP，保留中断的完整下载以便以后续传。

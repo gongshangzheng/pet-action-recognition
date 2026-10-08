@@ -30,6 +30,12 @@
 来源不可达时使用固定版本的公开社区镜像，校验 HF LFS SHA256；完整版在三个镜像
 中的哈希一致。它们没有在本次任务中加载执行。
 
+Rockchip 模型库采用标有 `source-only` 的源码快照：包含 540 个源码、配置和
+示例/校准图像，按官方固定 tree 的 Git blob SHA1 校验。ZIP 内
+`SOURCE_SNAPSHOT_MANIFEST.json` 记录所有包含和省略的路径。它省略仓库内的
+OpenCV SDK、二进制模型/runtime 等大文件；选定模型权重和 RKNN runtime 已独立
+储备。Python 示例可使用现有 OpenCV，C++ 示例编译仍需对应 OpenCV 开发包或 BSP。
+
 ## 离线入口
 
 从项目根目录启动后，显式设置缓存位置：

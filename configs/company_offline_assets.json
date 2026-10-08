@@ -124,7 +124,8 @@
     },
     {
       "repo": "airockchip/rknn_model_zoo",
-      "ref": "v2.3.2"
+      "ref": "v2.3.2",
+      "snapshot": "source-only"
     },
     {
       "repo": "airockchip/ultralytics_yolo11"

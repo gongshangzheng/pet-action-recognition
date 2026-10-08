@@ -152,6 +152,12 @@ def main():
                     data = metadata("https://api.github.com/repos/" + repo + "/commits/HEAD")
                     manifest.setdefault("warnings", []).append(repo + " ref " + ref + " unavailable; snapshot HEAD " + data["sha"])
                 sha = data["sha"]
+                if source.get("snapshot") == "source-only":
+                    add("source:" + repo, "https://github.com/" + repo + "/tree/" + sha,
+                        "third-party/offline/sources/" + repo.replace("/", "--") + "-" + sha[:12] + "-source-only.zip",
+                        "pinned source-only snapshot; see SOURCE_SNAPSHOT_MANIFEST.json for included/excluded files",
+                        revision=sha, requested_ref=ref, prepared_snapshot=True)
+                    continue
                 add("source:" + repo, ["https://codeload.github.com/" + repo + "/zip/" + sha,
                                       "https://api.github.com/repos/" + repo + "/zipball/" + sha,
                                       "https://codeload.github.com/" + repo + "/legacy.zip/" + sha],
@@ -327,6 +333,8 @@ def main():
             else:
                 if args.verify_only:
                     raise FileNotFoundError("Asset is not cached")
+                if item.get("prepared_snapshot"):
+                    raise FileNotFoundError("Prepare snapshot using scripts/cache_company_model_zoo_source.py")
                 # Older versions rejected valid legacy tar-format PyTorch checkpoints.
                 for rejected in sorted(target.parent.glob(target.name + ".part.rejected.*")):
                     try:
