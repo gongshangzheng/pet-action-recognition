@@ -281,13 +281,14 @@ def main() -> int:
                                 map_location='cpu')
         weights = checkpoint.get('state_dict', checkpoint)
         model_state = model.state_dict()
+        output_prefix = 'cls_head.fc2.' if cfg.model.cls_head.type == 'X3DHead' else 'cls_head.fc_cls.'
         filtered = {k: v for k, v in weights.items() if k in model_state and v.shape == model_state[k].shape}
         dropped = [k for k in weights if k not in filtered]
         check(bool(filtered), 'No local pretrained weights matched')
-        check(all(k.startswith('cls_head.fc_cls.') for k in dropped),
+        check(all(k.startswith(output_prefix) for k in dropped),
               f'Unexpected incompatible checkpoint keys: {dropped}')
         missing, unexpected = model.load_state_dict(filtered, strict=False)
-        check(not unexpected and all(k.startswith('cls_head.fc_cls.') for k in missing),
+        check(not unexpected and all(k.startswith(output_prefix) for k in missing),
               f'Unexpected missing keys: {missing}')
         model.train()
         optimizer = AuditedSGD(model, ('backbone.', 'cls_head.'))
