@@ -64,3 +64,12 @@ timelinelabels，行为项没有个体关联字段；未审计 task 其他身份
 完整计数口径与建议在 `docs/company_action_label_audit.md`，
 本地汇总在 `results/datasets/company_action_label_audit_20261010/report.json`。
 不把帧数折算为未核实 FPS 的秒数，不把不同文件当独立场景或最终可训练样本。
+
+## 标注者确认与后续媒体抽样
+
+用户随后明确：本批素材没有呕吐、猫叫或持续叫行为，标签由用户手工打。
+这三类不纳入本轮输出的依据补充为“标注者确认没有实际样本”，
+无需继续把它们解释为潜在漏标。不能据此推定其他空白帧的负例含义。
+
+后续按类别抽样 12 个视频，均没有音频流；媒体检查详见
+`inspect-company-video-audio/design.md`。这是独立的抽样发现，不是全量证明。
