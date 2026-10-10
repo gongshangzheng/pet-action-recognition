@@ -3,6 +3,19 @@
 只修复 Label Studio 视频地址，不改变动作标签、起止区间、其他字段或记录顺序。
 空标注、取消标注和多标签记录也保留。原始标注与视频不覆盖、不移动。
 
+## 2026-10-10 执行结果
+
+已生成副本并通过独立回读核验：CSV 2,626/2,626 行、JSON 2,737/2,737 个任务
+全部映射到可读视频，共引用 2,737 个正常视频；2,737 个 AppleDouble 文件未参与。
+上传前缀解析覆盖 CSV 1,574 行、JSON 1,638 个任务；`d` 参数解析覆盖 CSV 1,052 行、
+JSON 1,099 个任务。跨 CSV/JSON 的 2,626 个相同任务 ID 的视频地址一致。
+CSV 非地址字段（包含 `behavior` 原始字符串）、JSON 非地址内容与原值一致，
+原 CSV/JSON 的 SHA256 不变，视频大小/mtime/inode 不变。
+
+本次审计目录：
+`/home/work/analysis_code/results/datasets/company_video_paths_20261010T085713Z_d1e8d962/`，
+包含 `path_mapping.csv` 与 `report.json`。没有进行训练、前向、视频解码或标签转换。
+
 ## 路径
 
 源目录：`/home/work/pet_analysis_wyy`。

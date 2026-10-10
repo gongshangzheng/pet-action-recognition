@@ -57,3 +57,30 @@ CSV 保持列名、列顺序、行顺序及每个非 `video` 字段的原始字�
 
 脚本在本地只做语法检查；进仓库提交后同步服务器，在现有环境执行地址修复及核验。
 不安装依赖，不读取私钥，不保存动态口令，不更改网络权限，不跑训练或前向。
+
+## 2026-10-10 实施与验收
+
+脚本在提交 `3616eb2` 后才同步服务器执行；代码包 SHA256 核验一致。
+原标注、视频数量与历史基线相同，目标副本目录此前不存在。
+服务器依次通过内存契约检查、`--check-only`、实际生成和 `--verify-only`。
+URL 单次解码、优先精确文件名、去前缀、绝对路径重复解析、歧义拒绝以及
+非地址字段保留检查均通过。没有安装依赖或执行模型。
+
+- CSV：2,626/2,626 行成功，上传前缀 1,574，local-files 1,052。
+- JSON：2,737/2,737 任务成功，上传前缀 1,638，local-files 1,099。
+- 可读正常视频共 2,737；忽略 2,737 个 AppleDouble 文件。
+- 跨 CSV/JSON 核对 2,626 个相同任务 ID，视频地址一致。
+- 原标注哈希不变、CSV 非地址字符串和 JSON 非地址结构/值不变；
+  全部引用视频的大小、mtime、inode 不变。空标注记录未被移除。
+
+副本在 `/home/work/analysis_code/datasets/company_video_paths/`，文件为
+`merged_annotations.local.csv` 与 `merged_annotations.local.json`。
+审计在 `/home/work/analysis_code/results/datasets/company_video_paths_20261010T085713Z_d1e8d962/`，
+文件为 `path_mapping.csv` 与 `report.json`。
+
+原 CSV SHA256：`52aa2a7775e8f11c4d5933d2355b7fb0cc3d3a7e0692c72838c6807e39e3c51d`。
+原 JSON SHA256：`15e07810bbbe7822cbec092c33a1cd5c1d5c9b2ce17a4e926758ca15b3b79c88`。
+副本 CSV SHA256：`08cc6ae4052944a9d43ceb7b46a471a23792b7dbc65c4f3851e5ac56344a6b15`。
+副本 JSON SHA256：`cb698510f1573c5e40ed4b94198d7e907759bf03e0a4309e4523bc5ffc5ae63b`。
+
+本次只规范视频地址；现有训练脚本及 Label Studio 动作区间格式未变。
