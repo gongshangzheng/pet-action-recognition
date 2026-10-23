@@ -14,10 +14,10 @@ classes = [
     "toileting",
     "abnormal",
 ]
-# Inverse-square-root weights from the v1 training split:
-# activity 962, eating 227, drinking 112, stationary 208, grooming 50,
-# toileting 15, abnormal 84.
-class_weight = [0.496, 1.021, 1.454, 1.067, 2.177, 3.974, 1.679]
+# Inverse-square-root weights from the verified v1 training split:
+# activity 998, eating 200, drinking 93, stationary 216, grooming 48,
+# toileting 20, abnormal 89.
+class_weight = [0.488, 1.090, 1.599, 1.049, 2.225, 3.448, 1.634]
 
 data_root = "datasets/cat_raw"
 index_root = "datasets/cat_action_v1"

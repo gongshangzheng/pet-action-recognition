@@ -20,8 +20,8 @@
 
 - 原始 `datasets/cat_raw/annotations/intervals.csv`：3,927 条区间、2,573 个视频、114 个拍摄日、12 个标签。
 - 按 v1 映射和过滤后：2,735 条候选；丢弃 640 条不足 60 帧、518 条重叠、34 条 v1 未纳入标签（多猫追逐/打闹）。
-- 七类候选：`activity` 1,636、`eating` 347、`prolonged_stationary` 341、`drinking` 167、`grooming` 85、`abnormal` 128、`toileting` 31。
-- 使用与现有脚本相同的拍摄日划分搜索规则，seed 11 可行（70 训练日 / 22 验证日 / 22 测试日）；自然分布候选约 train 1,658、val 455、test 622。其中 `toileting` 为 15/8/8，样本很紧。最终数字以 apply 时的审计为准。
+- 视频帧校验再用 Decord 排除 25 条帧越界区间，最终 **2,710 条候选**：`activity` 1,629、`eating` 341、`prolonged_stationary` 335、`drinking` 164、`grooming` 85、`abnormal` 125、`toileting` 31。
+- 使用与现有脚本相同的拍摄日划分搜索规则，实际 seed 1 可行（70 训练日 / 22 验证日 / 22 测试日）；自然分布候选 **train 1,664、val 604、test 442**。其中 `toileting` 为 20/4/7（train/val/test），验证侧只有 4 条，样本很紧。最终数字以服务器审计为准。
 
 ## 类别映射
 

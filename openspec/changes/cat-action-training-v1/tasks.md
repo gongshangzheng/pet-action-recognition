@@ -62,7 +62,7 @@
 
 - [ ] 5.1 生成 `docs/cat_action_training_v1.md`：七类映射、丢弃计数、划分
   清单、数据/配置/checkpoint 哈希、环境版本、两个模型指标、最终选择和已知
-  风险（`toileting` 仅 15/8/8 的长尾小类、`abnormal` 只以 scratching 为主、
+  风险（`toileting` 仅 20/4/7 的长尾小类、`abnormal` 只以 scratching 为主、
   未覆盖多猫/音频/稀有异常），单列 `abnormal` 整体 recall/support，并记录
   多猫追逐/打闹后续用空间关系逻辑处理。
 - [ ] 5.2 核验原始视频和原始标注未改动；旧 smoke 结果和旧模型 checkpoint

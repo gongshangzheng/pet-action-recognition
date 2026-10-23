@@ -20,14 +20,15 @@ fall/seizure 四个源标签；`multi_cat_chase`、`multi_cat_roughplay` 不纳�
 | 不足 60 帧 | 640 |
 | 与同视频其他区间重叠 | 518 |
 | v1 未纳入标签（多猫追逐/打闹） | 34 |
-| v1 候选 | 2,735 |
+| 视频帧校验越界（Decord） | 25 |
+| v1 候选 | 2,710 |
 
-七类候选：`activity` 1,636、`eating` 347、`prolonged_stationary` 341、
-`drinking` 167、`grooming` 85、`abnormal` 128、`toileting` 31。
-`abnormal` 中实际可训练的主要来自 scratching（124 条候选）；gnawing 只剩
-4 条，fall/seizure 过滤后为 0。`toileting` 只有 31 条候选、分布在 22 个拍摄日，
+七类候选：`activity` 1,629、`eating` 341、`prolonged_stationary` 335、
+`drinking` 164、`grooming` 85、`abnormal` 125、`toileting` 31。
+`abnormal` 中实际可训练的主要来自 scratching；gnawing 只剩少量，
+fall/seizure 过滤后为 0。`toileting` 只有 31 条候选、分布在 22 个拍摄日，
 属于长尾小类。报告中必须明确这两点，不能把 `abnormal` 解释为四类异常都能
-识别，也不能把 `toileting` 的 8 条测试结果当作稳定的验收指标。
+识别，也不能把 `toileting` 的少量测试结果当作稳定的验收指标。
 
 ## 划分
 
@@ -39,16 +40,19 @@ fall/seizure 四个源标签；`multi_cat_chase`、`multi_cat_roughplay` 不纳�
 - 验证/测试各取约五分之一的天数，其余为训练；搜索 seed 时要求非如厕类在
   验证/测试中至少 15 条、训练中至少 40 条；`toileting` 在验证/测试中至少
   4 条、训练中至少 10 条。
-- 干跑得到 seed 11：70 训练日 / 22 验证日 / 22 测试日。自然分布候选：
-  - train 1,658：activity 962、stationary 208、eating 227、drinking 112、
-    grooming 50、abnormal 84、toileting 15
-  - val 455：activity 264、stationary 76、eating 50、drinking 16、
-    grooming 17、abnormal 24、toileting 8
-  - test 622：activity 410、stationary 57、eating 70、drinking 39、
-    grooming 18、abnormal 20、toileting 8
+- 视频帧校验后实际得到 seed 1：70 训练日 / 22 验证日 / 22 测试日。
+  自然分布候选：
+  - train 1,664：activity 998、stationary 216、eating 200、drinking 93、
+    grooming 48、abnormal 89、toileting 20
+  - val 604：activity 375、stationary 47、eating 96、drinking 45、
+    grooming 19、abnormal 18、toileting 4
+  - test 442：activity 256、stationary 72、eating 45、drinking 26、
+    grooming 18、abnormal 18、toileting 7
 - **训练集使用上述全部候选**，不截断到每类 40 条。验证/测试保留自然分布，
   另为每个 split 生成最多 12 条/类的平衡诊断集，用于分类别召回和混淆矩阵；
-  `toileting` 在验证/测试中只有 8 条，平衡集也只能各取 8 条。
+  `toileting` 在验证/测试中只有 4/7 条，平衡集也只能取相同数量。
+  设计期干跑为 2,735 条、seed 11、train/val/test 1,658/455/622；Decord
+  越界校验排除 25 条后实际为 2,710 条、seed 1、1,664/604/442。以实际审计为准。
 - `activity` 占比高，训练使用 class-weighted CE 或等价采样；权重、采样规则和
   有效样本数写入运行记录。`toileting` 作为长尾类单独记录采样权重和 support。
   验证/测试不做人为平衡。
@@ -145,10 +149,10 @@ num_clips=8`）、224×224 输入、同一增强、同一优化器和同一 epoc
 
 ## 风险与边界
 
-- `toileting` 只有 31 条候选，seed 11 下 train/val/test 为 15/8/8；验证和
-  测试各只有 8 条，分类别指标方差很大。v1 应报告 support，不把它作为稳定
-  验收结论。
-- `abnormal` 虽然合并后有 128 条候选，但实际只覆盖 scratching 为主，不能
+- `toileting` 只有 31 条候选，seed 1 下 train/val/test 为 20/4/7；验证和
+  测试分别只有 4/7 条，分类别指标方差很大。v1 应报告 support，不把它作为
+  稳定验收结论。
+- `abnormal` 虽然合并后有 125 条候选，但实际只覆盖 scratching 为主，不能
   宣称呕吐、抽搐、跌落、持续叫可识别；这些仍需数据和单独方案。
 - 验证/测试的自然分布由 `activity` 主导，准确率会被多数类拉动；必须同时
   报告 macro-F1 和分类别 recall，平衡诊断集只用于诊断。
