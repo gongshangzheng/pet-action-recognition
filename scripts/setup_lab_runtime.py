@@ -85,6 +85,7 @@ elif action == 'bind-project':
 elif action == 'status':
     clone_log = logs / 'runtime_clone.log'
     aux_log = logs / 'runtime_aux_install.log'
+    bind_log = logs / 'runtime_bind_mmaction.log'
     processes = subprocess.run(['ps', '-eo', 'pid,etime,stat,comm,args'], capture_output=True, text=True)
     clone_processes = [line.strip() for line in processes.stdout.splitlines()
                        if len(line.split(None, 4)) == 5 and
@@ -96,7 +97,9 @@ elif action == 'status':
                       'clone_tail': clone_log.read_text(errors='replace').splitlines()[-8:]
                       if clone_log.exists() else [],
                       'aux_tail': aux_log.read_text(errors='replace').splitlines()[-8:]
-                      if aux_log.exists() else []}, ensure_ascii=False))
+                      if aux_log.exists() else [],
+                      'bind_tail': bind_log.read_text(errors='replace').splitlines()[-12:]
+                      if bind_log.exists() else []}, ensure_ascii=False))
 else:
     raise RuntimeError('Unsupported action')
 '''
