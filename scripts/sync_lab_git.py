@@ -22,7 +22,7 @@ def main() -> None:
         _, changed, _ = remote_run(client, 'git -C ' + shlex.quote(TARGET)
                                    + ' diff --name-only')
         _, substantial, _ = remote_run(client, 'git -C ' + shlex.quote(TARGET)
-                                       + ' diff --ignore-space-at-eol --name-only')
+                                       + ' diff --ignore-cr-at-eol --name-only')
         changes = changed.splitlines()
         substantive = substantial.splitlines()
         report = {'remote_head': head.strip(), 'local_head': subprocess.check_output(
