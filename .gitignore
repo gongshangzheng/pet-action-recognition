@@ -28,6 +28,7 @@ results/
 
 # datasets/ entirely: runtime/external data (videos on NAS, list files generated), not committed
 /datasets/
+/自作自偷/
 
 # Dataset thumbnails cache (generated from video middle frames)
 /datasets/.thumbs/

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>猫行为数据集 · 本地浏览</title>
+  <style>
+    :root{color-scheme:light;--ink:#1c2731;--muted:#61717e;--line:#d7e0e7;--paper:#fff;--bg:#f1f5f7;--blue:#14628b}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,"Microsoft YaHei",sans-serif}
+    header{background:#132f42;color:#fff;padding:24px max(24px,calc((100vw - 1320px)/2))}
+    header h1{margin:0 0 5px;font-size:27px}header p{margin:0;color:#c6d7e1}
+    main{max-width:1368px;margin:auto;padding:20px 24px 40px}
+    .stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}.stat{background:#e7eef3;border-radius:10px;padding:8px 15px;min-width:130px}
+    .stat strong{display:block;font-size:20px;line-height:1.3}.stat small{color:var(--muted)}
+    .layout{display:grid;grid-template-columns:minmax(320px,410px) minmax(0,1fr);gap:18px}
+    section{background:var(--paper);border:1px solid var(--line);border-radius:13px;overflow:hidden;box-shadow:0 5px 18px #1c27310b}
+    .sectionhead{padding:15px 18px;border-bottom:1px solid var(--line)}h2{font-size:17px;margin:0 0 10px}
+    input,select{width:100%;border:1px solid #b7c5d0;border-radius:7px;padding:9px 10px;background:white;color:var(--ink);font:inherit}
+    .filters{display:flex;gap:8px}.filters input{flex:1.4}.filters select{flex:1;min-width:110px}
+    .list{max-height:71vh;overflow:auto}.item{display:block;width:100%;padding:11px 17px;text-align:left;background:white;border:0;border-bottom:1px solid #e8eef2;color:var(--ink);cursor:pointer;font:inherit}
+    .item:hover,.item.active{background:#e9f5fb}.item b{display:block;overflow-wrap:anywhere;font-weight:600}.item small{color:var(--muted)}
+    .detail{padding:18px;min-height:400px}.detail h2{font-size:20px;margin-bottom:5px;overflow-wrap:anywhere}
+    .hint{color:var(--muted)}.detail video{display:block;max-width:100%;max-height:50vh;width:100%;margin:14px 0;background:#071521;border-radius:8px}
+    a{color:var(--blue)}.links{margin:0 0 12px;display:flex;flex-wrap:wrap;gap:9px 20px}
+    table{border-collapse:collapse;width:100%;margin-top:12px;font-size:14px}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+    th{color:var(--muted);font-weight:600}td:first-child{font-variant-numeric:tabular-nums;white-space:nowrap}td{overflow-wrap:anywhere}
+    .badge{display:inline-block;background:#e8f2f6;color:#1b5975;border-radius:6px;padding:1px 7px;font-size:12px}
+    .notes{padding:16px 18px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+    @media(max-width:850px){.layout{grid-template-columns:1fr}.list{max-height:320px}.detail{min-height:260px}}
+  </style>
+</head>
+<body>
+  <header><h1>猫行为数据集</h1><p>本地原始视频与帧区间标注</p></header>
+  <main>
+    <div class="stats" id="stats"></div>
+    <div class="layout">
+      <section>
+        <div class="sectionhead"><h2>查找视频 <span id="visible-count" class="hint"></span></h2>
+          <div class="filters"><input id="search" type="search" placeholder="按文件名搜索"><select id="label-filter"><option value="">全部类别</option></select></div>
+        </div>
+        <div class="list" id="video-list"></div>
+        <div class="notes">最多显示前 100 条匹配结果；输入文件名可继续缩小范围。</div>
+      </section>
+      <section>
+        <div class="detail" id="detail"><p class="hint">从左侧选择视频，查看原始帧区间。</p></div>
+        <div class="notes">这里展示原标注的帧号与重叠，不自动换算为秒。视频播放取决于浏览器对原始 HEVC/H.265 编码的支持。</div>
+      </section>
+    </div>
+    <p class="hint">详细数据见 <a href="README.md">README</a>、<a href="annotations/intervals.csv">动作区间 CSV</a>、<a href="annotations/classes.csv">类别统计</a> 和 <a href="manifests/verification.json">校验报告</a>。</p>
+  </main>
+  <script type="application/json" id="dataset-data">__DATA_JSON__</script>
+  <script>
+    const data=JSON.parse(document.getElementById('dataset-data').textContent);
+    const list=document.getElementById('video-list'),detail=document.getElementById('detail');
+    const search=document.getElementById('search'),filter=document.getElementById('label-filter');
+    const grouped=new Map();
+    for(const row of data.intervals){if(!grouped.has(row.video))grouped.set(row.video,[]);grouped.get(row.video).push(row)}
+    for(const row of data.summary.classes){const option=document.createElement('option');option.value=row.label;option.textContent=`${row.label} (${row.videos})`;filter.append(option)}
+    const stats=[['视频',data.summary.unique_videos],['原始任务',data.summary.json_tasks],['动作区间',data.summary.intervals],['类别',data.summary.observed_classes]];
+    for(const [label,value] of stats){const box=document.createElement('div');box.className='stat';const strong=document.createElement('strong');strong.textContent=value;const small=document.createElement('small');small.textContent=label;box.append(strong,small);document.getElementById('stats').append(box)}
+    let selected='';
+    function videoUrl(path){return path.split('/').map(encodeURIComponent).join('/')}
+    function showVideo(video){
+      selected=video.video;detail.replaceChildren();
+      const title=document.createElement('h2');title.textContent=video.video.split('/').pop();detail.append(title);
+      const meta=document.createElement('p');meta.className='hint';meta.textContent=`${(video.bytes/1048576).toFixed(1)} MiB · ${video.interval_count} 条动作区间 · ${video.cancelled_annotations} 条取消标注`;detail.append(meta);
+      const links=document.createElement('div');links.className='links';
+      const raw=document.createElement('a');raw.href=videoUrl(video.video);raw.textContent='打开原视频';raw.target='_blank';links.append(raw);detail.append(links);
+      const player=document.createElement('video');player.controls=true;player.preload='metadata';player.src=videoUrl(video.video);detail.append(player);
+      const segments=grouped.get(video.video)||[];
+      if(!segments.length){const empty=document.createElement('p');empty.className='hint';empty.textContent='这个视频没有有效动作区间；空白或取消标注不表示无猫、无动作。';detail.append(empty);return}
+      const table=document.createElement('table');const head=document.createElement('thead');const header=document.createElement('tr');
+      for(const label of ['原始帧区间','动作标签','任务 / 标注']){const cell=document.createElement('th');cell.textContent=label;header.append(cell)}head.append(header);table.append(head);
+      const body=document.createElement('tbody');for(const row of segments){const tr=document.createElement('tr');const cells=[`${row.start_frame}–${row.end_frame}`,row.label,`${row.task_id} / ${row.annotation_id}`];for(const value of cells){const td=document.createElement('td');td.textContent=value;tr.append(td)}body.append(tr)}table.append(body);detail.append(table);
+    }
+    function render(){const query=search.value.trim().toLowerCase(),label=filter.value;const filtered=data.videos.filter(video=>video.video.toLowerCase().includes(query)&&(!label||(grouped.get(video.video)||[]).some(row=>row.label===label)));
+      document.getElementById('visible-count').textContent=`${filtered.length} 条`;list.replaceChildren();for(const video of filtered.slice(0,100)){const button=document.createElement('button');button.type='button';button.className='item'+(video.video===selected?' active':'');const name=document.createElement('b');name.textContent=video.video.split('/').pop();const sub=document.createElement('small');sub.textContent=`${video.interval_count} 条区间 · ${video.task_count} 个任务`;button.append(name,sub);button.onclick=()=>{showVideo(video);render()};list.append(button)}
+    }
+    search.addEventListener('input',render);filter.addEventListener('change',render);render();
+  </script>
+</body>
+</html>
