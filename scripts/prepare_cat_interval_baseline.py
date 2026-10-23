@@ -24,6 +24,25 @@ SEED = 0
 MIN_FRAMES = 60
 
 
+def assign_days(candidates: list[dict]) -> tuple[dict[str, set[str]], int]:
+    """Choose a reproducible day split with enough rare-class candidates."""
+    days = sorted({row["day"] for row in candidates})
+    fifth = len(days) // 5
+    for split_seed in range(10_000):
+        shuffled = days.copy()
+        random.Random(split_seed).shuffle(shuffled)
+        groups = {"val": set(shuffled[:fifth]),
+                  "test": set(shuffled[fifth:2 * fifth]),
+                  "train": set(shuffled[2 * fifth:])}
+        counts = {split: Counter(row["label"] for row in candidates
+                                 if row["day"] in group)
+                  for split, group in groups.items()}
+        if all(counts[split][label] >= quota + max(4, quota // 5)
+               for split, quota in QUOTAS.items() for label in range(len(CLASSES))):
+            return groups, split_seed
+    raise RuntimeError("No day-disjoint split has enough candidates in every class")
+
+
 def sha(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -44,13 +63,19 @@ def stable_key(row: dict) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
+    parser.add_argument("--smoke", action="store_true",
+                        help="Write a tiny workflow-only index in separate paths")
     args = parser.parse_args()
-    global SOURCE, VIDEOS, OUTPUT, AUDIT
+    global SOURCE, VIDEOS, OUTPUT, AUDIT, QUOTAS
     root = args.root.resolve()
     SOURCE = root / "datasets/cat_raw/annotations/intervals.csv"
     VIDEOS = root / "datasets/cat_raw"
     OUTPUT = root / "datasets/cat_interval_baseline"
     AUDIT = root / "results/training/cat_interval_baseline/data_audit.json"
+    if args.smoke:
+        OUTPUT = root / "datasets/cat_interval_smoke"
+        AUDIT = root / "results/training/cat_interval_smoke/data_audit.json"
+        QUOTAS = {"train": 2, "val": 1, "test": 1}
 
     from decord import VideoReader
 
@@ -83,11 +108,7 @@ def main() -> None:
                                "label": CLASSES.index(label), "label_name": label,
                                "day": day_of(video), "sample_id": sample_id})
 
-    days = sorted({row["day"] for row in candidates})
-    random.Random(SEED).shuffle(days)
-    fifth = len(days) // 5
-    split_days = {"val": set(days[:fifth]), "test": set(days[fifth:2 * fifth]),
-                  "train": set(days[2 * fifth:])}
+    split_days, split_seed = assign_days(candidates)
     frame_counts: dict[str, int | None] = {}
     invalid = Counter()
     selected: dict[str, list[dict]] = {}
@@ -131,10 +152,12 @@ def main() -> None:
     classes_file = OUTPUT / "classes.json"
     classes_file.write_text(json.dumps(CLASSES, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     report = {"source": str(SOURCE), "source_sha256": sha(SOURCE),
+              "purpose": "pipeline smoke test only" if args.smoke else "training baseline",
               "source_intervals": len(source_rows), "candidate_intervals": len(candidates),
               "filter_counts": dict(counts), "invalid_counts": dict(invalid),
               "frame_numbering": "1-based inclusive", "minimum_frames": MIN_FRAMES,
-              "split_group": "event calendar day", "seed": SEED, "classes": CLASSES,
+              "split_group": "event calendar day", "seed": SEED,
+              "split_seed": split_seed, "classes": CLASSES,
               "quotas_per_class": QUOTAS, "split_days": {k: sorted(v) for k, v in split_days.items()},
               "outputs": outputs, "selected_video_count": len({row["video"] for rows in selected.values() for row in rows})}
     AUDIT.parent.mkdir(parents=True, exist_ok=True)

@@ -18,24 +18,28 @@ import sys
 
 root = Path('/home/wyy/pet-final')
 python = root / '.runtime/pet/bin/python'
-result = root / 'results/training/cat_interval_baseline'
-result.mkdir(parents=True, exist_ok=True)
 action = sys.argv[1]
+smoke = action.startswith('smoke_')
+verb = action[6:] if smoke else action
+result = root / 'results/training' / ('cat_interval_smoke' if smoke else 'cat_interval_baseline')
+result.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env['PYTHONPATH'] = str(root) + os.pathsep + env.get('PYTHONPATH', '')
 env['CUDA_VISIBLE_DEVICES'] = '0'
-if action in ('prepare', 'preflight'):
-    script = ('prepare_cat_interval_baseline.py' if action == 'prepare'
+if verb in ('prepare', 'preflight'):
+    script = ('prepare_cat_interval_baseline.py' if verb == 'prepare'
               else 'check_cat_interval_baseline.py')
     command = [str(python), '-B', str(root / 'scripts' / script)]
-    if action == 'prepare':
+    if verb == 'prepare':
         command += ['--root', str(root)]
+    if smoke:
+        command += ['--smoke']
     completed = subprocess.run(command, cwd=root, env=env, stdin=subprocess.DEVNULL,
                                capture_output=True, text=True, timeout=1200)
     if completed.returncode:
         raise RuntimeError(action + ' failed: ' + completed.stderr[-2500:] + completed.stdout[-1000:])
     print(completed.stdout.strip().splitlines()[-1])
-elif action == 'start':
+elif verb == 'start':
     pid_path = result / 'job.pid'
     if pid_path.exists():
         old = int(pid_path.read_text())
@@ -43,12 +47,15 @@ elif action == 'start':
         if cmdline.exists() and b'run_cat_interval_baseline.py' in cmdline.read_bytes():
             raise RuntimeError('Training job is already active')
     with (result / 'job.log').open('ab') as stream:
-        proc = subprocess.Popen([str(python), '-B', str(root / 'scripts/run_cat_interval_baseline.py')],
+        command = [str(python), '-B', str(root / 'scripts/run_cat_interval_baseline.py')]
+        if smoke:
+            command += ['--smoke']
+        proc = subprocess.Popen(command,
                                 cwd=root, env=env, stdin=subprocess.DEVNULL,
                                 stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
     pid_path.write_text(str(proc.pid) + '\n')
     print(json.dumps({'pid': proc.pid, 'result_dir': str(result)}))
-elif action == 'status':
+elif verb == 'status':
     pid_path = result / 'job.pid'
     pid = int(pid_path.read_text()) if pid_path.exists() else None
     proc_path = Path('/proc/' + str(pid) + '/cmdline') if pid is not None else None
@@ -69,7 +76,9 @@ else:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['prepare', 'preflight', 'start', 'status'])
+    parser.add_argument('action', choices=['prepare', 'preflight', 'start', 'status',
+                                           'smoke_prepare', 'smoke_preflight',
+                                           'smoke_start', 'smoke_status'])
     args = parser.parse_args()
     client = connect()
     try:
