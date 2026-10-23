@@ -76,7 +76,7 @@ elif action == 'bind-project':
     if not (new / 'bin/python').is_file():
         raise RuntimeError('Cloned environment missing')
     command = [str(new / 'bin/python'), '-m', 'pip', 'install', '--no-deps',
-               '--no-build-isolation', '-e', str(root / 'models/mmaction2')]
+               '-e', str(root / 'models/mmaction2')]
     result = subprocess.run(command, capture_output=True, text=True, timeout=300)
     (logs / 'runtime_bind_mmaction.log').write_text(result.stdout + result.stderr)
     if result.returncode:
