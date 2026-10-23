@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from mmengine.config import Config
 from mmaction.registry import DATASETS, MODELS
 from mmaction.utils import register_all_modules
 
 import petlib.datasets.cat_intervals  # noqa: F401 - registry side effect
-
-ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
