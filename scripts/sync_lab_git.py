@@ -32,6 +32,10 @@ def main() -> None:
         if args.action == 'files':
             source_manifest = json.loads((LOCAL_REPORT / 'manifest.json').read_text(encoding='utf-8'))
             original = {entry['path']: entry['sha256'] for entry in source_manifest['files']}
+            prior_report_path = LOCAL_REPORT / 'git_sync.json'
+            prior = json.loads(prior_report_path.read_text(encoding='utf-8')) if prior_report_path.exists() else {}
+            prior_head = prior.get('migration_final_head')
+            prior_paths = set(prior.get('files_updated', []))
             updated = subprocess.check_output(['git', 'diff', '--name-only', head.strip(),
                                                'HEAD'], cwd=ROOT, text=True).splitlines()
             if not updated:
@@ -48,7 +52,12 @@ def main() -> None:
                     if status == 0:
                         if current.split()[0] == sha256_file(local_file):
                             continue
-                        if relative not in original or current.split()[0] != original[relative]:
+                        known_hashes = {original[relative]} if relative in original else set()
+                        if prior_head and relative in prior_paths:
+                            previous = subprocess.check_output(['git', 'show', f'{prior_head}:{relative}'], cwd=ROOT)
+                            known_hashes.add(hashlib.sha256(previous).hexdigest())
+                            known_hashes.add(hashlib.sha256(previous.replace(b'\n', b'\r\n')).hexdigest())
+                        if current.split()[0] not in known_hashes:
                             raise RuntimeError('Remote update path differs from original manifest: ' + relative)
                         replace = True
                     else:
