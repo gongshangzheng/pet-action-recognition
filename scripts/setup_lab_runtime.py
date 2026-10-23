@@ -13,6 +13,7 @@ REMOTE = r'''
 import importlib.metadata as md
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -91,7 +92,12 @@ elif action == 'status':
                        if len(line.split(None, 4)) == 5 and
                        line.split(None, 4)[4].startswith('/home/wyy/miniconda3/bin/conda create')]
     size = subprocess.run(['du', '-sh', str(new)], capture_output=True, text=True)
+    node = subprocess.run(['node', '--version'], capture_output=True, text=True) if shutil.which('node') else None
+    npm = subprocess.run(['npm', '--version'], capture_output=True, text=True) if shutil.which('npm') else None
     print(json.dumps({'clone_ready': (new / 'bin/python').is_file(),
+                      'node_version': node.stdout.strip() if node and node.returncode == 0 else None,
+                      'npm_version': npm.stdout.strip() if npm and npm.returncode == 0 else None,
+                      'web_node_modules': (root / 'web/node_modules').is_dir(),
                       'clone_processes': clone_processes[:5],
                       'clone_directory_size': size.stdout.strip() if size.returncode == 0 else None,
                       'clone_tail': clone_log.read_text(errors='replace').splitlines()[-8:]
@@ -100,6 +106,22 @@ elif action == 'status':
                       if aux_log.exists() else [],
                       'bind_tail': bind_log.read_text(errors='replace').splitlines()[-12:]
                       if bind_log.exists() else []}, ensure_ascii=False))
+elif action == 'fix-rich':
+    command = [str(new / 'bin/python'), '-m', 'pip', 'install', 'rich~=13.4.2']
+    result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+    (logs / 'runtime_rich_fix.log').write_text(result.stdout + result.stderr)
+    if result.returncode:
+        raise RuntimeError('Rich version adjustment failed; see runtime_rich_fix.log')
+    print(json.dumps({'rich_adjusted': True}))
+elif action == 'install-web':
+    command = ['npm', 'ci', '--no-audit', '--no-fund']
+    with (logs / 'web_npm_ci.log').open('w') as log:
+        result = subprocess.run(command, cwd=root / 'web', stdin=subprocess.DEVNULL,
+                                stdout=log, stderr=subprocess.STDOUT, timeout=1800)
+    print(json.dumps({'exit_code': result.returncode, 'node_modules':
+                      (root / 'web/node_modules').is_dir()}))
+    if result.returncode:
+        sys.exit(result.returncode)
 else:
     raise RuntimeError('Unsupported action')
 '''
@@ -107,7 +129,8 @@ else:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['clone', 'install-aux', 'bind-project', 'audit', 'status'])
+    parser.add_argument('action', choices=['clone', 'install-aux', 'bind-project', 'audit',
+                                           'status', 'fix-rich', 'install-web'])
     args = parser.parse_args()
     client = connect()
     try:
