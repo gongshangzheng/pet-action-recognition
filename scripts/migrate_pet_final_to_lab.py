@@ -220,15 +220,22 @@ def mkdir_p(sftp: paramiko.SFTPClient, path: str) -> None:
             fail(f"Remote path is not a directory: {current}")
 
 
-def upload(sftp: paramiko.SFTPClient, source: Path, destination: str, expected_size: int) -> str:
+def upload(sftp: paramiko.SFTPClient, source: Path, destination: str, expected_size: int,
+           *, replace_pristine_clone_file: bool = False) -> str:
     if source.stat().st_size != expected_size:
         fail(f"Local source changed size: {source}")
     mkdir_p(sftp, destination.rsplit("/", 1)[0])
     done = remote_exists(sftp, destination)
     if done is not None:
-        if stat.S_ISREG(done.st_mode) and done.st_size == expected_size:
+        if not stat.S_ISREG(done.st_mode):
+            fail(f"Remote destination is not a regular file: {destination}")
+        if replace_pristine_clone_file:
+            # Only a Git-tracked file whose clone checkout is still pristine may be replaced.
+            pass
+        elif done.st_size == expected_size:
             return "already_present_pending_final_hash"
-        fail(f"Remote destination conflicts: {destination}")
+        else:
+            fail(f"Remote destination conflicts: {destination}")
     temporary = destination + ".codex-upload"
     pending = remote_exists(sftp, temporary)
     offset = pending.st_size if pending is not None else 0
@@ -243,9 +250,12 @@ def upload(sftp: paramiko.SFTPClient, source: Path, destination: str, expected_s
     actual = sftp.stat(temporary).st_size
     if actual != expected_size:
         fail(f"Incomplete upload: {destination}: {actual}/{expected_size}")
-    if remote_exists(sftp, destination) is not None:
+    if not replace_pristine_clone_file and remote_exists(sftp, destination) is not None:
         fail(f"Remote destination appeared during upload: {destination}")
-    sftp.rename(temporary, destination)
+    if replace_pristine_clone_file:
+        sftp.posix_rename(temporary, destination)
+    else:
+        sftp.rename(temporary, destination)
     return "uploaded"
 
 
@@ -262,7 +272,7 @@ def transfer() -> dict:
         try:
             remote_run(client, "test -d /home/wyy && test -w /home/wyy")
             mkdir_p(sftp, STAGING)
-            bundle_remote = STAGING + "/git_history.bundle"
+            bundle_remote = STAGING + "/git_history_" + manifest["git_bundle"]["sha256"][:16] + ".bundle"
             upload(sftp, bundle, bundle_remote, bundle.stat().st_size)
             current = remote_exists(sftp, TARGET)
             if current is None:
@@ -271,7 +281,22 @@ def transfer() -> dict:
                 fail("Target project path exists but is not a directory")
             _, head, _ = remote_run(client, "git -C " + shlex.quote(TARGET) + " rev-parse HEAD")
             if head.strip() != manifest["git_head"]:
-                fail(f"Remote Git history differs: {head.strip()}")
+                _, dirty, _ = remote_run(client, "git -C " + shlex.quote(TARGET)
+                                         + " status --porcelain --untracked-files=no")
+                if dirty.strip():
+                    fail("Remote worktree changed; refusing to update Git history")
+                remote_run(client, "git -C " + shlex.quote(TARGET) + " fetch -q "
+                           + shlex.quote(bundle_remote) + " main")
+                remote_run(client, "git -C " + shlex.quote(TARGET) + " merge --ff-only -q FETCH_HEAD")
+                _, head, _ = remote_run(client, "git -C " + shlex.quote(TARGET) + " rev-parse HEAD")
+                if head.strip() != manifest["git_head"]:
+                    fail("Remote Git head does not match local bundle")
+            _, tracked_output, _ = remote_run(client, "git -C " + shlex.quote(TARGET) + " ls-files -z")
+            _, modified_output, _ = remote_run(client, "git -C " + shlex.quote(TARGET)
+                                               + " diff --name-only -z")
+            tracked = set(filter(None, tracked_output.split("\0")))
+            modified = set(filter(None, modified_output.split("\0")))
+            pristine_tracked = tracked - modified
             mkdir_p(sftp, TARGET + "/.migration")
             transferred = skipped = transferred_bytes = 0
             started = time.monotonic()
@@ -281,7 +306,8 @@ def transfer() -> dict:
                 if (info.st_size, info.st_mtime_ns) != (entry["bytes"], entry["mtime_ns"]):
                     fail(f"Local source changed after manifest creation: {source}")
                 dest = TARGET + "/" + entry["path"]
-                state = upload(sftp, source, dest, entry["bytes"])
+                state = upload(sftp, source, dest, entry["bytes"],
+                               replace_pristine_clone_file=entry["path"] in pristine_tracked)
                 transferred += state == "uploaded"
                 skipped += state != "uploaded"
                 transferred_bytes += entry["bytes"] if state == "uploaded" else 0
