@@ -138,6 +138,19 @@ elif action == 'install-web':
                       (root / 'web/node_modules').is_dir()}))
     if result.returncode:
         sys.exit(result.returncode)
+elif action == 'build-web':
+    node_bin = root / '.runtime/node-v22.16.0-linux-x64/bin'
+    import os
+    env = os.environ.copy()
+    env['PATH'] = str(node_bin) + os.pathsep + env.get('PATH', '')
+    with (logs / 'web_build.log').open('w') as log:
+        result = subprocess.run([str(node_bin / 'npm'), 'run', 'build'], cwd=root / 'web',
+                                stdin=subprocess.DEVNULL, stdout=log,
+                                stderr=subprocess.STDOUT, env=env, timeout=1800)
+    print(json.dumps({'exit_code': result.returncode, 'dist_exists':
+                      (root / 'web/dist').is_dir()}))
+    if result.returncode:
+        sys.exit(result.returncode)
 elif action == 'install-node':
     name = 'node-v22.16.0-linux-x64.tar.xz'
     directory = root / '.runtime/node-v22.16.0-linux-x64'
@@ -176,7 +189,8 @@ else:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['clone', 'install-aux', 'bind-project', 'audit',
-                                           'status', 'fix-rich', 'fix-typer', 'install-node', 'install-web'])
+                                           'status', 'fix-rich', 'fix-typer', 'install-node',
+                                           'install-web', 'build-web'])
     args = parser.parse_args()
     client = connect()
     try:
