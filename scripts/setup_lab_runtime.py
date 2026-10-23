@@ -116,6 +116,13 @@ elif action == 'fix-rich':
     if result.returncode:
         raise RuntimeError('Rich version adjustment failed; see runtime_rich_fix.log')
     print(json.dumps({'rich_adjusted': True}))
+elif action == 'fix-typer':
+    command = [str(new / 'bin/python'), '-m', 'pip', 'install', 'typer==0.15.4']
+    result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+    (logs / 'runtime_typer_fix.log').write_text(result.stdout + result.stderr)
+    if result.returncode:
+        raise RuntimeError('Typer version adjustment failed; see runtime_typer_fix.log')
+    print(json.dumps({'typer_adjusted': True}))
 elif action == 'install-web':
     node_bin = root / '.runtime/node-v22.16.0-linux-x64/bin'
     if not (node_bin / 'node').is_file():
@@ -169,7 +176,7 @@ else:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['clone', 'install-aux', 'bind-project', 'audit',
-                                           'status', 'fix-rich', 'install-node', 'install-web'])
+                                           'status', 'fix-rich', 'fix-typer', 'install-node', 'install-web'])
     args = parser.parse_args()
     client = connect()
     try:
