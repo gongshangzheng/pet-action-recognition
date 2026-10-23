@@ -25,7 +25,7 @@ result = root / 'results/training' / ('cat_interval_smoke' if smoke else 'cat_in
 result.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env['PYTHONPATH'] = str(root) + os.pathsep + env.get('PYTHONPATH', '')
-env['CUDA_VISIBLE_DEVICES'] = '0'
+env['CUDA_VISIBLE_DEVICES'] = '1' if smoke else '0'
 if verb in ('prepare', 'preflight'):
     script = ('prepare_cat_interval_baseline.py' if verb == 'prepare'
               else 'check_cat_interval_baseline.py')

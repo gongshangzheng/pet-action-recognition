@@ -57,7 +57,8 @@ def main() -> int:
         "purpose": "pipeline smoke test only" if args.smoke else "training baseline",
         "config": str(config), "config_sha256": sha(config),
         "epochs": 1 if args.smoke else 3,
-        "batch_size": 2 if args.smoke else 8, "gpu": "CUDA_VISIBLE_DEVICES=0",
+        "batch_size": 2 if args.smoke else 8,
+        "gpu": "CUDA_VISIBLE_DEVICES=" + os.environ.get("CUDA_VISIBLE_DEVICES", "0"),
         "dataset_sha256": {name: sha(ROOT / f"datasets/{'cat_interval_smoke' if args.smoke else 'cat_interval_baseline'}/{name}.jsonl")
                            for name in ("train", "val", "test")},
         "versions": {name: metadata.version(name) for name in
@@ -65,7 +66,7 @@ def main() -> int:
     }
     save(state, result)
     env = os.environ.copy()
-    env["CUDA_VISIBLE_DEVICES"] = "0"
+    env["CUDA_VISIBLE_DEVICES"] = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
     env["OMP_NUM_THREADS"] = "4"
     command = [sys.executable, str(ROOT / "models/mmaction2/tools/train.py"),
