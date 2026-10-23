@@ -62,6 +62,14 @@ for name in names:
 print(json.dumps({'versions':result,'cuda_available':torch.cuda.is_available()}))"""
     output = subprocess.check_output([str(new / 'bin/python'), '-c', code], text=True, timeout=120)
     print(output)
+elif action == 'status':
+    clone_log = logs / 'runtime_clone.log'
+    aux_log = logs / 'runtime_aux_install.log'
+    print(json.dumps({'clone_ready': (new / 'bin/python').is_file(),
+                      'clone_tail': clone_log.read_text(errors='replace').splitlines()[-8:]
+                      if clone_log.exists() else [],
+                      'aux_tail': aux_log.read_text(errors='replace').splitlines()[-8:]
+                      if aux_log.exists() else []}, ensure_ascii=False))
 else:
     raise RuntimeError('Unsupported action')
 '''
@@ -69,7 +77,7 @@ else:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['clone', 'install-aux', 'audit'])
+    parser.add_argument('action', choices=['clone', 'install-aux', 'audit', 'status'])
     args = parser.parse_args()
     client = connect()
     try:
