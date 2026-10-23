@@ -154,7 +154,8 @@ elif action == 'install-node':
     if not (directory / 'bin/node').is_file():
         with tarfile.open(archive, 'r:xz') as bundle:
             for member in bundle.getmembers():
-                if not member.name.startswith('node-v22.16.0-linux-x64/') or '..' in Path(member.name).parts:
+                if (member.name != 'node-v22.16.0-linux-x64' and
+                        not member.name.startswith('node-v22.16.0-linux-x64/')) or '..' in Path(member.name).parts:
                     raise RuntimeError('Unexpected path in Node archive')
             bundle.extractall(root / '.runtime')
     version = subprocess.check_output([str(directory / 'bin/node'), '--version'], text=True).strip()
