@@ -12,6 +12,7 @@ from migrate_pet_final_to_lab import connect
 COPY_CHECKPOINTS = r'''
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 
@@ -30,13 +31,21 @@ def sha(path):
 
 count = copied = total_bytes = 0
 for file in sorted(source.rglob('*')):
-    if not file.is_file() or file.is_symlink():
+    if not file.is_file():
         continue
     relative = file.relative_to(source)
     destination = target / relative
     destination.parent.mkdir(parents=True, exist_ok=True)
     if not destination.exists():
-        shutil.copy2(file, destination)
+        resolved = file.resolve()
+        try:
+            linked_source = target / resolved.relative_to(source.resolve())
+        except ValueError:
+            linked_source = None
+        if file.is_symlink() and linked_source is not None and linked_source.is_file():
+            os.link(linked_source, destination)
+        else:
+            shutil.copy2(file, destination)
         copied += 1
     if destination.stat().st_size != file.stat().st_size or sha(destination) != sha(file):
         raise RuntimeError('Checkpoint differs: ' + str(relative))
