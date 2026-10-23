@@ -65,7 +65,14 @@ print(json.dumps({'versions':result,'cuda_available':torch.cuda.is_available()})
 elif action == 'status':
     clone_log = logs / 'runtime_clone.log'
     aux_log = logs / 'runtime_aux_install.log'
+    processes = subprocess.run(['ps', '-eo', 'pid,etime,stat,comm,args'], capture_output=True, text=True)
+    clone_processes = [line.strip() for line in processes.stdout.splitlines()
+                       if len(line.split(None, 4)) == 5 and
+                       line.split(None, 4)[4].startswith('/home/wyy/miniconda3/bin/conda create')]
+    size = subprocess.run(['du', '-sh', str(new)], capture_output=True, text=True)
     print(json.dumps({'clone_ready': (new / 'bin/python').is_file(),
+                      'clone_processes': clone_processes[:5],
+                      'clone_directory_size': size.stdout.strip() if size.returncode == 0 else None,
                       'clone_tail': clone_log.read_text(errors='replace').splitlines()[-8:]
                       if clone_log.exists() else [],
                       'aux_tail': aux_log.read_text(errors='replace').splitlines()[-8:]
