@@ -53,15 +53,35 @@ elif action == 'install-aux':
 elif action == 'audit':
     if not (new / 'bin/python').is_file():
         raise RuntimeError('Cloned environment missing')
-    code = """import importlib.metadata as m, json, torch
+    code = """import importlib.metadata as m, json, torch, importlib
 names=['torch','torchvision','mmcv','mmengine','mmaction2','numpy','ultralytics','rembg','onnxruntime','rknn-toolkit2','ruptures','hmmlearn','pytorch-tcn']
 result={}
 for name in names:
  try: result[name]=m.version(name)
  except m.PackageNotFoundError: result[name]=None
-print(json.dumps({'versions':result,'cuda_available':torch.cuda.is_available()}))"""
+imports={}
+for name in ['mmaction','mmcv','mmengine','mmdet','decord','ultralytics','rembg','onnxruntime','rknn']:
+ try:
+  module=importlib.import_module(name)
+  imports[name]=getattr(module,'__file__',None)
+ except Exception as exc: imports[name]=type(exc).__name__+': '+str(exc)[:180]
+print(json.dumps({'versions':result,'cuda_available':torch.cuda.is_available(),'imports':imports}))"""
     output = subprocess.check_output([str(new / 'bin/python'), '-c', code], text=True, timeout=120)
-    print(output)
+    check = subprocess.run([str(new / 'bin/python'), '-m', 'pip', 'check'], capture_output=True,
+                           text=True, timeout=120)
+    result = json.loads(output)
+    result['pip_check'] = {'exit_code': check.returncode, 'output': check.stdout.strip()[:3000]}
+    print(json.dumps(result))
+elif action == 'bind-project':
+    if not (new / 'bin/python').is_file():
+        raise RuntimeError('Cloned environment missing')
+    command = [str(new / 'bin/python'), '-m', 'pip', 'install', '--no-deps',
+               '--no-build-isolation', '-e', str(root / 'models/mmaction2')]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+    (logs / 'runtime_bind_mmaction.log').write_text(result.stdout + result.stderr)
+    if result.returncode:
+        raise RuntimeError('MMAction2 project binding failed; see runtime_bind_mmaction.log')
+    print(json.dumps({'project': str(root / 'models/mmaction2'), 'bound': True}))
 elif action == 'status':
     clone_log = logs / 'runtime_clone.log'
     aux_log = logs / 'runtime_aux_install.log'
@@ -84,7 +104,7 @@ else:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['clone', 'install-aux', 'audit', 'status'])
+    parser.add_argument('action', choices=['clone', 'install-aux', 'bind-project', 'audit', 'status'])
     args = parser.parse_args()
     client = connect()
     try:
