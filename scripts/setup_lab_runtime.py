@@ -69,7 +69,7 @@ print(json.dumps({'versions':result,'cuda_available':torch.cuda.is_available(),'
     output = subprocess.check_output([str(new / 'bin/python'), '-c', code], text=True, timeout=120)
     check = subprocess.run([str(new / 'bin/python'), '-m', 'pip', 'check'], capture_output=True,
                            text=True, timeout=120)
-    result = json.loads(output)
+    result = json.loads(output.splitlines()[-1])
     result['pip_check'] = {'exit_code': check.returncode, 'output': check.stdout.strip()[:3000]}
     print(json.dumps(result))
 elif action == 'bind-project':
