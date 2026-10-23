@@ -106,6 +106,41 @@ print(json.dumps({'status': {key: status.get(key) for key in
                   'log_tail': lines[-8:]}, ensure_ascii=False))
 '''
 
+START_MODEL_ZOO = r'''
+import json
+from pathlib import Path
+import subprocess
+
+root = Path('/home/wyy/pet-final')
+report = root / 'results/migration_lab/public_assets'
+report.mkdir(parents=True, exist_ok=True)
+log = report / 'model_zoo.log'
+pid = report / 'model_zoo.pid'
+if pid.exists() and Path('/proc/' + pid.read_text().strip()).exists():
+    raise RuntimeError('Model zoo source preparation is already running')
+command = ['/home/wyy/miniconda3/envs/pet/bin/python',
+           str(root / 'scripts/cache_company_model_zoo_source.py'), '--root', str(root)]
+with log.open('ab') as stream:
+    process = subprocess.Popen(command, cwd=root, stdin=subprocess.DEVNULL,
+                               stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
+pid.write_text(str(process.pid) + '\n')
+print(json.dumps({'pid': process.pid, 'log': str(log)}))
+'''
+
+MODEL_ZOO_STATUS = r'''
+import json
+from pathlib import Path
+
+root = Path('/home/wyy/pet-final')
+report = root / 'results/migration_lab/public_assets'
+log = report / 'model_zoo.log'
+lines = log.read_text(errors='replace').splitlines() if log.exists() else []
+archive = root / 'third-party/offline/sources/airockchip--rknn_model_zoo-bad6c7334531-source-only.zip'
+print(json.dumps({'archive_exists': archive.is_file(),
+                  'archive_bytes': archive.stat().st_size if archive.is_file() else 0,
+                  'log_tail': lines[-8:]}, ensure_ascii=False))
+'''
+
 
 def run(client, source: str, timeout: int) -> dict:
     _, stdout, stderr = client.exec_command('python3 -c ' + shlex.quote(source), timeout=timeout)
@@ -119,12 +154,14 @@ def run(client, source: str, timeout: int) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['copy-checkpoints', 'start-assets', 'asset-status'])
+    parser.add_argument('action', choices=['copy-checkpoints', 'start-assets', 'asset-status',
+                                           'start-model-zoo', 'model-zoo-status'])
     args = parser.parse_args()
     client = connect()
     try:
         source = {'copy-checkpoints': COPY_CHECKPOINTS, 'start-assets': START_ASSETS,
-                  'asset-status': ASSET_STATUS}[args.action]
+                  'asset-status': ASSET_STATUS, 'start-model-zoo': START_MODEL_ZOO,
+                  'model-zoo-status': MODEL_ZOO_STATUS}[args.action]
         print(json.dumps(run(client, source, 1800 if args.action == 'copy-checkpoints' else 120),
                          ensure_ascii=False, indent=2))
     finally:
