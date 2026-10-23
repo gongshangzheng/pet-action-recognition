@@ -70,9 +70,16 @@ class CatIntervalMetric(BaseMetric):
 
     def process(self, data_batch, data_samples) -> None:
         for sample in data_samples:
-            scores = sample.pred_score.detach().cpu().tolist()
-            label = int(sample.gt_label.item())
-            meta = sample.metainfo
+            if isinstance(sample, dict):
+                pred_score = sample["pred_score"]
+                gt_label = sample["gt_label"]
+                meta = sample.get("metainfo", sample)
+            else:
+                pred_score = sample.pred_score
+                gt_label = sample.gt_label
+                meta = sample.metainfo
+            scores = pred_score.detach().cpu().tolist()
+            label = int(gt_label.item())
             self.results.append({
                 "sample_id": meta.get("sample_id"),
                 "video": meta.get("filename"),
