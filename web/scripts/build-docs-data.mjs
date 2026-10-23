@@ -60,7 +60,7 @@ function parseFrontmatter(content, file) {
   if (!content.startsWith('---')) return [{}, content]
   const end = content.indexOf('---', 3)
   if (end < 0) fail(`${file}: frontmatter 起始 --- 之后没有结束 ---`)
-  const head = content.slice(3, end).split('\n')
+  const head = content.slice(3, end).split(/\r?\n/)
   const meta = {}
   head.forEach((line, index) => {
     if (!line.trim()) return
