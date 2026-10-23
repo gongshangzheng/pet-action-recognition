@@ -11,11 +11,14 @@ from migrate_pet_final_to_lab import connect
 
 REMOTE = r'''
 import importlib.metadata as md
+import hashlib
 import json
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tarfile
+from urllib.request import urlopen
 
 root = Path('/home/wyy/pet-final')
 old = Path('/home/wyy/miniconda3/envs/pet')
@@ -114,14 +117,49 @@ elif action == 'fix-rich':
         raise RuntimeError('Rich version adjustment failed; see runtime_rich_fix.log')
     print(json.dumps({'rich_adjusted': True}))
 elif action == 'install-web':
-    command = ['npm', 'ci', '--no-audit', '--no-fund']
+    node_bin = root / '.runtime/node-v22.16.0-linux-x64/bin'
+    if not (node_bin / 'node').is_file():
+        raise RuntimeError('Run install-node first')
+    import os
+    env = os.environ.copy()
+    env['PATH'] = str(node_bin) + os.pathsep + env.get('PATH', '')
+    command = [str(node_bin / 'npm'), 'ci', '--no-audit', '--no-fund']
     with (logs / 'web_npm_ci.log').open('w') as log:
         result = subprocess.run(command, cwd=root / 'web', stdin=subprocess.DEVNULL,
-                                stdout=log, stderr=subprocess.STDOUT, timeout=1800)
+                                stdout=log, stderr=subprocess.STDOUT, env=env, timeout=1800)
     print(json.dumps({'exit_code': result.returncode, 'node_modules':
                       (root / 'web/node_modules').is_dir()}))
     if result.returncode:
         sys.exit(result.returncode)
+elif action == 'install-node':
+    name = 'node-v22.16.0-linux-x64.tar.xz'
+    directory = root / '.runtime/node-v22.16.0-linux-x64'
+    cache = root / '.runtime/cache/node'
+    cache.mkdir(parents=True, exist_ok=True)
+    archive = cache / name
+    sums = cache / 'SHASUMS256.txt'
+    source = 'https://nodejs.org/dist/v22.16.0/'
+    if not sums.exists():
+        sums.write_bytes(urlopen(source + 'SHASUMS256.txt', timeout=45).read())
+    expected = next((line.split()[0] for line in sums.read_text().splitlines()
+                     if line.split()[-1] == name), None)
+    if expected is None:
+        raise RuntimeError('Node archive absent from official checksum list')
+    if not archive.exists():
+        with urlopen(source + name, timeout=90) as response, archive.open('wb') as stream:
+            shutil.copyfileobj(response, stream)
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    if digest != expected:
+        raise RuntimeError('Node archive SHA-256 mismatch')
+    if not (directory / 'bin/node').is_file():
+        with tarfile.open(archive, 'r:xz') as bundle:
+            for member in bundle.getmembers():
+                if not member.name.startswith('node-v22.16.0-linux-x64/') or '..' in Path(member.name).parts:
+                    raise RuntimeError('Unexpected path in Node archive')
+            bundle.extractall(root / '.runtime')
+    version = subprocess.check_output([str(directory / 'bin/node'), '--version'], text=True).strip()
+    print(json.dumps({'node': str(directory / 'bin/node'), 'version': version,
+                      'archive_sha256': digest}))
 else:
     raise RuntimeError('Unsupported action')
 '''
@@ -130,7 +168,7 @@ else:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['clone', 'install-aux', 'bind-project', 'audit',
-                                           'status', 'fix-rich', 'install-web'])
+                                           'status', 'fix-rich', 'install-node', 'install-web'])
     args = parser.parse_args()
     client = connect()
     try:
