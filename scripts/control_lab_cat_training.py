@@ -26,13 +26,14 @@ result.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env['PYTHONPATH'] = str(root) + os.pathsep + env.get('PYTHONPATH', '')
 env['CUDA_VISIBLE_DEVICES'] = '1' if smoke else '0'
-if verb in ('prepare', 'preflight'):
-    script = ('prepare_cat_interval_baseline.py' if verb == 'prepare'
-              else 'check_cat_interval_baseline.py')
+if verb in ('prepare', 'preflight', 'verify'):
+    script = {'prepare': 'prepare_cat_interval_baseline.py',
+              'preflight': 'check_cat_interval_baseline.py',
+              'verify': 'verify_cat_interval_smoke.py'}[verb]
     command = [str(python), '-B', str(root / 'scripts' / script)]
     if verb == 'prepare':
         command += ['--root', str(root)]
-    if smoke:
+    if smoke and verb != 'verify':
         command += ['--smoke']
     completed = subprocess.run(command, cwd=root, env=env, stdin=subprocess.DEVNULL,
                                capture_output=True, text=True, timeout=1200)
@@ -78,7 +79,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['prepare', 'preflight', 'start', 'status',
                                            'smoke_prepare', 'smoke_preflight',
-                                           'smoke_start', 'smoke_status'])
+                                           'smoke_start', 'smoke_status', 'smoke_verify'])
     args = parser.parse_args()
     client = connect()
     try:
