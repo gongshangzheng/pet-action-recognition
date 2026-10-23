@@ -90,6 +90,7 @@ elif action == 'status':
     clone_log = logs / 'runtime_clone.log'
     aux_log = logs / 'runtime_aux_install.log'
     bind_log = logs / 'runtime_bind_mmaction.log'
+    web_build_log = logs / 'web_build.log'
     processes = subprocess.run(['ps', '-eo', 'pid,etime,stat,comm,args'], capture_output=True, text=True)
     clone_processes = [line.strip() for line in processes.stdout.splitlines()
                        if len(line.split(None, 4)) == 5 and
@@ -108,7 +109,9 @@ elif action == 'status':
                       'aux_tail': aux_log.read_text(errors='replace').splitlines()[-8:]
                       if aux_log.exists() else [],
                       'bind_tail': bind_log.read_text(errors='replace').splitlines()[-12:]
-                      if bind_log.exists() else []}, ensure_ascii=False))
+                      if bind_log.exists() else [],
+                      'web_build_tail': web_build_log.read_text(errors='replace').splitlines()[-12:]
+                      if web_build_log.exists() else []}, ensure_ascii=False))
 elif action == 'fix-rich':
     command = [str(new / 'bin/python'), '-m', 'pip', 'install', 'rich~=13.4.2']
     result = subprocess.run(command, capture_output=True, text=True, timeout=300)
