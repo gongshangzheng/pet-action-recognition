@@ -9,7 +9,7 @@ from pathlib import Path
 import shlex
 import subprocess
 
-from migrate_pet_final_to_lab import LOCAL_REPORT, ROOT, TARGET, STAGING, connect, remote_run, upload
+from migrate_pet_final_to_lab import LOCAL_REPORT, ROOT, TARGET, STAGING, connect, remote_run, upload, sha256_file
 
 
 def main() -> None:
@@ -46,6 +46,8 @@ def main() -> None:
                     status, current, _ = remote_run(client, 'test -f ' + shlex.quote(remote_file)
                                                     + ' && sha256sum ' + shlex.quote(remote_file), checked=False)
                     if status == 0:
+                        if current.split()[0] == sha256_file(local_file):
+                            continue
                         if relative not in original or current.split()[0] != original[relative]:
                             raise RuntimeError('Remote update path differs from original manifest: ' + relative)
                         replace = True
