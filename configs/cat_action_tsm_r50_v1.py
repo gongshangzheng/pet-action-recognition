@@ -30,6 +30,7 @@ custom_imports = dict(
 model = dict(
     backbone=dict(
         pretrained=None,
+        pretrained2d=False,
         init_cfg=dict(
             type="Pretrained",
             checkpoint="checkpoints/tsm-resnet50/tsm-resnet50_pretrained.pth",
