@@ -59,9 +59,12 @@ def check_weights(cfg: Config, model: torch.nn.Module) -> dict:
     state = model.state_dict()
     matched = total = unmatched = 0
     missing, shape_mismatch = [], []
+    buffers = {name for name, _ in model.named_buffers()}
     for key, value in state.items():
         if not key.startswith("backbone.") or key.endswith("num_batches_tracked"):
             continue
+        if key in buffers and key not in source:
+            continue  # fixed buffers (e.g. VideoMAE sinusoid pos_embed) are not in the checkpoint
         total += value.numel()
         if key not in source:
             missing.append(key)

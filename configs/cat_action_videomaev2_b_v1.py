@@ -72,9 +72,9 @@ eval_pipeline = [
     dict(type="PackActionInputs", meta_keys=("filename", "interval_start", "interval_end", "sample_id")),
 ]
 
-train_dataloader = dict(batch_size=8, dataset=dict(pipeline=train_pipeline))
-val_dataloader = dict(batch_size=8, dataset=dict(pipeline=eval_pipeline))
-test_dataloader = dict(batch_size=8, dataset=dict(pipeline=eval_pipeline))
+train_dataloader = dict(batch_size=4, dataset=dict(pipeline=train_pipeline))
+val_dataloader = dict(batch_size=4, dataset=dict(pipeline=eval_pipeline))
+test_dataloader = dict(batch_size=4, dataset=dict(pipeline=eval_pipeline))
 
 val_evaluator = dict(
     type="CatIntervalMetric",
@@ -92,7 +92,7 @@ optim_wrapper = dict(
     optimizer=dict(type="AdamW", lr=5e-5, betas=(0.9, 0.999), weight_decay=0.05),
     paramwise_cfg=dict(norm_decay_mult=0.0, bias_decay_mult=0.0),
     clip_grad=dict(max_norm=1.0),
-    accumulative_counts=2,
+    accumulative_counts=4,
 )
 param_scheduler = [
     dict(type="LinearLR", start_factor=0.1, by_epoch=True, begin=0, end=2),

@@ -6,7 +6,7 @@
 
 | 模型 | batch × 累积 | 优化器 | lr | 说明 |
 |---|---|---|---|---|
-| VideoMAEv2-B | 8 × 2 | AdamW wd 0.05 | 5e-5 | AMP，drop_path 0.1 |
+| VideoMAEv2-B | 4 × 4 | AdamW wd 0.05 | 5e-5 | AMP，drop_path 0.1 |
 | UniFormerV2-B | 16 × 1 | AdamW wd 0.05 | 5e-5 | AMP |
 | X3D-S | 16 × 1 | SGD m0.9 wd 1e-4 | 0.01 | AMP |
 | SlowFast R50 | 8 × 2 | SGD m0.9 wd 1e-4 | 0.005 | AMP |
