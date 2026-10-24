@@ -130,6 +130,21 @@ sha256sums.txt
 | toileting | 7 | 46.67% | 100.00% | 63.64% |
 | abnormal | 18 | 50.00% | 38.89% | 43.75% |
 
+### 区间级漏检率代理（测试集）
+
+从 `test_metrics.json` 的逐样本预测按平衡诊断索引重算，未重新推理。
+这里的“漏检”指区间真实类别没有被预测对，不等于连续视频的事件级漏检。
+
+| 口径 | TSM R50 | TSN R50 |
+|---|---:|---:|
+| 自然分布 test（442 条，micro） | 20.81% 错误 | 27.15% 错误 |
+| 类别均衡 test（79 条，macro 近似） | 35.44%（51/79） | 44.30%（44/79） |
+| 连续视频事件级漏检 | 未测 | 未测 |
+
+TSM 在平衡诊断集上的分类别漏检：activity 25.00%、eating 16.67%、
+drinking 33.33%、prolonged_stationary 0.00%、grooming 100.00%、
+toileting 0.00%（support 7）、abnormal 58.33%。
+
 ### 产物
 
 - TSM best checkpoint：
