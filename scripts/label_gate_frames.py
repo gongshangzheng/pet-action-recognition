@@ -50,7 +50,7 @@ def cmd_yolo(args: argparse.Namespace) -> int:
     from ultralytics import YOLO
 
     rows = read_manifest(args.manifest)
-    root = args.manifest.parent
+    root = args.image_root or args.manifest.parent
     model = YOLO(str(args.weights))
     cat_class = int(args.cat_class)
     out: list[dict] = []
@@ -87,7 +87,7 @@ def cmd_gdino(args: argparse.Namespace) -> int:
     from transformers import AutoProcessor, GroundingDinoForObjectDetection
 
     rows = read_manifest(args.manifest)
-    root = args.manifest.parent
+    root = args.image_root or args.manifest.parent
     device = args.device if args.device != "cpu" else "cpu"
     processor = AutoProcessor.from_pretrained(args.model_id)
     model = GroundingDinoForObjectDetection.from_pretrained(args.model_id).to(device).eval()
@@ -163,6 +163,8 @@ def main() -> int:
     for name in ("yolo", "gdino"):
         p = sub.add_parser(name)
         p.add_argument("--manifest", type=Path, required=True)
+        p.add_argument("--image-root", type=Path, default=None,
+                       help="图片根目录（默认 = manifest 所在目录）；帧清单可放在别处")
         p.add_argument("--out", type=Path, required=True)
         p.add_argument("--batch", type=int, default=64 if name == "yolo" else 8)
         p.add_argument("--device", default="cuda:0")
