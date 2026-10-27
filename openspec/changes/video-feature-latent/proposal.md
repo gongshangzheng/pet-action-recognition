@@ -2,6 +2,14 @@
 
 > 子 change，总管：`pet-motion-latent-pipeline`。前置：`batch-followcam-extraction` 完成（跟随视频资产就绪）。
 
+> **状态：延后到本轮最后（用户裁定 2026-10-27）**——「这个先不做，放到最后再考虑」。
+> 影响：本 change 是 `spot-check-cli`（抽查/实时双模式）、`video-action-segmentation`（找边界）、
+> `behavior-anomaly-detection`（异常检测）的共同上游，三者在其产出行为簇之前无法推进。
+> 余留事实备查：GPU 两张卡被他人任务长期占用（18.3/24 GB、16.9/24 GB）；
+> 阶段一主力候选 V-JEPA 2 fpc16 需 `transformers ≥ 4.55`（plf 环境为 4.49），
+> 且候选 A（VideoMAE v1 宠物微调版）已于 2026-09-16 由用户裁定移出候选。
+
+
 ## Why（2026-09-16 路线修订）
 
 本 change 改为**消费** identity-action-tokenizer 产出的编码器做行为发现（encoder 优先原则），现成四候选 backbone（V-JEPA 2 / MammalNet / DINOv2）降为**回退方案**——仅在 tokenizer 训练失败或需快速 smoke test 时启用。

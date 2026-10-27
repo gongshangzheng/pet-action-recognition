@@ -1,6 +1,7 @@
 # Tasks: video-feature-latent
 
 > 总管：`pet-motion-latent-pipeline`。前置：`batch-followcam-extraction` 完成。严格按编号顺序执行。
+> **状态：延后到本轮最后（用户裁定 2026-10-27）**，未勾选任务全部保留，不删减。
 
 - [ ] 1.1 主表示选型实验（design L1 v2 四候选）：**A. VideoMAE v1 宠物微调版 / B. DINOv2+帧间差分 / C. MammalNet（权重可得性待探）/ D. V-JEPA 2 fpc16（新主力，需 pet_tokenizer 环境 transformers≥4.55）**——在两段验收跟随视频 + 抽 3 段白天段上各出窗口特征 → UMAP 可视化 + 时序连续性 + 人工可命名性；判定：可命名簇比例为主
 - [ ] 1.2 胜出编码器接入 petlib（`petlib/features/` 抽象 + 契约测试复用）
