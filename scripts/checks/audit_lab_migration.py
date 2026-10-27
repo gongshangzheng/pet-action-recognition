@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import shlex
 
-from migrate_pet_final_to_lab import LOCAL_REPORT, connect, remote_run
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.migration.migrate_pet_final_to_lab import LOCAL_REPORT, connect, remote_run
 
 
 REMOTE_AUDIT = r'''

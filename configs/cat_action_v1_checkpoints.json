@@ -1,0 +1,38 @@
+[
+  {
+    "model": "slowfast_r50",
+    "config": "configs/cat_action_slowfast_r50_v1.py",
+    "checkpoint": "slowfast_r50/work/best_macro_f1_epoch_11.pth",
+    "sha256": "09d095beb8da739bc0254591eb8e58e9e9607cb4d25f30d5d54d0c11b8365f05"
+  },
+  {
+    "model": "tsm_r50",
+    "config": "configs/cat_action_tsm_r50_v1.py",
+    "checkpoint": "tsm_r50/work/best_macro_f1_epoch_16.pth",
+    "sha256": "1cf934fcb318dbe7cd50f2e7bcdfd2e22f425354109383dedafb9a6a9e845193"
+  },
+  {
+    "model": "tsn_r50",
+    "config": "configs/cat_action_tsn_r50_v1.py",
+    "checkpoint": "tsn_r50/work/best_macro_f1_epoch_20.pth",
+    "sha256": "d75ebf54a807d804796d8a9d23362c8e958db593b36df6d2c49b359672c39b2c"
+  },
+  {
+    "model": "uniformerv2_b",
+    "config": "configs/cat_action_uniformerv2_b_v1.py",
+    "checkpoint": "uniformerv2_b/work/best_macro_f1_epoch_14.pth",
+    "sha256": "b1ddd98c993282840af2093b97fd8587c5ff486cfc295cd1e8414fa37d126610"
+  },
+  {
+    "model": "videomaev2_b",
+    "config": "configs/cat_action_videomaev2_b_v1.py",
+    "checkpoint": "videomaev2_b/work/best_macro_f1_epoch_12.pth",
+    "sha256": "39a1baa176d66b85244dde40521b11d05ed84f5a4815d64038122454c0e518ae"
+  },
+  {
+    "model": "x3d_s",
+    "config": "configs/cat_action_x3d_s_v1.py",
+    "checkpoint": "x3d_s/work/best_macro_f1_epoch_20.pth",
+    "sha256": "00e09d3b61648fe118b56ad6233d6374290a4257addec24eb2a648dc2cf7272c"
+  }
+]

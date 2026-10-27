@@ -56,7 +56,7 @@ export NUMBA_CACHE_DIR=/home/work/analysis_code/.runtime/cache/numba
 ```
 
 - 固定依赖：`configs/company_auxiliary_requirements.txt`。
-- 可复用安装/检查工具：`scripts/install_company_auxiliary.py`。
+- 可复用安装/检查工具：`scripts/migration/install_company_auxiliary.py`。
 - 缓存：`.runtime/cache/auxiliary-wheels/`，原有缓存仍在 `.runtime/cache/wheels/`。
 - 安装计划、前后版本、二进制哈希和审计：`results/deployment/company_auxiliary_20260930/`。
 - 原有动作识别环境复查：该目录下的 `core_recheck/runtime_audit.json`。
@@ -71,7 +71,7 @@ export NUMBA_CACHE_DIR=/home/work/analysis_code/.runtime/cache/numba
 依赖复查可以单独执行，不触发模型运行或重新安装：
 
 ```bash
-python scripts/install_company_auxiliary.py --root /home/work/analysis_code --audit-only
+python scripts/migration/install_company_auxiliary.py --root /home/work/analysis_code --audit-only
 ```
 
 OpenCV 的 core/contrib/headless 包会共用 `cv2` 路径。这里固定相同版本，
@@ -88,7 +88,7 @@ python -m pip install --no-index \
   -r configs/company_auxiliary_requirements.txt
 python -m pip install --no-index --no-deps --force-reinstall \
   --find-links .runtime/cache/wheels opencv-contrib-python==4.10.0.84
-python scripts/install_company_auxiliary.py --root /home/work/analysis_code --audit-only
+python scripts/migration/install_company_auxiliary.py --root /home/work/analysis_code --audit-only
 ```
 
 以上恢复只涉及已缓存的依赖，不包含模型权重、另行研究的源码仓库或公司数据。

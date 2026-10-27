@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RESULT = ROOT / "results/training/cat_interval_smoke"
 INDEX = ROOT / "datasets/cat_interval_smoke"
 

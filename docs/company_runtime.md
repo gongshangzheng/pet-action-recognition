@@ -66,7 +66,7 @@ Decord 0.6.0 官方 `py3` wheel 内部错误标注为 `cp36`，新版 pip check 
 - `.runtime/cache/wheels/`：核心依赖和 CUDA/MMCV 二进制安装包。
 - `.runtime/cache/pip/`：pip 下载缓存。
 
-安装工具为 `scripts/install_company_runtime.sh`。它可以重试联网安装，
+安装工具为 `scripts/migration/install_company_runtime.sh`。它可以重试联网安装，
 并在依赖装完后自动做环境审计，不会运行模型。下载失败时查看日志后重试，
 不要删除缓存。传输 Bash 脚本需保留 LF 换行。
 
@@ -77,7 +77,7 @@ python -m pip install --no-index --find-links .runtime/cache/wheels \
   -r configs/company_runtime_requirements.txt \
   mmcv==2.1.0 moviepy==1.0.3 pytorchvideo==0.1.5 lmdb==1.5.1
 python -m pip install --no-index --no-deps --no-build-isolation -e models/mmaction2
-python scripts/audit_company_runtime.py --root /home/work/analysis_code \
+python scripts/checks/audit_company_runtime.py --root /home/work/analysis_code \
   --out /home/work/analysis_code/results/deployment/company_runtime_20260930
 ```
 

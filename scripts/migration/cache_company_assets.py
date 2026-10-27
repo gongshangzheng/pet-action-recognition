@@ -335,7 +335,7 @@ def main():
                 if args.verify_only:
                     raise FileNotFoundError("Asset is not cached")
                 if item.get("prepared_snapshot"):
-                    raise FileNotFoundError("Prepare snapshot using scripts/cache_company_model_zoo_source.py")
+                    raise FileNotFoundError("Prepare snapshot using scripts/migration/cache_company_model_zoo_source.py")
                 # Older versions rejected valid legacy tar-format PyTorch checkpoints.
                 for rejected in sorted(target.parent.glob(target.name + ".part.rejected.*")):
                     try:

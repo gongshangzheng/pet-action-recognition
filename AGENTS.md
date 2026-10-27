@@ -97,7 +97,10 @@ pet-action-recognition/
 ├── datasets/                    # 数据集目录
 │   └── quadruped_action/        # 四足动物动作数据集
 │
-├── scripts/                    # 顶层脚本
+├── tests/                      # 项目自动化测试（夹具在 results/tests/）
+├── scripts/                    # 正式入口 + 分类工具
+│   ├── checks/                 # 环境/模型预检、烟测和核验
+│   ├── migration/              # 部署、迁移、环境恢复
 │   ├── train_model.py           # 训练包装
 │   ├── run_test.py              # 正式测试
 │   ├── speedrun.py              # Speed Run 批量
@@ -241,13 +244,17 @@ id, source_id, filename, note, created_at
 
 ### 测试、预检与迁移脚本的目录规范
 
-| 路径 | 职责 |
-|------|------|
-| `tests/` | 项目自身的自动化测试（`test_*.py`），按模块组织 |
-| `scripts/checks/` | 环境检查、模型预检、烟测及产物核验命令 |
-| `scripts/migration/` | 代码/数据部署、迁移、环境恢复和同步工具 |
-| `scripts/` | 正式训练、推理、评测、数据准备及分析入口 |
-| `results/` | 测试夹具、预检报告、审计及实验产物（不入库） |
+#### 自动化测试
+
+项目自动化测试（`test_*.py`）放在 `tests/`，按模块组织。
+
+#### 预检与迁移工具
+
+环境检查、模型预检、烟测及产物核验命令放在 `scripts/checks/`；代码/数据部署、迁移、环境恢复和同步工具放在 `scripts/migration/`。
+
+#### 正式入口与产物
+
+正式训练、推理、评测、数据准备及分析入口保留在 `scripts/`。测试夹具、预检报告、审计及实验产物放在不入库的 `results/`。
 
 - 不把测试放进 `models/mmaction2/tests/`；该目录属于只读第三方快照。
 - 测试夹具与临时输出使用项目 `results/tests/` 下的独立目录，结束后安全清理，不依赖系统临时目录。

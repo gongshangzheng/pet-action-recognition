@@ -9,7 +9,11 @@ from pathlib import Path
 import shlex
 import subprocess
 
-from migrate_pet_final_to_lab import LOCAL_REPORT, ROOT, TARGET, STAGING, connect, remote_run, upload, sha256_file
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.migration.migrate_pet_final_to_lab import LOCAL_REPORT, ROOT, TARGET, STAGING, connect, remote_run, upload, sha256_file
 
 
 def main() -> None:

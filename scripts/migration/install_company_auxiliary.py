@@ -159,7 +159,7 @@ def main():
             break
     checks.append(dict(name="rknn_rv1126b_shipped_reference", passed=bool(rknn_hits), files=rknn_hits))
     core_out = out / "core_recheck"
-    core_rc = run([sys.executable, str(root / "scripts/audit_company_runtime.py"),
+    core_rc = run([sys.executable, str(root / "scripts/checks/audit_company_runtime.py"),
                    "--root", str(root), "--out", str(core_out)], "core_recheck.log", allow_failure=True)
     checks.append(dict(name="original_action_runtime_recheck", passed=core_rc == 0,
                        report="core_recheck/runtime_audit.json"))

@@ -118,3 +118,6 @@ open http://localhost:3000
 - **agent skills**：`.claude/skills/`（agent 操作指南，与 wiki 分工）
 
 详细说明见 [仓库资产盘点](management/docs/repo-inventory.md)。
+## 脚本与测试入口
+
+项目自动化测试在 `tests/`，预检在 `scripts/checks/`，部署迁移工具在 `scripts/migration/`。正式训练、评测与分析入口保留在 `scripts/`。当前命令和猫动作权重链接方法见 [脚本说明](scripts/README.md)。

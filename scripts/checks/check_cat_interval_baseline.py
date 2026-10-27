@@ -6,6 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from mmengine.config import Config
 from mmaction.registry import DATASETS
 from mmaction.utils import register_all_modules
@@ -13,7 +16,7 @@ from mmaction.utils import register_all_modules
 import petlib.datasets.cat_intervals  # noqa: F401 - registry side effect
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def main() -> None:

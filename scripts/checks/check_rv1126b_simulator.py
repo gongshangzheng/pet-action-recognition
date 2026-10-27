@@ -18,7 +18,7 @@ import uuid
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument('--timeout', type=int, default=240)
     args = parser.parse_args()
     root = args.root.resolve()

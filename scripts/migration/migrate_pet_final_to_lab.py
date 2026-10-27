@@ -18,7 +18,7 @@ import time
 
 import paramiko
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 LOCAL_REPORT = ROOT / "results" / "migration_lab"
 SOURCE_CONNECTION = ROOT / "自作自偷" / "4090.txt"
 HOST_KEYS = ROOT / "results" / "lab_known_hosts"
@@ -29,7 +29,7 @@ TARGET = "/home/wyy/pet-final"
 STAGING = "/home/wyy/.pet-final-transfer"
 TOP_DIRS = (
     ".claude", ".github", "configs", "data", "docs", "evaluation", "management",
-    "models", "openspec", "papers", "petlib", "scripts", "server", "templates", "web",
+    "models", "openspec", "tests", "papers", "petlib", "scripts", "server", "templates", "web",
 )
 RESULT_SUBDIRS = ("deployment", "model_comparison", "research", "datasets", "local-service", "live")
 ROOT_FILES = (".gitattributes", ".gitignore", "AGENTS.md", "README.md", "start_services.sh",

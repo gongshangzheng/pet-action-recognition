@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install dependencies only. Never invokes a model, a dataset, or a train/test loop.
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNTIME="$ROOT/.runtime"
 CACHE="$RUNTIME/cache"
 WHEELS="$CACHE/wheels"
@@ -71,5 +71,5 @@ printf 'STAGE local_mmaction_install\n'
 # cp36 internal wheel-tag error after its native-library import succeeds.
 find "$WHEELS" -maxdepth 1 -type f -name '*.whl' -print0 | sort -z | xargs -0 sha256sum > "$REPORT/wheels.sha256"
 printf 'STAGE dependency_only_audit\n'
-"$PY" "$ROOT/scripts/audit_company_runtime.py" --root "$ROOT" --out "$REPORT"
+"$PY" "$ROOT/scripts/checks/audit_company_runtime.py" --root "$ROOT" --out "$REPORT"
 printf 'INSTALL_DEPENDENCIES_DONE %s\n' "$(date -u +%FT%TZ)"

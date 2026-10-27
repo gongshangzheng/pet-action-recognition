@@ -12,7 +12,7 @@ import tarfile
 ROOT_FILES = ("AGENTS.md", "README.md", ".gitignore")
 SOURCE_DIRS = (
     "scripts", "configs", "server", "petlib", "evaluation", "models",
-    "openspec", "docs", "templates",
+    "openspec", "docs", "templates", "tests",
 )
 SKIP_DIRS = {
     ".git", "__pycache__", ".venv", "venv", "node_modules", "dist",
@@ -32,7 +32,7 @@ def sha256(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--base-ref", help="Create a small overlay against a public Git revision")
     args = parser.parse_args()

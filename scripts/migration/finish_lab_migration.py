@@ -6,7 +6,11 @@ import argparse
 import json
 import shlex
 
-from migrate_pet_final_to_lab import connect
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.migration.migrate_pet_final_to_lab import connect
 
 
 COPY_CHECKPOINTS = r'''
@@ -80,7 +84,7 @@ if pid.exists():
     old = int(pid.read_text())
     if Path('/proc/' + str(old)).exists():
         raise RuntimeError('Public asset cache is already running')
-command = ['/home/wyy/miniconda3/envs/pet/bin/python', str(root / 'scripts/cache_company_assets.py'),
+command = ['/home/wyy/miniconda3/envs/pet/bin/python', str(root / 'scripts/migration/cache_company_assets.py'),
            '--root', str(root), '--report-dir', 'results/migration_lab/public_assets',
            '--workers', '4', '--retry-failed']
 with log.open('ab') as stream:
@@ -119,7 +123,7 @@ pid = report / 'model_zoo.pid'
 if pid.exists() and Path('/proc/' + pid.read_text().strip()).exists():
     raise RuntimeError('Model zoo source preparation is already running')
 command = ['/home/wyy/miniconda3/envs/pet/bin/python',
-           str(root / 'scripts/cache_company_model_zoo_source.py'), '--root', str(root)]
+           str(root / 'scripts/migration/cache_company_model_zoo_source.py'), '--root', str(root)]
 with log.open('ab') as stream:
     process = subprocess.Popen(command, cwd=root, stdin=subprocess.DEVNULL,
                                stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)

@@ -6,7 +6,11 @@ import argparse
 import json
 import shlex
 
-from migrate_pet_final_to_lab import connect
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.migration.migrate_pet_final_to_lab import connect
 
 
 REMOTE = r'''

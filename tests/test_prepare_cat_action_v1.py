@@ -11,7 +11,7 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import prepare_cat_action_v1 as prep
 
@@ -86,7 +86,9 @@ class SplitTests(unittest.TestCase):
 
 class OutputTests(unittest.TestCase):
     def test_outputs_are_reproducible_and_source_unchanged(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        scratch = Path(__file__).resolve().parents[1] / "results/tests"
+        scratch.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
             root = Path(tmp)
             source = root / "datasets/cat_raw/annotations/intervals.csv"
             source.parent.mkdir(parents=True)

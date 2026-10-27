@@ -62,7 +62,10 @@ pet-action-recognition/
 ├── datasets/                   # 数据集目录（gitignore）
 │   └── quadruped_action/       # 四足动物动作数据集
 │
-├── scripts/                    # 顶层脚本
+├── tests/                      # 项目自动化测试，夹具在 results/tests/
+├── scripts/                    # 正式入口与分类工具
+│   ├── checks/                 # 环境/模型预检、烟测和核验
+│   ├── migration/              # 部署、迁移与环境恢复
 │   ├── train_model.py          # 训练包装入口
 │   ├── run_test.py             # 正式测试包装
 │   ├── speedrun.py             # Speed Run 批量
@@ -167,3 +170,7 @@ pet-action-recognition/
 ## 目录树可能滞后于实际代码
 
 以 `AGENTS.md` + 实际 `ls` 为准。
+
+## 测试与工具分类
+
+项目测试归 `tests/`，预检归 `scripts/checks/`，部署迁移归 `scripts/migration/`。正式模型评测保留 `scripts/run_test.py`。skill 自带工具保持原位，第三方 tests 不改。当前命令见 `scripts/README.md`，目录规范以 `AGENTS.md` 为准。

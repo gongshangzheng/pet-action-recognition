@@ -87,13 +87,13 @@ NanoDet/BoxMOT 等源码的历史接口也需按选定版本适配，不能直�
 只验证文件，不执行模型：
 
 ```bash
-python scripts/cache_company_assets.py --root /home/work/analysis_code --verify-only
+python scripts/migration/cache_company_assets.py --root /home/work/analysis_code --verify-only
 ```
 
 获得文件准备授权后，可用以下方式续传；不要与其他写同一清单或同一文件的任务并行：
 
 ```bash
-python scripts/cache_company_assets.py --root /home/work/analysis_code --retry-failed
+python scripts/migration/cache_company_assets.py --root /home/work/analysis_code --retry-failed
 ```
 
 主清单按文件统计，硬链接别名不会重复计入字节总量。哈希、大小、PDF/ZIP 格式检查

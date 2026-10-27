@@ -10,12 +10,15 @@ import tarfile
 import unittest
 import uuid
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+
 from recover_cat_dataset import ROOT, inspect_archive
 
 
 class RecoveryTests(unittest.TestCase):
     def setUp(self):
-        self.scratch = ROOT / "results" / "datasets" / f"cat_recovery_test_{uuid.uuid4().hex}"
+        self.scratch = ROOT / "results" / "tests" / f"cat_recovery_test_{uuid.uuid4().hex}"
         self.scratch.mkdir(parents=True, exist_ok=False)
         self.assertIn(ROOT.resolve(), self.scratch.resolve().parents)
         self.addCleanup(self._cleanup)
