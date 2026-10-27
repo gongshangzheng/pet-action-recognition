@@ -239,6 +239,22 @@ id, source_id, filename, note, created_at
 - **跨项目通用 skill 放在 `~/.claude/skills/`**
 - `.agents/` 是 `.claude/` 的软链接
 
+### 测试、预检与迁移脚本的目录规范
+
+| 路径 | 职责 |
+|------|------|
+| `tests/` | 项目自身的自动化测试（`test_*.py`），按模块组织 |
+| `scripts/checks/` | 环境检查、模型预检、烟测及产物核验命令 |
+| `scripts/migration/` | 代码/数据部署、迁移、环境恢复和同步工具 |
+| `scripts/` | 正式训练、推理、评测、数据准备及分析入口 |
+| `results/` | 测试夹具、预检报告、审计及实验产物（不入库） |
+
+- 不把测试放进 `models/mmaction2/tests/`；该目录属于只读第三方快照。
+- 测试夹具与临时输出使用项目 `results/tests/` 下的独立目录，结束后安全清理，不依赖系统临时目录。
+- 移动脚本必须同步修正仓库根目录定位、Python 导入、调用路径和当前操作文档；保留旧实验配置、日志及历史记录中的原始路径。
+- 已归属某个 skill 的脚本继续由该 skill 管理；以上规范用于项目自身脚本，不将 skill 工具重复复制到顶层。
+- 远程已有权重可在 `checkpoints/` 下按实验/模型建立软链接；不得覆盖既有文件或修改源权重，机器绝对路径链接不入 Git。
+
 ### 当前项目 Skill（15 个）
 
 | Skill | 路径 | 用途 |
@@ -261,7 +277,7 @@ id, source_id, filename, note, created_at
 
 ### 服务器/产物纪律（硬规则）
 
-1. **可复用脚本必须先进仓库**：任务中产生的任何脚本先提交到 `scripts/`（入版本管理）再执行；**禁止在 `/tmp` 放脚本**（历史事故：multi_detect / kp_video / compare_mc 三次返工）
+1. **可复用脚本必须先进仓库**：任务中产生的脚本先按上述规范提交到 `scripts/`、其分类子目录或 `tests/`（入版本管理）再执行；**禁止在 `/tmp` 放脚本**（历史事故：multi_detect / kp_video / compare_mc 三次返工）
 2. **分析产物入项目路径**：数据/审计/报告类产物一律写项目内路径（服务器上 `~/pet-action-recognition/results/...` 或仓库 `results/`），**禁止散落 `$HOME` 根目录或 `/tmp`**（历史事故：saturation_audit.json 丢 home 被用户指正）
 3. **远程进程检查防自匹配**：`pgrep -f <关键词>` 会匹配到检查命令自身导致误报 RUNNING——用日志标志（如 BATCH DONE）、完整路径匹配或 `ps aux | grep keyword | grep -v grep`
 4. **远程后台启动同样必须 `</dev/null`**：`nohup cmd </dev/null > log 2>&1 & disown`——漏掉会导致 ssh 会话挂起超时（即使输出已重定向）
