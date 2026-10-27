@@ -84,7 +84,8 @@ description: |
 - **文件名**：`{slug}.md`，slug 只允许字母、数字、连字符 `-`、下划线 `_`、斜杠 `/`（子目录）。
 - **存放位置**：`management/docs/`（纯 wiki 目录，不混会议纪要/项目/里程碑）。支持子目录，如 `management/docs/architecture/api-design.md`，slug 为 `architecture/api-design`。
 - **frontmatter 必填**：`title`、`author`、`date`、`tags`、`summary`。
-- **frontmatter 可选**：`id`（数字），用于控制文档列表排序。有 `id` 的文档按 `id` 升序排列在前，无 `id` 的按 `date` 降序排列在后。
+- **frontmatter 可选**：`order`（整数，推荐阅读顺序，由 §2.6 的 `docs_order.py` 维护）、`id`（数字，旧排序字段）。
+  后端排序链：`folder → order → id → date(desc) → slug`。
 
 ```yaml
 ---
@@ -149,6 +150,68 @@ id: 1
 任务 ID 格式：顶层 `t1`、`t2`，子任务 `t1-1`、`t2-3`（对应 `management/projects/{slug}/tasks.json` 中的 `id` 字段）。
 
 > 用 `#` 区分：含 `#` 的是任务链接，不含的是文档链接（文档 slug 可含 `/`）。
+
+### 2.4 图片与图题
+
+**存放**：`management/docs/_assets/<slug>/`（下划线前缀表明该目录非文档；文档列表只扫 `*.md`，图片不会被当成文档）。`<slug>` 与所属文档 slug 对齐。
+
+**引用**（必须用绝对 URL）：
+
+```markdown
+![图 1 · MaskGIT 整体架构](/api/management/docs-assets/maskgit-2022/fig-1-arch.webp)
+```
+
+- 后端把 `management/docs/_assets/` 挂成只读静态目录 `/api/management/docs-assets/`（经 Vite `/api` 代理）
+- **不要用相对路径**（如 `_assets/x.png`）：文档页 URL 是 `/management/docs/<slug>`，相对路径会被解析到 `/management/docs/_assets/...` → 404
+- 生产构建（静态托管）由 `MarkdownRenderer` 把该前缀改写为 `${BASE_URL}docs-assets/`，图片随构建产物发布
+
+**图题约定**：`![图 N · 说明](url)` —— alt 文本会被渲染成 `<figcaption>`（渲染器把“整段仅一张带 alt 的图”包为 `<figure>`）。图号按正文出现顺序全局递增，子图用 `图 N(a) · …`；不需要图题的图写空 alt `![](url)`。
+
+**资源规范**：WebP / 最长边 ≤1600px / 质量 82 / 单文件 ≤500KB / 单篇 ≤5MB。
+
+### 2.5 公式（LaTeX）
+
+正文支持 KaTeX 渲染：行内 `$...$`、块级 `$$...$$`（契约见 `openspec/specs/docs-page-content/spec.md`）。
+
+```markdown
+质能关系 $E = mc^2$ 成立。
+
+$$
+\mathcal{L}_{total} = \mathcal{L}_{rec} + \lambda \mathcal{L}_{per}
+$$
+```
+
+- 公式后**必须**给符号表与中文解释（符号 / 含义 / 取值），不要只丢公式
+- **不要**写 `\(...\)` 或 `\[...\]`：这是 markdown-it 的转义语法，反斜杠会被吃掉，`\(a\)` 会渲染成 `(a)`
+- **不要**写 `\begin{equation}`：改用 `$$...$$` 块级公式
+- 公式内容首尾不能是空白（`$ x $` 会被当普通文本）；`$` 紧邻数字也不当公式（`$5 到 $10` 保持字面）
+- **Mermaid 图节点内**用 `$$...$$`（单 `$` 不渲染，是 Mermaid 自身规则）：`A["输入 $$x_t$$"] --> B["损失 $$\mathcal{L}$$"]`
+- 需要保真原式（便于复制/对照论文）时，可额外附代码块保留 LaTeX 源码
+
+### 2.6 文档顺序工具（`order`）
+
+`./scripts/docs_order.py` 是随本 skill 提供的 `order` 维护工具，**只用 Python 标准库**，仅写文档时手工调用（服务运行不依赖它）：
+
+```bash
+# 只读：列出当前阅读顺序、整数空位与重复值
+python3 .claude/skills/documentation/scripts/docs_order.py list management/docs
+
+# 插入新文档（默认 dry-run，只打印计划；确认后加 --apply 才写盘）
+python3 .claude/skills/documentation/scripts/docs_order.py insert management/docs \
+  --title "新文档" --author "作者" --after "已有文档的标题或 slug" --create --apply
+
+# 需要 10/20/30 连续时：新篇取插入点，其后顺延（前缀不动）
+python3 .claude/skills/documentation/scripts/docs_order.py insert management/docs \
+  --title "新文档" --author "作者" --after "参考文档" --create --shift --apply
+
+# 明确要规范化整个目录时
+python3 .claude/skills/documentation/scripts/docs_order.py renumber management/docs --apply
+```
+
+- **所有改写命令默认 dry-run**，只有显式 `--apply` 才写盘；优先占用相邻文档间的整数空位，不改既有文档（`--shift` 才重排插入点及其后）。
+- 拒绝重复 `order`、多个 `order:` 行与不合法 frontmatter（除非显式 `--force`）；写入后做结构校验，失败时回滚该文件。
+- `--author` 是必填项 —— frontmatter 的 `author` 为必填，工具不代你编造。
+- 排序键与后端 `_doc_sort_key` **同源**（`folder → order → id → date(desc) → slug`）：后端排序链若变更，本脚本需同步，否则插入位置会与页面顺序不一致。
 
 ## 3. Mermaid 图表
 

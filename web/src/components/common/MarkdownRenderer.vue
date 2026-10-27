@@ -8,6 +8,8 @@ import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import checkbox from 'markdown-it-task-checkbox'
 import { slugify } from '../../utils/markdown'
+import * as katexPluginModule from '@vscode/markdown-it-katex'
+import 'katex/dist/katex.min.css'
 import { useThemeStore } from '../../stores/theme'
 
 const props = defineProps({
@@ -60,6 +62,50 @@ const md = new MarkdownIt({
     divWrap: false,
     liClass: 'task-list-item',
   })
+
+// `@vscode/markdown-it-katex` 是 CJS（`exports.default = fn`）：
+//   dev（esbuild 预打包）→ 默认导出是**命名空间对象** `{ default: fn }`
+//   build（Rollup）      → 默认导出直接是函数
+// 这里归一化一次，否则 dev 下 `md.use()` 拿到对象会抛错、整块正文渲染失败。
+const katexPlugin = typeof katexPluginModule.default === 'function'
+  ? katexPluginModule.default
+  : katexPluginModule.default?.default
+
+if (typeof katexPlugin === 'function') {
+  // LaTeX 数学：`$...$` 行内、`$$...$$` 块级 → KaTeX
+  // （katex.css 由本文件顶部引入；Mermaid 图内的 $$ 公式也依赖这份样式）
+  md.use(katexPlugin, { throwOnError: false })
+  guardInlineMathDelimiter()
+} else {
+  console.error('[MarkdownRenderer] KaTeX 插件加载异常，公式将按原文显示')
+}
+
+// 插件的行内规则只校验「闭定界符之后是非单词字符」，不校验内容首尾空白，
+// 于是「价格从 $5 到 $10 不等」里的 `$10 不等，还有 $` 会被当成公式（内容首尾带空白）。
+// 这里补上标准守卫（GitHub / KaTeX auto-render 同款）：内容首尾不得为空白；
+// 不满足时回滚该 token 与位置，交回后续规则按普通文本处理。
+function guardInlineMathDelimiter() {
+  const rules = md.inline.ruler.__rules__
+  const original = rules?.find((r) => r.name === 'math_inline')?.fn
+  if (typeof original !== 'function') {
+    console.warn('[MarkdownRenderer] 未找到 math_inline 规则，跳过美元符号守卫')
+    return
+  }
+  md.inline.ruler.at('math_inline', (state, silent) => {
+    const startPos = state.pos
+    const tokensBefore = state.tokens.length
+    if (!original(state, silent)) return false
+    if (silent) return true
+    const token = state.tokens[state.tokens.length - 1]
+    const isMath = token && token.type === 'math_inline'
+    if (isMath && /^\s|\s$/.test(token.content)) {
+      state.tokens.length = tokensBefore
+      state.pos = startPos
+      return false
+    }
+    return true
+  })
+}
 
 // Heading auto-ID
 const defaultHeadingRender = md.renderer.rules.heading_open ||

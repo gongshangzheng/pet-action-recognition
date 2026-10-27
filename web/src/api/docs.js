@@ -12,6 +12,16 @@ import {
 
 const USE_STATIC = import.meta.env.PROD
 
+// 正文按文档图片约定写绝对路径 /api/management/docs-assets/...；
+// 静态托管没有该端点，读取静态数据时改写到产物内的 docs-assets/（随 BASE_URL 解析）。
+// 源 Markdown 不改写 —— 它要同时满足 article-note 的校验与本地开发的后端端点。
+const API_ASSET_PREFIX = '/api/management/docs-assets/'
+
+function toStaticAssetUrls(content) {
+  if (!content) return content
+  return content.split(API_ASSET_PREFIX).join(`${import.meta.env.BASE_URL}docs-assets/`)
+}
+
 let staticCache = null
 
 async function loadStaticData() {
@@ -37,5 +47,5 @@ export async function getDocDetail(slug) {
   const doc = data.details?.[slug]
   // 与后端 404 行为一致：以错误结束，由调用方显示空态
   if (!doc) throw new Error(`Doc not found: ${slug}`)
-  return doc
+  return { ...doc, content: toStaticAssetUrls(doc.content) }
 }

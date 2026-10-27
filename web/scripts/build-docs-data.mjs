@@ -2,7 +2,7 @@
 // 构建期把 management/docs/ 编译为 GitHub Pages 可读取的静态文档数据与图片资产。
 
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -95,11 +95,29 @@ function compareDocs(a, b) {
     || compare(a.slug, b.slug)
 }
 
+function countFiles(dir) {
+  let count = 0
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) count += countFiles(join(dir, entry.name))
+    else if (entry.isFile() && !entry.name.startsWith('.')) count += 1
+  }
+  return count
+}
+
+/**
+ * 把 management/docs/_assets/ 整树复制到 web/public/docs-assets/。
+ * 先清空目标：静态托管产物是「本次构建的完整快照」，残留旧图会让已删除的图仍可访问。
+ * 源目录不存在时跳过（构建照常成功）。返回复制的图片资产数。
+ */
 function copyAssets() {
   rmSync(OUT_ASSETS_DIR, { recursive: true, force: true })
-  if (!existsSync(ASSETS_DIR)) return
+  if (!existsSync(ASSETS_DIR)) return 0
   mkdirSync(dirname(OUT_ASSETS_DIR), { recursive: true })
-  cpSync(ASSETS_DIR, OUT_ASSETS_DIR, { recursive: true })
+  cpSync(ASSETS_DIR, OUT_ASSETS_DIR, {
+    recursive: true,
+    filter: (src) => !basename(src).startsWith('.'),
+  })
+  return countFiles(OUT_ASSETS_DIR)
 }
 
 function main() {
@@ -141,9 +159,12 @@ function main() {
   docs.sort(compareDocs)
   const orderedDetails = Object.fromEntries(docs.map((doc) => [doc.slug, details[doc.slug]]))
   mkdirSync(dirname(OUT_FILE), { recursive: true })
-  copyAssets()
-  writeFileSync(OUT_FILE, `${JSON.stringify({ generatedAt: new Date().toISOString(), docs, details: orderedDetails }, null, 2)}\n`)
-  console.log(`[build-docs-data] ${docs.length} 篇文档 → ${relative(REPO_ROOT, OUT_FILE)}`)
+  const assetCount = copyAssets()
+  writeFileSync(
+    OUT_FILE,
+    `${JSON.stringify({ generatedAt: new Date().toISOString(), assetCount, docs, details: orderedDetails }, null, 2)}\n`,
+  )
+  console.log(`[build-docs-data] ${docs.length} 篇文档、${assetCount} 个图像资产 → ${relative(REPO_ROOT, OUT_FILE)}`)
 }
 
 main()

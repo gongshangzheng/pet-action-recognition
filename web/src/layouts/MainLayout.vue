@@ -19,7 +19,7 @@
         :collapsed="collapsed"
         :collapsed-width="56"
         :collapsed-icon-size="18"
-        :options="menuOptions"
+        :options="visibleMenuOptions"
         :value="activeKey"
         :expanded-keys="expandedKeys"
         @update:value="handleMenuSelect"
@@ -129,16 +129,20 @@ import { useThemeStore } from '../stores/theme'
 import { SIDEBAR_DEFAULT_COLLAPSED } from '../config/layout'
 import { ACCENTS, readableOn } from '../config/theme'
 import { FAVICONS, faviconSvg } from '../config/favicon'
+import { HIDDEN_KEYS, filterHidden } from '../config/hidden'
 
 const route = useRoute()
 const router = useRouter()
 const themeStore = useThemeStore()
 
-const SIDEBAR_COLLAPSED_KEY = 'pet-action-recognition-sidebar-collapsed'
+const SIDEBAR_COLLAPSED_KEY = 'app.sidebar-collapsed'
+// 旧 key 兼容读取：迁移到通用 key 后仍能恢复用户此前折叠偏好
+const LEGACY_SIDEBAR_COLLAPSED_KEY = 'pet-action-recognition-sidebar-collapsed'
 
 function readCollapsed() {
   try {
-    const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
+    const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) ??
+      localStorage.getItem(LEGACY_SIDEBAR_COLLAPSED_KEY)
     if (stored === null) return SIDEBAR_DEFAULT_COLLAPSED
     return stored === '1'
   } catch {
@@ -244,6 +248,9 @@ const menuOptions = [
     ],
   },
 ]
+
+// 按 HIDDEN_KEYS 过滤后的菜单（叶子命中 path 摘除；分组命中摘整组；组内叶子全部隐藏时整组摘除）
+const visibleMenuOptions = computed(() => filterHidden(menuOptions, HIDDEN_KEYS))
 
 const activeKey = computed(() => {
   const path = route.path

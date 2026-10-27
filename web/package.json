@@ -12,8 +12,10 @@
   },
   "dependencies": {
     "@vicons/ionicons5": "^0.13.0",
+    "@vscode/markdown-it-katex": "^1.1.2",
     "axios": "^1.18.1",
     "echarts": "^6.1.0",
+    "katex": "^0.16.47",
     "markdown-it": "^14.3.0",
     "markdown-it-task-checkbox": "^1.0.6",
     "mermaid": "^11.16.0",
