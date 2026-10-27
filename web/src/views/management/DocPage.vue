@@ -48,6 +48,7 @@
         :options="mobileOptions"
         placeholder="选择文档"
         size="small"
+        :consistent-menu-width="false"
         @update:value="navigateTo"
       />
     </div>
@@ -357,10 +358,18 @@ watch(currentSlug, (slug) => {
 
 <style scoped lang="scss">
 .doc-page {
+  // 窄屏：纵向排布 —— 文档选择器独占一行，正文拿到整宽；宽屏（≥1024）才恢复三栏横向
   display: flex;
-  gap: 24px;
-  padding: 20px 24px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
   min-height: 100%;
+
+  @media (min-width: 1024px) {
+    flex-direction: row;
+    gap: 24px;
+    padding: 20px 24px;
+  }
 }
 
 // Left sidebar
@@ -524,7 +533,8 @@ watch(currentSlug, (slug) => {
 // Mobile selector
 .doc-mobile-select {
   display: block;
-  margin-bottom: 12px;
+  width: 100%;
+  flex-shrink: 0;
 
   @media (min-width: 1024px) {
     display: none;
@@ -541,7 +551,12 @@ watch(currentSlug, (slug) => {
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 24px;
+  // 窄屏横向像素最稀缺：正文文本宽度优先于装饰性留白
+  padding: 16px;
+
+  @media (min-width: 640px) {
+    padding: 24px;
+  }
 }
 
 .doc-header {
