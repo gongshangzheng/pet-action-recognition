@@ -78,6 +78,32 @@ description: |
 - **管线产物**（batch-followcam-extraction，34 段时间戳白天段）：pet:`~/results/batch/<段名>/{track.json, followcam.mp4}`（运动校正轨迹 + 跟随视角）；汇总 `batch_report.md` / `batch_summary.json`；告警段接触表 `<段名>/contact.jpg`。
 - **定位提醒**：79 段事件视频仅 14.7 分钟，行为发现/预训练的主粮是 pet_action_mammal_v0（2234 clips）+ quadruped_cats_v1（717 clips）；79 段承担管线验证、spot-check 演示与二期红外微调素材。
 
+## pet-final 完整猫语料（cat_raw，主数据集）
+
+79 段事件片段只是演示素材；**行为/门控/训练的主语料在 pet-final**：
+
+- 位置：`~/pet-final/datasets/cat_raw/`（pet 机器本地磁盘，**非 NAS**，9.4 GB）
+  ```
+  cat_raw/
+  ├── videos/<设备序列号>_<户码>__event_<YYYYMMDD>_<HHMMSS>.mp4   # 2737 段
+  └── annotations/
+      ├── intervals.csv            # 3927 条行为区间（1 起始、两端包含，帧号）
+      ├── classes.csv              # 类别表
+      ├── merged_annotations.{lab,local,relative}.{csv,json}
+      └── path_mapping.csv         # 原始路径 → 本机路径
+  ```
+- 规模与构成（2026-10-27 实测）：**2,737 段 / 9.4 GB / 15 fps / 2880×1620**；抽样中位时长约 17 s；
+  **124 天**（2026-03-17 → 08-21）；8+ 个户码（`charw1g` 131、`chmtg0l` 66、`chyr316` 62、`chi2m65` 59…）。
+- 标注分布：`activity 2352` / `prolonged_stationary 538` / `eating 411` / `drinking 202` / `abnormal/scratching 193` /
+  `grooming 144` / `toileting 40` / **`multi_cat_chase 19` + `multi_cat_roughplay 15`（27 段视频 → 多猫确有发生）** /
+  `gnawing 10` / `fall 2` / `seizure 1`。
+- **未标注视频 164 段**——可作「无猫/无标注行为」候选池，但**未标注 ≠ 无猫**，入训练前必须人工核验。
+- 昼夜构成（抽样 400 段取中间帧，HSV 饱和度）：中位 40.8；`S<20` 占 19.2%、`S<30` 占 27.5%
+  → 夜视/红外约 **20–28%（≈550–750 段）**。**同样遵守「时间戳 ≠ 昼夜」**，按画面饱和度判定。
+- 用途：门控训练（`presence-gate-model`）、按需切片进 `quadruped_cats_v*`、跨户/跨日期泛化评测（124 天支持日期隔离划分）。
+- 与 79 段（`~/mnt/dxm/dataset_{崔,蒋}`）的关系：79 段 = 单日（20260806）+ 两户的**短事件片段**，
+  现在定位为**OOD（跨户跨设备）测试集**与管线演示素材，不再充当训练主粮。
+
 ## 四足动作数据集（目标数据集，待收集）
 
 - 目录：`datasets/quadruped_action/`，期望结构：
