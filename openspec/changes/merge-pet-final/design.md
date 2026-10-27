@@ -47,3 +47,9 @@ cat-action-v1 包含：区间数据集/采样/指标、小样本 smoke、七类�
 本地验证：11 个合成数据自动化测试通过；65 个 Python 文件 AST 解析、Shell bash -n、所选无模型 CLI --help 通过；Web npm run build 成功（保留原有大 chunk 提示）；11 篇静态文档、404 回退及 LF/CRLF frontmatter 等价检查通过；git diff --check 和 OpenSpec strict 校验通过。人工审查路径、非覆盖链接、配置/哈希对应和运行时文件未入库。未启动训练、推理、安装依赖或重启服务；GPU 预检本身未重跑。
 
 六模型权重在远程完成 SHA-256 复核，与既有文档的完整哈希或前缀匹配；原文件在 pet-final/results/training/cat_action_v1。完整哈希见 configs/cat_action_v1_checkpoints.json。
+
+## 同步与权重接入结果
+
+本地 main 已快进并通过 git push pet main 同步到旧远程工作树（updateInstead）。已在 pet-action-recognition/checkpoints/cat_action_v1/ 下建立六模型的 best.pth 链接，均指向 pet-final 的既有最佳权重；工具执行前完整复核 SHA-256，未替换既有文件。远程报告为 results/migration/cat_action_v1_links.json，源数据、权重、运行环境和两个来源工作树未修改，未重启服务。
+
+数据索引、原始猫视频和实验日志仍在 pet-final，未链接或迁移；本次链接不提供 Web run 注册。模型重跑需显式配置数据位置与环境，不能将代码合并视为整套运行资源迁移。
