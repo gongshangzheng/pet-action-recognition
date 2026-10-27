@@ -54,7 +54,8 @@
 - [ ] 3.9a 域路由预研：仅当 M2/M3 胜出时做——路由判据（饱和度/亮度阈值）在核验集上的误路由率，以及误路由时的性能损失。
 - [ ] 3.1 `petlib/gate/`：判定器抽象（**`fit(frames, labels)` / `predict(frame) -> p_cat`** / 后处理 `to_timeline(probs, ts)`）+ 契约测试（同一接口四个实现可互换；**同一帧在不同调用位置必须给出同一概率 → 无帧间状态**）。
 - [ ] 3.2 候选 A：YOLO11n 单类「猫」（**单帧输入**），用弱标签 + 核验集微调/训练；输入尺寸按 2.2b 标定结果选定，记录 mAP50 与帧率。
-- [ ] 3.2b 教师标注分辨率：弱标签教师 SHALL 在 ≥1280 输入下运行（640 实测漏检严重，见 design D11）；全量重标或对大分辨率子集重标，记录各教师输入尺寸。
+- [ ] 3.2b 教师标注分辨率：弱标签教师 SHALL 在 ≥1280 输入下运行（640 实测漏检严重，见 design D11）；全量重标或对大分辨率子集重标，记录各教师输入尺寸。**2026-10-27 用户裁定：等 GPU 空闲再跑**（CPU 版需 ~2.5 h，不做）。
+- [ ] 3.2c GPU 排队脚本已就绪（等空闲窗口执行）：`label_gate_frames.py --teacher gdino`（交叉校验，CPU 过慢必须 GPU）与 `label_gate_frames.py --teacher yolo --imgsz 1280`（全量重标）以及 `checks/calibrate_gate_resolution.py`（分辨率↔检出率曲线）。执行前先 `nvidia-smi` 确认可用显存 ≥6 GB 且无人任务受影响。
 - [ ] 3.3 候选 B：MobileNetV3-Small 二分类（224–256px，**单帧输入**），弱标签训练。
 - [ ] 3.4 候选 C1：冻结 GDINO，取 Feature Enhancer 后**单帧**多尺度特征 → 薄头（1×1 降维 64 + GAP + 2 层 MLP，参数量 < 10 万）→ 训练；
 - [ ] 3.5 候选 C2：冻结 GDINO backbone，取增强器之前**单帧** Swin 多尺度输出 → 同款薄头 → 训练。
