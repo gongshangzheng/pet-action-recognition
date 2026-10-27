@@ -257,4 +257,4 @@ videos_train/xxx.mp4 <label>
 
 ---
 
-**相关文档**：[《模型》](../wiki/models)（用什么模型训这些数据）/ [《训练体系》](../wiki/training-guide)（mmaction2 怎么加载这些数据）/ [《系统架构》《系统架构》§4.4](../wiki/architecture)（数据如何进入管线）
+**相关文档**：[《模型》](../wiki/models)（用什么模型训这些数据）/ [《训练体系》](../wiki/training-guide)（mmaction2 怎么加载这些数据）/ [《系统架构》 §4](../wiki/architecture)（数据如何进入管线：环节① 定位与跟踪）

@@ -20,7 +20,7 @@ mmaction2 是 OpenMMLab 出品的**视频动作识别（video classification）�
 - **训练入口**：`tools/train.py ${CONFIG} --work-dir ${WORK_DIR}`
 - **数据流**：RawframeDataset / VideoDataset 加载视频 → pipeline 抽帧/缩放/增强 → 模型前向 → loss
 
-**为什么不用 mmcv 改动**：GroundingDINO/HQSAM/ViTPose 依赖重且与 mmcv 约束冲突风险高（[《系统架构》 §5.1](../wiki/architecture) D5），所以 pet 上另起 conda env `plf`，管线脚本以 subprocess + env 切换调用，产物落盘交接。
+**为什么不用 mmcv 改动**：GroundingDINO/HQSAM/ViTPose 依赖重且与 mmcv 约束冲突风险高（[《系统架构》 sidecar `architecture.json`「附录 · 环境隔离」](../wiki/architecture) D5），所以 pet 上另起 conda env `plf`，管线脚本以 subprocess + env 切换调用，产物落盘交接。
 
 ## §2 四种训练模式（互斥）
 
@@ -159,4 +159,4 @@ pet 是 2× RTX 4090，多用户共享：
 
 ---
 
-**相关文档**：[《模型》](../wiki/models)（每个模型实测）/ [《数据集全景》](../wiki/datasets)（喂什么数据）/ [《系统架构》《系统架构》§5.1](../wiki/architecture)（环境隔离）/ `.claude/skills/remote-servers/`（远程服务器）/ `.claude/skills/training/`（训练操作指南）
+**相关文档**：[《模型》](../wiki/models)（每个模型实测）/ [《数据集全景》](../wiki/datasets)（喂什么数据）/ [《系统架构》 sidecar `architecture.json`（附录 · 环境隔离）](../wiki/architecture)/ `.claude/skills/remote-servers/`（远程服务器）/ `.claude/skills/training/`（训练操作指南）

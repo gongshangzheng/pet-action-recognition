@@ -32,7 +32,7 @@ id: 11
 
 ### §1.3 11 月中期验收 KPI
 
-来自 2026-08-15 二期计划（已整合到 [《系统架构》《系统架构》§9.3](../wiki/architecture)）：
+来自 2026-08-15 二期计划（已整合到 [《系统架构》 sidecar `architecture.json`「进度」](../wiki/architecture)）：
 
 - P0 精度攻坚：8-9 月，5 个训练 run 全 error（数据/接口问题），k400 烟测 top1 0.77 已验证管线
 - P1 端侧 pipeline：9-11 月，34 段白天已处理，夜间红外段待做
@@ -90,7 +90,7 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 - `plf`：GroundingDINO/HQSAM/ViTPose 管线用（独立环境，避免 mmcv 冲突）
 - `pet_tokenizer`：tokenizer 训练/推理用（原 `pet_vjepa`，2026-09-16 按用途改名；需 transformers ≥4.55）
 
-环境隔离纪律详见 [《系统架构》 §5.1](../wiki/architecture) D5。
+环境隔离纪律详见 [《系统架构》 sidecar `architecture.json`「附录 · 环境隔离」](../wiki/architecture) D5。
 
 ## §3 工作纪律（三阶段 OpenSpec + 远程纪律）
 
@@ -201,7 +201,7 @@ cd web && nohup npx vite --port 3000 --strict-port </dev/null > /tmp/frontend.lo
 
 1. **老师腔**：每段先点目的（"为什么有这一步"），再讲方法，最后给坑
 2. **术语首次出现必定义**：括注（"X（…）"）或紧跟一句通俗定义
-3. **架构文档带术语表**：[《系统架构》《系统架构》§0](../wiki/architecture) 是范例
+3. **术语就地定义（不设术语表）**：[《系统架构》](../wiki/architecture) 是范例——术语在首次使用处解释，术语表已取消
 4. **类比与示例**：抽象概念配生活类比
 5. **避免**：缩写堆叠、长从句、"显然"之类的不解释
 6. **结论带四要素**（D6）：日期/来源/关键数字/证据路径

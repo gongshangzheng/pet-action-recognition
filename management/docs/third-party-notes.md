@@ -67,7 +67,7 @@ cd third-party/pet-videos
 ### §1.8 交叉引用
 
 - [《Live 模块》](../wiki/live-module)（落地点详述）
-- [《系统架构》《系统架构》§4.6](../wiki/architecture)（Live 在管线中的角色）
+- [《系统架构》 §11](../wiki/architecture)（Live 在管线中的角色）
 
 ---
 
