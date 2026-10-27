@@ -34,9 +34,10 @@ class GateFrames(Dataset):
 
         self.rows = rows
         self.image_root = image_root
+        self.size = (img_size, int(round(img_size * 16 / 9)))   # (H, W)：整帧 16:9，不裁两侧
         if train:
             self.transform = transforms.Compose([
-                transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0), ratio=(1.3, 2.2)),
+                transforms.RandomResizedCrop(self.size, scale=(0.6, 1.0), ratio=(1.4, 2.0)),
                 transforms.RandomHorizontalFlip(),
                 transforms.ColorJitter(brightness=0.2, contrast=0.2),
                 transforms.ToTensor(),
@@ -44,8 +45,7 @@ class GateFrames(Dataset):
             ])
         else:
             self.transform = transforms.Compose([
-                transforms.Resize((img_size, int(img_size * 16 / 9))),
-                transforms.CenterCrop(img_size),
+                transforms.Resize(self.size),
                 transforms.ToTensor(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ])
@@ -196,8 +196,10 @@ def main() -> int:
 
     # 阈值反解：在 val 上按「漏检率 ≤ target_miss」找最低阈值（宁多跑不漏判）
     probabilities, targets, _ = evaluate(model, val_loader, device)
-    chosen = 0.5
-    for threshold in sorted(set(probabilities)):
+    # 在满足「漏检 <= target_miss」的阈值里取**最高**的那个：召回约束优先，同时最小化误检。
+    # （取最低会退化成「全判有猫」，误检率 100%，门控失去早退价值。）
+    chosen = 1.0
+    for threshold in sorted(set(probabilities), reverse=True):
         if metrics_at(probabilities, targets, threshold)["recall"] >= 1.0 - args.target_miss:
             chosen = threshold
             break
