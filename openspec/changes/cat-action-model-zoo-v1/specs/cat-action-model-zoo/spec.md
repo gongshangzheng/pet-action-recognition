@@ -1,3 +1,7 @@
+## Purpose
+
+This capability defines auditable acceptance criteria and evidence boundaries for the approved work, preserving reproducibility and distinguishing verified outcomes from remaining limitations.
+
 ## ADDED Requirements
 
 ### Requirement: same-protocol reference models
@@ -30,3 +34,7 @@ Ranking SHALL use validation macro-F1 first, then toileting, abnormal, grooming 
 ### Requirement: disclose non-controlled differences
 
 The report SHALL list differences from the TSM/TSN baselines (precision, weight loading route, cropping, temporal span, regularization) and SHALL NOT present small macro-F1 gaps as established differences given the small validation support.
+
+#### Scenario: Interpret small score differences
+- WHEN the reference models are compared with TSM and TSN
+- THEN list precision, loading, crop, temporal and regularization differences and do not describe small validation gaps as established superiority.

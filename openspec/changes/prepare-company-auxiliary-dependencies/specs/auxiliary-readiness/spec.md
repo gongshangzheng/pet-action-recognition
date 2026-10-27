@@ -1,5 +1,9 @@
 # Auxiliary dependency readiness
 
+## Purpose
+
+This capability defines auditable acceptance criteria and evidence boundaries for the approved work, preserving reproducibility and distinguishing verified outcomes from remaining limitations.
+
 ## ADDED Requirements
 
 ### Requirement: reuse the working environment safely
@@ -23,3 +27,7 @@ help/config checks without model or dataset execution.
 ### Requirement: explain performance effects accurately
 The handoff SHALL distinguish the disk cost of unused packages from changes to
 numeric backends, active pipelines, quantization or resource contention.
+
+#### Scenario: Explain unused dependency costs
+- WHEN the handoff describes an installed but unused package
+- THEN distinguish its disk cost from effects of active numeric backends, quantization and resource contention without asserting an unmeasured speed change.

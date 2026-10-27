@@ -7,7 +7,7 @@
 | 模型 | batch × 累积 | 优化器 | lr | 说明 |
 |---|---|---|---|---|
 | VideoMAEv2-B | 4 × 4 | AdamW wd 0.05 | 5e-5 | AMP，drop_path 0.1 |
-| UniFormerV2-B | 16 × 1 | AdamW wd 0.05 | 5e-5 | AMP |
+| UniFormerV2-B | 8 × 2 | AdamW wd 0.05 | 5e-5 | AMP |
 | X3D-S | 16 × 1 | SGD m0.9 wd 1e-4 | 0.01 | AMP |
 | SlowFast R50 | 8 × 2 | SGD m0.9 wd 1e-4 | 0.005 | AMP |
 
@@ -19,7 +19,7 @@ X3D 不用 `target_fps`：源视频 15 fps，间隔 3 帧的时间跨度等于 K
 
 - 复用 `scripts/run_cat_action_v1.py` 的 `train_model`/`test_model`；新增 `scripts/run_cat_action_batch.py` 提供三个阶段：`train`（按设备队列顺序训练，失败不中断队列）、`rank`（只用验证集给 6 个模型排名并冻结）、`test`（排名之后才跑 test）。
 - 静态分配：GPU 0 先 VideoMAEv2 再 X3D；GPU 1 先 UniFormerV2 再 SlowFast。开跑前查 `nvidia-smi`，不抢占他人任务。
-- 预检脚本 `scripts/check_cat_action_models.py`：构建模型、加载权重并比对 backbone 张量、核对首样本帧落在区间内、用真实 batch 跑一次前向/反向测显存。
+- 预检脚本 `scripts/checks/check_cat_action_models.py`：构建模型、加载权重并比对 backbone 张量、核对首样本帧落在区间内、用真实 batch 跑一次前向/反向测显存。
 - 服务器侧沿用 bundle 同步到 `~/pet-final-v1`，不手改远程文件。
 
 ## 风险

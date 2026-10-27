@@ -134,3 +134,11 @@ GPU 小批量串行执行，常规模块设置分钟级超时，RKNN 编译单�
 unsupported，以及 contract_only 的覆盖说明。任何必测项缺失都不能给出完整通过结论。
 Markdown 总表区分原子模块、同进程共存、数据串联、训练/包装器闭环、RKNN。
 不生成正式精度对比榜；真实视频和权重验证另行扩展，记录来源与类别映射。
+
+## 2026-10-27 后续工作覆盖核对
+
+本 change 的通用驱动和完整串联验收仍未实施，也未因本轮文档更新获得执行授权。后续 `check-company-forward-in-memory` 提供选定模型的前向证据，`check-company-training-in-memory` 提供受限内存短训练证据，`check-rv1126b-simulator-in-memory` 提供特定微型网络的模拟器证据；这些结果不等于完整业务链通过。`cat-interval-training-lab`、`cat-action-training-v1` 和 `cat-action-model-zoo-v1` 是另一服务器与数据协议上的训练记录，不能替代本 change 的公司节点验收。
+
+仍需验证视频时间轴及空/坏输入、checkpoint 保存/重载/恢复和项目包装器、同进程共存及真实数据交接、门控前视/有界队列/丢帧/EOF、候选业务模型导出/INT8/板端，以及真实语义质量和端到端延迟。原任务保留未完成，实施前应依据各窄范围报告逐项选择可复用证据。
+
+可复用检查驱动应放 `scripts/checks/`，自动化测试放 `tests/`，合成数据与报告放 `results/verification/company_modules/<run_id>/`。这些是计划路径，不表示驱动已经存在。

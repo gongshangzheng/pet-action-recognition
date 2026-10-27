@@ -1,5 +1,9 @@
 # Runtime readiness
 
+## Purpose
+
+This capability defines auditable acceptance criteria and evidence boundaries for the approved work, preserving reproducibility and distinguishing verified outcomes from remaining limitations.
+
 ## ADDED Requirements
 
 ### Requirement: isolated compatible installation
@@ -25,3 +29,7 @@ weight initialization or dataset processing.
 The workspace SHALL retain downloaded installation assets and exact resolved
 versions, with logs under the project tree, for later recovery after public
 network access expires.
+
+#### Scenario: Recover cached installation assets
+- WHEN the environment must be restored after public access expires
+- THEN retain resolved versions, installation assets and project-local logs so recovery inputs can be identified.
