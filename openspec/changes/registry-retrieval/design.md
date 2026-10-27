@@ -54,7 +54,7 @@
 
 **分工架构**：每帧 GroundingDINO 只管**会动的**（猫）；静态物体走「**一次 SAM 分割 + 登记检索 + 帧差变更触发**」。
 
-> **注（2026-09-17）**：本节 R1/R2 与上文「背景对象层（SAM，关键帧）」是同一件事的两种描述；该部分可能拆为独立 change（暂名 `background-object-memory`），届时本节迁入。
+> **注（2026-10-27）**：R1/R2/R2b 机制已迁入独立 change `background-object-memory`（proposal/design/tasks/specs 齐备），本节保留为来源记录；本 change 只负责实例识别（embedding 选型 / 向量库 / 登记 CLI），不再承担清单维护。
 
 **实施时机**：调研结论备档；待 §4 验收后用户决定启动。
 
