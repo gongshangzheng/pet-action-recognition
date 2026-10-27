@@ -8,4 +8,4 @@
 
 ## 归档前文档补项
 
-- [ ] 创建缺失的 delta spec，覆盖区间采样、日期隔离、独立 smoke 产物与分数解释边界，并通过严格校验。
+- [x] 创建缺失的 delta spec，覆盖区间采样、日期隔离、独立 smoke 产物与分数解释边界，并通过严格校验（`specs/cat-interval-smoke/spec.md`，`openspec validate --strict` 通过）。

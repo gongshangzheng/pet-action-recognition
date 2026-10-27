@@ -17,3 +17,22 @@ TBD - created by archiving change multi-object-detect-gate. Update Purpose after
 - **WHEN** 猫框与桌框重叠但底边中点不在桌框内
 - **THEN** 状态保持 `on floor`，不误判 `cat on table`
 
+### Requirement: 离线猫居中预处理管线（仅白天段）
+
+系统 SHALL 提供离线批处理管线（GroundingDINO 检测 + 跟踪 + HQSAM/ViTPose 可选），处理范围为**白天段**，将输入视频转换为：① 每猫轨迹的猫居中稳定裁剪视频；② 伪标注框包（含家具框与空间状态序列）。跟踪 MUST 提供身份连续（track_id）、漏检帧插值补全、轨迹平滑三项能力。**抽样插值框可选经逐帧运动校正**（`--motion-correct` 显式启用；默认禁用——2026-09-16 用户裁定实测收益有限且引入尺寸呼吸），启用时校正幅度设上限、校正量落盘。
+
+#### Scenario: 单猫视频生成跟随视角
+
+- **WHEN** 对一段单猫视频执行批处理
+- **THEN** 输出恰好一条猫居中稳定视频，画面中猫保持居中，帧间无跳切抖动
+
+#### Scenario: 插值框运动校正
+
+- **WHEN** 抽样间隙猫移动导致插值框未完整覆盖猫（前景 mask 溢出框外）
+- **THEN** 框向外扩展/平移覆盖前景连通域，该帧标记 `motion_corrected`，校正量计入报告
+
+#### Scenario: 批处理质量报告
+
+- **WHEN** 全量 34 段批处理完成
+- **THEN** 输出逐段报告：检出率/插值率/运动校正率/离群剔除数/时长覆盖；插值率 >30% 的段列入告警清单
+

@@ -21,9 +21,9 @@
 - [x] 3.4 §5 解码与重建（汇合 / 不用 warp·feats / 连续潜空间 / 损失）
 - [x] 3.5 §6 训练与对比实验 / §7 评测矩阵 / §8 下游：行为素序列 → 动作识别 / §9 谱系与合规 / §10 参考来源；符号速查降为附录
 - [x] 3.6 每章补章节引言（该章在框架中的位置），内容只搬移不重写
-- [ ] 3.7（待办） 引用级联：《系统架构》/ papers 笔记 / 各 change design 中指向本文档的节引用全部重映射 + 闭合核对（悬空 0）
+- [x] 3.7 引用级联：《系统架构》/ papers 笔记 / 各 change design 中指向本文档的节引用全部重映射 + 闭合核对（悬空 0） —— 已重映射 §4.0 → 附录「符号速查」、§4.2c → §4.3c、§4.6b → §1.1 / §2，并清理重复文档名（《系统架构》《系统架构》）；新增 `scripts/checks/check_doc_refs.py` 做可重复核验：来源 66 个文件、解析成功 56 条、**悬空 0**
 - [x] 3.8 sidecar `action-model-design.json` changelog 加条 + 提交
 
 ## 4. 不做
 
-- [ ] 4.1 设计内容的裁定（T-A3b2 patchify 取舍、T-A5d 两方案开口项、权重选型等）→ 走 `identity-action-tokenizer` change，不在本 change
+非本 change 范围（不列为任务）：设计内容的裁定（T-A3b2 patchify 取舍、T-A5d 两方案开口项、权重选型等）走 `identity-action-tokenizer` change。此处保留为边界说明，不参与完成度统计。
