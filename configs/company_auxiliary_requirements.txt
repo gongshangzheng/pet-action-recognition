@@ -1,0 +1,37 @@
+# Compatible with Python 3.10, glibc 2.17, torch 2.1.2 and NumPy 1.26.4.
+# Background masks and portable ONNX preparation (ORT CPU intentionally).
+rembg==2.0.59
+onnxruntime==1.16.3
+opencv-python-headless==4.10.0.84
+pymatting==1.1.12
+numba==0.59.1
+llvmlite==0.42.0
+pooch==1.8.2
+jsonschema==4.23.0
+# Cat detection/segmentation and common lightweight-model training utilities.
+ultralytics==8.3.0
+ultralytics-thop==2.0.9
+albumentations==1.3.1
+seaborn==0.13.2
+psutil==6.0.0
+py-cpuinfo==9.0.0
+lap==0.5.12
+timm==0.9.16
+huggingface-hub==0.24.7
+safetensors==0.4.5
+pytorch-lightning==1.9.5
+torchmetrics==0.11.4
+lightning-utilities==0.11.9
+h5py==3.10.0
+# Feature-sequence boundary methods; custom TCNs can also use plain torch.
+ruptures==1.1.9
+hmmlearn==0.3.2
+pytorch-tcn==1.2.3
+# Export/quantization preparation, including RV1126B support.
+onnx==1.16.2
+onnxsim==0.4.36
+onnxoptimizer==0.3.13
+rknn-toolkit2==2.3.2
+fast-histogram==0.14
+ruamel.yaml==0.18.6
+protobuf==4.25.4

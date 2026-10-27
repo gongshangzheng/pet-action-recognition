@@ -1,0 +1,35 @@
+# Python 3.10 / CentOS 7 / glibc 2.17; MMAction2 1.2.0 action workflows.
+# MMCV is installed separately from its CUDA 12.1 / torch 2.1 binary wheel.
+torch==2.1.2
+torchvision==0.16.2
+numpy==1.26.4
+mmengine==0.10.7
+mmdet==3.2.0
+opencv-python==4.10.0.84
+opencv-contrib-python==4.10.0.84
+decord==0.6.0
+av==12.3.0
+einops==0.8.0
+scipy==1.11.4
+matplotlib==3.8.4
+Pillow==10.4.0
+scikit-learn==1.4.2
+scikit-image==0.22.0
+pandas==2.2.2
+pycocotools==2.0.7
+shapely==2.0.6
+imageio==2.35.1
+imageio-ffmpeg==0.5.1
+tensorboard==2.17.1
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.9.2
+importlib-metadata==8.5.0
+addict==2.4.0
+PyYAML==6.0.2
+yapf==0.40.2
+terminaltables==3.1.10
+tqdm==4.66.5
+packaging==24.1
+setuptools==69.5.1
+wheel==0.43.0
