@@ -39,24 +39,59 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-NAME_PATTERN = re.compile(r"^(?P<serial>\d+)_(?P<house>[a-z0-9]+)__event_(?P<date>\d{8})_(?P<time>\d{6})\.mp4$")
+# 文件名有三种形态（实测 2,737 段）：
+#   <serial>_<house>__event_YYYYMMDD_HHMMSS.mp4                       （309 段，带设备前缀）
+#   <serial>_<house>__event_YYYYMMDD_HHMMSS__src_<hash>.mp4           （83 段，带设备前缀 + 来源标记）
+#   event_YYYYMMDD_HHMMSS.mp4                                        （2,345 段，无前缀）
+DATETIME_PATTERN = re.compile(r"event_(?P<date>\d{8})_(?P<time>\d{6})")
+PREFIX_PATTERN = re.compile(r"^(?P<serial>\d+)_(?P<house>[a-z0-9]+)__")
+UPLOAD_PATTERN = re.compile(r"/upload/(?P<bucket>\d+)/")
 SAT_IR_THRESHOLD = 20.0          # S < 20 → 红外灰度段（datasets skill 口径）
 DEFAULT_LONG_SIDE = 1280
 DEFAULT_JPEG_QUALITY = 90
 SPLIT_RATIO = (0.70, 0.15, 0.15)
 
 
-def parse_name(path: Path) -> dict | None:
-    match = NAME_PATTERN.match(path.name)
+def load_upload_buckets(root: Path) -> dict[str, str]:
+    """从 annotations/path_mapping.csv 取「视频 → 原始 /upload/<bucket>/ 桶」（户/项目代理键）。"""
+    mapping_file = root / "annotations" / "path_mapping.csv"
+    if not mapping_file.is_file():
+        return {}
+    buckets: dict[str, str] = {}
+    with mapping_file.open(encoding="utf-8", newline="") as stream:
+        for row in csv.DictReader(stream):
+            original = row.get("original_video") or ""
+            match = UPLOAD_PATTERN.search(original)
+            if match:
+                buckets[Path(row["video"]).name] = f"upload{match.group('bucket')}"
+    return buckets
+
+
+def parse_name(path: Path, upload_buckets: dict[str, str]) -> dict | None:
+    """解析日期/小时，以及尽力而为的「设备 + 分组」键（前缀优先，其次 annotations 里的 upload 桶）。"""
+    match = DATETIME_PATTERN.search(path.name)
     if not match:
         return None
-    groups = match.groupdict()
-    return {
-        "serial": groups["serial"],
-        "household": groups["house"],
-        "date": groups["date"],
-        "hour": int(groups["time"][:2]),
+    entry = {
+        "date": match.group("date"),
+        "hour": int(match.group("time")[:2]),
+        "serial": "",
+        "household": "",
+        "group": "",
     }
+    prefix = PREFIX_PATTERN.match(path.name)
+    if prefix:
+        entry["serial"] = prefix.group("serial")
+        entry["household"] = prefix.group("house")
+        entry["group"] = prefix.group("house")
+    bucket = upload_buckets.get(path.name)
+    if bucket:
+        entry["group"] = bucket
+        entry["household"] = entry["household"] or bucket
+    if not entry["group"]:
+        entry["group"] = "unknown"
+        entry["household"] = "unknown"
+    return entry
 
 
 def list_videos(root: Path) -> list[Path]:
@@ -133,9 +168,10 @@ def main() -> int:
         print(f"[prepare_gate_frames] 找不到视频：{args.root}/videos", file=sys.stderr)
         return 2
 
+    upload_buckets = load_upload_buckets(args.root)
     entries, unparsed = [], []
     for path in videos:
-        meta = parse_name(path)
+        meta = parse_name(path, upload_buckets)
         if meta is None:
             unparsed.append(path.name)
             continue
@@ -146,7 +182,10 @@ def main() -> int:
 
     print(f"[prepare_gate_frames] 视频总数 {len(videos)}（可解析 {len(entries)}，未解析 {len(unparsed)}）")
     print(f"[prepare_gate_frames] 抽样 {len(picked)} 段，覆盖日期 {len({e['date'] for e in picked})} 天，"
-          f"户码 {len({e['household'] for e in picked})} 个")
+          f"分组 {dict(Counter(e['group'] for e in picked).most_common(8))}")
+    coverage = Counter("prefix" if e["serial"] else ("upload_bucket" if e["group"].startswith("upload") else "unknown")
+                       for e in entries)
+    print(f"[prepare_gate_frames] 设备信息覆盖（全量）：{dict(coverage)}")
     print(f"[prepare_gate_frames] 日期→split：train {sum(1 for v in split_map.values() if v=='train')} / "
           f"val {sum(1 for v in split_map.values() if v=='val')} / test {sum(1 for v in split_map.values() if v=='test')}")
     if args.dry_run:
@@ -199,6 +238,7 @@ def main() -> int:
                 "video": path.name,
                 "serial": entry["serial"],
                 "household": entry["household"],
+                "group": entry["group"],
                 "date": entry["date"],
                 "hour": entry["hour"],
                 "frame_idx": index,
@@ -237,6 +277,7 @@ def main() -> int:
         "domain_frames": dict(Counter(row["domain"] for row in rows)),
         "split_frames": dict(Counter(row["split"] for row in rows)),
         "household_frames": dict(Counter(row["household"] for row in rows)),
+        "group_frames": dict(Counter(row["group"] for row in rows)),
         "date_frames": dict(sorted(Counter(row["date"] for row in rows).items())),
         "sat_median_by_domain": {k: round(sorted(v)[len(v) // 2], 2) for k, v in sat_by_domain.items() if v},
         "fps_sampling": "1 frame per round(fps) frames",
