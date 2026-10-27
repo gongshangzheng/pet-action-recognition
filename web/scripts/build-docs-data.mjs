@@ -55,7 +55,7 @@ function parseFrontmatter(content, file) {
   const end = content.indexOf('---', 3)
   if (end < 0) fail(`${file}: frontmatter 起始 --- 之后没有结束 ---`)
   const meta = {}
-  content.slice(3, end).split('\n').forEach((line, index) => {
+  content.slice(3, end).split(/\r?\n/).forEach((line, index) => {
     if (!line.trim() || /^\s*#/.test(line)) return
     if (/^\s/.test(line)) fail(`${file}:${index + 2} frontmatter 不支持缩进或多行：${line}`)
     const match = /^([A-Za-z0-9_-]+):\s?(.*)$/.exec(line)
