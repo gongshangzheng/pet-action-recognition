@@ -5,7 +5,8 @@
 
 教师设计（openspec/changes/presence-gate-model design D10.2）：
 - `--teacher yolo`：Ultralytics YOLO11n 的 COCO `cat` 类（无需训练），score = 最高 cat 框置信度。
-- `--teacher gdino`：GroundingDINO-tiny，prompt `cat.`，score = 最高 cat 框置信度（受 max 框数限制）。
+- `--teacher gdino`：GroundingDINO-tiny，prompt `cat. dog.`，主分数 = 最高 cat 框置信度；dog 单列记录
+  （实测语料里混有狗 → 猫门控必须能区分「有猫」与「只有狗」）。
 - 两者都能跑完后，用 `merge` 子命令合并：一致 → 采用；冲突（一高一低）→ 进人工队列。
 
 产物（JSONL，一帧一行）：
@@ -16,8 +17,8 @@
   python scripts/label_gate_frames.py yolo --manifest results/gate/dataset_v1/manifest.csv \
       --weights ~/pet-final/weights/yolo11n.pt --out results/gate/labels_yolo.jsonl --batch 64
 
-  # 教师 B（慢，GPU）
-  python scripts/label_gate_frames.py gdino --manifest ... --out results/gate/labels_gdino.jsonl --batch 8
+  # 教师 B（慢，GPU；同时查 cat 与 dog）
+  python scripts/label_gate_frames.py gdino --manifest ... --out results/gate/labels_gdino.jsonl
 
   # 合并 + 冲突队列
   python scripts/label_gate_frames.py merge --manifest ... \
@@ -101,11 +102,26 @@ def cmd_gdino(args: argparse.Namespace) -> int:
         result = processor.post_process_grounded_object_detection(
             outputs, inputs["input_ids"], threshold=args.threshold,
             text_threshold=args.text_threshold, target_sizes=[image.size[::-1]])[0]
-        best_score, best_box = 0.0, None
-        for box, score in zip(result["boxes"].tolist(), result["scores"].tolist()):
-            if float(score) > best_score:
-                best_score, best_box = float(score), [round(v, 1) for v in box]
-        out.append({"path": row["path"], "teacher": "gdino", "score": round(best_score, 4), "box": best_box})
+        boxes = result["boxes"].tolist()
+        scores = result["scores"].tolist()
+        # transformers 4.49 的返回键是 labels；缺省时退化为「全部当 cat」，避免静默丢标签
+        texts = result.get("labels") or result.get("text_labels") or []
+        per_class: dict[str, float] = {}
+        per_class_box: dict[str, list[float]] = {}
+        for position, (box, score) in enumerate(zip(boxes, scores)):
+            label = str(texts[position]) if position < len(texts) else "cat"
+            label = label.strip().rstrip(".").lower()
+            if float(score) > per_class.get(label, 0.0):
+                per_class[label] = float(score)
+                per_class_box[label] = [round(v, 1) for v in box]
+        out.append({
+            "path": row["path"], "teacher": "gdino",
+            "score": round(per_class.get("cat", 0.0), 4),          # 主分数 = cat
+            "box": per_class_box.get("cat"),
+            "score_dog": round(per_class.get("dog", 0.0), 4),       # 语料里确实混有狗，单列记录
+            "box_dog": per_class_box.get("dog"),
+            "per_class": {k: round(v, 4) for k, v in sorted(per_class.items())},
+        })
         if index % 50 == 0 or index == len(rows):
             print(f"[label_gate] gdino {index}/{len(rows)}", flush=True)
 
@@ -175,7 +191,7 @@ def main() -> int:
     y.add_argument("--cat-class", type=int, default=15, help="COCO 的 cat 类索引（默认 15）")
     g = sub.choices["gdino"]
     g.add_argument("--model-id", default="IDEA-Research/grounding-dino-tiny")
-    g.add_argument("--prompt", default="cat.")
+    g.add_argument("--prompt", default="cat. dog.", help="多类别提示；主分数取 cat，dog 单列记录")
     g.add_argument("--threshold", type=float, default=0.05)
     g.add_argument("--text-threshold", type=float, default=0.15)
 
