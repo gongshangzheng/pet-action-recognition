@@ -6,7 +6,7 @@
 
 ### Requirement: 构建期生成文档静态数据
 
-构建流程 SHALL 扫描 `management/docs/` 下的 Markdown 与同名 sidecar JSON，产出前端可读取的静态数据文件；其字段 SHALL 与后端文档接口一致（列表项含 `slug/title/author/date/tags/summary/id`，详情项额外含 `content` 与 `sidecar`），排序 SHALL 与后端一致。
+构建流程 SHALL 扫描 `management/docs/` 下的 Markdown 与同名 sidecar JSON，产出前端可读取的静态数据文件；其字段 SHALL 与后端文档接口一致（列表项含 `slug/title/author/date/tags/summary/id` 以及后续新增的 `folder/order`，详情项额外含 `content` 与 `sidecar`），排序 SHALL 与后端一致。
 
 #### Scenario: 生成列表与详情
 - **WHEN** 执行构建
@@ -14,7 +14,7 @@
 
 #### Scenario: 排序与后端一致
 - **WHEN** 比较静态数据列表顺序与 `GET /api/management/docs` 的顺序
-- **THEN** 两者一致（`id` 数值升序、非数字或缺失者排最后；同 `id` 时按 `date` 降序）
+- **THEN** 两者一致（采用 `sync-projflow-shared-ui-docs` 扩展后的 folder 优先级 → order → id → date 降序 → slug；非法或缺失数值排后）
 
 #### Scenario: sidecar 元数据保留
 - **WHEN** 某文档存在同名 `.json`

@@ -1,8 +1,10 @@
+# sidebar-collapse Specification
+
 ## Purpose
 
-定义应用主侧边栏折叠状态的持久化、首次默认值与折叠态尺寸，使折叠偏好跨刷新保留且占用更少横向空间。
+定义应用主侧边栏折叠状态的持久化、首次默认值与折叠态尺寸，使折叠偏好跨刷新保留且占用更少横向空间。同时确保本地存储不可用时正常显示，并与文档面板和主题偏好分别保存。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 折叠状态跨刷新保留
 

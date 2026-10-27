@@ -1,0 +1,31 @@
+# cat-action-integration Specification
+
+## Purpose
+
+将独立猫动作实验工作区中的训练与评测能力整合到研究平台仓库，保留既有平台行为，并让使用者明确区分代码版本、数据位置以及已训练模型产物，避免代码同步被误认为权重迁移。
+
+## Requirements
+
+### Requirement: 猫动作训练能力完整保留
+
+整合后的仓库 SHALL 提供七类猫动作的数据准备及六模型训练与评测配置，并保留原有平台功能。
+
+#### Scenario: 审查整合结果
+- **WHEN** 使用者检查整合后的配置、入口与说明
+- **THEN** 能定位 TSM、TSN、VideoMAEv2、UniFormerV2、X3D、SlowFast 的实验配置与评测协议，且 Web 构建成功
+
+### Requirement: 代码与产物位置可区分
+
+整合说明 MUST 列出六模型既有最佳权重及配置对应关系，明确数据与权重不随 Git merge 迁移，且不得修改来源实验产物。
+
+#### Scenario: 定位既有模型
+- **WHEN** 使用者按整合说明查找最佳权重
+- **THEN** 能定位远程 pet-final 现有文件及其对应配置，且来源文件保持不变
+
+### Requirement: 分类目录与权重链接
+
+项目 SHALL 按 AGENTS.md 分类存放测试、预检和迁移工具；最佳权重 MUST 通过非覆盖软链接接入且保持源文件不变。
+
+#### Scenario: 合并后使用工具与权重
+- **WHEN** 使用者从项目根运行分类后的入口并检查权重链接
+- **THEN** 导入及根路径正确，六模型链接指向原始权重，测试夹具位于 results/tests/

@@ -95,3 +95,7 @@ docs.sort((a, b) => idNum(a) - idNum(b))                              // id 升�
 2. 本地验证：`npm run build` → 产物含 `docs-data.json` 与 `404.html`；`npm run preview` 下文档页可读；dev 下仍走后端。
 3. 提交并 push → `deploy.yml` 自动构建部署。
 4. 回滚：revert 提交即可；`docs-data.json` 未入库故无残留状态。
+
+## 归档时的后续演进说明
+
+本文件保留首次静态化实现的设计记录。后续 `sync-projflow-shared-ui-docs` 已扩展 folder/order 元数据、目录过滤、图片资产发布及排序规则；当前规格以该后续实现为准，本 change 的 delta 已协调排序描述，避免主规格同时保留冲突的顺序要求。

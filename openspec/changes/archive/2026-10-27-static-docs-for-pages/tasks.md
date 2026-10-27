@@ -20,7 +20,7 @@
 
 ## 4. 验证
 
-- [x] 4.1 `npm run build` 成功，产物含 `web/dist/docs-data.json` 与 `web/dist/404.html`（两者内容与 `index.html` 一致）
+- [x] 4.1 `npm run build` 成功，产物含 `web/dist/docs-data.json` 与 `web/dist/404.html`（`404.html` 内容与 `index.html` 一致；`docs-data.json` 为文档数据）
 - [x] 4.2 静态数据字段与排序对照后端：本地起后端比对 `GET /api/management/docs` 的顺序与字段
 - [x] 4.3 `npm run preview`（生产构建）下文档页可见列表 + 正文 + sidecar 区块，且深链接直接打开可渲染
 - [x] 4.4 开发模式（`npm run dev`）文档页仍走后端 API，改 md 刷新即见
