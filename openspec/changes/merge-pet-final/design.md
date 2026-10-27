@@ -35,3 +35,15 @@ pet-final 的原始 diff 涉及 1581 文件；忽略行尾空白后为 30 文件
 pet-final/main 包含：AnimalKingdom 既有权重对比与报告、公司部署打包和校验、独立环境准备、离线资源下载与哈希审计、模型前后向预检、RV1126B 最小模拟器检查、标注路径规范化、标签/音频审计、分卷猫数据恢复、课题组迁移，以及 LFB 8xb12 注册修正。文档侧栏和静态构建与本地重叠，保留本地增强。
 
 cat-action-v1 包含：区间数据集/采样/指标、小样本 smoke、七类映射过滤及按日划分、TSN/TSM 基线、四参考模型训练及验证排名冻结、权重与采样预检、均衡错误率/绘图/区间统计、迁移后环境与同步工具、CRLF frontmatter 构建兼容。它不实现连续视频事件检测、多猫身份关联或端侧量化。
+
+## 实施与验证记录
+
+来源固定为 pet-final/main@9847f1f 与 cat-action-v1@eb63f7d73；本地原始 main@4a45102，规范提交 4487462 可作为整合前回退点。两次 merge 保留来源历史；唯一冲突为 build-docs-data.mjs，保留本地排序、注释和资源构建逻辑，加入 CRLF 行拆分。
+
+来源 main 的未提交换行符/权限变化未带入；额外运行环境 design 记录未纳入实现；CRLF 实际修复已包含在来源 cat-action-v1 提交中。来源未跟踪迁移脚本的已提交版本由 cat-action-v1 带入；.runtime、weights、数据、数据库和结果未复制。原来源工作树保持原状。
+
+迁移 24 个入口：2 个自动化测试、10 个检查工具、12 个运维工具。另新增 1 个权重链接工具及其 4 项安全测试，清单含六模型配置与完整 SHA-256。新目录和当前文档引用已更新，来源 OpenSpec 和既有实验说明保留历史记录。
+
+本地验证：11 个合成数据自动化测试通过；65 个 Python 文件 AST 解析、Shell bash -n、所选无模型 CLI --help 通过；Web npm run build 成功（保留原有大 chunk 提示）；11 篇静态文档、404 回退及 LF/CRLF frontmatter 等价检查通过；git diff --check 和 OpenSpec strict 校验通过。人工审查路径、非覆盖链接、配置/哈希对应和运行时文件未入库。未启动训练、推理、安装依赖或重启服务；GPU 预检本身未重跑。
+
+六模型权重在远程完成 SHA-256 复核，与既有文档的完整哈希或前缀匹配；原文件在 pet-final/results/training/cat_action_v1。完整哈希见 configs/cat_action_v1_checkpoints.json。
