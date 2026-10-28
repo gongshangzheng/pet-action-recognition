@@ -35,7 +35,10 @@ def main() -> int:
     parser.add_argument("--per-sheet", type=int, default=20)
     parser.add_argument("--cols", type=int, default=4)
     parser.add_argument("--sheets", type=int, default=3)
-    parser.add_argument("--strategy", choices=["stratify", "low", "high", "night", "queue"], default="stratify")
+    parser.add_argument("--strategy", default="stratify",
+                        choices=["stratify", "low", "high", "night", "queue",
+                                 "cat_present", "other_animal_only", "absent", "rechecked"],
+                        help="cat_present / other_animal_only / absent 用三态标签文件（含 label 字段）筛选")
     parser.add_argument("--queue", type=Path, default=None, help="strategy=queue 时的 CSV（含 path 列）")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--draw-box", action="store_true", help="叠加教师检测框")
@@ -49,9 +52,14 @@ def main() -> int:
         rows = list(csv.DictReader(stream))
 
     def score(row: dict) -> float:
-        return float(labels.get(row["path"], {}).get("score") or 0.0)
+        entry = labels.get(row["path"], {})
+        return float(entry.get("score") or entry.get("score_cat") or 0.0)
 
-    if args.strategy == "queue" and args.queue:
+    if args.strategy in ("cat_present", "other_animal_only", "absent"):
+        pool = [row for row in rows if labels.get(row["path"], {}).get("label") == args.strategy]
+    elif args.strategy == "rechecked":
+        pool = [row for row in rows if labels.get(row["path"], {}).get("label_source") == "recheck_zoom"]
+    elif args.strategy == "queue" and args.queue:
         with args.queue.open(encoding="utf-8", newline="") as stream:
             queued = [row["path"] for row in csv.DictReader(stream)]
         keep = set(queued)
@@ -100,7 +108,12 @@ def main() -> int:
                 scale_y = TILE_SIZE[1] / float(row["height"])
                 cv2.rectangle(image, (int(x1 * scale_x), int(y1 * scale_y)),
                               (int(x2 * scale_x), int(y2 * scale_y)), (0, 255, 0), 2)
-            text = f"#{sheet * args.per_sheet + position + 1} s={entry.get('score', 0):.2f} {row['domain']}/{row['split']}"
+            score_value = entry.get("score") or entry.get("score_cat") or 0
+            label_text = entry.get("label", "")
+            extra = ""
+            if entry.get("recheck_cat") is not None:
+                extra = f" re={entry['recheck_cat']:.2f}"
+            text = f"#{sheet * args.per_sheet + position + 1} {label_text} cat={score_value:.2f}{extra} {row['domain']}"
             cv2.putText(image, text, (6, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 0), 3, cv2.LINE_AA)
             cv2.putText(image, text, (6, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
             y = (position // args.cols) * TILE_SIZE[1]
@@ -108,14 +121,15 @@ def main() -> int:
             canvas[y:y + TILE_SIZE[1], x:x + TILE_SIZE[0]] = image
             index_rows.append({"sheet": sheet + 1, "cell": position + 1, "path": row["path"],
                                "video": row["video"], "domain": row["domain"], "split": row["split"],
-                               "teacher_score": entry.get("score"), "human_label": ""})
+                               "teacher_label": entry.get("label"), "teacher_score": score_value,
+                               "recheck_cat": entry.get("recheck_cat"), "human_label": ""})
         target = args.out / f"sheet{sheet + 1}.jpg"
         cv2.imwrite(str(target), canvas, [cv2.IMWRITE_JPEG_QUALITY, 88])
         print(f"[contact_sheet] {target} （{len(chunk)} 格）")
 
     with (args.out / "review_index.csv").open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=["sheet", "cell", "path", "video", "domain", "split",
-                                                    "teacher_score", "human_label"])
+                                                    "teacher_label", "teacher_score", "recheck_cat", "human_label"])
         writer.writeheader()
         writer.writerows(index_rows)
     print(f"[contact_sheet] 索引 → {args.out / 'review_index.csv'}（人工填 human_label: present/absent/uncertain）")
