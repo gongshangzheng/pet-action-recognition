@@ -6,8 +6,9 @@
 （D11 已实测 640 输入系统性漏检）。本脚本因此：
 
 1. 按 manifest 的 `video` + `frame_idx` 从源视频**解出原始分辨率帧**（不落盘，省磁盘）；
-2. GDINO 处理器短边可调（`--shortest-edge` / `--max-size`），或 **2×2 分块推理**（`--tiles 2`）——
-   分块等价于把有效分辨率再放大一倍，是补小猫的标准做法；
+2. **提高有效分辨率靠分块，不靠调处理器短边**：实测把处理器短边从 800 提到 1000/1333 会让 GDINO 输出崩塌
+   （logits 1.09 → 0.90 → −2.80，标签变空）。正确做法是 `--tiles N`：把原图切成 N×N 块（带重叠），
+   每块仍按官方 800 短边处理。N=2 时每块 1440×810 → 有效像素密度约为整图的 2×，N=3 时接近原分辨率；
 3. 输出三态：`cat_present` / `other_animal_only` / `absent`（prompt 默认 `cat. dog.`），
    同时保留每个类别的分数与框，便于后续审计。
 
@@ -44,17 +45,18 @@ def run_tiles(model, processor, image, args) -> tuple[dict[str, float], dict[str
 
     width, height = image.size
     grids = [(0, 0, width, height)]
-    if args.tiles == 2:
-        overlap = 0.1
-        half_w, half_h = width / 2, height / 2
-        pad_w, pad_h = half_w * overlap, half_h * overlap
+    if args.tiles > 1:
+        n = args.tiles
+        overlap = args.overlap
+        step_w, step_h = width / n, height / n
+        pad_w, pad_h = step_w * overlap, step_h * overlap
         grids = []
-        for row in (0, 1):
-            for col in (0, 1):
-                x1 = max(0, int(col * half_w - pad_w))
-                y1 = max(0, int(row * half_h - pad_h))
-                x2 = min(width, int((col + 1) * half_w + pad_w))
-                y2 = min(height, int((row + 1) * half_h + pad_h))
+        for row in range(n):
+            for col in range(n):
+                x1 = max(0, int(col * step_w - pad_w))
+                y1 = max(0, int(row * step_h - pad_h))
+                x2 = min(width, int((col + 1) * step_w + pad_w))
+                y2 = min(height, int((row + 1) * step_h + pad_h))
                 grids.append((x1, y1, x2, y2))
 
     best: dict[str, float] = {}
@@ -88,9 +90,12 @@ def main() -> int:
     parser.add_argument("--threshold", type=float, default=0.20, help="三态判定阈值（低于此分数视为无该宠物）")
     parser.add_argument("--detect-threshold", type=float, default=0.05, help="检测框保留阈值（便于事后重标定）")
     parser.add_argument("--text-threshold", type=float, default=0.15)
-    parser.add_argument("--shortest-edge", type=int, default=1333, help="GDINO 处理器短边（默认 1333，高于官方 800）")
-    parser.add_argument("--max-size", type=int, default=2400)
-    parser.add_argument("--tiles", type=int, choices=[1, 2], default=1, help="2 = 2×2 分块（提高有效分辨率）")
+    parser.add_argument("--shortest-edge", type=int, default=None,
+                        help="GDINO 处理器短边；默认沿用官方 800。**实测提高该值会显著劣化 GDINO 输出**"
+                             "（800→1.09 logits, 1000→0.90, 1333→-2.80），提高有效分辨率请用 --tiles 分块")
+    parser.add_argument("--max-size", type=int, default=None, help="配合 --shortest-edge 的 longest_edge（默认 1333）")
+    parser.add_argument("--tiles", type=int, default=2, help="N×N 分块推理（默认 2；3 或 4 可让每块接近 800 短边）")
+    parser.add_argument("--overlap", type=float, default=0.15, help="分块重叠比例（默认 0.15）")
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--limit", type=int, default=None, help="只跑前 N 条（调试）")
     parser.add_argument("--save-crops", type=Path, default=None, help="可选：把解出的原始分辨率帧另存（仅供抽检）")
@@ -106,7 +111,9 @@ def main() -> int:
     #   {'shortest_edge': 800, 'longest_edge': 1333}
     # 只写 shortest_edge（漏 longest_edge）会让内部 resize 计算异常并 segfault（实测 exit 139），
     # 因此两键必须一起给；max_size 属性不参与这条路径，不要单独赋值。
-    processor.image_processor.size = {"shortest_edge": args.shortest_edge, "longest_edge": args.max_size}
+    if args.shortest_edge:
+        processor.image_processor.size = {"shortest_edge": args.shortest_edge,
+                                          "longest_edge": args.max_size or 1333}
     model = GroundingDinoForObjectDetection.from_pretrained(args.model_id).to(args.device).eval()
 
     with args.manifest.open(encoding="utf-8", newline="") as stream:
