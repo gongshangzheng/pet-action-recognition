@@ -67,7 +67,7 @@ def run_tiles(model, processor, image, args) -> tuple[dict[str, float], dict[str
         with torch.no_grad():
             outputs = model(**inputs)
         result = processor.post_process_grounded_object_detection(
-            outputs, inputs["input_ids"], threshold=args.threshold,
+            outputs, inputs["input_ids"], box_threshold=args.detect_threshold,
             text_threshold=args.text_threshold, target_sizes=[crop.size[::-1]])[0]
         texts = result.get("labels") or result.get("text_labels") or []
         for position, (box, score) in enumerate(zip(result["boxes"].tolist(), result["scores"].tolist())):
@@ -101,7 +101,7 @@ def main() -> int:
     parser.add_argument("--save-crops", type=Path, default=None, help="可选：把解出的原始分辨率帧另存（仅供抽检）")
     args = parser.parse_args()
 
-    import decord
+    import cv2
     import torch
     from PIL import Image
     from transformers import AutoProcessor, GroundingDinoForObjectDetection
@@ -121,7 +121,7 @@ def main() -> int:
     if args.limit:
         rows = rows[: args.limit]
 
-    readers: dict[str, object] = {}
+    captures: dict[str, object] = {}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     counts = {"cat_present": 0, "other_animal_only": 0, "absent": 0}
     with args.out.open("w", encoding="utf-8") as out_stream:
@@ -129,11 +129,18 @@ def main() -> int:
             video = str(args.video_root / row["video"])
             frame_index = int(row["frame_idx"])
             try:
-                reader = readers.get(video)
-                if reader is None:
-                    reader = decord.VideoReader(video, num_threads=1)
-                    readers[video] = reader
-                frame = reader[frame_index].asnumpy()
+                # 用 cv2 定位解码：decord 与 CUDA 同进程实测会 segfault（CPU 正常、GPU exit 139）
+                capture = captures.get(video)
+                if capture is None:
+                    capture = cv2.VideoCapture(video)
+                    if not capture.isOpened():
+                        raise RuntimeError("cannot open video")
+                    captures[video] = capture
+                capture.set(cv2.CAP_PROP_POS_FRAMES, float(frame_index))
+                ok, frame_bgr = capture.read()
+                if not ok:
+                    raise RuntimeError(f"无法解出第 {frame_index} 帧")
+                frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
             except Exception as error:
                 out_stream.write(json.dumps({"path": row["path"], "error": f"{type(error).__name__}: {error}"},
                                             ensure_ascii=False) + "\n")
