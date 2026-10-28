@@ -102,9 +102,11 @@ def main() -> int:
     from transformers import AutoProcessor, GroundingDinoForObjectDetection
 
     processor = AutoProcessor.from_pretrained(args.model_id)
-    # 覆盖官方默认（短边 800）以保留更多细节
-    processor.image_processor.size = {"shortest_edge": args.shortest_edge}
-    processor.image_processor.max_size = args.max_size
+    # transformers 4.49 的 GroundingDinoImageProcessor.size 是双键 dict
+    #   {'shortest_edge': 800, 'longest_edge': 1333}
+    # 只写 shortest_edge（漏 longest_edge）会让内部 resize 计算异常并 segfault（实测 exit 139），
+    # 因此两键必须一起给；max_size 属性不参与这条路径，不要单独赋值。
+    processor.image_processor.size = {"shortest_edge": args.shortest_edge, "longest_edge": args.max_size}
     model = GroundingDinoForObjectDetection.from_pretrained(args.model_id).to(args.device).eval()
 
     with args.manifest.open(encoding="utf-8", newline="") as stream:
