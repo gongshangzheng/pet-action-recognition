@@ -37,8 +37,8 @@ description: |
 SD=.claude/skills/remote-ops/scripts
 
 # ① 容量预检（跑任何东西之前）：GPU 是否有人真占显存、load/core、可用内存、磁盘
-bash $SD/resource_guard.sh preflight --gpu-index 0
-bash $SD/resource_guard.sh snapshot        # 只看当前机器状态
+bash $SD/preflight.sh --gpu-index 0        # 在本地发起、在 pet 上执行（推荐）
+bash $SD/preflight.sh --gpu-index 0 --json results/gate/preflight.json   # 顺带落盘证据
 
 # ② 跑任何超过几秒的命令：包在守卫里（nice + 线程上限 + 看门狗）
 bash $SD/remote_run.sh --gpu-index 0 --max-cpu-pct 350 --max-rss-mb 24000 --timeout-s 3600 \
