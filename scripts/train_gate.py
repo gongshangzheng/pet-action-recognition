@@ -138,6 +138,8 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default=None)
     parser.add_argument("--workers", type=int, default=2, help="DataLoader 进程数（共享机默认 2）")
+    parser.add_argument("--eval-only", action="store_true",
+                        help="只加载 --out/best.pt 做阈值反解与按域评测（训练被中断后用）")
     args = parser.parse_args()
 
     # 共享机线程纪律：DataLoader worker + OpenMP 一起会把 CPU 顶穿
@@ -183,7 +185,16 @@ def main() -> int:
 
     best = {"epoch": -1, "recall": -1.0}
     args.out.mkdir(parents=True, exist_ok=True)
-    for epoch in range(1, args.epochs + 1):
+    checkpoint_path = args.out / "best.pt"
+
+    if args.eval_only:
+        if not checkpoint_path.is_file():
+            print(f"[train_gate] --eval-only 但找不到 {checkpoint_path}")
+            return 2
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+        print(f"[train_gate] eval-only：已加载 {checkpoint_path}")
+        best = {"epoch": -1, "recall": float("nan")}
+    for epoch in range(1, 0 if args.eval_only else args.epochs + 1):
         model.train()
         running = 0.0
         for images, labels in train_loader:
@@ -202,7 +213,8 @@ def main() -> int:
             best = {"epoch": epoch, "recall": recall_at_half}
             torch.save(model.state_dict(), args.out / "best.pt")
 
-    model.load_state_dict(torch.load(args.out / "best.pt", map_location=device))
+    if not args.eval_only:
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 
     # 阈值反解：在 val 上按「漏检率 ≤ target_miss」找最低阈值（宁多跑不漏判）
     probabilities, targets, _ = evaluate(model, val_loader, device)
