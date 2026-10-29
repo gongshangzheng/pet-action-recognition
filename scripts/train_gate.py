@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import random
 from pathlib import Path
 
@@ -136,8 +137,17 @@ def main() -> int:
     parser.add_argument("--target-miss", type=float, default=0.02, help="阈值反解目标：漏检率上限")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default=None)
-    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--workers", type=int, default=2, help="DataLoader 进程数（共享机默认 2）")
     args = parser.parse_args()
+
+    # 共享机线程纪律：DataLoader worker + OpenMP 一起会把 CPU 顶穿
+    # （实测 4 worker 时 CPU 391%、RSS 11.7GB，被 resource_guard 按 300% 上限终止）
+    torch.set_num_threads(int(os.environ.get("TORCH_NUM_THREADS", "2")))
+    try:
+        import cv2
+        cv2.setNumThreads(0)    # worker 内部不再并行，交给 DataLoader 的多进程
+    except Exception:
+        pass
 
     random.seed(args.seed)
     np.random.seed(args.seed)
