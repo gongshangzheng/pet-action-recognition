@@ -76,12 +76,15 @@ ssh 远程 "cd repo && tar -xf /tmp/untracked_backup.tar"   # 恢复（内容相
 - 装完必须验证原环境不受影响：`原环境 python -c "import 关键包; print(版本)"`
 - 新机器启用（连 conda 都没有）→ 这是一个 change（见 provision-a100-server 先例）
 
-## 5. GPU 使用纪律
+## 5. GPU 与资源纪律（机制在 `remote-ops` skill）
 
-- 任何 GPU 任务开跑前：`nvidia-smi --query-gpu=index,memory.used,utilization.gpu` 查占用
-- 选空闲卡：`CUDA_VISIBLE_DEVICES=N` 显式指定，不裸跑
-- 两卡都忙：等待或与用户/占用者协调；**禁止抢占**
-- 长任务用 nohup + 日志文件，不用交互式占住终端
+**唯一出处是 `remote-ops` skill**（预检 / 资源守卫 / 看门狗 / 静态审计）。本节只保留纪律要点：
+
+- 任何 GPU 任务开跑前先跑 `bash .claude/skills/remote-ops/scripts/resource_guard.sh preflight --gpu-index N`；
+  退出码 2（容量被占）→ **停下来问用户，禁止抢占**
+- 任何超过几秒的命令用 `remote_run.sh` 包起来（nice + 线程上限 + CPU/RSS/显存/时长看门狗）
+- 长任务用 nohup + 日志；**禁止**在单次 `ssh 'cmd'` 里用 `nohup … & disown`（会话关闭会被杀，用 `setsid`）
+- 事故记录：2026-10-27/28 门控标注把 load 顶到 103、frp 隧道两度中断 → 见 `remote-ops` SKILL 开头
 
 ## 6. 脚本交接方式
 

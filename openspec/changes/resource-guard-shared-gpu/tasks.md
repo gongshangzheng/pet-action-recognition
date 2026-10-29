@@ -1,10 +1,12 @@
 # Tasks: resource-guard-shared-gpu
 
-## 1. 模块与限额
+## 1. 移植 CyberVerse remote-ops（替代自研模块）
 
-- [ ] 1.1 `scripts/_resource_guard.py`：`preflight(cfg) -> Report`（GPU 空闲/他人进程/load/内存/磁盘五项）、`apply_limits(cfg)`（torch/OMP/cv2/DataLoader/显存 fraction/nice）、`yield_watch(cfg, on_pause)`、`trace(event)`。
-- [ ] 1.2 拒绝路径：不满足条件时打印原因表并以退出码 3 结束；`--force` 必须配 `--force-reason` 并写入轨迹。
-- [ ] 1.3 单元级验证：`torch.get_num_threads()`、`cv2.getNumThreads()` 与配置一致；fraction 生效。
+- [x] 1.1 移植 `resource_guard.sh` / `remote_run.sh` / `_remote_common.sh` / `code_audit.py` 到
+      `.claude/skills/remote-ops/scripts/`（改磁盘检查层级、默认 GPU 索引、REMOTE_ROOT、无代理）。
+- [x] 1.2 写本仓版 `remote-ops/SKILL.md`：三道闸、退出码表、GPU 判忙口径（≥500 MiB 显存持有）、
+      `setsid` 纪律、连 pet 不走代理。
+- [ ] 1.3 `remote-server-discipline` §5 改为指向 remote-ops（单一出处），保留事故记录。
 
 ## 2. 接入现有脚本
 

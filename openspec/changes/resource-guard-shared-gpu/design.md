@@ -73,3 +73,19 @@
 - 不做全局调度器/队列系统（超出一个 skill + 一个模块的范围）；
 - 不接管他人的进程（永不 `kill` 非本进程）；
 - 不在离线（无 GPU）路径上加护栏，避免污染纯 CPU 的单元测试。
+
+## D6 方案修订（2026-10-29，用户指出 CyberVerse 已有同款机制）
+
+用户提示 `~/code/CyberVerse/.agents/skills/` 下有成熟实现，经核对后**改为移植而非自研**：
+
+| CyberVerse 资产 | 作用 | 本仓处置 |
+|---|---|---|
+| `remote-ops/scripts/resource_guard.sh` | `preflight`（GPU 显存持有量 ≥500 MiB 判忙 / load per-core / mem / disk）+ `run`（nice + 线程上限 + CPU/RSS/显存/时长看门狗，超限 TERM→KILL） | **原样移植**（仅改磁盘检查层级与默认 GPU 索引） |
+| `remote-ops/scripts/remote_run.sh` | 用 ssh 把 resource_guard 管道过去执行任意命令 | **原样移植**（改 REMOTE_ROOT/环境变量名） |
+| `remote-ops/scripts/code_audit.py` | 静态扫描内存炸弹写法 + `smoke` 降规模测峰值 RSS | **原样移植** |
+| `remote-ops/SKILL.md` | 三道闸、退出码表、GPU 判忙口径 | 重写为本仓版本（pet / plf / 2×4090 / 数据路径 / 无代理） |
+| `experiment/SKILL.md` | 实验方法论（change 先行、evidence.md、留痕、回滚） | 移植精简版（下一步） |
+
+**放弃**自研的「L3 合作式让行（SIGSTOP 暂停）」：CyberVerse 的做法是**超限直接终止 + 留采样日志**，
+更简单、不会留下半死不活的暂停进程；让行改由「预检拒绝 + 运行中看门狗」覆盖。
+保留自研的「资源轨迹」要求（`resource_guard` 的采样日志已满足，落盘位置按本仓 `results/` 约定）。
