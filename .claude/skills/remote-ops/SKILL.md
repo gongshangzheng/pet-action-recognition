@@ -9,6 +9,10 @@ description: |
 
 # 远程交互（pet）统一指引
 
+> **上游关系**：本 skill 已反哺上游 ProjFlow（`521496a [shared]`），上游是**通用版**——
+> 不写死服务器，靠 `REMOTE_SSH` / `REMOTE_ROOT` 两个变量配置；**本仓副本填了本仓的实际配置**
+> （别名、工作目录、环境、数据路径），这是下游与上游的**有意分叉**，改动脚本逻辑时两边同步。
+
 > **本 skill 存在的原因（真实事故）**：2026-10-27/28 门控全量标注（`label_gate_native.py --tiles 3`）
 > 在 16 人共用的 pet 上运行时，主机 **load average 冲到 103**、**frp 隧道两度中断**（SSH 从 banner 超时
 > 到 `Connection refused`，最长 >10 分钟）。当时的脚本没有任何预检与上限——因为项目里只有
