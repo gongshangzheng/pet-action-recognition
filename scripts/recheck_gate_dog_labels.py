@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import Counter
 from pathlib import Path
 
@@ -40,6 +41,11 @@ def main() -> int:
 
     import cv2
     import torch
+
+    # 线程上限：共享机上 4K HEVC 解码默认会吃满所有核（实测 370% CPU → 被守卫按上限终止）。
+    # 这里显式压住 OpenCV 与 torch 的并行度；外部仍可用 OMP_NUM_THREADS 进一步约束。
+    cv2.setNumThreads(2)
+    torch.set_num_threads(int(os.environ.get("TORCH_NUM_THREADS", "4")))
     from PIL import Image
     from transformers import AutoProcessor, GroundingDinoForObjectDetection
 
