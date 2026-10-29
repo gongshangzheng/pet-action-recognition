@@ -67,9 +67,11 @@ def main() -> int:
 
     counts = Counter(row["label"] for row in merged.values())
     by_config: dict[str, Counter] = {}
+    audit_counter: Counter = Counter()
     for row in merged.values():
         config = f"tiles{row.get('tiles')}"
         by_config.setdefault(config, Counter())[row["label"]] += 1
+        audit_counter[row.get("audit_label") or row["label"]] += 1
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8") as stream:
@@ -81,6 +83,7 @@ def main() -> int:
           f"阈值 {args.threshold}；{'二态' if args.binary else '三态'}")
     for label, count in counts.most_common():
         print(f"  {label:18s} {count:6d} ({count / total:.1%})")
+    print(f"审计三态（未折叠）：{dict(audit_counter)}")
     print("按配置：")
     for config, counter in sorted(by_config.items()):
         n = sum(counter.values())

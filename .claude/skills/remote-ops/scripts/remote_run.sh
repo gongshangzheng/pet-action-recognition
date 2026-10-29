@@ -21,13 +21,32 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || $# -eq 0 ]]; then
   exit 0
 fi
 
+SKIP_PREFLIGHT=0
+GPU_INDEX_FOR_PREFLIGHT=""
 GLUE=()
 while [[ $# -gt 0 && "$1" != "--" ]]; do
-  GLUE+=("$1"); shift
+  case "$1" in
+    --skip-preflight) SKIP_PREFLIGHT=1; shift ;;
+    --gpu-index) GPU_INDEX_FOR_PREFLIGHT="$2"; GLUE+=("$1" "$2"); shift 2 ;;
+    *) GLUE+=("$1"); shift ;;
+  esac
 done
 [[ "${1:-}" == "--" ]] && shift
 if [[ $# -eq 0 ]]; then
   die "no command given (usage: remote_run.sh [guard options] -- <command...>)"
+fi
+
+# 默认先跑容量预检：预检不通过就**不跑**（退出码沿用 1/2/3），
+# 避免「明明 GPU 有人占着还照跑」——真实事故：2026-10-29 我在 preflight 返回 2 之后仍然启动了训练。
+if (( SKIP_PREFLIGHT == 0 )); then
+  echo "### 自动预检（可用 --skip-preflight 关闭）"
+  PREFLIGHT_ARGS=()
+  [[ -n "$GPU_INDEX_FOR_PREFLIGHT" ]] && PREFLIGHT_ARGS+=(--gpu-index "$GPU_INDEX_FOR_PREFLIGHT")
+  if ! bash "$SCRIPT_DIR/preflight.sh" "${PREFLIGHT_ARGS[@]}"; then
+    rc=$?
+    echo "预检未通过（退出码 $rc）→ 不执行命令。等机器空下来或与占用者协调后再跑。" >&2
+    exit "$rc"
+  fi
 fi
 
 # Quote the remote command so the guard receives it as one argument string.
