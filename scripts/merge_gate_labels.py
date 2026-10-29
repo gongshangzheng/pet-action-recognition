@@ -31,11 +31,18 @@ def classify(cat: float, dog: float, threshold: float) -> str:
     return "absent"
 
 
+def collapse(label: str) -> str:
+    """门控只关心「有没有宠物」：猫和其他宠物都算 present。"""
+    return "absent" if label == "absent" else "present"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--in", dest="inputs", type=Path, action="append", required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--threshold", type=float, default=0.15)
+    parser.add_argument("--binary", action="store_true",
+                        help="折叠为二态：present（猫或其他宠物）/ absent；原三态保留在 audit_label 字段")
     args = parser.parse_args()
 
     merged: dict[str, dict] = {}
@@ -54,7 +61,8 @@ def main() -> int:
                     # 不同配置重复出现时保留 cat 分数更高者（召回优先）
                     if (row.get("score_cat") or 0) <= (merged[key].get("score_cat") or 0):
                         continue
-                row["label"] = classify(row.get("score_cat") or 0.0, row.get("score_dog") or 0.0, args.threshold)
+                row["audit_label"] = classify(row.get("score_cat") or 0.0, row.get("score_dog") or 0.0, args.threshold)
+                row["label"] = collapse(row["audit_label"]) if args.binary else row["audit_label"]
                 merged[key] = row
 
     counts = Counter(row["label"] for row in merged.values())
@@ -69,7 +77,8 @@ def main() -> int:
             stream.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     total = len(merged)
-    print(f"合并 {len(args.inputs)} 份 → {total} 帧（重复 {dup} 条，保留 cat 分数更高者）；阈值 {args.threshold}")
+    print(f"合并 {len(args.inputs)} 份 → {total} 帧（重复 {dup} 条，保留 cat 分数更高者）；"
+          f"阈值 {args.threshold}；{'二态' if args.binary else '三态'}")
     for label, count in counts.most_common():
         print(f"  {label:18s} {count:6d} ({count / total:.1%})")
     print("按配置：")
