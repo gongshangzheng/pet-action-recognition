@@ -3,8 +3,37 @@
 import argparse
 import csv
 import json
+import math
 import subprocess
 from pathlib import Path
+
+
+def source_samples(row, start):
+    """Record decoded source positions; fail if frame/time metadata is inconsistent."""
+    import cv2
+    fps = float(row['fps'])
+    if not math.isfinite(fps) or fps <= 0:
+        raise ValueError('invalid source fps')
+    capture = cv2.VideoCapture(row['source_path'], cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, 1])
+    if not capture.isOpened():
+        raise ValueError(f"cannot open source {row['video']}")
+    timestamps, frames = [], []
+    try:
+        for offset in (0.25, 0.75, 1.25, 1.75):
+            target = start + offset
+            frame = round(target * fps)
+            capture.set(cv2.CAP_PROP_POS_FRAMES, frame)
+            ok, image = capture.read()
+            if not ok or image is None:
+                raise ValueError(f"cannot decode source {row['video']} frame {frame}")
+            actual = capture.get(cv2.CAP_PROP_POS_MSEC) / 1000
+            if not math.isfinite(actual) or abs(actual - target) > 1.5 / fps:
+                raise ValueError(f"source timestamp mismatch {row['video']}: {actual} vs {target}")
+            timestamps.append(actual)
+            frames.append(frame)
+    finally:
+        capture.release()
+    return timestamps, frames
 
 
 def clip_starts(duration):
@@ -39,6 +68,7 @@ def main():
     for row in sources:
         duration = float(row['duration'])
         for index, start in enumerate(clip_starts(duration)):
+            timestamps, frames = source_samples(row, start)
             relative = f"proxies/{row['source_id']}_{index}.mp4"
             subprocess.run([args.ffmpeg, '-nostdin', '-v', 'error', '-threads', '1', '-ss', str(start),
                             '-i', row['source_path'], '-t', '2', '-an', '-vf',
@@ -64,6 +94,7 @@ def main():
                           'video': row['video'], 'start_sec': start, 'end_sec': start + 2,
                           'split': row['split'], 'domain': row['domain'], 'scenario': 'pilot',
                           'label_scope': 'any_pet_in_window', 'proxy_duration': actual_duration,
+                          'sample_timestamps': timestamps, 'frame_ids': frames,
                           'review_status': 'unlabeled'})
     if not items:
         raise ValueError('no eligible clips')
