@@ -4,7 +4,7 @@
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
         <span v-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
-        <span v-else class="gr-hint">教师判定与框已标出；你只需判断 <b>present / absent / uncertain</b>（快捷键 P / A / U，← → 翻页）</span>
+        <span v-else class="gr-hint">模型预标仅供参考，请确认有无宠物；看不清可跳过。（快捷键 P / A / U，← → 切换图片）</span>
       </div>
       <div class="gr-controls">
         <n-select v-model:value="currentSet" :options="setOptions" size="small" style="width: 200px"
@@ -46,7 +46,7 @@
                     class="box-dog" />
             </svg>
             <div v-if="!hideTeacher" class="gr-badges">
-              <span class="badge teacher">{{ item.teacher_label }}</span>
+              <span class="badge teacher">{{ teacherText(item.teacher_label) }}</span>
               <span class="badge cat">cat {{ (item.score_cat ?? 0).toFixed(2) }}</span>
               <span v-if="item.score_dog" class="badge dog">dog {{ item.score_dog.toFixed(2) }}</span>
               <span class="badge scenario">{{ item.scenario }} · {{ item.domain }}</span>
@@ -119,6 +119,7 @@ function syncLabeled() {
 const progressPercent = computed(() => (stats.value ? Math.round((labeled.value / Math.max(1, stats.value.total)) * 100) : 0))
 
 const pct = (value, dimension) => `${(value / dimension) * 100}`
+const teacherText = (label) => ({ cat_present: '预标：有猫', other_animal_only: '预标：有狗', absent: '预标：未检出' }[label] || label)
 
 async function loadSets() {
   sets.value = await listSets()
