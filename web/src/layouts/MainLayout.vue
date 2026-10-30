@@ -229,6 +229,7 @@ const menuOptions = [
     icon: renderIcon(LayersOutline),
     children: [
       { label: '数据集浏览', key: '/datasets', icon: renderIcon(LayersOutline) },
+      { label: '门控核验', key: '/gate/review', icon: renderIcon(CheckmarkOutline) },
     ],
   },
   {
@@ -263,6 +264,7 @@ const activeKey = computed(() => {
     '/management/meetings', '/management/docs', '/papers/list', '/papers/config',
     '/evaluation/run', '/evaluation/speedrun', '/evaluation/results', '/evaluation/outputs', '/evaluation/models', '/evaluation/configs',
     '/datasets',
+    '/gate/review',
     '/live',
     '/training/run', '/training/results', '/training/models', '/training/configs',
   ]

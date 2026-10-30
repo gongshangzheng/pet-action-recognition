@@ -166,6 +166,12 @@ const routes = [
         component: () => import('../views/datasets/DatasetBrowser.vue'),
         meta: { title: '数据集浏览', module: 'datasets' },
       },
+      {
+        path: 'gate/review',
+        name: 'GateReview',
+        component: () => import('../views/gate/GateReview.vue'),
+        meta: { title: '门控核验', module: 'datasets' },
+      },
       // ===== live 实时视频流 =====
       {
         path: 'live',

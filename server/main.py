@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from server.config import CORS_ORIGINS, MANAGEMENT_DIR
-from server.routers import management, papers, evaluation, training, speedrun, datasets, live
+from server.routers import management, papers, evaluation, training, speedrun, datasets, live, gate_review
 
 app = FastAPI(
     title="宠物动作识别研究平台 API",
@@ -33,6 +33,7 @@ app.include_router(training.router)
 app.include_router(speedrun.router)
 app.include_router(datasets.router)
 app.include_router(live.router)
+app.include_router(gate_review.router)
 
 # 文档图片资产仅从 management/docs/_assets/ 只读提供。
 DOC_ASSETS_DIR = os.path.join(MANAGEMENT_DIR, "docs", "_assets")
