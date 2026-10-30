@@ -96,6 +96,7 @@ def main():
                           'label_scope': 'any_pet_in_window', 'proxy_duration': actual_duration,
                           'sample_timestamps': timestamps, 'frame_ids': frames,
                           'review_status': 'unlabeled'})
+        print(f"prepared {len(items)} clips; last source {row['source_id']}", flush=True)
     if not items:
         raise ValueError('no eligible clips')
     with (args.out / 'clips.csv').open('w', encoding='utf-8', newline='') as stream:
