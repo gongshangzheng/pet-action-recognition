@@ -127,7 +127,8 @@ def main() -> int:
     if args.limit:
         rows = rows[: args.limit]
 
-    captures: dict[str, object] = {}
+    capture = None
+    current_video = None
     args.out.parent.mkdir(parents=True, exist_ok=True)
     counts = {"cat_present": 0, "other_animal_only": 0, "absent": 0}
     with args.out.open("w", encoding="utf-8") as out_stream:
@@ -136,12 +137,14 @@ def main() -> int:
             frame_index = int(row["frame_idx"])
             try:
                 # 用 cv2 定位解码：decord 与 CUDA 同进程实测会 segfault（CPU 正常、GPU exit 139）
-                capture = captures.get(video)
-                if capture is None:
-                    capture = cv2.VideoCapture(video)
+                if video != current_video:
+                    if capture is not None:
+                        capture.release()
+                    current_video = None
+                    capture = cv2.VideoCapture(video, cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, 1])
                     if not capture.isOpened():
                         raise RuntimeError("cannot open video")
-                    captures[video] = capture
+                    current_video = video
                 capture.set(cv2.CAP_PROP_POS_FRAMES, float(frame_index))
                 ok, frame_bgr = capture.read()
                 if not ok:
@@ -172,6 +175,8 @@ def main() -> int:
                 print(f"[label_gate_native] {index}/{len(rows)} | cat {counts['cat_present']} "
                       f"dog-only {counts['other_animal_only']} absent {counts['absent']}", flush=True)
 
+    if capture is not None:
+        capture.release()
     print(f"[label_gate_native] 完成 {len(rows)} 帧 → {args.out}；三态分布 {counts}")
     return 0
 
