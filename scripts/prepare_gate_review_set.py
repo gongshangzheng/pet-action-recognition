@@ -125,7 +125,7 @@ def main() -> int:
     items = []
     for row in picked:
         source = args.image_root / row["path"]
-        target = frames_dir / row["path"]
+        target = args.out / row["path"]        # row["path"] 已形如 frames/<date>/<name>.jpg
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.exists():
             if args.copy:
@@ -135,7 +135,7 @@ def main() -> int:
         entry = row["entry"]
         items.append({
             "path": row["path"],
-            "file": f"frames/{row['path']}",
+            "file": row["path"],
             "video": row["video"],
             "date": row["date"],
             "group": row["group"],
