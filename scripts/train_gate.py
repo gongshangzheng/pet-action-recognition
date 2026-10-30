@@ -84,15 +84,40 @@ def build_model(arch: str, pretrained: bool):
 
 def load_rows(manifest: Path, labels: Path) -> list[dict]:
     with labels.open(encoding="utf-8") as stream:
-        label_map = {json.loads(line)["path"]: json.loads(line) for line in stream if line.strip()}
+        records = [json.loads(line) for line in stream if line.strip()]
+    label_map = {record["path"]: record for record in records}
+    if len(label_map) != len(records) or any(r["label"] not in ("present", "absent") for r in records):
+        raise ValueError("duplicate paths or invalid labels")
     rows = []
+    seen = set()
     with manifest.open(encoding="utf-8", newline="") as stream:
         for row in csv.DictReader(stream):
+            if row.get("split") not in ("train", "val", "test") or not all(row.get(k) for k in ("path", "video", "domain")):
+                raise ValueError(f"invalid manifest row: {row}")
+            if row["path"] in seen:
+                raise ValueError(f"duplicate manifest path: {row['path']}")
+            seen.add(row["path"])
             label = label_map.get(row["path"])
             if label is None:
-                continue
+                raise ValueError(f"missing label: {row['path']}")
             rows.append({**row, "label": 1 if label["label"] == "present" else 0})
+    if seen != set(label_map):
+        raise ValueError("labels contain paths outside manifest")
+    source_splits = {}
+    for row in rows:
+        source = row["video"]
+        if source in source_splits and source_splits[source] != row["split"]:
+            raise ValueError(f"source occurs in multiple splits: {source}")
+        source_splits[source] = row["split"]
     return rows
+
+
+def train_step(model, images, labels, optimizer, criterion):
+    optimizer.zero_grad(set_to_none=True)
+    loss = criterion(model(images), labels)
+    loss.backward()
+    optimizer.step()
+    return float(loss.detach()) * images.size(0)
 
 
 def evaluate(model, loader, device) -> tuple[list[float], list[int], list[dict]]:
@@ -115,6 +140,7 @@ def metrics_at(probabilities: list[float], targets: list[int], threshold: float)
     tn = sum(1 for p, y in zip(probabilities, targets) if y == 0 and p < threshold)
     return {
         "n": n,
+        "accuracy": (tp + tn) / n if n else None,
         "recall": tp / max(1, tp + fn),
         "fpr": fp / max(1, fp + tn),
         "precision": tp / max(1, tp + fp),
@@ -160,8 +186,8 @@ def main() -> int:
     train_rows = [r for r in rows if r["split"] == "train"]
     val_rows = [r for r in rows if r["split"] == "val"]
     test_rows = [r for r in rows if r["split"] == "test"]
-    if not train_rows or not val_rows:
-        print("[train_gate] train/val 为空，检查 manifest 与 labels 的路径是否对齐")
+    if not train_rows or not val_rows or not test_rows:
+        print("[train_gate] train/val/test 为空，检查 manifest 与 labels 的路径是否对齐")
         return 2
     pos = sum(r["label"] for r in train_rows)
     print(f"[train_gate] train {len(train_rows)}（正 {pos} / 负 {len(train_rows) - pos}）"
@@ -199,11 +225,7 @@ def main() -> int:
         running = 0.0
         for images, labels in train_loader:
             images, labels = images.to(device, non_blocking=True), labels.to(device, non_blocking=True)
-            optimizer.zero_grad(set_to_none=True)
-            loss = criterion(model(images), labels)
-            loss.backward()
-            optimizer.step()
-            running += float(loss) * images.size(0)
+            running += train_step(model, images, labels, optimizer, criterion)
         scheduler.step()
         probabilities, targets, _ = evaluate(model, val_loader, device)
         recall_at_half = metrics_at(probabilities, targets, 0.5)["recall"]
