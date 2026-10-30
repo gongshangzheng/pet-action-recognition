@@ -42,7 +42,7 @@ def main():
             relative = f"proxies/{row['source_id']}_{index}.mp4"
             subprocess.run([args.ffmpeg, '-nostdin', '-v', 'error', '-threads', '1', '-ss', str(start),
                             '-i', row['source_path'], '-t', '2', '-an', '-vf',
-                            'scale=1280:720:force_original_aspect_ratio=decrease', '-c:v', 'libx264',
+                            'setpts=PTS-STARTPTS,scale=1280:720:force_original_aspect_ratio=decrease', '-c:v', 'libx264',
                             '-threads', '1', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
                             str(args.out / relative)], check=True)
             import cv2
@@ -56,7 +56,7 @@ def main():
                 if fps <= 0 or count < 1:
                     raise ValueError(f'invalid proxy metadata {relative}')
                 actual_duration = count / fps
-                if abs(actual_duration - 2) > 1 / fps + 0.001:
+                if actual_duration < 2 - 0.001 or actual_duration > 2 + 1 / fps + 0.001:
                     raise ValueError(f'incomplete proxy {relative}: {actual_duration}s')
             finally:
                 capture.release()
