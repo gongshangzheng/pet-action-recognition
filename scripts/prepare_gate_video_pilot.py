@@ -14,7 +14,7 @@ def clip_starts(duration):
         return [(duration - 2) / 2]
     starts = [(duration - 2) / 4, 3 * (duration - 2) / 4]
     if starts[1] - starts[0] < 2:
-        raise ValueError('approved quarter-position windows overlap for videos shorter than six seconds')
+        return starts[:1]
     return starts
 
 
@@ -42,7 +42,7 @@ def main():
             relative = f"proxies/{row['source_id']}_{index}.mp4"
             subprocess.run([args.ffmpeg, '-nostdin', '-v', 'error', '-threads', '1', '-ss', str(start),
                             '-i', row['source_path'], '-t', '2', '-an', '-vf',
-                            'setpts=PTS-STARTPTS,scale=1280:720:force_original_aspect_ratio=decrease', '-c:v', 'libx264',
+                            f"setpts=PTS-STARTPTS,fps={float(row['fps'])},scale=1280:720:force_original_aspect_ratio=decrease", '-c:v', 'libx264',
                             '-threads', '1', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
                             str(args.out / relative)], check=True)
             import cv2
