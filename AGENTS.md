@@ -220,6 +220,15 @@ id, source_id, filename, note, created_at
 3. **type 取值**：feat（新功能）、fix（修复）、refactor（重构）、style（样式）、docs（文档）、chore（杂项）
 4. **禁止提交**：`node_modules/`、`__pycache__/`、`.venv/`、`*.db`、`data/papers.db`、`results/`、`checkpoints/`、`live/screenshots/`
 
+#### 交付到 pet
+
+`pet` 是本项目的 GPU 远程，remote 为 `pet:pet-action-recognition`（`~/.ssh/config` 中的 SSH alias）。交付规则：
+
+1. **代码只走 Git**：本地 `commit` → `git push pet <branch>` → 在远程显式 checkout 并校验 commit（`git rev-parse HEAD` 与所推分支对齐），**确认后再启动服务**；不要假设“推上去就自动部署了”。
+2. **禁止 `rsync` / `scp`** 把本地工作区文件同步到远程部署目录；需要验证一个尚未部署的分支时，用 `git -C <远程仓库> worktree add --detach <tmp 路径> <branch>` 在远程物化，验证完 `git worktree remove`。`--detach` 必须带，否则被 worktree 占用的分支 `push` 会失败。
+3. **远程临时产物只进 `tmp/`**，不放 `$HOME` 根目录，也不放系统 `/tmp` —— 与「服务器/产物纪律（硬规则）」第 1、2 条同一约束。注意本仓库 `.gitignore` 目前只忽略 `/tmp/*.log`，写到 `tmp/` 的其它文件在提交前必须确认不入库。
+4. **连接细节留在 `~/.ssh/config`**：不在仓库脚本、文档或本文件里硬编码 IP、端口、用户名、私钥路径。
+
 ### 前端开发
 
 - 框架：Vue 3 `<script setup>` + Naive UI 组件库
