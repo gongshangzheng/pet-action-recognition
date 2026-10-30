@@ -2,15 +2,16 @@
   <div class="gate-review">
     <header class="gr-head">
       <div class="gr-title">
-        <h2>门控核验</h2>
-        <span class="gr-hint">教师判定与框已标出；你只需判断 <b>present / absent / uncertain</b>（快捷键 P / A / U，← → 翻页）</span>
+        <h2>{{ selectedSet?.title || '门控核验' }}</h2>
+        <span v-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
+        <span v-else class="gr-hint">教师判定与框已标出；你只需判断 <b>present / absent / uncertain</b>（快捷键 P / A / U，← → 翻页）</span>
       </div>
       <div class="gr-controls">
         <n-select v-model:value="currentSet" :options="setOptions" size="small" style="width: 200px"
-                  placeholder="选择 review set" @update:value="reload" />
+                  placeholder="选择标注批次" @update:value="changeFilter" />
         <n-select v-model:value="scenario" :options="scenarioOptions" size="small" style="width: 150px"
-                  @update:value="reload" />
-        <n-switch v-model:value="onlyUnlabeled" size="small" @update:value="reload">
+                  @update:value="changeFilter" />
+        <n-switch v-model:value="onlyUnlabeled" size="small" @update:value="changeFilter">
           <template #checked>只看未标</template>
           <template #unchecked>全部</template>
         </n-switch>
@@ -34,7 +35,7 @@
           <div class="gr-frame">
             <img :src="frameUrl(currentSet, item.file)" :alt="item.path" loading="lazy" />
             <!-- 教师框叠加：按原始像素 → 百分比换算 -->
-            <svg class="gr-box" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <svg v-if="!hideTeacher" class="gr-box" viewBox="0 0 100 100" preserveAspectRatio="none">
               <rect v-if="item.box_cat" :x="pct(item.box_cat[0], item.width)" :y="pct(item.box_cat[1], item.height)"
                     :width="pct(item.box_cat[2] - item.box_cat[0], item.width)"
                     :height="pct(item.box_cat[3] - item.box_cat[1], item.height)"
@@ -44,7 +45,7 @@
                     :height="pct(item.box_dog[3] - item.box_dog[1], item.height)"
                     class="box-dog" />
             </svg>
-            <div class="gr-badges">
+            <div v-if="!hideTeacher" class="gr-badges">
               <span class="badge teacher">{{ item.teacher_label }}</span>
               <span class="badge cat">cat {{ (item.score_cat ?? 0).toFixed(2) }}</span>
               <span v-if="item.score_dog" class="badge dog">dog {{ item.score_dog.toFixed(2) }}</span>
@@ -58,9 +59,9 @@
             <button class="btn absent" :class="{ active: item.human_label === 'absent' }"
                     @click.stop="label(item, 'absent')">无宠物 A</button>
             <button class="btn uncertain" :class="{ active: item.human_label === 'uncertain' }"
-                    @click.stop="label(item, 'uncertain')">不确定 U</button>
+                    @click.stop="label(item, 'uncertain')">{{ hideTeacher ? '跳过待复核 U' : '不确定 U' }}</button>
           </figcaption>
-          <div class="gr-flags" :class="{ disabled: !item.human_label }">
+          <div v-if="!hideTeacher" class="gr-flags" :class="{ disabled: !item.human_label }">
             <span class="gr-flags-label">框问题：</span>
             <button v-for="flag in BOX_FLAGS" :key="flag.key" class="chip"
                     :class="{ on: hasFlag(item, flag.key) }" :disabled="!item.human_label"
@@ -90,10 +91,14 @@ const total = ref(0)
 const stats = ref(null)
 const loading = ref(false)
 const cursor = ref(0)
+const saving = ref(false)
+let loadVersion = 0
+const selectedSet = computed(() => sets.value.find((s) => s.name === currentSet.value))
+const hideTeacher = computed(() => Boolean(selectedSet.value?.hide_teacher))
 
 const setOptions = computed(() => sets.value.map((s) => {
   const live = stats.value && s.name === currentSet.value ? labeled.value : s.labeled
-  return { label: `${s.name}（${live}/${s.count}）`, value: s.name }
+  return { label: `${s.title || s.name}（${live}/${s.count}）`, value: s.name }
 }))
 const scenarioOptions = [
   { label: '全部场景', value: '' },
@@ -117,44 +122,64 @@ const pct = (value, dimension) => `${(value / dimension) * 100}`
 
 async function loadSets() {
   sets.value = await listSets()
+  const requestedSet = new URLSearchParams(window.location.search).get('set')
+  if (requestedSet && sets.value.some((s) => s.name === requestedSet)) currentSet.value = requestedSet
   if (!currentSet.value && sets.value.length) currentSet.value = sets.value[0].name
   const current = sets.value.find((s) => s.name === currentSet.value)
   if (current && !stats.value) labeled.value = current.labeled
 }
 
+function changeFilter() {
+  page.value = 1
+  reload()
+}
+
 async function reload() {
   if (!currentSet.value) return
+  const batch = currentSet.value
+  const version = ++loadVersion
   loading.value = true
   try {
-    const data = await listItems(currentSet.value, {
+    const data = await listItems(batch, {
       scenario: scenario.value || undefined,
       only_unlabeled: onlyUnlabeled.value,
       page: page.value,
       page_size: pageSize,
     })
+    if (version !== loadVersion) return
     items.value = data.items.map((item) => ({ note: '', ...item }))
     total.value = data.total
     cursor.value = 0
-    stats.value = await getStats(currentSet.value)
+    const updatedStats = await getStats(batch)
+    if (version !== loadVersion) return
+    stats.value = updatedStats
     syncLabeled()
   } finally {
-    loading.value = false
+    if (version === loadVersion) loading.value = false
   }
 }
 
-async function label(item, value, note = '') {
+async function label(item, value, note = item.note || '') {
+  if (saving.value) return
+  saving.value = true
+  const batch = currentSet.value
   const previous = item.human_label
   try {
-    await setLabel(currentSet.value, { path: item.path, human_label: value, note })
+    await setLabel(batch, { path: item.path, human_label: value, note })
+    if (batch !== currentSet.value) return
     item.human_label = value
     item.note = note
     // 以服务端统计为准（避免本地计数漂移），并把当前 set 的计数同步到下拉标签
-    stats.value = await getStats(currentSet.value)
+    const updatedStats = await getStats(batch)
+    if (batch !== currentSet.value) return
+    stats.value = updatedStats
     syncLabeled()
     if (previous !== value && cursor.value < items.value.length - 1) cursor.value += 1
   } catch (error) {
     console.error('[gate-review] 标注保存失败', error)
     message.error(`保存失败：${error?.response?.data?.detail || error?.message || '未知错误'}（该帧可能已不在当前 review set 中，请刷新页面）`)
+  } finally {
+    saving.value = false
   }
 }
 
@@ -190,6 +215,8 @@ function prevPage() {
 }
 
 function onKey(event) {
+  if (event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName))) return
+  if (event.repeat || saving.value) return
   const key = event.key.toLowerCase()
   const item = items.value[cursor.value]
   if (!item) return

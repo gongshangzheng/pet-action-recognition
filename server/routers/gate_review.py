@@ -67,7 +67,8 @@ def list_sets() -> list[dict]:
         labels = _read_labels(path)
         labeled = sum(1 for row in labels.values() if (row.get("human_label") or "").strip())
         sets.append({"name": name, "count": data.get("count", len(data.get("items", []))),
-                     "labeled": labeled})
+                     "labeled": labeled, "title": data.get("title", name),
+                     "hide_teacher": data.get("hide_teacher", False)})
     return sets
 
 
@@ -84,7 +85,8 @@ def list_items(name: str, scenario: str | None = None, only_unlabeled: bool = Fa
             continue
         if only_unlabeled and human:
             continue
-        items.append({**item, "human_label": human})
+        note = (labels.get(item["path"], {}) or {}).get("note", "")
+        items.append({**item, "human_label": human, "note": note})
     total = len(items)
     start = max(0, (page - 1) * page_size)
     return {"total": total, "page": page, "page_size": page_size,
