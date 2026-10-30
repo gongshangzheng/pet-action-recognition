@@ -22,15 +22,19 @@ def source_samples(row, start):
         for offset in (0.25, 0.75, 1.25, 1.75):
             target = start + offset
             frame = round(target * fps)
-            capture.set(cv2.CAP_PROP_POS_FRAMES, frame)
+            if not capture.set(cv2.CAP_PROP_POS_FRAMES, frame):
+                raise ValueError(f"source seek failed: {row['video']} frame {frame}")
             ok, image = capture.read()
             if not ok or image is None:
                 raise ValueError(f"cannot decode source {row['video']} frame {frame}")
+            actual_frame = round(capture.get(cv2.CAP_PROP_POS_FRAMES)) - 1
+            if actual_frame != frame:
+                raise ValueError(f"source frame mismatch {row['video']}: {actual_frame} vs {frame}")
             actual = capture.get(cv2.CAP_PROP_POS_MSEC) / 1000
             if not math.isfinite(actual) or abs(actual - target) > 1.5 / fps:
                 raise ValueError(f"source timestamp mismatch {row['video']}: {actual} vs {target}")
             timestamps.append(actual)
-            frames.append(frame)
+            frames.append(actual_frame)
     finally:
         capture.release()
     return timestamps, frames
@@ -102,7 +106,8 @@ def main():
     with (args.out / 'clips.csv').open('w', encoding='utf-8', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=list(items[0]))
         writer.writeheader()
-        writer.writerows(items)
+        writer.writerows({**item, 'sample_timestamps': json.dumps(item['sample_timestamps']),
+                          'frame_ids': json.dumps(item['frame_ids'])} for item in items)
     (args.out / 'items.json').write_text(json.dumps({'count': len(items), 'items': items,
         'mode': 'video', 'hide_teacher': True, 'title': '视频标注 · 首轮',
         'description': '完整片段内出现过宠物即为有宠物'}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
