@@ -29,12 +29,12 @@
         </template>
         <div class="stat-item">
           <span class="stat-num">{{ starCount }}</span>
-          <span class="stat-label">⭐ 收藏</span>
+          <span class="stat-label">收藏</span>
         </div>
         <div class="stat-divider" />
         <div class="stat-item">
           <span class="stat-num">{{ pinCount }}</span>
-          <span class="stat-label">📌 置顶</span>
+          <span class="stat-label">置顶</span>
         </div>
       </div>
 
@@ -48,10 +48,10 @@
         <n-space align="center">
           <n-button
             size="small"
-            :type="starredOnly ? 'warning' : 'default'"
+            :type="starredOnly ? 'primary' : 'default'"
             :secondary="!starredOnly"
             @click="starredOnly = !starredOnly"
-          >⭐ 收藏</n-button>
+          >收藏</n-button>
           <n-button-group size="small">
             <n-button :type="sortBy === 'newest' ? 'primary' : 'default'" @click="sortBy = 'newest'" title="最新优先">↓</n-button>
             <n-button :type="sortBy === 'oldest' ? 'primary' : 'default'" @click="sortBy = 'oldest'" title="最早优先">↑</n-button>
@@ -103,10 +103,14 @@
                   <a v-if="p.blog_url" :href="p.blog_url" target="_blank" class="paper-link blog" @click.stop>Blog</a>
                 </div>
                 <div class="paper-actions">
-                  <span v-if="p.has_note" class="badge-icon" title="有笔记">📝</span>
-                  <span v-if="p.summary_zh" class="badge-icon" title="有摘要">✨</span>
-                  <button class="action-btn" :class="{ active: p.pinned }" @click.stop="handlePin(p)" title="置顶">📌</button>
-                  <button class="action-btn" :class="{ active: p.starred }" @click.stop="handleStar(p)" title="收藏">⭐</button>
+                  <n-icon v-if="p.has_note" class="badge-icon" size="14" title="有笔记"><CreateOutline /></n-icon>
+                  <n-icon v-if="p.summary_zh" class="badge-icon" size="14" title="有摘要"><SparklesOutline /></n-icon>
+                  <button class="action-btn" :class="{ active: p.pinned }" :aria-pressed="!!p.pinned" :title="p.pinned ? '取消置顶' : '置顶'" @click.stop="handlePin(p)">
+                    <n-icon size="16"><PinOutline /></n-icon>
+                  </button>
+                  <button class="action-btn" :class="{ active: p.starred }" :aria-pressed="!!p.starred" :title="p.starred ? '取消收藏' : '收藏'" @click.stop="handleStar(p)">
+                    <n-icon size="16"><StarOutline v-if="!p.starred" /><Star v-else /></n-icon>
+                  </button>
                 </div>
               </div>
             </div>
@@ -148,7 +152,7 @@
             <div class="dm-header">
               <div class="dm-header-info">
                 <h2>{{ detailPaper.title_zh || detailPaper.title }}
-                  <span v-if="detailPaper.summary_zh" class="dm-ai-badge" title="已生成 AI 概述">✨</span>
+                  <n-icon v-if="detailPaper.summary_zh" class="dm-ai-badge" size="15" title="已生成 AI 概述"><SparklesOutline /></n-icon>
                 </h2>
                 <p v-if="detailPaper.title_zh" class="dm-title-en">{{ detailPaper.title }}</p>
                 <p class="dm-authors">{{ formatAllAuthors(detailPaper.authors) }}</p>
@@ -159,11 +163,11 @@
                 </div>
               </div>
               <div class="dm-actions">
-                <n-button :type="detailPaper.starred ? 'warning' : 'default'" :secondary="!detailPaper.starred" @click="handleDetailStar">
-                  {{ detailPaper.starred ? '⭐ 已收藏' : '☆ 收藏' }}
+                <n-button :type="detailPaper.starred ? 'primary' : 'default'" :secondary="!detailPaper.starred" @click="handleDetailStar">
+                  {{ detailPaper.starred ? '已收藏' : '收藏' }}
                 </n-button>
-                <n-button :type="detailPaper.pinned ? 'info' : 'default'" :secondary="!detailPaper.pinned" @click="handleDetailPin">
-                  {{ detailPaper.pinned ? '📌 已置顶' : '置顶' }}
+                <n-button :type="detailPaper.pinned ? 'primary' : 'default'" :secondary="!detailPaper.pinned" @click="handleDetailPin">
+                  {{ detailPaper.pinned ? '已置顶' : '置顶' }}
                 </n-button>
                 <n-button v-if="detailPaper.url" tag="a" :href="detailPaper.url" target="_blank" secondary>arXiv</n-button>
                 <n-button v-if="detailPaper.pdf_url" tag="a" :href="detailPaper.pdf_url" target="_blank" secondary>PDF</n-button>
@@ -232,7 +236,7 @@ import {
   NCard, NSpin, NSpace, NInput, NSelect, NTag, NButton, NButtonGroup, NIcon, NDivider,
   NPagination, NModal, NCheckbox, useMessage,
 } from 'naive-ui'
-import { AddOutline } from '@vicons/ionicons5'
+import { AddOutline, CreateOutline, SparklesOutline, PinOutline, StarOutline, Star } from '@vicons/ionicons5'
 import EmptyState from '../../components/common/EmptyState.vue'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import { getPaperList, getPaperStats, getThumbnailUrl, fetchPaper, starPaper, pinPaper, getPaperDetail, getPaperNote, savePaperNote, setPaperBlog, summarizePaper } from '../../api/papers'
@@ -601,7 +605,7 @@ async function handleDetailPin() {
 
 <style scoped lang="scss">
 .flex-between { flex-wrap: wrap; gap: 8px; }
-.card-title { margin: 0; font-size: 16px; font-weight: 600; }
+.card-title { margin: 0; font-size: 20px; font-weight: 600; }
 .header-left { display: flex; align-items: center; gap: 10px; }
 
 .filter-toolbar {
@@ -611,21 +615,22 @@ async function handleDetailPin() {
 
 .stats-bar {
   display: flex; gap: 16px; align-items: center; margin-bottom: 14px; padding: 10px 16px;
-  background: #f8fafc; border-radius: 8px; flex-wrap: wrap;
+  background: var(--color-elevated); border-radius: 8px; flex-wrap: wrap;
 }
 .stat-item { display: flex; align-items: baseline; gap: 5px; }
-.stat-num { font-size: 20px; font-weight: bold; color: #4f46e5; }
-.stat-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-divider { width: 1px; height: 20px; background: #e2e8f0; }
+.stat-num { font-size: 20px; font-weight: bold; color: var(--color-primary); }
+.stat-label { font-size: 11px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-divider { width: 1px; height: 20px; background: var(--color-border); }
+
 
 .papers-grid { display: flex; flex-direction: column; gap: 14px; }
 
 .paper-card {
   display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 14px;
-  padding: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; cursor: pointer;
-  &:hover { border-color: var(--color-primary-border); box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
-  &.pinned { border-left: 3px solid var(--color-primary); background: var(--color-primary-soft); }
+  padding: 14px; background: var(--color-elevated); border-radius: 10px;
+  transition: background-color 0.2s, box-shadow 0.2s; cursor: pointer;
+  &:hover { background: var(--color-hover); box-shadow: 0 2px 10px var(--color-shadow); }
+  &.pinned { background: var(--color-primary-soft); }
 
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
@@ -634,39 +639,39 @@ async function handleDetailPin() {
 }
 
 .paper-thumb {
-  border-radius: 8px; overflow: hidden; background: #f1f5f9;
+  border-radius: 8px; overflow: hidden; background: var(--color-card);
   display: flex; align-items: center; justify-content: center; min-height: 200px;
   img { width: 100%; height: auto; display: block; object-fit: cover; }
-  .placeholder { color: #94a3b8; font-size: 12px; text-align: center; padding: 20px; .icon { font-size: 28px; display: block; margin-bottom: 6px; opacity: 0.5; } }
+  .placeholder { color: var(--color-text-dim); font-size: 12px; text-align: center; padding: 20px; .icon { font-size: 28px; display: block; margin-bottom: 6px; opacity: 0.5; } }
 }
 
 .paper-content { display: flex; flex-direction: column; min-width: 0; }
-.paper-title { font-size: 14px; font-weight: 600; line-height: 1.5; margin-bottom: 4px; color: #1e293b; }
-.paper-title-en { font-size: 12px; color: #94a3b8; margin-bottom: 6px; font-style: italic; }
+.paper-title { font-size: 16px; font-weight: 600; line-height: 1.5; margin-bottom: 4px; color: var(--color-text-heading); }
+.paper-title-en { font-size: 12px; color: var(--color-text-dim); margin-bottom: 6px; font-style: italic; }
 .paper-meta { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; align-items: center; }
-.paper-date { font-size: 11px; color: #94a3b8; margin-left: 4px; }
-.paper-authors { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+.paper-date { font-size: 11px; color: var(--color-text-dim); margin-left: 4px; }
+.paper-authors { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; }
 .paper-abstract {
-  font-size: 13px; color: #475569; line-height: 1.6;
+  font-size: 13px; color: var(--color-text-secondary); line-height: 1.6;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .paper-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; }
 .paper-links { display: flex; gap: 6px; }
 .paper-link {
   display: inline-flex; padding: 3px 10px; border-radius: 999px;
-  border: 1px solid #e2e8f0; font-size: 12px; color: var(--color-primary);
+  border: 1px solid var(--color-border); font-size: 12px; color: var(--color-primary);
   text-decoration: none; transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
-  &:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  &:hover { background: var(--color-primary-soft); border-color: var(--color-primary); }
+  &.blog { color: var(--tag-medium-fg); &:hover { background: var(--tag-medium-bg); border-color: var(--tag-medium-fg); } }
 
-  &.blog { color: #f59e0b; &:hover { background: #f59e0b; border-color: #f59e0b; } }
 }
 .paper-actions { display: flex; gap: 4px; align-items: center; }
 .badge-icon { font-size: 14px; opacity: 0.7; }
 .action-btn {
   background: none; border: none; cursor: pointer; font-size: 16px;
-  padding: 2px 4px; border-radius: 4px; opacity: 0.25;
+  padding: 2px 4px; border-radius: 4px; opacity: 0.45;
   transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s; line-height: 1;
-  &:hover { opacity: 0.6; background: #f1f5f9; }
+  &:hover { opacity: 1; background: var(--color-hover); }
   &.active { opacity: 1; }
 }
 
@@ -674,33 +679,33 @@ async function handleDetailPin() {
 
 // ---- 详情浮窗 ----
 .detail-modal-body {
-  background: #fff; border-radius: 12px; width: 80vw; max-width: 800px;
+  background: var(--color-card); border-radius: 12px; width: 80vw; max-width: 800px;
   max-height: 85vh; overflow-y: auto; padding: 24px;
 }
 .detail-inner { display: flex; flex-direction: column; gap: 16px; }
 .dm-header {
   display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  h2 { font-size: 18px; line-height: 1.4; margin-bottom: 4px; }
+  h2 { font-size: 18px; line-height: 1.4; margin-bottom: 6px; }
 }
 .dm-header-info { flex: 1; min-width: 0; }
-.dm-title-en { font-size: 13px; color: #94a3b8; font-style: italic; margin-bottom: 4px; }
-.dm-authors { font-size: 13px; color: #64748b; margin-bottom: 8px; }
+.dm-title-en { font-size: 13px; color: var(--color-text-dim); font-style: italic; margin-bottom: 4px; }
+.dm-authors { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; }
 .dm-tags { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-.dm-date { font-size: 12px; color: #94a3b8; margin-left: 6px; }
+.dm-date { font-size: 12px; color: var(--color-text-dim); margin-left: 6px; }
 .dm-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
 
 .dm-body { display: flex; gap: 20px; flex-wrap: wrap; }
-.dm-thumb { width: 200px; flex-shrink: 0; img { width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; } }
+.dm-thumb { width: 200px; flex-shrink: 0; img { width: 100%; border-radius: 8px; border: 1px solid var(--color-border); } }
 .dm-text { flex: 1; min-width: 200px; h3 { font-size: 15px; margin-bottom: 8px; } }
-.dm-abstract-zh { font-size: 14px; color: #1e293b; line-height: 1.7; margin-bottom: 12px; }
-.dm-abstract-en { font-size: 13px; color: #64748b; line-height: 1.6; }
-.dm-summary { font-size: 14px; color: #334155; line-height: 1.7; background: #f8fafc; padding: 12px; border-radius: 8px; }
+.dm-abstract-zh { font-size: 14px; color: var(--color-text-heading); line-height: 1.7; margin-bottom: 12px; }
+.dm-abstract-en { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; }
+.dm-summary { font-size: 14px; color: var(--color-text); line-height: 1.7; background: var(--color-elevated); padding: 12px; border-radius: 8px; }
 
-.dm-notes { border-top: 1px solid #e2e8f0; padding-top: 16px; }
+.dm-notes { border-top: 1px solid var(--color-border); padding-top: 16px; }
 .dm-notes-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; h3 { font-size: 15px; } }
-.dm-no-note { color: #94a3b8; font-size: 13px; }
+.dm-no-note { color: var(--color-text-dim); font-size: 13px; }
 
-.dm-footer { display: flex; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+.dm-footer { display: flex; gap: 8px; border-top: 1px solid var(--color-border); padding-top: 16px; }
 
 .dm-ai-badge { font-size: 16px; cursor: default; vertical-align: middle; margin-left: 6px; }
 </style>

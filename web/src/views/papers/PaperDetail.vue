@@ -234,9 +234,9 @@ onMounted(async () => {
 <style scoped lang="scss">
 .detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .header-info { flex: 1; min-width: 0; h2 { margin-bottom: 4px; } }
-.title-en { font-size: 13px; color: #94a3b8; font-style: italic; margin-bottom: 4px; }
-.authors { font-size: 13px; color: #64748b; margin-bottom: 8px; }
-.meta-tags { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; .date { font-size: 12px; color: #94a3b8; margin-left: 6px; } }
+.title-en { font-size: 13px; color: var(--color-text-dim); font-style: italic; margin-bottom: 4px; }
+.authors { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; }
+.meta-tags { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; .date { font-size: 12px; color: var(--color-text-dim); margin-left: 6px; } }
 
 .action-fab {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -247,10 +247,10 @@ onMounted(async () => {
 }
 
 .detail-body { display: flex; gap: 20px; }
-.detail-thumb { width: 200px; flex-shrink: 0; img { width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; } }
+.detail-thumb { width: 200px; flex-shrink: 0; img { width: 100%; border-radius: 8px; border: 1px solid var(--color-border); } }
 .detail-content { flex: 1; min-width: 0; h3 { font-size: 15px; margin-bottom: 8px; } }
-.abstract-zh { font-size: 14px; color: #1e293b; line-height: 1.7; margin-bottom: 12px; }
-.abstract-en { font-size: 13px; color: #64748b; line-height: 1.6; }
+.abstract-zh { font-size: 14px; color: var(--color-text-heading); line-height: 1.7; margin-bottom: 12px; }
+.abstract-en { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; }
 .summary-section { margin-top: 16px; }
-.summary-text { font-size: 14px; color: #334155; line-height: 1.7; background: #f8fafc; padding: 12px; border-radius: 8px; }
+.summary-text { font-size: 14px; color: var(--color-text); line-height: 1.7; background: var(--color-elevated); padding: 12px; border-radius: 8px; }
 </style>
