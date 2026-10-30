@@ -33,6 +33,19 @@ from collections import defaultdict
 from pathlib import Path
 
 
+def scale_box(box: list[float] | None, native_w: float, native_h: float,
+              frame_w: float, frame_h: float) -> list[float] | None:
+    """把原生分辨率坐标的框换算到**已保存帧**的坐标系。
+
+    GDINO 标注是在原生 2880×1620 上做的，而落盘帧是长边 1280；两者差 2.25 倍，
+    不做换算框会被画到画面外（真实 bug：核验页大部分帧看起来"没有框"）。
+    """
+    if not box or not native_w or not native_h:
+        return None
+    sx, sy = frame_w / native_w, frame_h / native_h
+    return [round(box[0] * sx, 1), round(box[1] * sy, 1), round(box[2] * sx, 1), round(box[3] * sy, 1)]
+
+
 def box_center(box: list[float] | None) -> tuple[float, float] | None:
     if not box:
         return None
@@ -133,6 +146,9 @@ def main() -> int:
             else:
                 target.symlink_to(source.resolve())
         entry = row["entry"]
+        frame_w, frame_h = int(row["width"]), int(row["height"])
+        native_w = float(entry.get("native_width") or frame_w)
+        native_h = float(entry.get("native_height") or frame_h)
         items.append({
             "path": row["path"],
             "file": row["path"],
@@ -145,10 +161,13 @@ def main() -> int:
             "teacher_label": entry.get("label"),
             "score_cat": entry.get("score_cat"),
             "score_dog": entry.get("score_dog"),
-            "box_cat": entry.get("box_cat"),
-            "box_dog": entry.get("box_dog"),
-            "width": int(row["width"]),
-            "height": int(row["height"]),
+            # 框统一换算到「帧坐标系」，前端按 width/height 直接缩放
+            "box_cat": scale_box(entry.get("box_cat"), native_w, native_h, frame_w, frame_h),
+            "box_dog": scale_box(entry.get("box_dog"), native_w, native_h, frame_w, frame_h),
+            "width": frame_w,
+            "height": frame_h,
+            "native_width": int(native_w),
+            "native_height": int(native_h),
             "human_label": "",
         })
 
