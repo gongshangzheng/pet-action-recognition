@@ -68,6 +68,7 @@ def list_sets() -> list[dict]:
         labeled = sum(1 for row in labels.values() if (row.get("human_label") or "").strip())
         sets.append({"name": name, "count": data.get("count", len(data.get("items", []))),
                      "labeled": labeled, "title": data.get("title", name),
+                     "mode": data.get("mode", "image"),
                      "hide_teacher": data.get("hide_teacher", False)})
     return sets
 
@@ -127,6 +128,20 @@ def frame(name: str, path: str) -> FileResponse:
     if not os.path.isfile(full):
         raise HTTPException(status_code=404, detail="帧文件缺失")
     return FileResponse(full, media_type="image/jpeg")
+
+
+@router.get("/sets/{name}/video")
+def video(name: str, path: str) -> FileResponse:
+    set_dir = _set_dir(name)
+    data = _read_items(set_dir)
+    if data.get("mode") != "video" or path not in {item.get("file") for item in data.get("items", [])}:
+        raise HTTPException(status_code=404, detail="该视频不在 review set 中")
+    full = os.path.realpath(os.path.join(set_dir, path))
+    if not full.startswith(os.path.realpath(set_dir) + os.sep) or not full.lower().endswith(".mp4"):
+        raise HTTPException(status_code=400, detail="非法视频路径")
+    if not os.path.isfile(full):
+        raise HTTPException(status_code=404, detail="视频文件缺失")
+    return FileResponse(full, media_type="video/mp4")
 
 
 class LabelPayload(BaseModel):

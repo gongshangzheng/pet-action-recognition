@@ -3,7 +3,8 @@
     <header class="gr-head">
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
-        <span v-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
+        <span v-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；看不清可跳过待复核。</span>
+        <span v-else-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
         <span v-else class="gr-hint">模型预标仅供参考，请确认有无宠物；看不清可跳过。（快捷键 P / A / U，← → 切换图片）</span>
       </div>
       <div class="gr-controls">
@@ -33,7 +34,8 @@
                 :class="{ labeled: item.human_label, selected: index === cursor }"
                 @click="cursor = index">
           <div class="gr-frame">
-            <img :src="frameUrl(currentSet, item.file)" :alt="item.path" loading="lazy" />
+            <video v-if="isVideo" :src="videoUrl(currentSet, item.file)" controls preload="metadata" />
+            <img v-else :src="frameUrl(currentSet, item.file)" :alt="item.path" loading="lazy" />
             <!-- 教师框叠加：按原始像素 → 百分比换算 -->
             <svg v-if="!hideTeacher" class="gr-box" viewBox="0 0 100 100" preserveAspectRatio="none">
               <rect v-if="item.box_cat" :x="pct(item.box_cat[0], item.width)" :y="pct(item.box_cat[1], item.height)"
@@ -77,7 +79,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { NButton, NEmpty, NProgress, NSelect, NSpin, NSwitch, useMessage } from 'naive-ui'
-import { frameUrl, getStats, listItems, listSets, setLabel } from '../../api/gateReview'
+import { frameUrl, videoUrl, getStats, listItems, listSets, setLabel } from '../../api/gateReview'
 
 const message = useMessage()
 const sets = ref([])
@@ -95,6 +97,7 @@ const saving = ref(false)
 let loadVersion = 0
 const selectedSet = computed(() => sets.value.find((s) => s.name === currentSet.value))
 const hideTeacher = computed(() => Boolean(selectedSet.value?.hide_teacher))
+const isVideo = computed(() => selectedSet.value?.mode === 'video')
 
 const setOptions = computed(() => sets.value.map((s) => {
   const live = stats.value && s.name === currentSet.value ? labeled.value : s.labeled
@@ -109,7 +112,7 @@ const scenarioOptions = [
   { label: 'day 白天', value: 'day' },
   { label: 'night 夜视', value: 'night' },
 ]
-const maxPage = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+const maxPage = computed(() => Math.max(1, Math.ceil(total.value / (isVideo.value ? 1 : pageSize))))
 const labeled = ref(0)
 function syncLabeled() {
   if (!stats.value) { labeled.value = 0; return }
@@ -145,7 +148,7 @@ async function reload() {
       scenario: scenario.value || undefined,
       only_unlabeled: onlyUnlabeled.value,
       page: page.value,
-      page_size: pageSize,
+      page_size: isVideo.value ? 1 : pageSize,
     })
     if (version !== loadVersion) return
     items.value = data.items.map((item) => ({ note: '', ...item }))
@@ -308,7 +311,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   aspect-ratio: 16 / 9;
   background: #111;
 
-  img {
+  img, video {
     width: 100%;
     height: 100%;
     object-fit: contain;

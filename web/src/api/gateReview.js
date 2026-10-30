@@ -9,3 +9,5 @@ export const setLabel = (set, payload) => request.post(`/gate-review/sets/${set}
 // 帧图片直连 URL（不走 axios，交给 <img> 加载）
 export const frameUrl = (set, path) =>
   `/api/gate-review/sets/${encodeURIComponent(set)}/frame?path=${encodeURIComponent(path)}`
+export const videoUrl = (set, path) =>
+  `/api/gate-review/sets/${encodeURIComponent(set)}/video?path=${encodeURIComponent(path)}`
