@@ -60,11 +60,12 @@
             <button class="btn uncertain" :class="{ active: item.human_label === 'uncertain' }"
                     @click.stop="label(item, 'uncertain')">不确定 U</button>
           </figcaption>
-          <label class="gr-flag" :class="{ disabled: !item.human_label }">
-            <input type="checkbox" :checked="item.note === 'box_wrong'" :disabled="!item.human_label"
-                   @change.stop="toggleBoxWrong(item)" />
-            框不对（有宠物但框选错了）
-          </label>
+          <div class="gr-flags" :class="{ disabled: !item.human_label }">
+            <span class="gr-flags-label">框问题：</span>
+            <button v-for="flag in BOX_FLAGS" :key="flag.key" class="chip"
+                    :class="{ on: hasFlag(item, flag.key) }" :disabled="!item.human_label"
+                    @click.stop="toggleFlag(item, flag.key)">{{ flag.label }}</button>
+          </div>
         </figure>
       </div>
       <n-empty v-if="!loading && !items.length" description="该筛选下没有帧" />
@@ -157,9 +158,21 @@ async function label(item, value, note = '') {
   }
 }
 
-async function toggleBoxWrong(item) {
+const BOX_FLAGS = [
+  { key: 'cat_wrong', label: 'cat 框错' },
+  { key: 'dog_wrong', label: 'dog 框错' },
+  { key: 'tight', label: '框偏小' },
+  { key: 'loose', label: '框偏大' },
+]
+
+const noteFlags = (note) => (note || '').split(';').map((v) => v.trim()).filter(Boolean)
+const hasFlag = (item, key) => noteFlags(item.note).includes(key)
+
+async function toggleFlag(item, key) {
   if (!item.human_label) return
-  await label(item, item.human_label, item.note === 'box_wrong' ? '' : 'box_wrong')
+  const flags = new Set(noteFlags(item.note))
+  flags.has(key) ? flags.delete(key) : flags.add(key)
+  await label(item, item.human_label, [...flags].sort().join(';'))
 }
 
 function nextPage() {
@@ -341,22 +354,41 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   color: #fff;
 }
 
-.gr-flag {
+.gr-flags {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 5px;
   align-items: center;
   padding: 0 8px 8px;
   font-size: 11px;
   color: var(--color-text-dim);
-  cursor: pointer;
 
   &.disabled {
     opacity: 0.45;
-    cursor: not-allowed;
   }
 
-  input {
-    accent-color: #f0a020;
+  .gr-flags-label {
+    margin-right: 2px;
+  }
+
+  .chip {
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-dim);
+    cursor: pointer;
+
+    &.on {
+      background: #f0a020;
+      border-color: #f0a020;
+      color: #fff;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
   }
 }
 
