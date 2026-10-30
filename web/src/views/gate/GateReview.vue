@@ -69,9 +69,10 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { NButton, NEmpty, NProgress, NSelect, NSpin, NSwitch } from 'naive-ui'
+import { NButton, NEmpty, NProgress, NSelect, NSpin, NSwitch, useMessage } from 'naive-ui'
 import { frameUrl, getStats, listItems, listSets, setLabel } from '../../api/gateReview'
 
+const message = useMessage()
 const sets = ref([])
 const currentSet = ref('')
 const scenario = ref('')
@@ -84,9 +85,10 @@ const stats = ref(null)
 const loading = ref(false)
 const cursor = ref(0)
 
-const setOptions = computed(() => sets.value.map((s) => ({
-  label: `${s.name}（${s.labeled}/${s.count}）`, value: s.name,
-})))
+const setOptions = computed(() => sets.value.map((s) => {
+  const live = stats.value && s.name === currentSet.value ? labeled.value : s.labeled
+  return { label: `${s.name}（${live}/${s.count}）`, value: s.name }
+}))
 const scenarioOptions = [
   { label: '全部场景', value: '' },
   { label: 'still 静止', value: 'still' },
@@ -97,11 +99,12 @@ const scenarioOptions = [
   { label: 'night 夜视', value: 'night' },
 ]
 const maxPage = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
-const labeled = computed(() => {
-  if (!stats.value) return 0
+const labeled = ref(0)
+function syncLabeled() {
+  if (!stats.value) { labeled.value = 0; return }
   const c = stats.value.counts
-  return c.present + c.absent + c.uncertain
-})
+  labeled.value = c.present + c.absent + c.uncertain
+}
 const progressPercent = computed(() => (stats.value ? Math.round((labeled.value / Math.max(1, stats.value.total)) * 100) : 0))
 
 const pct = (value, dimension) => `${(value / dimension) * 100}`
@@ -109,6 +112,8 @@ const pct = (value, dimension) => `${(value / dimension) * 100}`
 async function loadSets() {
   sets.value = await listSets()
   if (!currentSet.value && sets.value.length) currentSet.value = sets.value[0].name
+  const current = sets.value.find((s) => s.name === currentSet.value)
+  if (current && !stats.value) labeled.value = current.labeled
 }
 
 async function reload() {
@@ -125,21 +130,25 @@ async function reload() {
     total.value = data.total
     cursor.value = 0
     stats.value = await getStats(currentSet.value)
+    syncLabeled()
   } finally {
     loading.value = false
   }
 }
 
 async function label(item, value) {
-  const result = await setLabel(currentSet.value, { path: item.path, human_label: value })
-  item.human_label = value
-  if (stats.value) {
-    stats.value.counts.unlabeled = Math.max(0, stats.value.counts.unlabeled - 1)
-    stats.value.counts[value] = (stats.value.counts[value] || 0) + 1
+  const previous = item.human_label
+  try {
+    await setLabel(currentSet.value, { path: item.path, human_label: value })
+    item.human_label = value
+    // 以服务端统计为准（避免本地计数漂移），并把当前 set 的计数同步到下拉标签
+    stats.value = await getStats(currentSet.value)
+    syncLabeled()
+    if (previous !== value && cursor.value < items.value.length - 1) cursor.value += 1
+  } catch (error) {
+    console.error('[gate-review] 标注保存失败', error)
+    message.error(`保存失败：${error?.response?.data?.detail || error?.message || '未知错误'}（该帧可能已不在当前 review set 中，请刷新页面）`)
   }
-  if (result?.labeled !== undefined) labeled.value = result.labeled
-  // 自动前进到下一张
-  if (cursor.value < items.value.length - 1) cursor.value += 1
 }
 
 function nextPage() {
