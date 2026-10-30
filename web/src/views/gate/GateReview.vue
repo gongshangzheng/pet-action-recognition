@@ -60,6 +60,11 @@
             <button class="btn uncertain" :class="{ active: item.human_label === 'uncertain' }"
                     @click.stop="label(item, 'uncertain')">不确定 U</button>
           </figcaption>
+          <label class="gr-flag" :class="{ disabled: !item.human_label }">
+            <input type="checkbox" :checked="item.note === 'box_wrong'" :disabled="!item.human_label"
+                   @change.stop="toggleBoxWrong(item)" />
+            框不对（有宠物但框选错了）
+          </label>
         </figure>
       </div>
       <n-empty v-if="!loading && !items.length" description="该筛选下没有帧" />
@@ -126,7 +131,7 @@ async function reload() {
       page: page.value,
       page_size: pageSize,
     })
-    items.value = data.items
+    items.value = data.items.map((item) => ({ note: '', ...item }))
     total.value = data.total
     cursor.value = 0
     stats.value = await getStats(currentSet.value)
@@ -136,11 +141,12 @@ async function reload() {
   }
 }
 
-async function label(item, value) {
+async function label(item, value, note = '') {
   const previous = item.human_label
   try {
-    await setLabel(currentSet.value, { path: item.path, human_label: value })
+    await setLabel(currentSet.value, { path: item.path, human_label: value, note })
     item.human_label = value
+    item.note = note
     // 以服务端统计为准（避免本地计数漂移），并把当前 set 的计数同步到下拉标签
     stats.value = await getStats(currentSet.value)
     syncLabeled()
@@ -149,6 +155,11 @@ async function label(item, value) {
     console.error('[gate-review] 标注保存失败', error)
     message.error(`保存失败：${error?.response?.data?.detail || error?.message || '未知错误'}（该帧可能已不在当前 review set 中，请刷新页面）`)
   }
+}
+
+async function toggleBoxWrong(item) {
+  if (!item.human_label) return
+  await label(item, item.human_label, item.note === 'box_wrong' ? '' : 'box_wrong')
 }
 
 function nextPage() {
@@ -328,6 +339,25 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   border-radius: 3px;
   background: var(--color-primary);
   color: #fff;
+}
+
+.gr-flag {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0 8px 8px;
+  font-size: 11px;
+  color: var(--color-text-dim);
+  cursor: pointer;
+
+  &.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  input {
+    accent-color: #f0a020;
+  }
 }
 
 .gr-actions {
