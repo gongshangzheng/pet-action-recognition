@@ -284,3 +284,27 @@ GroundingDINO 的 Feature Enhancer 内部做**图像↔文本双向 cross-attent
 - **达标线**：与总管一致——准确率 75% 以上、漏检率 10% 以下；门控的「准确率」定义为
   (TP+TN)/(总数)，并同时给出 recall/precision/FPR，避免单一数字掩盖方向。
 
+## D16 产物目录规范（`results/gate/`）
+
+统一结构（详见 `results/gate/README.md`，该文件同时放在远端）：
+
+```
+results/gate/{dataset/<version>, labels/<stage>-<config>, runs/<run-id>,
+              review/<set>, probes/, contact_sheets/, logs/}
+```
+
+| 目录 | 内容 | 谁产出 |
+|---|---|---|
+| `dataset/<version>/` | `frames/` + `manifest.csv` + `splits_by_date.json` + `sample_stats.json` + `dataset_card.md` | `prepare_gate_frames.py` |
+| `labels/<stage>-<config>/` | 逐帧标签 JSONL（path/label/scores/box/teacher/tiles）+ 二态折叠 | `label_gate_native.py`、`merge_gate_labels.py`、`recheck_gate_dog_labels.py` |
+| `runs/<run-id>/` | `best.pt` / `threshold.json` / `metrics.json` / `predictions_<split>.jsonl` / `env.json` | `train_gate.py`、`env_check.sh` |
+| `review/<set>/` | `items.json` + `frames/` + `labels.csv` | `prepare_gate_review_set.py` + 网页标注（`/gate/review`） |
+| `probes/` | 一次性探针（motion / latency / 判别力） | 各 `checks/*.py` |
+| `logs/` | 运行日志 | 所有远端任务 |
+
+**rd 纪律**：① 新产物先归类，不往根目录扔文件；② `results/` 被 gitignore，长期保留的结论必须写进 `evidence.md`；
+③ 可复用脚本进 `scripts/` 或 skill 的 `scripts/`，一次性探针进 `tmp/`；④ 每个训练/评测 run 必须有 `env.json`，否则不可复现。
+
+**v1 → v2 迁移**：现存的 `dataset_v1/`、平铺的 `labels_*.jsonl`、`runs/smoke_*` 等按 README 的映射表迁移；
+迁移只做 `mv`（manifest 内的相对路径以 dataset 目录为基准，整体移动不破坏引用），并同步更新脚本参数默认值。
+
