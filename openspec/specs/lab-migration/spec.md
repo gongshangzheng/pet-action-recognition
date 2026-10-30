@@ -1,4 +1,10 @@
-## ADDED Requirements
+# lab-migration Specification
+
+## Purpose
+
+把本机项目代码、猫视频与原始标注迁入课题组 GPU 服务器，使新机器上的代码、数据与研究记录可通过逐文件哈希独立核验使用，同时不覆盖该机已有实验项目与其权重。
+
+## Requirements
 
 ### Requirement: 可核验的独立迁移
 

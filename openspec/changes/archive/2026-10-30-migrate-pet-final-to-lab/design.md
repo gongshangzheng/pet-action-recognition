@@ -46,23 +46,32 @@ checkpoint 可用性。对尚缺的公共权重或依赖，优先复用课题组
 标注和 3,927 条区间。代码可以用现有 4090 环境导入，模型权重/可选依赖的
 实际缺项有明确列表及重建位置。报告记录总传输量、目标路径及受限事项。
 
-## 2026-10-27 迁移记录复核
+## 最终状态（2026-10-29）
 
-目标 `.migration/transfer_report.json` 记录于 2026-10-23T10:09:25Z 完成传输：7571 个文件、10,046,488,364 字节，`remote_sha256_verified: true`，代码 HEAD 为 `9847f1fde25fe52a0c3d29d91fcf0e07f6726e73`。这是当时的全量哈希验收记录，本轮未重算全部文件哈希。
+**已验证**
 
-只读复核确认目标有 2737 个正常视频、Linux 路径版 CSV 2626 行，以及 `/home/wyy/.pet-final-transfer/git_history.bundle`。`existing_checkpoints.json` 位于远端 `/home/wyy/pet-final/results/migration_lab/existing_checkpoints.json`，保留既有 checkpoint 检查记录。脚本现已归入 `scripts/migration/`。
+- 传输完整：7571 个文件 / 10,046,488,364 字节，远端 `manifest.sha256` 逐文件核验
+  `remote_sha256_verified: true`；代码 HEAD `9847f1f`。
+- 数据齐备：`datasets/cat_raw/videos` 2737 个 mp4，约 9.3 GiB。
+- 标注可用：`scripts/checks/check_lab_annotation_paths.py` 逐行检查
+  lab CSV 2626 行、relative CSV 2626 行、intervals 3927 行、lab JSON 2737 个任务，
+  `missing=0 empty=0`。此前「CSV 存在且行数正确」的间接证据已由直接检查取代。
+- 原项目未动：`/home/wyy/pet-action-recognition` 仍在（checkpoint 约 5.5 GiB、
+  results 约 72 GiB），旧权重未被覆盖。
+- 凭据未外泄：`自作自偷/4090.txt` 从未进入 Git（`.gitignore:33` 整目录排除），
+  且该文件在本机已不存在。
 
-`public_assets_missing_from_local: true` 明确表明公司公共资产缓存未全量迁入；不能宣称全部模型已经具备运行条件。Linux CSV 存在与行数正确不等于全部路径可读验收；未覆盖旧项目、凭据排除、先提交再执行及双端报告仍需逐项补足对应证据后勾选。不得把迁移后单独完成的训练替代这些验收记录。
+**未验证**
 
-## 2026-10-29 收尾结论
+- 新目录内跑通训练/推理的环境与公共权重。`public_assets_missing_from_local: true`
+  表示约 8 GiB 公共模型缓存未随迁；既有 checkpoint 与 `pet` conda 环境能否复用到
+  新目录尚未绑定。用户 2026-10-29 决定本次不做，理由：当前主线训练在 `pet` 上执行。
 
-标注路径可读性已用 `scripts/checks/check_lab_annotation_paths.py` 实测通过：lab CSV 2626 行、
-relative CSV 2626 行、intervals 3927 行、lab JSON 2737 个任务全部 `is_file()` 且非空，
-磁盘 2737 个 mp4、约 9.3 GiB。此前"CSV 存在且行数正确"的间接证据已由直接检查取代。
+**运维注意**
 
-本机 `~/.ssh/config` 新增 `Host lab`，走密钥认证；原口令文件 `自作自偷/4090.txt` 在本机已不存在，
-仅影响需要重跑传输类脚本的场景，不影响只读核验。
-
-仍未验证的一项：新目录内跑通训练/推理所需的环境与公共权重。`public_assets_missing_from_local: true`
-表示约 8 GiB 公共模型缓存未随迁，是否补齐取决于后续是否在该机训练——当前主线训练在 `pet` 执行。
-因此本 change 的结论是"迁移与数据完整性已验证，端到端可用性未验证"，不得表述为"迁移完成可用"。
+- 只读核验走 `~/.ssh/config` 的 `Host lab`（密钥认证）。迁移脚本
+  `scripts/migration/migrate_pet_final_to_lab.py` 的 `connect()` 仍读本机口令文件，
+  该文件已不存在，重跑传输类脚本前需先恢复凭据来源。
+- `existing_checkpoints.json` 位于远端
+  `/home/wyy/pet-final/results/migration_lab/existing_checkpoints.json`，由
+  `scripts/migration/finish_lab_migration.py` 写入，不是本机路径。
