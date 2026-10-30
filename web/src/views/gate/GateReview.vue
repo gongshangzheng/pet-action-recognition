@@ -163,6 +163,7 @@ async function label(item, value, note = item.note || '') {
   if (saving.value) return
   saving.value = true
   const batch = currentSet.value
+  const version = loadVersion
   const previous = item.human_label
   try {
     await setLabel(batch, { path: item.path, human_label: value, note })
@@ -174,7 +175,7 @@ async function label(item, value, note = item.note || '') {
     if (batch !== currentSet.value) return
     stats.value = updatedStats
     syncLabeled()
-    if (previous !== value && cursor.value < items.value.length - 1) cursor.value += 1
+    if (version === loadVersion && previous !== value && cursor.value < items.value.length - 1) cursor.value += 1
   } catch (error) {
     console.error('[gate-review] 标注保存失败', error)
     message.error(`保存失败：${error?.response?.data?.detail || error?.message || '未知错误'}（该帧可能已不在当前 review set 中，请刷新页面）`)
