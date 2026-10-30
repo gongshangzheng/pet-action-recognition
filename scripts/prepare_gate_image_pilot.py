@@ -120,7 +120,9 @@ def main():
             if completed == QUOTAS[split]:
                 break
             video = resolved[row["video"]]
-            capture = cv2.VideoCapture(str(video))
+            # cv2.setNumThreads controls image kernels, not FFmpeg HEVC decoding.
+            capture = cv2.VideoCapture(str(video), cv2.CAP_FFMPEG,
+                                       [cv2.CAP_PROP_N_THREADS, 1])
             before = len(items)
             written = []
             try:
