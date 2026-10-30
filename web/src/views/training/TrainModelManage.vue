@@ -2,7 +2,7 @@
   <div class="page-container">
     <n-card size="small">
       <template #header>
-        <div class="flex-between"><h3>模型配置（可训练 DL 模型）</h3><n-button size="small" @click="load">刷新</n-button></div>
+        <div class="flex-between"><h2 class="card-title">模型配置（可训练 DL 模型）</h2><n-button size="small" @click="load">刷新</n-button></div>
       </template>
       <n-spin :show="loading">
         <n-data-table :columns="columns" :data="models" :bordered="false" size="small" striped />

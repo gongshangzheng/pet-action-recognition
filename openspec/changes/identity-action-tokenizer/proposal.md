@@ -1,5 +1,7 @@
 # Proposal: identity-action-tokenizer
 
+> **当前排程：搁置，不推进。** 身份/动作向量研究与行为发现研究不属于当前闭集识别及端云交付主线，不得作为动作分割、闭集分类或系统集成的前置。下文保留原研究方案，旧主线与依赖声明不再作为排程依据。
+
 > 子 change，总管：`pet-motion-latent-pipeline`（**2.3 主线**）。**性质：研究型**，2026-09-16 用户裁定升为主线（encoder 优先——此 change 产出编码器，下游 `video-feature-latent` / `spot-check-cli` 才能做高质量无监督工作）。
 
 ## Why

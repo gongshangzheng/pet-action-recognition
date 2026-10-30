@@ -45,31 +45,31 @@ const routes = [
         path: 'management/reports/:type(daily)/:date/:author',
         name: 'ReportDailyDetail',
         component: () => import('../views/management/ReportPage.vue'),
-        meta: { title: '日报详情', module: 'management' },
+        meta: { title: '日报详情', module: 'management', ownHeading: true },
       },
       {
         path: 'management/reports/:type(weekly)/:year/:week/:author',
         name: 'ReportWeeklyDetail',
         component: () => import('../views/management/ReportPage.vue'),
-        meta: { title: '周报详情', module: 'management' },
+        meta: { title: '周报详情', module: 'management', ownHeading: true },
       },
       {
         path: 'management/reports/:type(monthly)/:year/:month/:author',
         name: 'ReportMonthlyDetail',
         component: () => import('../views/management/ReportPage.vue'),
-        meta: { title: '月报详情', module: 'management' },
+        meta: { title: '月报详情', module: 'management', ownHeading: true },
       },
       {
         path: 'management/docs',
         name: 'DocPage',
         component: () => import('../views/management/DocPage.vue'),
-        meta: { title: '文档', module: 'management' },
+        meta: { title: '文档', module: 'management', ownHeading: true },
       },
       {
         path: 'management/docs/:slug(.*)',
         name: 'DocDetail',
         component: () => import('../views/management/DocPage.vue'),
-        meta: { title: '文档详情', module: 'management' },
+        meta: { title: '文档详情', module: 'management', ownHeading: true },
       },
       {
         path: 'management/tasks',
@@ -93,7 +93,7 @@ const routes = [
         path: 'management/meetings/:date',
         name: 'MeetingDetail',
         component: () => import('../views/management/MeetingList.vue'),
-        meta: { title: '会议纪要详情', module: 'management' },
+        meta: { title: '会议纪要详情', module: 'management', ownHeading: true },
       },
       // 论文搜集
       {

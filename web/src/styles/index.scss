@@ -20,6 +20,17 @@
   --color-shadow: rgba(0, 0, 0, 0.08);
   --scrollbar-thumb: #c1c1c1;
   --scrollbar-thumb-hover: #a8a8a8;
+
+  // 优先级标签：底色半透明叠加，文字色分档取可达 4.5:1 的值
+  --tag-high-bg: rgba(239, 68, 68, 0.12);
+  --tag-high-fg: #b91c1c;
+  --tag-medium-bg: rgba(245, 158, 11, 0.12);
+  --tag-medium-fg: #92400e;
+  --tag-low-bg: rgba(100, 116, 139, 0.10);
+  --tag-low-fg: #475569;
+
+  // 强调色底上的文字：浅色模式强调色偏深用白字，深色模式强调色偏亮用墨色
+  --icon-on-accent: #ffffff;
 }
 
 :root[data-theme='dark'] {
@@ -32,8 +43,8 @@
   --color-border: #3f3f46;
   --color-border-light: #2a2a2e;
   --color-text: #e4e4e7;
-  --color-text-secondary: #a1a1aa;
-  --color-text-dim: #71717a;
+  --color-text-secondary: #b4b4bd;
+  --color-text-dim: #9d9da7;
   --color-text-heading: #fafafa;
   --color-primary: #a8aeb6;
   --color-primary-soft: rgba(168, 174, 182, 0.15);
@@ -41,6 +52,15 @@
   --color-shadow: rgba(0, 0, 0, 0.4);
   --scrollbar-thumb: #3f3f46;
   --scrollbar-thumb-hover: #52525b;
+
+  --tag-high-bg: rgba(239, 68, 68, 0.14);
+  --tag-high-fg: #f87171;
+  --tag-medium-bg: rgba(245, 158, 11, 0.14);
+  --tag-medium-fg: #fbbf24;
+  --tag-low-bg: rgba(148, 163, 184, 0.12);
+  --tag-low-fg: #cbd5e1;
+
+  --icon-on-accent: #18181b;
 }
 
 * {
@@ -61,6 +81,45 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+// 选中文字取主色浅底，跟随主题与强调色
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-text-heading);
+}
+
+// 键盘焦点：统一可见描边（鼠标点击不显形）
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+// 仅供读屏的文本（页面隐藏 h1 等）
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// 尊重系统「减少动态效果」：去掉位移与时长，保留颜色/透明度过渡（状态反馈不丢）
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: background-color, border-color, color, opacity, box-shadow !important;
+    transition-duration: 0.12s !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 a {
@@ -139,6 +198,21 @@ a {
 
 .text-light {
   color: $text-light;
+}
+
+// 数字输入的加减按钮：Naive 默认 18x18，低于 SC 2.5.8 的 24px 下限
+.n-input-number .n-button { min-width: 24px; min-height: 24px; }
+
+// 全局提示条：默认贴顶 8px，会压在 56px 固定顶栏上；下移一条顶栏高度
+.n-message-container--top { top: 64px !important; }
+
+// 卡片头里的页面/区块标题用 h2，视觉尺寸沿用原 h3 的 16px
+.card-title { margin: 0; font-size: 16px; font-weight: 600; }
+
+// 空态描述：Naive 用 textColor3 的默认值（浅色 #c2c2c2 / 深色 38% 白）只有 1.8–3.6:1，
+// themeOverrides 覆盖不到 Empty 主题，这里用两级选择器压过 Naive 的注入样式。
+.n-empty .n-empty__description {
+  color: var(--color-text-dim);
 }
 
 // Markdown 渲染样式

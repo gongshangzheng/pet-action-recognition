@@ -22,7 +22,13 @@
 
         <!-- 内容 -->
         <div class="node-content">
-          <span v-if="hasChildren" class="chevron" @click.stop="expanded = !expanded">
+          <span
+            v-if="hasChildren"
+            class="chevron"
+            v-clickable
+            :aria-label="expanded ? '收起子任务' : '展开子任务'"
+            @click.stop="expanded = !expanded"
+          >
             <n-icon size="12">
               <chevron-down v-if="expanded" />
               <chevron-forward v-else />
@@ -231,11 +237,11 @@ function onClick() {
 }
 .progress-text { flex-shrink: 0; font-size: 10px; color: var(--color-text-dim); }
 .priority-tag {
-  flex-shrink: 0; font-size: 9px; line-height: 1;
-  padding: 1px 5px; border-radius: 3px; font-weight: 500;
-  &.p-high { background: rgba(239,68,68,0.12); color: #dc2626; }
-  &.p-medium { background: rgba(245,158,11,0.12); color: #d97706; }
-  &.p-low { background: rgba(100,116,139,0.10); color: #64748b; }
+  flex-shrink: 0; font-size: 11px; line-height: 1.2;
+  padding: 2px 6px; border-radius: 3px; font-weight: 500;
+  &.p-high { background: var(--tag-high-bg); color: var(--tag-high-fg); }
+  &.p-medium { background: var(--tag-medium-bg); color: var(--tag-medium-fg); }
+  &.p-low { background: var(--tag-low-bg); color: var(--tag-low-fg); }
 }
 .assignee {
   flex-shrink: 0; margin-left: auto;
@@ -257,10 +263,10 @@ function onClick() {
   .hc-id { font-family: 'SF Mono', 'Menlo', monospace; font-size: 10px; color: var(--color-text-dim); background: var(--color-elevated); padding: 1px 5px; border-radius: 3px; }
   .hc-badge { font-size: 10px; min-width: 42px; text-align: center; background: var(--color-elevated); padding: 1px 6px; border-radius: 4px; color: var(--color-text-secondary); }
   .hc-priority {
-    font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 500;
-    &.p-high { background: rgba(239,68,68,0.12); color: #dc2626; }
-    &.p-medium { background: rgba(245,158,11,0.12); color: #d97706; }
-    &.p-low { background: rgba(100,116,139,0.10); color: #64748b; }
+    font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: 500;
+    &.p-high { background: var(--tag-high-bg); color: var(--tag-high-fg); }
+    &.p-medium { background: var(--tag-medium-bg); color: var(--tag-medium-fg); }
+    &.p-low { background: var(--tag-low-bg); color: var(--tag-low-fg); }
   }
   .hc-line { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
   .hc-progress { font-size: 11px; color: var(--color-text-secondary); margin-top: 4px; }

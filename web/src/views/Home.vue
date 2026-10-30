@@ -1,10 +1,10 @@
 <template>
   <div class="page-container home-page">
-    <n-grid :cols="3" :x-gap="16" :y-gap="16">
+    <n-grid cols="1 640:2 900:3" responsive="screen" :x-gap="16" :y-gap="16">
       <n-gi>
         <n-card class="module-card management" hoverable @click="router.push('/management/team')">
           <div class="module-icon">PM</div>
-          <h3>项目管理</h3>
+          <h2>项目管理</h2>
           <p class="module-desc">团队档案、日报/周报/月报、任务看板、里程碑</p>
           <div class="module-stats">
             <n-statistic label="团队成员" :value="stats.teamCount" />
@@ -14,7 +14,7 @@
       <n-gi>
         <n-card class="module-card papers" hoverable @click="router.push('/papers/list')">
           <div class="module-icon">PP</div>
-          <h3>论文搜集</h3>
+          <h2>论文搜集</h2>
           <p class="module-desc">多源聚合、智能分类、精读笔记</p>
           <div class="module-stats">
             <n-statistic label="论文数量" :value="stats.paperCount" />
@@ -24,7 +24,7 @@
       <n-gi>
         <n-card class="module-card evaluation" hoverable @click="router.push('/evaluation/results')">
           <div class="module-icon">EV</div>
-          <h3>评测体系</h3>
+          <h2>评测体系</h2>
           <p class="module-desc">模型管理、评测运行、结果对比</p>
           <div class="module-stats">
             <n-statistic label="评测模型" :value="stats.modelCount" />
@@ -33,7 +33,7 @@
       </n-gi>
     </n-grid>
 
-    <n-grid :cols="2" :x-gap="16" :y-gap="16" style="margin-top: 16px">
+    <n-grid cols="1 900:2" responsive="screen" :x-gap="16" :y-gap="16" style="margin-top: 16px">
       <n-gi>
         <n-card title="项目里程碑" size="small">
           <n-spin :show="loadingMilestones">
@@ -148,15 +148,16 @@ onMounted(async () => {
     justify-content: center;
     font-size: 20px;
     font-weight: 700;
-    color: #fff;
+    color: var(--icon-on-accent);
   }
 
-  &.management .module-icon { background: #4f46e5; }
-  &.papers .module-icon { background: #0ea5e9; }
-  &.evaluation .module-icon { background: #f59e0b; }
+  // 前两个图标底色固定（深色底 + 白字），第三个跟随强调色：深色模式下强调色变亮，字色随之变墨色
+  &.management .module-icon { background: var(--color-primary); }
+  &.papers .module-icon { background: #0369a1; color: #fff; }      // 白字 5.93:1
+  &.evaluation .module-icon { background: #b45309; color: #fff; }  // 白字 5.02:1
 
-  h3 { margin-bottom: 8px; }
-  .module-desc { font-size: 13px; color: #6b7280; margin-bottom: 12px; }
+  h2 { margin-bottom: 8px; font-size: 17px; }
+  .module-desc { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 12px; }
 }
 
 .milestone-preview {
@@ -165,10 +166,11 @@ onMounted(async () => {
     align-items: center;
     gap: 12px;
     padding: 8px 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border-light);
 
     .milestone-name { flex: 1; font-size: 14px; }
-    .milestone-date { font-size: 13px; color: #9ca3af; }
+    .milestone-date { font-size: 13px; color: var(--color-text-dim); }
   }
 }
+
 </style>

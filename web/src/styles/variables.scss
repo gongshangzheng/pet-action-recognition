@@ -9,8 +9,9 @@ $bg-sidebar: #1e1e2d;
 $bg-sidebar-hover: #2a2a3e;
 
 $text-primary: #1f2937;
-$text-secondary: #6b7280;
-$text-light: #9ca3af;
+// 二级/三级文字：取值以「白底与 elevated 底都 ≥4.5:1」为准（见 openspec design.md）
+$text-secondary: #4b5563;   // 白底 7.56:1 / #f3f4f6 上 6.87:1
+$text-light: #5f6672;       // 白底 5.78:1 / #f3f4f6 上 5.26:1
 $text-sidebar: #a0aec0;
 $text-sidebar-active: #ffffff;
 

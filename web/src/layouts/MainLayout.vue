@@ -1,4 +1,5 @@
 <template>
+  <a class="skip-link" href="#main" @click.prevent="focusMain">跳到主内容</a>
   <n-layout has-sider style="height: 100vh">
     <!-- 侧边栏 -->
     <n-layout-sider
@@ -98,13 +99,16 @@
 
       <!-- 内容区 -->
       <n-layout-content class="app-content" :native-scrollbar="false">
-        <router-view v-slot="{ Component }">
-          <transition name="fade-slide" mode="out-in">
-            <keep-alive :include="['PaperList', 'TrainResults', 'DatasetBrowser', 'ReportPage']">
-              <component :is="Component" />
-            </keep-alive>
-          </transition>
-        </router-view>
+        <main id="main" tabindex="-1">
+          <h1 v-if="!route.meta.ownHeading" class="visually-hidden">{{ route.meta.title || 'Pet Action' }}</h1>
+          <router-view v-slot="{ Component }">
+            <transition name="fade-slide" mode="out-in">
+              <keep-alive :include="['PaperList', 'TrainResults', 'DatasetBrowser', 'ReportPage']">
+                <component :is="Component" />
+              </keep-alive>
+            </transition>
+          </router-view>
+        </main>
       </n-layout-content>
     </n-layout>
   </n-layout>
@@ -281,6 +285,12 @@ function handleMenuSelect(key) {
   router.push(key)
 }
 
+// 跳转链接：移焦到主内容区，不写 hash（避免污染 history 模式的路由）
+function focusMain() {
+  const main = document.getElementById('main')
+  if (main) main.focus()
+}
+
 function onBreadcrumbClick(item) {
   if (item.path && item.path !== route.path) router.push(item.path)
 }
@@ -341,15 +351,73 @@ const today = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 0 24px;
   background: var(--color-card);
   border-bottom: 1px solid var(--color-border);
+}
+
+.header-left {
+  min-width: 0;
+  flex: 1;
+
+  :deep(.n-breadcrumb) {
+    display: flex;
+    min-width: 0;
+    flex-wrap: nowrap;
+  }
+
+  :deep(.n-breadcrumb-item) {
+    min-width: 0;
+  }
+
+  :deep(.n-breadcrumb-item__link) {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
+}
+
+// 窄屏：日期让位给面包屑与主题按钮，避免顶栏溢出被裁切
+@media (max-width: 720px) {
+  .app-header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .header-date {
+    display: none;
+  }
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 9000;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--color-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 12px var(--color-shadow);
+  font-size: 13px;
+  transform: translateY(-200%);
+  transition: transform 0.15s ease;
+
+  &:focus-visible {
+    transform: translateY(0);
+  }
 }
 
 .header-date {
@@ -446,6 +514,12 @@ const today = computed(() => {
 
   :deep(.n-scrollbar-content > *) {
     min-height: 100%;
+  }
+
+  // main 是滚动内容容器：撑满并去掉默认 block 行为的边距
+  main {
+    min-height: 100%;
+    outline: none;
   }
 }
 </style>

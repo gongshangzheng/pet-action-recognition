@@ -2,7 +2,7 @@
   <div class="page-container">
     <n-card size="small">
       <template #header>
-        <div class="flex-between"><h3>数据集配置（训练数据集）</h3><n-button size="small" @click="load">刷新</n-button></div>
+        <div class="flex-between"><h2 class="card-title">数据集配置（训练数据集）</h2><n-button size="small" @click="load">刷新</n-button></div>
       </template>
       <n-spin :show="loading">
         <n-data-table :columns="columns" :data="datasets" :bordered="false" size="small" striped />

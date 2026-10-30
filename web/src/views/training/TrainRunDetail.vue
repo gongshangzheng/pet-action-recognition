@@ -5,10 +5,10 @@
         <div class="flex-between">
           <n-space align="center" size="small">
             <n-button size="small" quaternary @click="$router.push('/training/results')">← 返回</n-button>
-            <h3>{{ run?.name || run?.id || '进程详情' }}</h3>
-            <span v-if="run?.description" style="font-size: 12px; color: #9ca3af">{{ run.description }}</span>
-            <n-tag v-if="run" :type="statusType" size="small">{{ run.status }}</n-tag>
-            <n-tag v-if="isRunning" type="info" size="small">实时刷新中…</n-tag>
+            <h2 class="card-title">{{ run?.name || run?.id || '进程详情' }}</h2>
+            <span v-if="run?.description" class="run-desc">{{ run.description }}</span>
+            <n-tag v-if="run" :type="statusType" size="small" :bordered="false">{{ run.status }}</n-tag>
+            <n-tag v-if="isRunning" type="info" size="small" :bordered="false">实时刷新中…</n-tag>
           </n-space>
           <n-button size="small" @click="load" :loading="loading">刷新</n-button>
         </div>
@@ -75,11 +75,12 @@
           @click="selectedEpoch = group.epoch"
         >
           <div class="epoch-cell-thumb">
-            <img v-if="group.samples[0]" :src="group.samples[0].url" loading="lazy" />
+            <img v-if="group.samples[0]" :src="group.samples[0].url" :alt="`epoch ${group.epoch} 样本缩略图`" loading="lazy" />
           </div>
           <div class="epoch-cell-meta">
             <span class="epoch-num">Ep {{ group.epoch }}</span>
             <span :class="visGroupCorrect(group) === group.samples.length ? 'vis-all-ok' : ''">{{ visGroupCorrect(group) }}/{{ group.samples.length }}</span>
+
           </div>
         </div>
       </div>
@@ -93,7 +94,7 @@
         <div class="vis-card-inner">
           <button class="vis-nav vis-prev" :disabled="visIndex[selectedEpoch] === 0" @click="switchVis(selectedEpoch, -1)">◀</button>
           <div class="vis-main" v-if="selectedGroup.samples[visIndex[selectedEpoch]]">
-            <img :src="selectedGroup.samples[visIndex[selectedEpoch]].url" class="vis-big-img" loading="lazy" />
+            <img :src="selectedGroup.samples[visIndex[selectedEpoch]].url" class="vis-big-img" :alt="`epoch ${selectedEpoch} 可视化样本 ${visIndex[selectedEpoch] + 1}`" loading="lazy" />
             <div class="vis-info">
               <span :class="selectedGroup.samples[visIndex[selectedEpoch]].correct ? 'vis-ok' : 'vis-err'">{{ selectedGroup.samples[visIndex[selectedEpoch]].correct ? 'OK' : 'WRONG' }}</span>
               <span class="vis-gt">GT: {{ selectedGroup.samples[visIndex[selectedEpoch]].gt_label }}</span>
@@ -102,6 +103,7 @@
             </div>
           </div>
           <button class="vis-nav vis-next" :disabled="visIndex[selectedEpoch] >= selectedGroup.samples.length - 1" @click="switchVis(selectedEpoch, 1)">▶</button>
+
         </div>
         <div class="vis-thumbs">
           <div
@@ -110,7 +112,7 @@
             :class="['vis-thumb', { active: i === visIndex[selectedEpoch] }]"
             @click="visIndex[selectedEpoch] = i"
           >
-            <img :src="s.url" loading="lazy" />
+            <img :src="s.url" :alt="`样本 ${i + 1} 缩略图`" loading="lazy" />
           </div>
         </div>
       </n-card>
@@ -258,35 +260,38 @@ onUnmounted(stopPoll)
 </script>
 
 <style scoped>
+h2.card-title { margin: 0; font-size: 15px; font-weight: 600; }
+.run-desc { font-size: 12px; color: var(--color-text-dim); }
 .page-container { padding: 16px; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .chart-block { margin-bottom: 16px; }
 .chart-block:last-child { margin-bottom: 0; }
-.chart-title { font-weight: 600; font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+.chart-title { font-weight: 600; font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px; }
 .chart { height: 200px; width: 100%; }
 .vis-card-inner { display: flex; align-items: center; gap: 12px; }
-.vis-nav { border: none; background: rgba(128,128,128,0.1); border-radius: 6px; width: 36px; height: 36px; cursor: pointer; font-size: 14px; color: #6b7280; flex-shrink: 0; }
-.vis-nav:hover:not(:disabled) { background: rgba(128,128,128,0.2); }
+.vis-nav { border: none; background: var(--color-elevated); border-radius: 6px; width: 36px; height: 36px; cursor: pointer; font-size: 14px; color: var(--color-text-secondary); flex-shrink: 0; }
+.vis-nav:hover:not(:disabled) { background: var(--color-hover); color: var(--color-text); }
 .vis-nav:disabled { opacity: 0.3; cursor: default; }
 .vis-main { flex: 1; text-align: center; }
 .vis-big-img { max-width: 100%; max-height: 300px; border-radius: 6px; display: block; margin: 0 auto 8px; }
 .vis-info { font-size: 12px; display: flex; justify-content: center; gap: 12px; align-items: center; }
-.vis-ok { color: #18a058; font-weight: bold; }
-.vis-err { color: #d03050; font-weight: bold; }
-.vis-gt { color: #6b7280; }
-.vis-pred { color: #9ca3af; }
-.vis-idx { color: #9ca3af; margin-left: auto; }
-.vis-all-ok { color: #18a058; }
+.vis-ok { color: #047857; font-weight: 600; }
+.vis-err { color: #b91c1c; font-weight: 600; }
+.vis-gt { color: var(--color-text-secondary); }
+.vis-pred { color: var(--color-text-dim); }
+.vis-idx { color: var(--color-text-dim); margin-left: auto; font-variant-numeric: tabular-nums; }
+.vis-all-ok { color: #047857; }
+
 .vis-thumbs { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; }
 .vis-thumb { width: 60px; height: 45px; border: 2px solid transparent; border-radius: 4px; overflow: hidden; cursor: pointer; flex-shrink: 0; }
-.vis-thumb.active { border-color: #2563eb; }
+.vis-thumb.active { border-color: var(--color-primary); }
 .vis-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .epoch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
 .epoch-cell { border: 2px solid transparent; border-radius: 6px; overflow: hidden; cursor: pointer; background: rgba(128,128,128,0.06); }
 .epoch-cell:hover { background: rgba(128,128,128,0.12); }
-.epoch-cell.active { border-color: #2563eb; }
+.epoch-cell.active { border-color: var(--color-primary); }
 .epoch-cell-thumb { height: 60px; overflow: hidden; }
 .epoch-cell-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.epoch-cell-meta { padding: 3px 4px; font-size: 11px; display: flex; justify-content: space-between; color: #6b7280; }
+.epoch-cell-meta { padding: 3px 4px; font-size: 11px; display: flex; justify-content: space-between; color: var(--color-text-secondary); }
 .epoch-num { font-weight: 600; }
 </style>

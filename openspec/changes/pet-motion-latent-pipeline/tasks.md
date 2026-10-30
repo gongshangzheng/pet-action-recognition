@@ -17,6 +17,8 @@
 
 ## 存在性检测
 
+存在性检测统一归属 `presence-gate-model`：单帧 RGB 基线与 RGB 视频时间池化候选；速度先行、输入不含帧差，数据和实验顺序见统一 design。原短视频 change 已合并，不再单独排程。
+
 > **进度快照（2026-10-30，详见 `presence-gate-model/evidence.md`）**：数据集 v1 已建（15,139 帧 / 124 天 / 8+ 户码）；
 > 教师标签（G-DINO native, tiles=3, 阈值 0.15）已产：present 97.5% / absent 2.5%，用户确认教师基本可信；
 > v1 小模型已训（MobileNetV3-S，1.52 M，796×448）：test recall 0.973，FPR 为宽区间估计（负样本仅 283）；
@@ -28,13 +30,17 @@
 
 ## 定位与空间状态
 
-- [ ] 核查归档多类别检测与当前实际入口的差异，分别记录多类别、多实例、多猫关联和空间关系证据。
+- [x] 核查归档多类别检测与当前实际入口的差异，分别记录多类别、多实例、多猫关联和空间关系证据。
+
+  归档任务记录了 `074451` 单段五类检测演示；`scripts/pet_multi_detect.py` 保留检测结果并绘制多个框，但没有同类多实例的独立验收。`scripts/pet_detect_track.py` 的猫轨迹在每个抽样帧取最高置信框，不提供经验证的多猫跨帧关联。演示脚本使用猫框底边中点判断家具关系，跟随脚本使用猫框底部区域与家具框的重叠比例；家具框复用最近抽样结果。两种空间规则都没有独立准确率验收。证据见 `openspec/changes/archive/2026-09-15-multi-object-detect-gate/tasks.md`、`scripts/pet_multi_detect.py` 和 `scripts/pet_detect_track.py`。
 - [ ] 定义空间关系及不可测状态，设计家具重叠、猫在物体后方、遮挡与漏检对照，禁止用默认地板或旧状态代替未观测事实。
 - [ ] 明确空间状态所需物体检测/场景记忆路线；background-object-memory 是候选方案，不因旧登记自动批准 SAM 实施。
 
 ## 动作分割与闭集识别
 
-- [ ] 同步 video-action-segmentation，解除 identity-action-tokenizer/video-feature-latent 前置；不强制 λ、纯无监督、严格因果或只出边界。
+- [x] 同步 video-action-segmentation，解除 identity-action-tokenizer/video-feature-latent 前置；不强制 λ、纯无监督、严格因果或只出边界。
+
+  已完成（2026-10-30）：该 change 的职责改为「动作分割与闭集行为识别」，主线为闭集窗口分类 + 时间聚合出段；spec 反转「MUST NOT 输出动作类别」为必须输出类别与起止时间，并新增三口径分开评测与「MUST NOT 依赖 λ / 无监督聚类」的约束。窗口口径、边界度量与评测协议仍为待实测/待审定项。
 - [ ] 核验现成候选的输入特征、标注、权重、代码许可、动作顺序及重复假设，再审定基线与实验矩阵。
 - [ ] 规划离线和有限后视对照，明确块重叠、EOF、边界修订、延迟、过分割和漏分割验收。
 - [ ] 盘点现有闭集分类模型与训练数据，形成训练、误差分析、导出和端侧精度复核的完整路径。

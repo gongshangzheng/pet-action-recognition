@@ -37,7 +37,7 @@
       </n-alert>
       <!-- 运行后若返回 output_video，直接按需看输出视频 + 指标 -->
       <div v-if="runResult.videoSrc" style="margin-top: 12px">
-        <h4 style="margin-bottom: 8px">输出视频</h4>
+        <h2 class="card-title" style="margin-bottom: 8px">输出视频</h2>
         <video :src="runResult.videoSrc" controls preload="none" playsinline style="width: 100%; max-height: 360px; background: #000" />
         <n-descriptions v-if="runResult.metrics" :column="3" size="small" label-placement="left" bordered style="margin-top: 12px">
           <n-descriptions-item v-for="(v, k) in runResult.metrics" :key="k" :label="k">

@@ -17,7 +17,7 @@
     <n-card size="small" class="curve-card">
       <template #header>
         <div class="flex-between">
-          <h3>训练曲线（多模型叠加）</h3>
+          <h3 class="card-title">训练曲线（多模型叠加）</h3>
           <n-space align="center" size="small">
             <span class="hint">指标</span>
             <n-select v-model:value="curveMetric" :options="metricOptions" size="small" style="width: 150px" />
@@ -117,6 +117,7 @@ async function refreshRuns() {
 function startPolling() {
   if (pollTimer) return
   pollTimer = setInterval(async () => {
+    if (document.hidden) return
     const res = await getTrainRuns().catch(() => null)
     if (res?.runs) {
       // 数据没变 → 跳过响应式更新，避免表格/图表每 3s 全量重渲染

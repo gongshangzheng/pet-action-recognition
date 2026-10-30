@@ -14,17 +14,20 @@
 // 默认强调色：无本地偏好时使用（枪灰）
 export const DEFAULT_ACCENT = 'gray'
 
-// 浅色模式用较深的色值（在白底上对比度足够），深色模式用较亮的变体。
+// 浅色模式用较深的色值，深色模式用较亮的变体。
+// 主色同时用于「白底上的文字/链接」与「白字按钮的底色」，所以 light 值必须两头都 ≥4.5:1：
+// 白底对比度 / 自身 16% 浅底（secondary 按钮、soft 底色）上的对比度 都达标。
+// （cyan/teal/green/amber/rose/blue 原值只在按钮底色一项达标，作文字色时 3.0–4.4:1。）
 export const ACCENTS = [
-  { key: 'indigo', label: '靛蓝', light: '#4f46e5', dark: '#818cf8' },
-  { key: 'blue', label: '蓝色', light: '#2563eb', dark: '#60a5fa' },
-  { key: 'cyan', label: '青色', light: '#0891b2', dark: '#22d3ee' },
-  { key: 'teal', label: '青绿', light: '#0d9488', dark: '#2dd4bf' },
-  { key: 'green', label: '绿色', light: '#16a34a', dark: '#4ade80' },
-  { key: 'amber', label: '琥珀', light: '#d97706', dark: '#fbbf24' },
-  { key: 'rose', label: '玫红', light: '#e11d48', dark: '#fb7185' },
-  { key: 'violet', label: '紫罗兰', light: '#7c3aed', dark: '#a78bfa' },
-  { key: 'gray', label: '枪灰', light: '#4a4f57', dark: '#a8aeb6' },
+  { key: 'indigo', label: '靛蓝', light: '#4f46e5', dark: '#a5b4fc' }, // 6.29 / 5.26
+  { key: 'blue', label: '蓝色', light: '#1d4ed8', dark: '#60a5fa' }, //  6.70 / 5.57
+  { key: 'cyan', label: '青色', light: '#155e75', dark: '#22d3ee' }, //  7.27 / 5.66
+  { key: 'teal', label: '青绿', light: '#115e59', dark: '#2dd4bf' }, //  7.58 / 5.88
+  { key: 'green', label: '绿色', light: '#166534', dark: '#4ade80' }, //  7.13 / 5.95
+  { key: 'amber', label: '琥珀', light: '#92400e', dark: '#fbbf24' }, //  7.09 / 5.88
+  { key: 'rose', label: '玫红', light: '#be123c', dark: '#fda4af' }, //  6.29 / 5.12
+  { key: 'violet', label: '紫罗兰', light: '#6d28d9', dark: '#c4b5fd' }, // 6.62 / 5.20
+  { key: 'gray', label: '枪灰', light: '#4a4f57', dark: '#a8aeb6' }, //  8.24 / 6.84
 ]
 
 // soft / selected 变量在明暗模式下的透明度（沿用改造前的取值）

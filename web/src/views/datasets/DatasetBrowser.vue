@@ -15,6 +15,7 @@
               <span v-if="d.files">{{ d.files }} 文件</span>
               <span v-if="d.is_symlink" class="ds-link">→ 软链</span>
             </div>
+
           </div>
         </div>
         <EmptyState v-else description="datasets/ 为空" />
@@ -57,6 +58,7 @@
             <!-- 其他文件 -->
             <div v-else class="item-thumb file-thumb">
               <n-icon size="24"><DocumentOutline /></n-icon>
+
             </div>
             <div class="item-name" :title="item.name">{{ item.name }}</div>
           </div>
@@ -81,6 +83,7 @@
       </div>
       <video v-else-if="previewType === 'video'" :src="previewSrc" controls preload="none" playsinline
         style="width: 100%; max-height: 70vh; background: #000" />
+
     </n-modal>
   </div>
 </template>
@@ -190,6 +193,7 @@ onMounted(loadDatasets)
   cursor: pointer;
   text-align: center;
   transition: box-shadow .15s;
+
 }
 .ds-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
 .ds-card-icon { margin-bottom: 8px; color: #6b7280; }

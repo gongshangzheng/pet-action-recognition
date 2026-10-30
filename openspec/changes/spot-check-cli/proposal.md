@@ -1,6 +1,8 @@
 # Proposal: spot-check-cli
 
-> 子 change，总管：`pet-motion-latent-pipeline`。前置：`video-feature-latent` 完成（隐空间表征可用）。
+> 子 change，总管：`pet-motion-latent-pipeline`。
+>
+> **当前排程（2026-10-30）：前置已解除。** `video-feature-latent`（隐码/行为簇）与 `identity-action-tokenizer` 均已搁置，不再是本 change 的前置；行为段的类别与起止时间改由 `video-action-segmentation`（动作分割与闭集行为识别，闭集窗口分类 + 时间聚合）提供。下文「隐码」「行为簇字典」「簇分配」等旧方案描述保留备查，不再作为排程依据。
 
 ## Why
 

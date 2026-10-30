@@ -2,12 +2,12 @@
   <div class="page-container">
     <n-card title="模型管理" size="small">
       <n-spin :show="loading">
-        <n-grid v-if="models.length" :cols="3" :x-gap="16" :y-gap="16">
+        <n-grid v-if="models.length" cols="1 640:2 900:3" responsive="screen" :x-gap="16" :y-gap="16">
           <n-gi v-for="m in models" :key="m.id">
             <n-card size="small" hoverable>
               <template #header>
                 <div class="flex-between">
-                  <h4>{{ m.name }}</h4>
+                  <h2 class="model-name">{{ m.name }}</h2>
                   <n-tag size="small" type="info">{{ m.type }}</n-tag>
                 </div>
               </template>
@@ -39,3 +39,7 @@ onMounted(async () => {
   loading.value = false
 })
 </script>
+
+<style scoped>
+.model-name { margin: 0; font-size: 14px; font-weight: 600; }
+</style>

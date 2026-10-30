@@ -452,7 +452,7 @@ onMounted(loadProjects)
   border: 1px solid var(--color-border); background: var(--color-card);
   color: var(--color-text-secondary); padding: 5px 12px; border-radius: 999px;
   font-size: 12px; font-weight: 500; cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
   &:hover { background: var(--color-elevated); color: var(--color-text); }
 }
 .tab-dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -482,7 +482,7 @@ onMounted(loadProjects)
     font-size: 10px; color: var(--color-text-dim);
     background: var(--color-elevated); border: 1px solid transparent;
     padding: 1px 6px; border-radius: 999px; cursor: pointer;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
     &:hover { color: var(--color-text); border-color: var(--color-border); }
     &.active { color: var(--color-primary); border-color: var(--color-primary-soft); background: var(--color-primary-soft); }
   }

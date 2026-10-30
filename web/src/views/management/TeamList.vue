@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <n-spin :show="loading">
-      <n-grid v-if="members.length" :cols="3" :x-gap="16" :y-gap="16">
+      <n-grid v-if="members.length" cols="1 640:2 900:3" responsive="screen" :x-gap="16" :y-gap="16">
         <n-gi v-for="m in members" :key="m.id">
           <n-card hoverable @click="router.push(`/management/team/${m.id}`)">
             <div class="member-card">
@@ -9,7 +9,7 @@
                 {{ m.name.charAt(0) }}
               </n-avatar>
               <div class="member-info">
-                <h3>{{ m.name }}</h3>
+                <h2 class="member-name">{{ m.name }}</h2>
                 <p class="member-role">{{ m.role }}</p>
                 <p class="member-date">入职：{{ m.join_date }}</p>
               </div>
@@ -38,7 +38,8 @@ const router = useRouter()
 const members = ref([])
 const loading = ref(false)
 
-const colors = ['#4f46e5', '#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
+// 头像底色的白字需 ≥4.5:1（原 #0ea5e9 2.77 / #f59e0b 2.15 / #10b981 2.54 均不达标）
+const colors = ['#4f46e5', '#0369a1', '#b45309', '#047857', '#b91c1c', '#6d28d9']
 function avatarColor(id) {
   const idx = (id || '').charCodeAt(0) % colors.length
   return colors[idx]
@@ -59,7 +60,7 @@ onMounted(async () => {
   align-items: center;
   gap: 16px;
 }
-.member-info h3 { margin-bottom: 4px; }
-.member-role { font-size: 13px; color: #6b7280; margin-bottom: 2px; }
-.member-date { font-size: 12px; color: #9ca3af; }
+.member-info h2 { margin-bottom: 4px; font-size: 17px; font-weight: 600; }
+.member-role { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 2px; }
+.member-date { font-size: 12px; color: var(--color-text-dim); }
 </style>

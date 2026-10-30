@@ -229,7 +229,21 @@ async function renderMermaid() {
       fontFamily,
       // 关键：不用 foreignObject 装标签，避免文本被裁（中文/→ 等符号量宽与实渲不一致）
       flowchart: { htmlLabels: false, useMaxWidth: true, padding: 12 },
-      themeVariables: { fontSize: '14px' },
+      // 深色下 mermaid 自带的边标签底/字色是 #585858 上的 #ccc（4.4:1），对齐站点令牌
+      themeVariables: {
+        fontSize: '14px',
+        ...(themeStore.isDark
+          ? {
+            background: '#1f1f23',
+            mainBkg: '#27272a',
+            primaryColor: '#27272a',
+            primaryTextColor: '#e4e4e7',
+            textColor: '#e4e4e7',
+            lineColor: '#71717a',
+            edgeLabelBackground: '#1f1f23',
+          }
+          : {}),
+      },
     })
     await mermaid.run({ nodes: Array.from(nodes) })
   } catch (e) {

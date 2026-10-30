@@ -14,7 +14,7 @@
         />
       </div>
 
-      <n-grid :cols="3" :x-gap="16" :y-gap="16" style="margin-top: 12px">
+      <n-grid cols="1 900:3" responsive="screen" :x-gap="16" :y-gap="16" style="margin-top: 12px">
         <n-gi>
           <n-card title="待开始" size="small">
             <template #header-extra><n-tag size="small" round>{{ tasks.pending.length }}</n-tag></template>
@@ -123,20 +123,21 @@ onMounted(async () => {
 .lbl { font-size: 13px; color: var(--color-text-secondary); }
 .task-list { display: flex; flex-direction: column; gap: 8px; }
 .task-card {
-  padding: 12px;
-  background: var(--color-elevated, #f9fafb);
-  border-radius: 8px;
-  border-left: 3px solid #e5e7eb;
+  // 看板列本身已是卡片，条目用分隔线而非「卡片套卡片」+ 左侧色条
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--color-border-light);
+
+  &:last-child { border-bottom: none; }
 
   .task-name { font-weight: 500; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-  .task-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
-  .task-note { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+  .task-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-text-secondary); }
+  .task-note { font-size: 12px; color: var(--color-text-dim); margin-top: 4px; }
 }
 .priority-tag {
-  font-size: 10px; line-height: 1; padding: 1px 5px;
+  font-size: 11px; line-height: 1.2; padding: 2px 6px;
   border-radius: 3px; font-weight: 500; flex-shrink: 0;
-  &.p-high { background: rgba(239,68,68,0.12); color: #dc2626; }
-  &.p-medium { background: rgba(245,158,11,0.12); color: #d97706; }
-  &.p-low { background: rgba(100,116,139,0.10); color: #64748b; }
+  &.p-high { background: var(--tag-high-bg); color: var(--tag-high-fg); }
+  &.p-medium { background: var(--tag-medium-bg); color: var(--tag-medium-fg); }
+  &.p-low { background: var(--tag-low-bg); color: var(--tag-low-fg); }
 }
 </style>

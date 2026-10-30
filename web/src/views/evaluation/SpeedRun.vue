@@ -43,12 +43,13 @@
       </template>
 
       <n-spin :show="loading">
-        <n-grid v-if="filteredResults.length" cols="3 600:2 900:3 1200:4" :x-gap="12" :y-gap="12" responsive="screen">
+        <n-grid v-if="filteredResults.length" cols="1 s:2 m:3 l:4" :x-gap="12" :y-gap="12" responsive="screen">
           <n-gi v-for="r in pagedResults" :key="r.id">
-            <div class="video-card" @click="playVideo(r)">
+            <div class="video-card" v-clickable :aria-label="`播放 ${r.video_name || r.id} 的评测视频`" @click="playVideo(r)">
               <div class="thumb">
-                <img v-if="r.cover_image" :src="getSpeedrunOutputUrl(r.cover_image)" class="cover-img" loading="lazy" />
+                <img v-if="r.cover_image" :src="getSpeedrunOutputUrl(r.cover_image)" class="cover-img" :alt="`${r.video_name || r.id} 的封面帧`" loading="lazy" />
                 <n-icon v-else size="36"><PlayCircleOutline /></n-icon>
+
                 <span class="play-overlay">▶</span>
                 <span class="ext">MP4</span>
                 <span v-if="r.correct === true" class="badge correct">✓</span>
@@ -260,11 +261,13 @@ let pollTimer = null
 function startPolling() {
   stopPolling()
   pollTimer = setInterval(async () => {
+    if (document.hidden) return  // 页面不可见时跳过这一轮
     await Promise.all([refreshStatus(), refreshResults()])
     if (!status.running && status.results_count > 0) {
       running.value = false
       stopPolling()
     }
+
   }, 3000)
 }
 function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
@@ -302,6 +305,7 @@ onUnmounted(stopPolling)
   overflow: hidden;
   cursor: pointer;
   transition: box-shadow .15s, transform .15s;
+
 }
 .video-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.12); transform: translateY(-1px); }
 .thumb {
@@ -313,6 +317,7 @@ onUnmounted(stopPolling)
   background: #000;
   color: rgba(255,255,255,.9);
   overflow: hidden;
+
 }
 .thumb .cover-img {
   width: 100%;
@@ -350,9 +355,9 @@ onUnmounted(stopPolling)
   justify-content: center;
   color: #fff;
 }
-.thumb .badge.correct { background: #18a058; }
-.thumb .badge.wrong { background: #d03050; }
-.thumb .badge.na { background: #909399; }
+.thumb .badge.correct { background: #15803d; }
+.thumb .badge.wrong { background: #b91c1c; }
+.thumb .badge.na { background: #52525b; }
 .card-body {
   padding: 10px 12px;
   display: flex;
@@ -375,16 +380,16 @@ onUnmounted(stopPolling)
   text-overflow: ellipsis;
 }
 .card-pred-label { font-weight: 500; }
-.card-pred-score { color: #6b7280; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.card-pred-score { color: var(--color-text-secondary); margin-left: 6px; font-variant-numeric: tabular-nums; }
 .card-stats {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-text-dim);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .card-stats .dot { margin: 0 3px; opacity: .5; }
-.card-stats .st-ok { color: #18a058; font-weight: bold; }
-.card-stats .st-err { color: #d03050; font-weight: bold; }
+.card-stats .st-ok { color: #047857; font-weight: 600; }
+.card-stats .st-err { color: #b91c1c; font-weight: 600; }
 .card-stats .st-wait { color: #f0a020; font-weight: bold; }
 .card-video {
   font-size: 10px;
@@ -394,5 +399,6 @@ onUnmounted(stopPolling)
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 2px;
+
 }
 </style>

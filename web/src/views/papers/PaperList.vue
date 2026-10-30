@@ -4,7 +4,7 @@
       <template #header>
         <div class="flex-between">
           <div class="header-left">
-            <h3>论文列表</h3>
+            <h2 class="card-title">论文列表</h2>
             <n-tag v-if="stats.total" size="small" type="info" round>共 {{ stats.total }} 篇</n-tag>
           </div>
           <n-button size="small" type="primary" circle @click="showFetchModal = true" title="添加论文">
@@ -62,7 +62,15 @@
 
       <n-spin :show="loading">
         <div v-if="papers.length" class="papers-grid">
-          <div v-for="p in paginatedPapers" :key="p.id" class="paper-card" :class="{ pinned: p.pinned }" @click="openDetail(p.id)">
+          <div
+            v-for="p in paginatedPapers"
+            :key="p.id"
+            class="paper-card"
+            :class="{ pinned: p.pinned }"
+            v-clickable
+            :aria-label="`查看论文：${p.title_zh || p.title}`"
+            @click="openDetail(p.id)"
+          >
             <!-- 缩略图 -->
             <div class="paper-thumb">
               <img
@@ -79,7 +87,7 @@
             </div>
             <!-- 内容 -->
             <div class="paper-content">
-              <h4 class="paper-title">{{ p.title_zh || p.title }}</h4>
+              <h3 class="paper-title">{{ p.title_zh || p.title }}</h3>
               <div v-if="p.title_zh" class="paper-title-en">{{ p.title }}</div>
               <div class="paper-meta">
                 <n-tag v-for="cat in (p.categories || [])" :key="cat" size="tiny" :type="categoryColor(cat)" round>{{ cat }}</n-tag>
@@ -593,6 +601,7 @@ async function handleDetailPin() {
 
 <style scoped lang="scss">
 .flex-between { flex-wrap: wrap; gap: 8px; }
+.card-title { margin: 0; font-size: 16px; font-weight: 600; }
 .header-left { display: flex; align-items: center; gap: 10px; }
 
 .filter-toolbar {
@@ -614,9 +623,10 @@ async function handleDetailPin() {
 .paper-card {
   display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 14px;
   padding: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
-  transition: all 0.2s; cursor: pointer;
-  &:hover { border-color: #4f46e544; box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
-  &.pinned { border-left: 3px solid #4f46e5; background: #fafaff; }
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; cursor: pointer;
+  &:hover { border-color: var(--color-primary-border); box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+  &.pinned { border-left: 3px solid var(--color-primary); background: var(--color-primary-soft); }
+
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
     .paper-thumb { min-height: 120px; max-height: 160px; img { object-fit: contain; } }
@@ -644,9 +654,10 @@ async function handleDetailPin() {
 .paper-links { display: flex; gap: 6px; }
 .paper-link {
   display: inline-flex; padding: 3px 10px; border-radius: 999px;
-  border: 1px solid #e2e8f0; font-size: 12px; color: #4f46e5;
-  text-decoration: none; transition: all 0.15s;
-  &:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+  border: 1px solid #e2e8f0; font-size: 12px; color: var(--color-primary);
+  text-decoration: none; transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  &:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
   &.blog { color: #f59e0b; &:hover { background: #f59e0b; border-color: #f59e0b; } }
 }
 .paper-actions { display: flex; gap: 4px; align-items: center; }
@@ -654,7 +665,7 @@ async function handleDetailPin() {
 .action-btn {
   background: none; border: none; cursor: pointer; font-size: 16px;
   padding: 2px 4px; border-radius: 4px; opacity: 0.25;
-  transition: all 0.15s; line-height: 1;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s; line-height: 1;
   &:hover { opacity: 0.6; background: #f1f5f9; }
   &.active { opacity: 1; }
 }

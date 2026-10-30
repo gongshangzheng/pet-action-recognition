@@ -3,7 +3,7 @@
     <n-card size="small">
       <template #header>
         <div class="flex-between">
-          <h3>评测配置</h3>
+          <h2 class="card-title">评测配置</h2>
           <n-button size="small" @click="load">刷新</n-button>
         </div>
       </template>

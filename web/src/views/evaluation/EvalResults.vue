@@ -3,7 +3,7 @@
     <n-card size="small">
       <template #header>
         <div class="flex-between">
-          <h3>评测结果</h3>
+          <h2 class="card-title">评测结果</h2>
           <n-space align="center">
             <n-select v-model:value="filters.model" :options="modelOptions" placeholder="全部模型" clearable size="small" style="width: 200px" />
             <n-select v-model:value="filters.dataset" :options="datasetOptions" placeholder="全部数据集" clearable size="small" style="width: 160px" />
@@ -263,5 +263,6 @@ onMounted(load)
 </script>
 
 <style scoped>
-.result-chart { height: 350px; width: 100%; }
+.result-chart { height: 400px; width: 100%; }
+.card-title { margin: 0; font-size: 16px; font-weight: 600; }
 </style>

@@ -3,7 +3,7 @@
     <n-card size="small">
       <template #header>
         <div class="flex-between">
-          <h3>查看输出</h3>
+          <h2 class="card-title">查看输出</h2>
           <n-button size="small" @click="load">刷新</n-button>
         </div>
       </template>
@@ -75,5 +75,5 @@ onMounted(load)
 
 <style scoped>
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
-.dim { color: var(--color-text-dim, #9ca3af); }
+.dim { color: var(--color-text-dim, #5f6672); }
 </style>

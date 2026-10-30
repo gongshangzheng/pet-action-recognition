@@ -48,5 +48,5 @@ onMounted(async () => {
 
 <style scoped>
 .milestone-detail { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-.milestone-desc { font-size: 13px; color: #6b7280; }
+.milestone-desc { font-size: 13px; color: var(--color-text-secondary); }
 </style>

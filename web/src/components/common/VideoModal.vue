@@ -45,6 +45,6 @@ watch(() => show.value, async (v) => {
 
 <style scoped>
 .video-wrap { display: flex; justify-content: center; align-items: center; }
-.no-src { color: var(--color-text-dim, #9ca3af); padding: 24px; }
-.hint { font-size: 12px; color: var(--color-text-dim, #9ca3af); }
+.no-src { color: var(--color-text-dim, #5f6672); padding: 24px; }
+.hint { font-size: 12px; color: var(--color-text-dim, #5f6672); }
 </style>

@@ -287,6 +287,13 @@ watch(() => route.params, async () => {
   gap: 24px;
   padding: 20px 24px;
   min-height: 100%;
+
+  // 窄屏：左侧导航收起为顶部下拉，三栏变单栏（否则下拉作为 flex 项会把正文挤没）
+  @media (max-width: 1023px) {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
 }
 
 .wiki-sidebar {
@@ -323,7 +330,7 @@ watch(() => route.params, async () => {
   font-weight: 500;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
 
   &:hover {
     background: var(--color-hover);
@@ -352,7 +359,7 @@ watch(() => route.params, async () => {
   line-height: 1.4;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
   text-decoration: none;
   margin-bottom: 2px;
 
@@ -390,6 +397,7 @@ watch(() => route.params, async () => {
 
 .wiki-mobile-select {
   display: block;
+  width: 100%;
   margin-bottom: 12px;
   @media (min-width: 1024px) { display: none; }
 }
@@ -463,7 +471,7 @@ watch(() => route.params, async () => {
   line-height: 1.4;
   color: var(--color-text-dim);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
   text-decoration: none;
 
   &:hover {

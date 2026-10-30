@@ -1,10 +1,12 @@
 # Proposal: video-feature-latent
 
+> **当前排程：搁置，不推进。** 身份/动作向量研究与行为发现研究不属于当前闭集识别及端云交付主线，不得作为动作分割、闭集分类或系统集成的前置。下文保留原研究方案，旧主线与依赖声明不再作为排程依据。
+
 > 子 change，总管：`pet-motion-latent-pipeline`。前置：`batch-followcam-extraction` 完成（跟随视频资产就绪）。
 
-> **状态：延后到本轮最后（用户裁定 2026-10-27）**——「这个先不做，放到最后再考虑」。
-> 影响：本 change 是 `spot-check-cli`（抽查/实时双模式）、`video-action-segmentation`（找边界）、
-> `behavior-anomaly-detection`（异常检测）的共同上游，三者在其产出行为簇之前无法推进。
+> **历史排程记录（已由当前搁置决定替代）：延后到本轮最后（2026-10-27）**——「这个先不做，放到最后再考虑」。
+> 历史方案的依赖描述（当前已解除）：本 change 是 `spot-check-cli`（抽查/实时双模式）、`video-action-segmentation`（找边界）、
+> `behavior-anomaly-detection`（异常检测）的共同上游，旧方案要求三者等待行为簇；当前动作分割及闭集识别不受此限制。
 > 余留事实备查：GPU 两张卡被他人任务长期占用（18.3/24 GB、16.9/24 GB）；
 > 阶段一主力候选 V-JEPA 2 fpc16 需 `transformers ≥ 4.55`（plf 环境为 4.49），
 > 且候选 A（VideoMAE v1 宠物微调版）已于 2026-09-16 由用户裁定移出候选。
