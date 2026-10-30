@@ -90,7 +90,7 @@ def main():
                 if fps <= 0 or count < 1:
                     raise ValueError(f'invalid proxy metadata {relative}')
                 actual_duration = count / fps
-                if actual_duration < 2 - 0.001 or actual_duration > 2 + 1 / fps + 0.001:
+                if abs(actual_duration - 2) > 0.1 / fps:
                     raise ValueError(f'incomplete proxy {relative}: {actual_duration}s')
             finally:
                 capture.release()
