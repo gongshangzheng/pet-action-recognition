@@ -16,6 +16,19 @@
 
 目标 `.migration/transfer_report.json` 记录于 2026-10-23T10:09:25Z 完成传输：7571 个文件、10,046,488,364 字节，`remote_sha256_verified: true`，代码 HEAD 为 `9847f1fde25fe52a0c3d29d91fcf0e07f6726e73`。这是当时的全量哈希验收记录，本轮未重算全部文件哈希。
 
-只读复核确认目标有 2737 个正常视频、Linux 路径版 CSV 2626 行，以及 `/home/wyy/.pet-final-transfer/git_history.bundle`。`results/migration_lab/existing_checkpoints.json` 保留既有 checkpoint 检查记录。脚本现已归入 `scripts/migration/`。
+只读复核确认目标有 2737 个正常视频、Linux 路径版 CSV 2626 行，以及 `/home/wyy/.pet-final-transfer/git_history.bundle`。`existing_checkpoints.json` 位于远端 `/home/wyy/pet-final/results/migration_lab/existing_checkpoints.json`，保留既有 checkpoint 检查记录。脚本现已归入 `scripts/migration/`。
 
 `public_assets_missing_from_local: true` 明确表明公司公共资产缓存未全量迁入；不能宣称全部模型已经具备运行条件。Linux CSV 存在与行数正确不等于全部路径可读验收；未覆盖旧项目、凭据排除、先提交再执行及双端报告仍需逐项补足对应证据后勾选。不得把迁移后单独完成的训练替代这些验收记录。
+
+## 2026-10-29 收尾结论
+
+标注路径可读性已用 `scripts/checks/check_lab_annotation_paths.py` 实测通过：lab CSV 2626 行、
+relative CSV 2626 行、intervals 3927 行、lab JSON 2737 个任务全部 `is_file()` 且非空，
+磁盘 2737 个 mp4、约 9.3 GiB。此前"CSV 存在且行数正确"的间接证据已由直接检查取代。
+
+本机 `~/.ssh/config` 新增 `Host lab`，走密钥认证；原口令文件 `自作自偷/4090.txt` 在本机已不存在，
+仅影响需要重跑传输类脚本的场景，不影响只读核验。
+
+仍未验证的一项：新目录内跑通训练/推理所需的环境与公共权重。`public_assets_missing_from_local: true`
+表示约 8 GiB 公共模型缓存未随迁，是否补齐取决于后续是否在该机训练——当前主线训练在 `pet` 执行。
+因此本 change 的结论是"迁移与数据完整性已验证，端到端可用性未验证"，不得表述为"迁移完成可用"。
