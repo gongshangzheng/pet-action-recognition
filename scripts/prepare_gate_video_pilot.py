@@ -32,10 +32,12 @@ def source_samples(row, start):
             if actual_frame != frame:
                 raise ValueError(f"source frame mismatch {row['video']}: {actual_frame} vs {frame}")
             actual = capture.get(cv2.CAP_PROP_POS_MSEC) / 1000
-            if not math.isfinite(actual) or abs(actual - target) > 0.5:
-                raise ValueError(f"source timestamp mismatch {row['video']}: {actual} vs {target}")
-            timestamps.append({'target_sec': target, 'decoded_sec': actual,
-                               'delta_sec': actual - target})
+            if not math.isfinite(actual):
+                raise ValueError(f"invalid source timestamp {row['video']}: frame {frame}")
+            frame_sec = actual_frame / fps
+            timestamps.append({'target_sec': target, 'frame_sec': frame_sec,
+                               'container_sec': actual,
+                               'container_minus_frame_sec': actual - frame_sec})
             frames.append(actual_frame)
     finally:
         capture.release()
