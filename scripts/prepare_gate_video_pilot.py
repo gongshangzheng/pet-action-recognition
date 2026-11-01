@@ -89,10 +89,10 @@ def main():
     for row in sources:
         duration = float(row['duration'])
         for index, start in enumerate(clip_starts(duration)):
-            timestamps, frames = source_samples(row, start)
             relative = f"proxies/{row['source_id']}_{index}.mp4"
             if relative in completed:
                 continue
+            timestamps, frames = source_samples(row, start)
             temporary = args.out / (relative + '.part.mp4')
             target_path = args.out / relative
             if target_path.exists() or temporary.exists():
