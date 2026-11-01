@@ -1,5 +1,5 @@
 <template>
-  <div class="gate-review">
+  <div class="gate-review" :class="{ 'video-mode': isVideo }">
     <header class="gr-head">
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
@@ -244,6 +244,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 <style scoped lang="scss">
 .gate-review {
   padding: 20px 24px;
+
+  &.video-mode {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 12px 24px 20px;
+    overflow: hidden;
+  }
 }
 
 .gr-head {
@@ -282,12 +290,33 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   margin: 6px 0 16px;
   font-size: 12px;
   color: var(--color-text-dim);
+
+  .video-mode & {
+    margin: 4px 0 8px;
+  }
+}
+
+.video-mode {
+  :deep(.n-spin-container),
+  :deep(.n-spin-content) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
 }
 
 .gr-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 14px;
+
+  .video-mode & {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
 }
 
 .gr-card {
@@ -304,12 +333,25 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   &.labeled {
     border-color: var(--color-primary);
   }
+
+  .video-mode & {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
 }
 
 .gr-frame {
   position: relative;
   aspect-ratio: 16 / 9;
   background: #111;
+
+  .video-mode & {
+    flex: 1;
+    min-height: 0;
+    aspect-ratio: auto;
+    background: #000;
+  }
 
   img, video {
     width: 100%;
@@ -428,6 +470,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   display: flex;
   gap: 6px;
   padding: 8px;
+
+  .video-mode & {
+    flex-shrink: 0;
+    padding: 8px 0 0;
+  }
 
   .btn {
     flex: 1;
