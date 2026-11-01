@@ -96,7 +96,11 @@ def main():
             temporary = args.out / (relative + '.part.mp4')
             target_path = args.out / relative
             if target_path.exists() or temporary.exists():
-                raise ValueError(f'unindexed proxy already exists: {relative}')
+                if not target_path.exists():
+                    raise ValueError(f'unindexed partial proxy already exists: {relative}')
+                # A proxy without a progress record failed validation or predates a crash.
+                # Quarantine it rather than silently treating an unindexed file as valid.
+                os.replace(target_path, args.out / (relative + '.invalid.mp4'))
             subprocess.run([args.ffmpeg, '-nostdin', '-v', 'error', '-threads', '1', '-ss', str(start),
                             '-i', row['source_path'], '-t', '2', '-an', '-vf',
                             f"setpts=PTS-STARTPTS,fps={float(row['fps'])},scale=1280:720:force_original_aspect_ratio=decrease", '-c:v', 'libx264',
@@ -114,7 +118,8 @@ def main():
                 if fps <= 0 or count < 1:
                     raise ValueError(f'invalid proxy metadata {relative}')
                 actual_duration = count / fps
-                if abs(actual_duration - 2) > 0.1 / fps:
+                # One frame accommodates the encoder's subframe 2-second rounding.
+                if abs(actual_duration - 2) > 1 / fps:
                     raise ValueError(f'incomplete proxy {relative}: {actual_duration}s')
             finally:
                 capture.release()
