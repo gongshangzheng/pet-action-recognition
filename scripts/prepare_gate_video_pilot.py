@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import math
+import os
 import subprocess
 from pathlib import Path
 
@@ -31,9 +32,10 @@ def source_samples(row, start):
             if actual_frame != frame:
                 raise ValueError(f"source frame mismatch {row['video']}: {actual_frame} vs {frame}")
             actual = capture.get(cv2.CAP_PROP_POS_MSEC) / 1000
-            if not math.isfinite(actual) or abs(actual - target) > 1.5 / fps:
+            if not math.isfinite(actual) or abs(actual - target) > 0.5:
                 raise ValueError(f"source timestamp mismatch {row['video']}: {actual} vs {target}")
-            timestamps.append(actual)
+            timestamps.append({'target_sec': target, 'decoded_sec': actual,
+                               'delta_sec': actual - target})
             frames.append(actual_frame)
     finally:
         capture.release()
@@ -57,8 +59,10 @@ def main():
     parser.add_argument('--out', required=True, type=Path)
     parser.add_argument('--limit', type=int, help='maximum source videos; for a small smoke run')
     parser.add_argument('--ffmpeg', default='ffmpeg', help='path to existing ffmpeg executable')
+    parser.add_argument('--resume', action='store_true',
+                        help='continue from progress.jsonl after an interrupted run')
     args = parser.parse_args()
-    if args.out.exists() and any(args.out.iterdir()):
+    if args.out.exists() and any(args.out.iterdir()) and not args.resume:
         raise ValueError('output directory must be empty')
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / 'proxies').mkdir()
@@ -68,17 +72,37 @@ def main():
         if args.limit < 1:
             raise ValueError('limit must be positive')
         sources = sources[:args.limit]
+    progress_path = args.out / 'progress.jsonl'
     items = []
+    completed = set()
+    if progress_path.exists():
+        if not args.resume:
+            raise ValueError('progress exists; use --resume to continue it')
+        with progress_path.open(encoding='utf-8') as stream:
+            for line in stream:
+                item = json.loads(line)
+                if not (args.out / item['path']).is_file():
+                    raise ValueError(f"progress references missing clip: {item['path']}")
+                items.append(item)
+                completed.add(item['path'])
+        print(f'resumed {len(items)} indexed clips', flush=True)
     for row in sources:
         duration = float(row['duration'])
         for index, start in enumerate(clip_starts(duration)):
             timestamps, frames = source_samples(row, start)
             relative = f"proxies/{row['source_id']}_{index}.mp4"
+            if relative in completed:
+                continue
+            temporary = args.out / (relative + '.part.mp4')
+            target_path = args.out / relative
+            if target_path.exists() or temporary.exists():
+                raise ValueError(f'unindexed proxy already exists: {relative}')
             subprocess.run([args.ffmpeg, '-nostdin', '-v', 'error', '-threads', '1', '-ss', str(start),
                             '-i', row['source_path'], '-t', '2', '-an', '-vf',
                             f"setpts=PTS-STARTPTS,fps={float(row['fps'])},scale=1280:720:force_original_aspect_ratio=decrease", '-c:v', 'libx264',
                             '-threads', '1', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
-                            str(args.out / relative)], check=True)
+                            str(temporary)], check=True)
+            os.replace(temporary, target_path)
             import cv2
             capture = cv2.VideoCapture(str(args.out / relative), cv2.CAP_FFMPEG,
                                        [cv2.CAP_PROP_N_THREADS, 1])
@@ -100,6 +124,8 @@ def main():
                           'label_scope': 'any_pet_in_window', 'proxy_duration': actual_duration,
                           'sample_timestamps': timestamps, 'frame_ids': frames,
                           'review_status': 'unlabeled'})
+            with progress_path.open('a', encoding='utf-8') as stream:
+                stream.write(json.dumps(items[-1], ensure_ascii=False) + '\n')
         print(f"prepared {len(items)} clips; last source {row['source_id']}", flush=True)
     if not items:
         raise ValueError('no eligible clips')
