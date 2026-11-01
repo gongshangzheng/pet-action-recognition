@@ -65,7 +65,7 @@ def main():
     if args.out.exists() and any(args.out.iterdir()) and not args.resume:
         raise ValueError('output directory must be empty')
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / 'proxies').mkdir()
+    (args.out / 'proxies').mkdir(exist_ok=True)
     with args.manifest.open(encoding='utf-8', newline='') as stream:
         sources = list(csv.DictReader(stream))
     if args.limit is not None:
