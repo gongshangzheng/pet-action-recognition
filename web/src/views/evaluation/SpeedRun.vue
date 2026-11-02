@@ -45,6 +45,7 @@
       <n-spin :show="loading">
         <n-grid v-if="filteredResults.length" cols="1 s:2 m:3 l:4" :x-gap="12" :y-gap="12" responsive="screen">
           <n-gi v-for="r in pagedResults" :key="r.id">
+
             <div class="video-card" v-clickable :aria-label="`播放 ${r.video_name || r.id} 的评测视频`" @click="playVideo(r)">
               <div class="thumb">
                 <img v-if="r.cover_image" :src="getSpeedrunOutputUrl(r.cover_image)" class="cover-img" :alt="`${r.video_name || r.id} 的封面帧`" loading="lazy" />

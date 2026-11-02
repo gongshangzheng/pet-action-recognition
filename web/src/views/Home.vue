@@ -1,6 +1,6 @@
 <template>
   <div class="page-container home-page">
-    <n-grid cols="1 640:2 900:3" responsive="screen" :x-gap="16" :y-gap="16">
+    <n-grid cols="1 s:2 m:3" responsive="screen" :x-gap="16" :y-gap="16">
       <n-gi>
         <n-card class="module-card management" hoverable @click="router.push('/management/team')">
           <div class="module-icon">PM</div>
@@ -33,7 +33,7 @@
       </n-gi>
     </n-grid>
 
-    <n-grid cols="1 900:2" responsive="screen" :x-gap="16" :y-gap="16" style="margin-top: 16px">
+    <n-grid cols="1 m:2" responsive="screen" :x-gap="16" :y-gap="16" style="margin-top: 16px">
       <n-gi>
         <n-card title="项目里程碑" size="small">
           <n-spin :show="loadingMilestones">

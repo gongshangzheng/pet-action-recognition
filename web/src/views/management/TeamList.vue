@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <n-spin :show="loading">
-      <n-grid v-if="members.length" cols="1 640:2 900:3" responsive="screen" :x-gap="16" :y-gap="16">
+      <n-grid v-if="members.length" cols="1 s:2 m:3" responsive="screen" :x-gap="16" :y-gap="16">
         <n-gi v-for="m in members" :key="m.id">
           <n-card hoverable @click="router.push(`/management/team/${m.id}`)">
             <div class="member-card">

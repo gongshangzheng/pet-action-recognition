@@ -14,7 +14,7 @@
         />
       </div>
 
-      <n-grid cols="1 900:3" responsive="screen" :x-gap="16" :y-gap="16" style="margin-top: 12px">
+      <n-grid cols="1 m:3" responsive="screen" :x-gap="16" :y-gap="16" style="margin-top: 12px">
         <n-gi>
           <n-card title="待开始" size="small">
             <template #header-extra><n-tag size="small" round>{{ tasks.pending.length }}</n-tag></template>

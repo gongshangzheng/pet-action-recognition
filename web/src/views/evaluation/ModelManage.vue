@@ -2,7 +2,7 @@
   <div class="page-container">
     <n-card title="模型管理" size="small">
       <n-spin :show="loading">
-        <n-grid v-if="models.length" cols="1 640:2 900:3" responsive="screen" :x-gap="16" :y-gap="16">
+        <n-grid v-if="models.length" cols="1 s:2 m:3" responsive="screen" :x-gap="16" :y-gap="16">
           <n-gi v-for="m in models" :key="m.id">
             <n-card size="small" hoverable>
               <template #header>
