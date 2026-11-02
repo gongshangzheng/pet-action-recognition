@@ -16,9 +16,11 @@
           <template #checked>只看未标</template>
           <template #unchecked>全部</template>
         </n-switch>
-        <n-button size="small" @click="prevPage" :disabled="page <= 1">上一页</n-button>
-        <span class="gr-page">{{ page }} / {{ maxPage }}</span>
-        <n-button size="small" @click="nextPage" :disabled="page >= maxPage">下一页</n-button>
+        <template v-if="!isVideo">
+          <n-button size="small" @click="prevPage" :disabled="page <= 1">上一页</n-button>
+          <span class="gr-page">{{ page }} / {{ maxPage }}</span>
+          <n-button size="small" @click="nextPage" :disabled="page >= maxPage">下一页</n-button>
+        </template>
       </div>
     </header>
 
@@ -63,6 +65,11 @@
             <button class="btn uncertain" :class="{ active: item.human_label === 'uncertain' }"
                     @click.stop="label(item, 'uncertain')">{{ hideTeacher ? '跳过待复核 U' : '不确定 U' }}</button>
           </figcaption>
+          <div v-if="isVideo" class="gr-video-pager">
+            <n-button size="small" @click="prevPage" :disabled="page <= 1">上一页</n-button>
+            <span class="gr-page">{{ page }} / {{ maxPage }}</span>
+            <n-button size="small" type="primary" @click="nextPage" :disabled="page >= maxPage">下一页</n-button>
+          </div>
           <div v-if="!hideTeacher" class="gr-flags" :class="{ disabled: !item.human_label }">
             <span class="gr-flags-label">框问题：</span>
             <button v-for="flag in BOX_FLAGS" :key="flag.key" class="chip"
@@ -504,5 +511,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       color: #fff;
     }
   }
+}
+
+.gr-video-pager {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  padding: 8px 0 0;
 }
 </style>
