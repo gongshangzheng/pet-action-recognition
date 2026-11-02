@@ -3,7 +3,7 @@
     <header class="gr-head">
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
-        <span v-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 P / A / U，空格播放/暂停，← → 翻页。</span>
+        <span v-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 F / A / U，空格播放/暂停，← → 翻页。</span>
         <span v-else-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
         <span v-else class="gr-hint">模型预标仅供参考，请确认有无宠物；看不清可跳过。（快捷键 P / A / U，← → 切换图片）</span>
       </div>
@@ -59,7 +59,7 @@
           </div>
           <figcaption class="gr-actions">
             <button class="btn present" :class="{ active: item.human_label === 'present' }"
-                    @click.stop="label(item, 'present')">有宠物 P</button>
+                    @click.stop="label(item, 'present')">有宠物 {{ isVideo ? 'F' : 'P' }}</button>
             <button class="btn absent" :class="{ active: item.human_label === 'absent' }"
                     @click.stop="label(item, 'absent')">无宠物 A</button>
             <button class="btn uncertain" :class="{ active: item.human_label === 'uncertain' }"
@@ -233,7 +233,7 @@ function onKey(event) {
   const key = event.key.toLowerCase()
   const item = items.value[cursor.value]
   if (!item) return
-  if (key === 'p') label(item, 'present')
+  if (key === (isVideo.value ? 'f' : 'p')) label(item, 'present')
   else if (key === 'a') label(item, 'absent')
   else if (key === 'u') label(item, 'uncertain')
   else if (key === ' ' && isVideo.value) {
