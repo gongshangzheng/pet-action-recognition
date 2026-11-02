@@ -72,6 +72,12 @@ const routes = [
         meta: { title: '文档详情', module: 'management', ownHeading: true },
       },
       {
+        path: 'management/experiments',
+        name: 'Experiments',
+        component: () => import('../views/management/ExperimentsPage.vue'),
+        meta: { title: '实验报告', module: 'management', ownHeading: true },
+      },
+      {
         path: 'management/tasks',
         name: 'TaskBoard',
         component: () => import('../views/management/TaskBoard.vue'),

@@ -193,13 +193,14 @@ bash $SD/env_check.sh --env plf --expect-commit <sha> --json results/<topic>/<ru
 python3 .agents/skills/experiment/scripts/build_report.py --help   # 作者清单驱动的生成器
 ```
 
-约定（详见 `management/experiments/README.md`）：
+约定（详见 `management/experiments/README.md`；写作骨架与叙述字段见 `references/report-template.md`）：
 
-- 落点 `management/experiments/<topic>/<YYYYMMDD>-<runid>/`：`report.md`（frontmatter：title/date/run_id/status/verdict/summary/source + 八固定章节）、`metrics.json`（series + tables）、`manifest.json`（evidence 六项 + metrics + cases）、`assets/`（案例图，作者显式选择，不自动扫）；
+- 落点 `management/experiments/<topic>/<YYYYMMDD>-<runid>/`：`report.md`（frontmatter：title/date/run_id/status/verdict/summary/source + 正文）、`metrics.json`（series + tables）、`manifest.json`（evidence 六项 + metrics + cases）、`assets/`（案例图，作者显式选择，不自动扫）；
 - `status`（执行状态：complete/partial/failed）与 `verdict`（结论方向：improved/no-gain/worse/inconclusive）独立填写；
-- **incomplete 由脚本与后端按同一规则推导**（字段/章节/evidence/案例齐全 + sha256 匹配），不由作者自评；缺什么就在 diagnostics 里写什么；
+- **正文是面向读者的文章，不是指标清单**：依次使用「背景与目标」「当前问题」「实验设计」「结果与分析」「结论与下一步」，最后提供「附录：配置与完整数据」。先介绍背景和术语，再提出问题；正文只保留能帮助判断的数值、图表和媒体并就近说明含义与限制。完整指标、精确配置、版本、权重、哈希、命令与原始来源放入附录（网页默认折叠）。不得把原始 metrics.md 直接拼进正文，也不得自动铺满指标卡片。核查数据齐全不等于文章清楚，两项均须审阅；
+- **incomplete 由脚本与后端按同一规则推导**（frontmatter 必填 + 文章章节齐全 + evidence/案例齐全 + sha256 匹配），不由作者自评；缺什么就在 diagnostics 里写什么；
 - 案例 `src` 指向 run 产物或仓库内图片，生成器复制进 `assets/` 并计算 sha256；报告 `source` 指向 run 产物路径（如 `evaluation/results/*.json`），不复制大产物；
-- 报告页在前端 `/management/experiments` 审阅（元信息、正文、指标表、趋势图、案例 A/B 原始像素对比）。
+- 报告页在前端 `/management/experiments` 审阅（正文文章 + 折叠附录 + 结构化指标/趋势/案例 A/B）。
 
 与 evidence 的关系：evidence 是过程记录（即时追加），报告是面向读者的结论交付（事后整理）——两者都要，不互相替代。
 
@@ -220,6 +221,8 @@ python3 .agents/skills/experiment/scripts/build_report.py --help   # 作者清�
 | 结论只写在对话或代码注释里 | 写进 change 的 evidence，结束后生成实验报告（§5.4） |
 | 做完实验只写「完成」 | 必须有数据 + 对比 + 结论 + 上界；报告 status/verdict 如实填 |
 | 报告只报成功案例 | 案例由作者按选样规则显式选择，失败边界单列（§2） |
+| 把原始 metrics.md 拼进正文 / 自动铺满指标卡片 | 正文按报告问题组织关键数值并就近解释，完整数据进折叠附录（§5.4） |
+| 从运行编号或目录名猜造报告内容 | 缺背景/设计/解释时保留草稿提示，不从目录名推断 |
 | 过程记录等最后补 | 跑完一次立刻追加 |
 | 无效但无害的改动留在仓库 | 无收益即 revert，evidence 记根因 |
 | 推翻旧结论后静默删掉 | 留「对旧结论的更正」表 |

@@ -12,6 +12,8 @@ import re
 from server.utils.file_utils import read_file, scan_directory
 
 SECTIONS = ["结论摘要", "实验问题与假设", "实验设置与环境", "指标结果", "案例展示", "失败案例与限制", "结论与建议", "产物来源"]
+# 读者导向文章模板（CyberVerse 124a697）：新报告默认正文结构
+NARRATIVE_SECTIONS = ["背景与目标", "当前问题", "实验设计", "结果与分析", "结论与下一步", "附录：配置与完整数据"]
 REQUIRED_FRONTMATTER = ["title", "date", "run_id", "status", "verdict", "summary", "source"]
 EVIDENCE_KEYS = ["实验类型", "baseline 数值来源", "可辨识性", "样本量", "失败边界", "结论上界"]
 METRIC_FIELDS = ["name", "unit", "baseline", "result", "delta", "sample_size", "source", "limitation"]
@@ -114,6 +116,25 @@ def _load_json(path):
         return None
 
 
+def _all_h2(body):
+    return [m.group(1).strip() for m in re.finditer(r'^##[ \t]+(.+?)[ \t]*$', body, flags=re.M)]
+
+
+def report_template(body):
+    """识别正文模板，返回 (章节列表, 模板名)。
+
+    读者导向五章（含附录）→ ('narrative', NARRATIVE_SECTIONS)；
+    旧八章→ ('legacy', SECTIONS)；都按出现顺序包含视为命中，否则 None。
+    向后兼容（CyberVerse 124a697 同策略）：存量旧报告不清空。
+    """
+    heads = _all_h2(body)
+    for name, sections in (("narrative", NARRATIVE_SECTIONS), ("legacy", SECTIONS)):
+        it = iter(heads)
+        if all(any(h == s for h in it) for s in sections):
+            return sections, name
+    return None, ""
+
+
 def report_problems(report_dir):
     """对一篇报告做完整性与 incomplete 推导，返回 (entry_fields, problems)。"""
     problems = []
@@ -132,11 +153,16 @@ def report_problems(report_dir):
     if meta.get("verdict") and meta["verdict"] not in VERDICT_ENUM:
         problems.append(f"verdict 非法：{meta['verdict']}")
 
-    for sec in SECTIONS:
-        if _section(body, sec) is None:
-            problems.append(f"缺章节：{sec}")
+    sections, template_name = report_template(body)
+    if sections is None:
+        problems.append("缺章节：未匹配文章模板（应含「背景与目标…结论与下一步」或旧八章）")
+    else:
+        for sec in sections:
+            if _section(body, sec) is None:
+                problems.append(f"缺章节：{sec}")
+    # 环境段（旧模板字段）：仅旧模板校验；新模板的「环境与配置」放附录不强制
     env_section = _section(body, "实验设置与环境")
-    if env_section is not None:
+    if env_section is not None and template_name == "legacy":
         for key in _environment_missing(env_section):
             problems.append(f"环境缺项：{key}")
 
@@ -172,6 +198,7 @@ def report_problems(report_dir):
         "status": meta.get("status", ""),
         "verdict": meta.get("verdict", ""),
         "summary": meta.get("summary", ""),
+        "template": template_name,
     }
     return entry, problems
 
@@ -224,6 +251,7 @@ def get_experiment_detail(experiments_dir, topic, slug):
         "manifest": manifest,
         "incomplete": bool(problems),
         "problems": problems,
+        "template": entry.get("template", ""),
     }
 
 

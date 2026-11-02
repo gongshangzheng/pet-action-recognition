@@ -52,6 +52,19 @@ import sys
 
 # ==== 与 server/parsers/experiments_parser.py 同步的常量 ====
 SECTIONS = ["结论摘要", "实验问题与假设", "实验设置与环境", "指标结果", "案例展示", "失败案例与限制", "结论与建议", "产物来源"]
+# 读者导向文章模板（CyberVerse 124a697）：新报告默认正文结构
+NARRATIVE_SECTIONS = ["背景与目标", "当前问题", "实验设计", "结果与分析", "结论与下一步", "附录：配置与完整数据"]
+# 叙述字段：author.report 里 background/problem/design/analysis/conclusion 组装正文（lim./summary 可选）
+NARRATIVE_FIELDS = ("background", "problem", "design", "analysis", "conclusion")
+NARRATIVE_PLACEHOLDERS = {
+    "background": "背景与目标待填写：请由实验负责人补充研究动机、背景与本次目标。",
+    "problem": "当前问题待填写：请说明已有证据、未决问题和本次实验不能回答的范围。",
+    "design": "实验设计待填写：请说明对照组、控制条件、样本选择和判据。",
+    "analysis": "结果与分析待填写：请选择关键数字并结合案例解释，不在此处粘贴完整指标。",
+    "conclusion": "结论与下一步待填写：请回答本次问题，区分已验证事实、未决问题与下一步。",
+}
+# 旧八章字段映射：question→problem、limitations→附录局限（向后兼容存量清单）
+OLD_FIELD_ALIASES = {"question": "problem", "limitations": "limitations"}
 REQUIRED_FRONTMATTER = ["title", "date", "run_id", "status", "verdict", "summary", "source"]
 EVIDENCE_KEYS = ["实验类型", "baseline 数值来源", "可辨识性", "样本量", "失败边界", "结论上界"]
 METRIC_FIELDS = ["name", "unit", "baseline", "result", "delta", "sample_size", "source", "limitation"]
@@ -96,7 +109,16 @@ def sha256_of(path):
     return h.hexdigest()
 
 
+def _narrative_fields(author):
+    """归一化叙述字段：新字段优先，旧 question→problem、limitations 保留（向后兼容）。"""
+    out = dict(author)
+    if not out.get("problem") and author.get("question"):
+        out["problem"] = author["question"]
+    return out
+
+
 def build_report_md(meta, author, env, diagnostics):
+    author = _narrative_fields(author)
     lines = ["---"]
     for k in REQUIRED_FRONTMATTER:
         v = meta.get(k, "")
@@ -113,9 +135,17 @@ def build_report_md(meta, author, env, diagnostics):
             lines.append(f"（缺失：{title}未提供，待补充。）")
         lines.append("")
 
-    section("结论摘要", meta.get("summary", ""))
-    section("实验问题与假设", author.get("question", ""))
-    lines.append("## 实验设置与环境")
+    # 读者导向文章模板：背景与目标 → 当前问题 → 实验设计 → 结果与分析 → 结论与下一步
+    section("背景与目标", author.get("background", ""))
+    section("当前问题", author.get("problem", ""))
+    section("实验设计", author.get("design", ""))
+    section("结果与分析", author.get("analysis", ""))
+    section("结论与下一步", author.get("conclusion", ""))
+
+    # 附录：配置与完整数据（网页默认折叠；环境与配置 + 局限 + 来源核查）
+    lines.append("## 附录：配置与完整数据")
+    lines.append("")
+    lines.append("### 环境与配置")
     lines.append("")
     if env:
         for k, v in env.items():
@@ -126,12 +156,21 @@ def build_report_md(meta, author, env, diagnostics):
     if missing_env:
         lines.append(f"（缺失环境项：{'、'.join(missing_env)}）")
     lines.append("")
-    section("指标结果", "见下方指标表；单位、样本量与局限见 manifest 的 metrics 条目。")
-    section("案例展示", "案例由作者按选样规则显式选择，见 manifest 的 cases 条目。")
-    section("失败案例与限制", author.get("limitations", ""))
-    section("结论与建议", author.get("conclusion", ""))
+    lines.append("### 局限与边界")
+    lines.append("")
+    if author.get("limitations"):
+        lines.append(str(author["limitations"]).strip())
+    else:
+        lines.append("（缺失：局限与边界未提供，待补充。）")
+    lines.append("")
+    lines.append("### 来源与核查")
+    lines.append("")
     src = meta.get("source", "")
-    section("产物来源", f"- run 产物：{src}\n（详细来源见 manifest 各条目的 source 字段。）" if src else "")
+    if src:
+        lines.append(f"- run 产物：{src}")
+    lines.append("- 详细来源见 manifest 各条目的 source 字段；单位、样本量与局限见 manifest 的 metrics 条目。")
+    lines.append(f"- 指标与趋势见 metrics.json（series 折线 + tables 指标表）。")
+    lines.append("")
     if diagnostics:
         lines.append("<!-- diagnostics（生成器写入，勿手改）：")
         for d in diagnostics:

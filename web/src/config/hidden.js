@@ -22,6 +22,7 @@
 //   '/management/milestones'  里程碑
 //   '/management/meetings'    会议纪要
 //   '/management/docs'        文档
+//   '/management/experiments'  实验报告
 //   '/papers/list'            论文列表
 //   '/papers/config'          数据源配置
 //   '/evaluation/run'         评测运行
