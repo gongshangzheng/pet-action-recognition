@@ -66,6 +66,11 @@
                     @click.stop="label(item, 'uncertain')">{{ hideTeacher ? '跳过待复核 U' : '不确定 U' }}</button>
           </figcaption>
           <div v-if="isVideo" class="gr-video-pager">
+            <div class="gr-jump">
+              <n-input-number v-model:value="jumpPageValue" :min="1" :max="maxPage" size="small"
+                              placeholder="页码" @keydown.enter="jumpToPage" />
+              <n-button size="small" @click="jumpToPage">跳转</n-button>
+            </div>
             <n-button size="small" @click="prevPage" :disabled="page <= 1">上一页 ←</n-button>
             <span class="gr-page">{{ page }} / {{ maxPage }}</span>
             <n-button size="small" type="primary" @click="nextPage" :disabled="page >= maxPage">下一页 →</n-button>
@@ -85,7 +90,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { NButton, NEmpty, NProgress, NSelect, NSpin, NSwitch, useMessage } from 'naive-ui'
+import { NButton, NEmpty, NInputNumber, NProgress, NSelect, NSpin, NSwitch, useMessage } from 'naive-ui'
 import { frameUrl, videoUrl, getStats, listItems, listSets, setLabel } from '../../api/gateReview'
 
 const message = useMessage()
@@ -94,6 +99,7 @@ const currentSet = ref('')
 const scenario = ref('')
 const onlyUnlabeled = ref(false)
 const page = ref(1)
+const jumpPageValue = ref(1)
 const pageSize = 24
 const items = ref([])
 const total = ref(0)
@@ -214,17 +220,23 @@ async function toggleFlag(item, key) {
 }
 
 function nextPage() {
-  if (page.value < maxPage.value) {
-    page.value += 1
-    reload()
-  }
+  if (page.value < maxPage.value) goToPage(page.value + 1)
 }
 
 function prevPage() {
-  if (page.value > 1) {
-    page.value -= 1
-    reload()
-  }
+  if (page.value > 1) goToPage(page.value - 1)
+}
+
+function goToPage(target) {
+  const nextPageValue = Math.min(maxPage.value, Math.max(1, Number(target) || 1))
+  jumpPageValue.value = nextPageValue
+  if (nextPageValue === page.value) return
+  page.value = nextPageValue
+  reload()
+}
+
+function jumpToPage() {
+  goToPage(jumpPageValue.value)
 }
 
 function onKey(event) {
@@ -528,5 +540,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   justify-content: flex-end;
   flex-shrink: 0;
   padding: 8px 0 0;
+}
+
+.gr-jump {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-right: auto;
+
+  :deep(.n-input-number) {
+    width: 92px;
+  }
 }
 </style>
