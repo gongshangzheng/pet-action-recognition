@@ -484,6 +484,7 @@ def main() -> int:
         "labels_sha256": report["labels_sha256"], "items_sha256": report["items_sha256"],
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     write_report(args.out, report)
+    (args.out / "execution_status").write_text("completed\n", encoding="utf-8")
     print(f"[gate-video] threshold={threshold:.6f} selected_epoch={frozen['selected_epoch']}", flush=True)
     for name, cell in report["domains"].items():
         print(f"[gate-video] {name:12s} n={cell['n']:3d} acc={cell['accuracy']:.3f} "
