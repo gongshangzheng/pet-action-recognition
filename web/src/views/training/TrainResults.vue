@@ -33,8 +33,9 @@
     <!-- 训练进程列表 -->
     <n-card size="small" title="训练进程列表" style="margin-top: 12px">
       <n-spin :show="loading">
-        <n-data-table v-if="filteredRuns.length" :columns="runColumns" :data="filteredRuns" :bordered="false" size="small" striped />
+        <n-data-table :scroll-x="720" v-if="filteredRuns.length" :columns="runColumns" :data="filteredRuns" :bordered="false" size="small" striped />
         <EmptyState v-else description="暂无训练进程。在「训练运行」页启动训练后，进程列表 + loss 曲线在此。" />
+
       </n-spin>
     </n-card>
   </div>

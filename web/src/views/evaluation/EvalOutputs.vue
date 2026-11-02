@@ -8,7 +8,7 @@
         </div>
       </template>
       <n-spin :show="loading">
-        <n-data-table :columns="columns" :data="outputs" :bordered="false" size="small" striped />
+        <n-data-table :scroll-x="720" :columns="columns" :data="outputs" :bordered="false" size="small" striped />
         <EmptyState v-if="!loading && !outputs.length" description="暂无输出文件。运行评测后，压缩码流/重建视频会出现在这里。" />
       </n-spin>
     </n-card>

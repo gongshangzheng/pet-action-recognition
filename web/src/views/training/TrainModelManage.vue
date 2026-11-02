@@ -5,7 +5,7 @@
         <div class="flex-between"><h2 class="card-title">模型配置（可训练 DL 模型）</h2><n-button size="small" @click="load">刷新</n-button></div>
       </template>
       <n-spin :show="loading">
-        <n-data-table :columns="columns" :data="models" :bordered="false" size="small" striped />
+        <n-data-table :scroll-x="720" :columns="columns" :data="models" :bordered="false" size="small" striped />
         <EmptyState v-if="!loading && !models.length" description="暂无可训练模型。下游接 CompressAI 架构 + ELIC 后此处列出。" />
       </n-spin>
     </n-card>

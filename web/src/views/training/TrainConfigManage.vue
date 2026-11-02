@@ -5,7 +5,7 @@
         <div class="flex-between"><h2 class="card-title">训练配置（超参 preset）</h2><n-button size="small" @click="load">刷新</n-button></div>
       </template>
       <n-spin :show="loading">
-        <n-data-table :columns="columns" :data="configs" :bordered="false" size="small" striped />
+        <n-data-table :scroll-x="720" :columns="columns" :data="configs" :bordered="false" size="small" striped />
         <EmptyState v-if="!loading && !configs.length" description="暂无超参 preset。" />
       </n-spin>
     </n-card>

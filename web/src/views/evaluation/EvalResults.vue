@@ -23,9 +23,10 @@
             <v-chart v-if="chartOption" class="result-chart" :option="chartOption" autoresize />
           </n-space>
 
+
           <n-divider />
 
-          <n-data-table :columns="columns" :data="filteredResults" :row-props="rowProps" :bordered="false" size="small" striped />
+          <n-data-table :scroll-x="720" :columns="columns" :data="filteredResults" :row-props="rowProps" :bordered="false" size="small" striped />
         </template>
         <EmptyState v-else description="暂无评测数值结果；在「训练运行」页跑 POST /api/training/run_test 后这里显示 top1/top5 准确率" />
       </n-spin>

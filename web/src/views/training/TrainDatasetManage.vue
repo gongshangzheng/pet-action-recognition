@@ -5,7 +5,7 @@
         <div class="flex-between"><h2 class="card-title">数据集配置（训练数据集）</h2><n-button size="small" @click="load">刷新</n-button></div>
       </template>
       <n-spin :show="loading">
-        <n-data-table :columns="columns" :data="datasets" :bordered="false" size="small" striped />
+        <n-data-table :scroll-x="720" :columns="columns" :data="datasets" :bordered="false" size="small" striped />
         <EmptyState v-if="!loading && !datasets.length" description="暂无训练数据集。下游接 FLIR thermal train split / OSU 帧 / 自定义后此处列出。" />
       </n-spin>
     </n-card>

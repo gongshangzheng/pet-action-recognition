@@ -8,7 +8,7 @@
         </div>
       </template>
       <n-spin :show="loading">
-        <n-data-table :columns="columns" :data="configs" :bordered="false" size="small" striped />
+        <n-data-table :scroll-x="720" :columns="columns" :data="configs" :bordered="false" size="small" striped />
         <EmptyState v-if="!loading && !configs.length" description="暂无评测配置。在 evaluation/configs/configs.json 添加。" />
       </n-spin>
     </n-card>
