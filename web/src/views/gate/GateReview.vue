@@ -3,7 +3,7 @@
     <header class="gr-head">
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
-        <span v-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 P / A / U，← → 翻页。</span>
+        <span v-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 P / A / U，空格播放/暂停，← → 翻页。</span>
         <span v-else-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
         <span v-else class="gr-hint">模型预标仅供参考，请确认有无宠物；看不清可跳过。（快捷键 P / A / U，← → 切换图片）</span>
       </div>
@@ -36,7 +36,7 @@
                 :class="{ labeled: item.human_label, selected: index === cursor }"
                 @click="cursor = index">
           <div class="gr-frame">
-            <video v-if="isVideo" :src="videoUrl(currentSet, item.file)" controls preload="metadata" />
+            <video v-if="isVideo" ref="videoRef" :src="videoUrl(currentSet, item.file)" controls preload="metadata" />
             <img v-else :src="frameUrl(currentSet, item.file)" :alt="item.path" loading="lazy" />
             <!-- 教师框叠加：按原始像素 → 百分比换算 -->
             <svg v-if="!hideTeacher" class="gr-box" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -101,6 +101,7 @@ const stats = ref(null)
 const loading = ref(false)
 const cursor = ref(0)
 const saving = ref(false)
+const videoRef = ref(null)
 let loadVersion = 0
 const selectedSet = computed(() => sets.value.find((s) => s.name === currentSet.value))
 const hideTeacher = computed(() => Boolean(selectedSet.value?.hide_teacher))
@@ -235,6 +236,13 @@ function onKey(event) {
   if (key === 'p') label(item, 'present')
   else if (key === 'a') label(item, 'absent')
   else if (key === 'u') label(item, 'uncertain')
+  else if (key === ' ' && isVideo.value) {
+    event.preventDefault()
+    const video = Array.isArray(videoRef.value) ? videoRef.value[0] : videoRef.value
+    if (!video) return
+    if (video.paused || video.ended) video.play().catch(console.error)
+    else video.pause()
+  }
   else if (key === 'arrowright') isVideo.value ? nextPage() : cursor.value = Math.min(cursor.value + 1, items.value.length - 1)
   else if (key === 'arrowleft') isVideo.value ? prevPage() : cursor.value = Math.max(cursor.value - 1, 0)
 }
