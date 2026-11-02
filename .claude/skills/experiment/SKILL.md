@@ -2,9 +2,10 @@
 name: experiment
 description: |
   实验方法论与执行纪律：先有 change、baseline 落盘、可辨识性检查、对照设计、污染控制、
-  产物与 evidence.md 留痕、一次修复一个 commit。凡是「跑个实验看看」「A/B 对比」「调参/消融」
-  「验证某个改动是否有效」这类工作，都必须先加载本 skill。
-  移植来源：CyberVerse/.agents/skills/experiment（2026-10-29），已按本仓布局改写。
+  产物与 evidence 留痕、一次修复一个 commit，实验结束后生成可审阅的实验报告。凡是「跑个实验看看」「A/B 对比」「调参/消融」
+  「验证某个改动是否有效」「写实验报告」这类工作，都必须先加载本 skill。
+  通用版：不写死任何具体服务器或仓库布局，连接/产物根见 §0.3、§3.1；报告落点见 §5.4。
+  移植来源：CyberVerse/.agents/skills/experiment（2026-10-29），已按本仓布局改写（报告功能 pick 自 ProjFlow 37dd993）。
 ---
 
 # 实验方法论
@@ -17,10 +18,17 @@ description: |
 ## 核心流程
 
 ```
-读本 skill → 建/复用 openspec change → 把准则写成 design 条款 → 开分支（一个 change 一条）
+读本 skill → 建/复用 openspec change → 准则写进 design 条款（含面向报告规划）→ 开分支（一个 change 一条）
 → preflight（资源）→ env_check（代码/环境）→ baseline → 可辨识性检查 → 假设 → 对照
-→ 验证/推翻 → 修复（一修一 commit）→ 结论写进 evidence.md → 合并回主分支 → 删分支
+→ 验证/推翻 → 修复（一修一 commit）→ 结论写进 change 的 evidence → 生成实验报告 → 合并回主分支 → 删分支
 ```
+
+### 0.1.1 面向报告规划（设计期就写清）
+
+每个实验从报告出发规划执行：在 design 中写明**读者**（自己回顾 / 团队 / 外部评审）、要回答的验证问题、
+对照与验收标准；列出指标的**单位、样本量、来源与局限**；确定案例选样规则（哪些输入值得展示、失败案例怎么选）
+与需要采集的产物（对比图、逐轮指标、日志切片）。失败或数据不足时如实记录，不能把预期写成结果。
+计划变化时先更新 change 并记录原因。
 
 ## 0. 开工前的强制检查
 
@@ -173,8 +181,27 @@ bash $SD/env_check.sh --env plf --expect-commit <sha> --json results/<topic>/<ru
 
 ### 5.3 图片/视频
 
-对比帧、曲线、失败边界特写放在 run 目录；需要在仓库长期保存的少量关键图放
-`management/docs/_assets/<slug>/`（走文档流程）。体积纪律：图 <1MB，视频转 H.264 <10MB。
+对比帧、曲线、失败边界特写放 run 目录；需长期保存的少量关键图进报告的 assets 目录（见 §5.4），
+或 wiki 文档场景走 `management/docs/_assets/<slug>/`（文档流程）。体积纪律：图 <1MB，视频转 H.264 <10MB。
+
+### 5.4 实验报告（实验结束后生成，强制）
+
+实验结束后**必须**生成可审阅的报告，执行失败或部分完成也保留草稿并说明缺失——报告记录的是
+「这次实验证明了什么/没证明什么」，失败的实验同样有此义务。报告进 `management/experiments/`，由脚本生成：
+
+```bash
+python3 .agents/skills/experiment/scripts/build_report.py --help   # 作者清单驱动的生成器
+```
+
+约定（详见 `management/experiments/README.md`）：
+
+- 落点 `management/experiments/<topic>/<YYYYMMDD>-<runid>/`：`report.md`（frontmatter：title/date/run_id/status/verdict/summary/source + 八固定章节）、`metrics.json`（series + tables）、`manifest.json`（evidence 六项 + metrics + cases）、`assets/`（案例图，作者显式选择，不自动扫）；
+- `status`（执行状态：complete/partial/failed）与 `verdict`（结论方向：improved/no-gain/worse/inconclusive）独立填写；
+- **incomplete 由脚本与后端按同一规则推导**（字段/章节/evidence/案例齐全 + sha256 匹配），不由作者自评；缺什么就在 diagnostics 里写什么；
+- 案例 `src` 指向 run 产物或仓库内图片，生成器复制进 `assets/` 并计算 sha256；报告 `source` 指向 run 产物路径（如 `evaluation/results/*.json`），不复制大产物；
+- 报告页在前端 `/management/experiments` 审阅（元信息、正文、指标表、趋势图、案例 A/B 原始像素对比）。
+
+与 evidence 的关系：evidence 是过程记录（即时追加），报告是面向读者的结论交付（事后整理）——两者都要，不互相替代。
 
 ## 6. 反模式
 
@@ -190,8 +217,9 @@ bash $SD/env_check.sh --env plf --expect-commit <sha> --json results/<topic>/<ru
 | 只查 GPU 不查 CPU/内存/磁盘 | `preflight.sh` 一起看 |
 | `pkill -f python` 收尾 | 只杀自己这次的 pid |
 | 在单次 ssh 里 `nohup … & disown` | 用 `setsid nohup` 或 `remote_run.sh` |
-| 结论只写在对话或代码注释里 | 写进 change 的 `evidence.md` |
-| 做完实验只写「完成」 | 必须有数据 + 对比 + 结论 + 上界 |
+| 结论只写在对话或代码注释里 | 写进 change 的 evidence，结束后生成实验报告（§5.4） |
+| 做完实验只写「完成」 | 必须有数据 + 对比 + 结论 + 上界；报告 status/verdict 如实填 |
+| 报告只报成功案例 | 案例由作者按选样规则显式选择，失败边界单列（§2） |
 | 过程记录等最后补 | 跑完一次立刻追加 |
 | 无效但无害的改动留在仓库 | 无收益即 revert，evidence 记根因 |
 | 推翻旧结论后静默删掉 | 留「对旧结论的更正」表 |
@@ -201,7 +229,11 @@ bash $SD/env_check.sh --env plf --expect-commit <sha> --json results/<topic>/<ru
 
 | 事项 | 去哪 |
 |---|---|
-| 怎么连/预检/守卫/代码审计 | `remote-ops` |
+| 怎么连/预检/守卫/代码审计/环境核验 | `remote-ops` |
 | 训练、测试、speedrun、评测的具体命令 | `training` / `testing` / `speedrun` / `evaluation` |
 | 数据集与权重位置 | `datasets` |
 | 文档写作与 Wiki 约定 | `documentation` |
+
+**与 `evaluation` 的边界**：本 skill 管模块无关的方法论（假设、baseline、对照、证据标准、样本量、失败边界）与实验报告；
+`evaluation` 管评测模块的操作（模型/数据集/配置 CRUD、跑评测、结果对比）。评测 run 作为实验证据时，报告
+`source` 指向 `evaluation/results|outputs/` 产物，本 skill 引用而不复制其操作指南。

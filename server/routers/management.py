@@ -9,7 +9,7 @@ import subprocess
 import yaml
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from server.config import DOCS_FOLDER_ORDER, MANAGEMENT_DIR
+from server.config import MANAGEMENT_DIR, DOCS_FOLDER_ORDER
 from server.utils.file_utils import read_file, safe_resolve, scan_directory
 from server.parsers.team_parser import parse_team_list, parse_member_profile
 from server.parsers.report_parser import get_report_list, get_report_detail
@@ -17,6 +17,9 @@ from server.parsers.tasks_parser import parse_tasks
 from server.parsers.milestones_parser import parse_milestones
 from server.parsers.projects_parser import (
     list_projects, get_project, get_project_tasks, get_task_note,
+)
+from server.parsers.experiments_parser import (
+    list_experiments, get_experiment_detail, resolve_experiment_asset,
 )
 
 router = APIRouter(prefix="/api/management", tags=["management"])
@@ -87,6 +90,9 @@ def _transcode_to_h264(src: str):
     if os.path.isfile(out) and os.path.getsize(out) > 0:
         return out
     return None
+
+# 实验报告根目录（management/experiments/；只读，写入走 experiment skill 的生成脚本）
+_EXPERIMENTS_DIR = os.path.join(MANAGEMENT_DIR, 'experiments')
 
 # 日期/作者参数校验（防止路径遍历与非法文件名）
 _DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
@@ -472,3 +478,33 @@ async def serve_note_asset(slug: str, asset_path: str):
         if out:
             return FileResponse(out, media_type="video/mp4", filename=os.path.basename(safe), headers=no_cache)
     return FileResponse(safe, media_type=media, filename=os.path.basename(safe), headers=no_cache)
+
+
+# ========== 实验报告（management/experiments/，只读；写入走 experiment skill 的生成脚本） ==========
+
+@router.get("/experiments")
+async def get_experiments():
+    """实验报告列表（含 incomplete 标记与 invalid 目录）"""
+    return list_experiments(_EXPERIMENTS_DIR)
+
+
+@router.get("/experiments/{topic}/{slug}")
+async def get_experiment(topic: str, slug: str):
+    """单篇实验报告详情（frontmatter + 正文 + metrics + manifest + 完整性问题）"""
+    detail = get_experiment_detail(_EXPERIMENTS_DIR, topic, slug)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Experiment report not found")
+    return detail
+
+
+@router.get("/experiments/{topic}/{slug}/assets/{filename}")
+async def get_experiment_asset(topic: str, slug: str, filename: str):
+    """报告案例图（按报告粒度隔离，防穿越 + 扩展名白名单）"""
+    path = resolve_experiment_asset(_EXPERIMENTS_DIR, topic, slug, filename)
+    if not path or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Asset not found")
+    media = {
+        '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+    }
+    return FileResponse(path, media_type=media.get(os.path.splitext(path)[1].lower(), 'application/octet-stream'))
