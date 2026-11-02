@@ -140,16 +140,34 @@ const teacherText = (label) => ({ cat_present: '预标：有猫', other_animal_o
 
 async function loadSets() {
   sets.value = await listSets()
-  const requestedSet = new URLSearchParams(window.location.search).get('set')
+  const params = new URLSearchParams(window.location.search)
+  const requestedSet = params.get('set')
   if (requestedSet && sets.value.some((s) => s.name === requestedSet)) currentSet.value = requestedSet
   if (!currentSet.value && sets.value.length) currentSet.value = sets.value[0].name
+  const requestedScenario = params.get('scenario')
+  if (scenarioOptions.some((option) => option.value === requestedScenario)) scenario.value = requestedScenario
+  onlyUnlabeled.value = params.get('unlabeled') === '1'
+  page.value = Math.max(1, Number(params.get('page')) || 1)
+  jumpPageValue.value = page.value
   const current = sets.value.find((s) => s.name === currentSet.value)
   if (current && !stats.value) labeled.value = current.labeled
 }
 
 function changeFilter() {
   page.value = 1
+  jumpPageValue.value = 1
+  syncUrlState()
   reload()
+}
+
+function syncUrlState() {
+  const params = new URLSearchParams()
+  if (currentSet.value) params.set('set', currentSet.value)
+  if (page.value > 1) params.set('page', String(page.value))
+  if (scenario.value) params.set('scenario', scenario.value)
+  if (onlyUnlabeled.value) params.set('unlabeled', '1')
+  const query = params.toString()
+  window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
 }
 
 async function reload() {
@@ -167,6 +185,15 @@ async function reload() {
     if (version !== loadVersion) return
     items.value = data.items.map((item) => ({ note: '', ...item }))
     total.value = data.total
+    const loadedMaxPage = Math.max(1, Math.ceil(data.total / (isVideo.value ? 1 : pageSize)))
+    if (page.value > loadedMaxPage) {
+      page.value = loadedMaxPage
+      jumpPageValue.value = loadedMaxPage
+      syncUrlState()
+      reload()
+      return
+    }
+    syncUrlState()
     cursor.value = 0
     const updatedStats = await getStats(batch)
     if (version !== loadVersion) return
@@ -232,6 +259,7 @@ function goToPage(target) {
   jumpPageValue.value = nextPageValue
   if (nextPageValue === page.value) return
   page.value = nextPageValue
+  syncUrlState()
   reload()
 }
 
