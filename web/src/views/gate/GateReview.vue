@@ -3,7 +3,7 @@
     <header class="gr-head">
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
-        <span v-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；看不清可跳过待复核。</span>
+        <span v-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 P / A / U，← → 翻页。</span>
         <span v-else-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
         <span v-else class="gr-hint">模型预标仅供参考，请确认有无宠物；看不清可跳过。（快捷键 P / A / U，← → 切换图片）</span>
       </div>
@@ -66,9 +66,9 @@
                     @click.stop="label(item, 'uncertain')">{{ hideTeacher ? '跳过待复核 U' : '不确定 U' }}</button>
           </figcaption>
           <div v-if="isVideo" class="gr-video-pager">
-            <n-button size="small" @click="prevPage" :disabled="page <= 1">上一页</n-button>
+            <n-button size="small" @click="prevPage" :disabled="page <= 1">上一页 ←</n-button>
             <span class="gr-page">{{ page }} / {{ maxPage }}</span>
-            <n-button size="small" type="primary" @click="nextPage" :disabled="page >= maxPage">下一页</n-button>
+            <n-button size="small" type="primary" @click="nextPage" :disabled="page >= maxPage">下一页 →</n-button>
           </div>
           <div v-if="!hideTeacher" class="gr-flags" :class="{ disabled: !item.human_label }">
             <span class="gr-flags-label">框问题：</span>
@@ -235,8 +235,8 @@ function onKey(event) {
   if (key === 'p') label(item, 'present')
   else if (key === 'a') label(item, 'absent')
   else if (key === 'u') label(item, 'uncertain')
-  else if (key === 'arrowright' && cursor.value < items.value.length - 1) cursor.value += 1
-  else if (key === 'arrowleft' && cursor.value > 0) cursor.value -= 1
+  else if (key === 'arrowright') isVideo.value ? nextPage() : cursor.value = Math.min(cursor.value + 1, items.value.length - 1)
+  else if (key === 'arrowleft') isVideo.value ? prevPage() : cursor.value = Math.max(cursor.value - 1, 0)
 }
 
 onMounted(async () => {
