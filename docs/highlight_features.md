@@ -5,8 +5,8 @@
 宠物活动幅度，宠物身体画面中面积占比和时长，面部暴露面积占比和时长，及行为识别
 信息上报到云端进行判断）”。
 
-**状态**：代码与合成数据单元测试完成（15 项通过，Python 3.8 / 3.11）；已在本机对 8 段
-单猫真实视频跑通 YOLO11n-seg + Haar（见“本机示例”）；行为模型路径未运行；所有阈值都是
+**状态**：代码与合成数据单元测试完成（15 项通过，Python 3.8 / 3.11）；已在本机对单猫真实
+视频跑通 YOLO11n-seg + Haar + v1 七类 X3D-S 行为滑窗（见“本机示例”）；所有阈值都是
 初值、未校准。云端接收与判断不在本次范围，载荷只写本地文件 / outbox。
 
 ## 用法
@@ -126,8 +126,10 @@ python scripts/render_highlight_demo.py --payload results/highlights/x.json --ou
 
 ## 本机示例（2026-11-02，RTX 3060 Laptop，单猫视频）
 
-环境：临时 venv（继承 `reid` 环境 torch 2.4.1+cu121，新装 ultralytics 8.3.40），
-`yolo11n-seg.pt` 从 4090 复制（SHA-256 `55ed65c5…`）。产物在 `results/highlights/demo/`
+环境：临时 venv（继承 `reid` 环境 torch 2.4.1+cu121；新装 ultralytics 8.3.40、mmengine 0.10.7、
+mmcv-lite 2.1.0、decord 0.6.0、einops 0.8.0；用 `.pth` 把 `models/mmaction2` 加入路径，不改
+vendored 源码）。`yolo11n-seg.pt`（SHA-256 `55ed65c5…`）与 X3D-S
+`best_macro_f1_epoch_20.pth`（SHA-256 `00e09d3b…`）均从 4090 只读复制，服务器上不执行任何计算。产物在 `results/highlights/demo/`
 （gitignored）。速度：40 s 视频约 21 s、15 s 视频约 12 s（含模型加载，5 fps 采样）。
 
 | 视频 | 时长 | 在场 | 身体占比均值 | 活动均值 | 露脸 | 人工核对 |
@@ -146,6 +148,24 @@ python scripts/render_highlight_demo.py --payload results/highlights/x.json --ou
 - **Haar 正脸检测：真脸能检出，但黑白画面里有结构性误检**。把 `minNeighbors` 从 3 调到
   5 / 7，误检 5→3→1，真脸 5→4→2，无法干净分开；样本太少，暂保持默认 3，待更多正负样本再定。
 - 抽样筛选时 `chmtg0l`、`chxnpw3` 个别视频也出现过 2 个框，是否真有第二只猫未逐一核对。
+
+### 行为识别（X3D-S，4 s 窗口 / 2 s 步长）
+
+行为模型选 X3D-S：v1 对比里它最轻（182 px、13 帧，训练峰值显存 4.19 GiB），更接近端侧。
+
+| 视频 | v1 划分 | 人工标注 | 预测时间轴 |
+|---|---|---|---|
+| chxnpw3 0620_092615 | train | 0–15.1 s eating | 0–15.1 s eating 0.998 |
+| chxnpw3 0503_161345 | **val** | 1.3–15.1 s activity | 0–15.1 s activity 0.914 |
+| chmtg0l 0703_125003 | train | 0–30.7 s activity | activity 为主，夹 4 段 2 s 的 abnormal（0.54–0.87，均标云端复核）；33–40.3 s prolonged_stationary 0.74（标注未覆盖，画面中猫坐着） |
+| chmtg0l 0730_095845 | train | 0–8.7 s scratching，13.9–26.9 s activity | 0–3 s abnormal 0.46（复核）、3–19 s activity、19–21 s abnormal、21–27 s activity 0.96、27–34 s abnormal 0.89 |
+
+- **4 段里 3 段在 v1 训练集**，只有 0503_161345 是验证集，所以这只证明行为识别已接入、
+  时间轴与载荷格式正确，**不能当作准确率证据**。
+- 0703_125003 中猫低头嗅地上玩具（t≈22 s）、坐着（t≈32 s）都被判成 abnormal，与 v1 报告里
+  abnormal 召回低、易混淆的结论一致；这些段都带 `needs_cloud_review: true`，正是交给云端
+  复核的设计。
+- `scripts/render_highlight_demo.py` 叠加图第 4 行显示当前行为标签，`[cloud review]` 表示需云端复核。
 
 ## 本地 outbox
 

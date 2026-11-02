@@ -25,7 +25,15 @@ def put(img, text, org, scale=0.55):
     cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, scale, WHITE, 1, cv2.LINE_AA)
 
 
-def draw(frame, s, face_segments):
+def action_at(t, behavior_segments):
+    for seg in behavior_segments:
+        if seg["t_start"] <= t < seg["t_end"]:
+            flag = " [cloud review]" if seg.get("needs_cloud_review") else ""
+            return f"{seg['label']} {seg['score']:.2f}{flag}"
+    return "-"
+
+
+def draw(frame, s, face_segments, behavior_segments=()):
     for b in s["pet_boxes"]:
         cv2.rectangle(frame, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), GREEN, 2)
     for b in s["face_boxes"]:
@@ -36,6 +44,7 @@ def draw(frame, s, face_segments):
         f"t={s['t']:.1f}s  bright={s['brightness']:.2f}  contrast={s['contrast']:.2f}",
         f"pets={s['n_pets']}  body={s['body_ratio']:.3f}  activity={act}",
         f"faces={s['n_faces']}  face={s['face_ratio']:.4f}  face_seg={'Y' if in_face_seg else 'N'}",
+        f"action={action_at(s['t'], behavior_segments)}",
     ]
     for i, line in enumerate(lines):
         put(frame, line, (10, 24 + 22 * i))
@@ -57,6 +66,7 @@ def main() -> int:
     by_frame = {s["frame"]: s for s in samples}
     size = tuple(p["analysis"]["analysis_size"])
     face_segments = p["segments"]["face_exposed"]
+    behavior_segments = p.get("behavior", {}).get("segments", [])
     sheet_idx = set(np.linspace(0, len(samples) - 1, args.sheet_frames).round().astype(int).tolist())
     sheet_frames = {samples[i]["frame"] for i in sheet_idx}
 
@@ -75,7 +85,7 @@ def main() -> int:
             if not ok:
                 break
             frame = cv2.resize(frame, size, interpolation=cv2.INTER_AREA)
-            frame = draw(frame, by_frame[idx], face_segments)
+            frame = draw(frame, by_frame[idx], face_segments, behavior_segments)
             if writer is not None:
                 writer.write(frame)
             if idx in sheet_frames:
