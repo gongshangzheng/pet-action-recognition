@@ -16,6 +16,7 @@ classes = [
 result_root = (
     "results/cat_crop_classification/gdino-crop-20261103a/gdino_motion"
 )
+index_root = "datasets/cat_crop_classification/gdino-v1"
 data_root = (
     "results/cat_crop_classification/gdino-crop-20261103a/"
     "assets/gdino-v1"
