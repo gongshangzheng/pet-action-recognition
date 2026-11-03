@@ -50,11 +50,17 @@ def letterbox(frame: np.ndarray, size: int) -> np.ndarray:
         (max(1, round(width * scale)), max(1, round(height * scale))),
         interpolation=cv2.INTER_AREA,
     )
-    canvas = np.full((size, size, 3), 32, dtype=np.uint8)
-    top = (size - resized.shape[0]) // 2
-    left = (size - resized.shape[1]) // 2
-    canvas[top : top + resized.shape[0], left : left + resized.shape[1]] = resized
-    return canvas
+    vertical = size - resized.shape[0]
+    horizontal = size - resized.shape[1]
+    return cv2.copyMakeBorder(
+        resized,
+        vertical // 2,
+        vertical - vertical // 2,
+        horizontal // 2,
+        horizontal - horizontal // 2,
+        cv2.BORDER_CONSTANT,
+        value=(32, 32, 32),
+    )
 
 
 def read_frame(path: Path, frame_index: int, size: int) -> np.ndarray:
@@ -71,8 +77,12 @@ def read_frame(path: Path, frame_index: int, size: int) -> np.ndarray:
 
 def add_header(image: np.ndarray, text: str) -> np.ndarray:
     header = 34
-    canvas = np.full((image.shape[0] + header, image.shape[1], 3), 18, np.uint8)
-    canvas[header:] = image
+    canvas = np.pad(
+        image,
+        ((header, 0), (0, 0), (0, 0)),
+        mode="constant",
+        constant_values=18,
+    )
     cv2.putText(
         canvas,
         text,
@@ -178,9 +188,10 @@ def render_sheet(
             read_frame(row["_paths"][variant], frame_number - 1, size)
             for variant in order
         ]
+        frame_row = np.asarray(panels).transpose(1, 0, 2, 3)
         grid_rows.append(
             add_header(
-                np.hstack(panels),
+                frame_row.reshape(size, size * len(order), 3),
                 f"{review_id} | source frame {frame_number}",
             )
         )
