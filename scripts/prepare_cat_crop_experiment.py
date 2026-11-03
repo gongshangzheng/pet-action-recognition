@@ -171,8 +171,12 @@ def build_detector(args: argparse.Namespace):
         raise FileNotFoundError(
             f"GroundingDINO model directory is incomplete: {model_dir}"
         )
+    import torch
     from petlib.detection.grounding_dino import GroundingDinoDetector
 
+    torch.set_num_threads(args.torch_threads)
+    torch.set_num_interop_threads(1)
+    cv2.setNumThreads(args.opencv_threads)
     detector = GroundingDinoDetector(
         model_dir=str(model_dir),
         box_threshold=args.threshold,
@@ -613,6 +617,8 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--pad must be at least 1")
     if args.bg_warmup_frames < 0:
         raise ValueError("--bg-warmup-frames must be non-negative")
+    if args.torch_threads < 1 or args.opencv_threads < 1:
+        raise ValueError("thread limits must be positive")
     if args.crf < 0 or args.crf > 51:
         raise ValueError("--crf must be between 0 and 51")
 
@@ -657,6 +663,8 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--text-threshold", type=float, default=0.3)
     parser.add_argument("--model-dir", default="~/models/grounding-dino-tiny")
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--torch-threads", type=int, default=2)
+    parser.add_argument("--opencv-threads", type=int, default=2)
     parser.add_argument("--size", type=int, default=512)
     parser.add_argument("--pad", type=float, default=1.2)
     parser.add_argument("--bg-lr", type=float, default=0.002)
