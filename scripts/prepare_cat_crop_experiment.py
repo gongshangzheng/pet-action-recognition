@@ -574,31 +574,31 @@ def build_indexes(
         "split_files": split_files,
     }
     atomic_json(dataset_root / "manifest.json", manifest)
-    atomic_json(
-        DEFAULT_RUN_ROOT / "availability.json",
-        {
-            "schema": "cat-crop-availability-v1",
-            "rows": [
-                {
-                    key: row.get(key)
-                    for key in (
-                        "sample_id",
-                        "video",
-                        "split",
-                        "task_id",
-                        "start_frame",
-                        "end_frame",
-                        "label",
-                        "available",
-                        "unavailable_reason",
-                        "invalid_frames",
-                        "source_video_sha256",
-                    )
-                }
-                for row in availability
-            ],
-        },
-    )
+    availability_payload = {
+        "schema": "cat-crop-availability-v1",
+        "rows": [
+            {
+                key: row.get(key)
+                for key in (
+                    "sample_id",
+                    "video",
+                    "split",
+                    "task_id",
+                    "start_frame",
+                    "end_frame",
+                    "label",
+                    "available",
+                    "unavailable_reason",
+                    "invalid_frames",
+                    "source_video_sha256",
+                )
+            }
+            for row in availability
+        ],
+    }
+    atomic_json(dataset_root / "availability.json", availability_payload)
+    if args.max_videos is None and not args.video:
+        atomic_json(DEFAULT_RUN_ROOT / "availability.json", availability_payload)
     return manifest
 
 
