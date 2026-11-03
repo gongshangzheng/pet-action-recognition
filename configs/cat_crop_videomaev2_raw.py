@@ -4,6 +4,15 @@ _base_ = [
     "./cat_action_videomaev2_b_v1.py",
 ]
 
+classes = [
+    "activity",
+    "eating",
+    "drinking",
+    "prolonged_stationary",
+    "grooming",
+    "toileting",
+    "abnormal",
+]
 run_id = "gdino-crop-20261103a"
 result_root = f"results/cat_crop_classification/{run_id}/raw"
 data_root = "datasets/cat_raw"
