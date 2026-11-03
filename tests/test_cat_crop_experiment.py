@@ -272,6 +272,12 @@ class VideoWriterTests(unittest.TestCase):
         )
         self.assertEqual(prepare.render_fingerprint(args)["ffmpeg_threads"], 1)
 
+    def test_opencv_threads_are_applied_before_render(self) -> None:
+        args = mock.Mock(opencv_threads=2)
+        with mock.patch.object(prepare.cv2, "setNumThreads") as set_threads:
+            prepare.configure_opencv_threads(args)
+        set_threads.assert_called_once_with(2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -176,7 +176,6 @@ def build_detector(args: argparse.Namespace):
 
     torch.set_num_threads(args.torch_threads)
     torch.set_num_interop_threads(1)
-    cv2.setNumThreads(args.opencv_threads)
     detector = GroundingDinoDetector(
         model_dir=str(model_dir),
         box_threshold=args.threshold,
@@ -636,6 +635,10 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--crf must be between 0 and 51")
 
 
+def configure_opencv_threads(args: argparse.Namespace) -> None:
+    cv2.setNumThreads(args.opencv_threads)
+
+
 def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--index-root",
@@ -727,6 +730,7 @@ def main() -> int:
     add_common_arguments(parser)
     args = parser.parse_args()
     validate_args(args)
+    configure_opencv_threads(args)
     rows, splits_by_video = source_records(args.index_root)
     videos = selected_videos(splits_by_video, args.video, args.max_videos)
     if args.stage in ("detect", "all"):
