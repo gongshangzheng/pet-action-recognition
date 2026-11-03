@@ -1,0 +1,110 @@
+{
+  "evidence": {
+    "实验类型": "感知质量与正确性小批验证",
+    "baseline 数值来源": "历史原视频 VideoMAEv2-B 仅作为后续训练锚点：val top-1 85.93%、macro-F1 70.97%，test top-1 81.90%、macro-F1 67.66%；本轮没有重训，故不能用它评价裁剪效果。",
+    "可辨识性": "媒体一致性审计能区分帧数、尺寸、FPS、哈希和轨迹长度不一致；匿名 B/C 图用于区分身体切断、跳猫、抖动、文字污染与目标误裁。",
+    "样本量": "20 个训练集唯一视频区间，七类覆盖，另有短、长和夜间候选；只达到链路验证和小批质检规模，未达到训练结论门槛。",
+    "失败边界": "选中区间严格可用 1/20；19 个失败原因中，多猫目标不明 5 个、狗在场 7 个、无可靠猫检测 7 个。另有灰帧、构图过紧、水印放大和前景目标误裁。",
+    "结论上界": "只能说明媒体链路可运行，以及当前目标有效性不足以扩量。不能说明裁剪提高或降低分类准确率，也不能把自动检测失败解释为真实无猫。"
+  },
+  "metrics": [
+    {
+      "name": "媒体链路审计通过",
+      "unit": "段",
+      "baseline": "20 段待验证",
+      "result": "20/20",
+      "delta": "全部通过",
+      "sample_size": "20 个唯一源视频",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20/crop_audit.json",
+      "limitation": "只证明文件结构、时间轴和哈希一致，不证明目标正确或构图可用。"
+    },
+    {
+      "name": "预选区间严格可用",
+      "unit": "段",
+      "baseline": "20",
+      "result": "1/20",
+      "delta": "-19",
+      "sample_size": "20 个预先冻结的训练区间",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20/crop_audit.json",
+      "limitation": "严格规则偏向保守；不区分真实无猫与探测器漏检。"
+    },
+    {
+      "name": "共同索引可用区间",
+      "unit": "段",
+      "baseline": "0",
+      "result": "2",
+      "delta": "+2",
+      "sample_size": "2,710 个可用索引检查，训练集源区间 1,664",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20/crop_audit.json",
+      "limitation": "两个区间来自同一视频，类别只有 activity 和 eating，不足以训练七类模型。"
+    },
+    {
+      "name": "整段源视频无效帧比例",
+      "unit": "%",
+      "baseline": "0",
+      "result": "72.93",
+      "delta": "+72.93 个百分点",
+      "sample_size": "12,174 帧",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20/crop_audit.json",
+      "limitation": "统计整段视频，不是人工动作区间内比例，也不是模型漏检率。"
+    },
+    {
+      "name": "像素运动辅助修正帧比例",
+      "unit": "%",
+      "baseline": "0",
+      "result": "6.00",
+      "delta": "+6.00 个百分点",
+      "sample_size": "12,174 帧",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20/crop_audit.json",
+      "limitation": "只说明触发比例，不说明修正是改善还是劣化。"
+    }
+  ],
+  "cases": [
+    {
+      "id": "q003-visual-style-detector-ambiguous",
+      "kind": "image",
+      "src": "assets/b3b0768f922eaec45d017267d046fdd597ce2535040efcea570bf11d01254321.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q003，grooming，训练集区间 34–380",
+      "selection_reason": "三帧均能看到猫，B/C 画面较稳定，但严格规则仍标记狗在场目标不明，说明视觉可用不等于身份有效。",
+      "sha256": "b3b0768f922eaec45d017267d046fdd597ce2535040efcea570bf11d01254321"
+    },
+    {
+      "id": "q006-only-selected-eligible-with-watermark",
+      "kind": "image",
+      "src": "assets/933f3df4c4a0099c4d2e69ce5d727aee41b8fbb951195e5c60d1140dc1ca6f9b.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q006，activity，训练集区间 1–60",
+      "selection_reason": "20 个预选区间中唯一严格可用样本；同时暴露源水印被放大后的文字污染。",
+      "sha256": "933f3df4c4a0099c4d2e69ce5d727aee41b8fbb951195e5c60d1140dc1ca6f9b"
+    },
+    {
+      "id": "q012-tight-body-cut",
+      "kind": "image",
+      "src": "assets/944b15509b61ce53f48eb946a20227d10ebdf77aef32e7f873229a130c5c160a.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q012，grooming，训练集区间 57–237",
+      "selection_reason": "代表身体切边和过紧构图；区间还被无可靠猫检测规则排除。",
+      "sha256": "944b15509b61ce53f48eb946a20227d10ebdf77aef32e7f873229a130c5c160a"
+    },
+    {
+      "id": "q016-target-and-watermark",
+      "kind": "image",
+      "src": "assets/04e6e70e00f2cae5254165ea43cca594f64dc5da547f8f496afdb611663f7ac1.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q016，eating，训练集区间 72–720",
+      "selection_reason": "猫和食盆能被裁入，但源水印显著放大，末帧出现灰帧，区间共 9 个无效帧。",
+      "sha256": "04e6e70e00f2cae5254165ea43cca594f64dc5da547f8f496afdb611663f7ac1"
+    },
+    {
+      "id": "q020-wrong-foreground-target",
+      "kind": "image",
+      "src": "assets/68a9d80177f192693aee0187e0ceaceed2c182afe2c7f2a1af6479d80564f76f.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q020，abnormal，训练集区间 156–362",
+      "selection_reason": "代表前景目标误裁和多猫歧义：裁剪主要框住笼子，未稳定扣住前景大猫。",
+      "sha256": "68a9d80177f192693aee0187e0ceaceed2c182afe2c7f2a1af6479d80564f76f"
+    }
+  ],
+  "diagnostics": []
+}
