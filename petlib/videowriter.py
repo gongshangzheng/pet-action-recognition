@@ -32,12 +32,21 @@ def _find_ffmpeg() -> str | None:
 class H264VideoWriter:
     """libx264 直写器（yuv420p，QuickTime/浏览器通用）。"""
 
-    def __init__(self, path: str, fps: float, size: tuple[int, int],
-                 crf: int = 23, preset: str = "fast"):
+    def __init__(
+        self,
+        path: str,
+        fps: float,
+        size: tuple[int, int],
+        crf: int = 23,
+        preset: str = "fast",
+        threads: int | None = None,
+    ):
         self.path = path
         self.fps = float(fps)
         self.size = (int(size[0]), int(size[1]))
         self._proc = None
+        if threads is not None and threads < 1:
+            raise ValueError("H264VideoWriter: threads must be positive")
         ffmpeg = _find_ffmpeg()
         if ffmpeg is None:
             self._fallback = cv2.VideoWriter(
@@ -51,8 +60,10 @@ class H264VideoWriter:
                "-s", f"{self.size[0]}x{self.size[1]}", "-r", str(self.fps),
                "-i", "-",
                "-c:v", "libx264", "-preset", preset, "-crf", str(crf),
-               "-pix_fmt", "yuv420p", "-movflags", "+faststart",
-               path]
+               "-pix_fmt", "yuv420p"]
+        if threads is not None:
+            cmd.extend(["-threads", str(threads)])
+        cmd.extend(["-movflags", "+faststart", path])
         self._proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                       stdout=subprocess.DEVNULL,
                                       stderr=subprocess.DEVNULL)

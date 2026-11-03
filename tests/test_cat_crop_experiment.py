@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import cv2
 import numpy as np
@@ -25,6 +26,7 @@ from petlib.datasets.cat_crop import (  # noqa: E402
 )
 import prepare_cat_crop_experiment as prepare  # noqa: E402
 import run_cat_crop_experiment as runner  # noqa: E402
+from petlib import videowriter  # noqa: E402
 
 
 def detection(label: str, box: list[float], score: float) -> dict:
@@ -216,6 +218,59 @@ class CacheAndIndexTests(unittest.TestCase):
                     runner.validate_common_indexes()
         finally:
             runner.INDEX_ROOT = old_root
+
+
+class VideoWriterTests(unittest.TestCase):
+    def test_ffmpeg_default_command_omits_thread_limit(self) -> None:
+        process = mock.Mock()
+        with (
+            mock.patch.object(videowriter, "_find_ffmpeg", return_value="/bin/ffmpeg"),
+            mock.patch.object(
+                videowriter.subprocess, "Popen", return_value=process
+            ) as popen,
+        ):
+            videowriter.H264VideoWriter("/tmp/out.mp4", fps=10, size=(32, 32))
+            command = popen.call_args.args[0]
+        self.assertNotIn("-threads", command)
+
+    def test_ffmpeg_thread_limit_is_passed_when_explicit(self) -> None:
+        process = mock.Mock()
+        with (
+            mock.patch.object(videowriter, "_find_ffmpeg", return_value="/bin/ffmpeg"),
+            mock.patch.object(
+                videowriter.subprocess, "Popen", return_value=process
+            ) as popen,
+        ):
+            writer = videowriter.H264VideoWriter(
+                "/tmp/out.mp4", fps=10, size=(32, 32), threads=2
+            )
+            command = popen.call_args.args[0]
+        self.assertEqual(
+            command[-5:],
+            ["-threads", "2", "-movflags", "+faststart", "/tmp/out.mp4"],
+        )
+        self.assertIs(writer._proc, process)
+
+    def test_ffmpeg_thread_limit_must_be_positive(self) -> None:
+        with self.assertRaisesRegex(ValueError, "threads must be positive"):
+            videowriter.H264VideoWriter(
+                "/tmp/out.mp4", fps=10, size=(32, 32), threads=0
+            )
+
+    def test_render_fingerprint_tracks_ffmpeg_threads(self) -> None:
+        args = mock.Mock(
+            size=512,
+            pad=1.2,
+            sample_stride=10,
+            max_gap=20,
+            bg_lr=0.002,
+            bg_warmup_frames=15,
+            min_motion_coverage=0.2,
+            max_motion_expansion=0.25,
+            crf=23,
+            ffmpeg_threads=1,
+        )
+        self.assertEqual(prepare.render_fingerprint(args)["ffmpeg_threads"], 1)
 
 
 if __name__ == "__main__":

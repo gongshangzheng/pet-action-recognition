@@ -353,10 +353,18 @@ def render_video(
     temporary_motion = paths["gdino_motion"].with_suffix(".mp4.writing.mp4")
     with (
         H264VideoWriter(
-            str(temporary_gdino), fps, (args.size, args.size), crf=args.crf
+            str(temporary_gdino),
+            fps,
+            (args.size, args.size),
+            crf=args.crf,
+            threads=args.ffmpeg_threads,
         ) as gdino_writer,
         H264VideoWriter(
-            str(temporary_motion), fps, (args.size, args.size), crf=args.crf
+            str(temporary_motion),
+            fps,
+            (args.size, args.size),
+            crf=args.crf,
+            threads=args.ffmpeg_threads,
         ) as motion_writer,
     ):
         while True:
@@ -453,6 +461,7 @@ def render_fingerprint(args: argparse.Namespace) -> dict[str, Any]:
         "min_motion_coverage": args.min_motion_coverage,
         "max_motion_expansion": args.max_motion_expansion,
         "crf": args.crf,
+        "ffmpeg_threads": args.ffmpeg_threads,
     }
 
 
@@ -617,7 +626,11 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--pad must be at least 1")
     if args.bg_warmup_frames < 0:
         raise ValueError("--bg-warmup-frames must be non-negative")
-    if args.torch_threads < 1 or args.opencv_threads < 1:
+    if (
+        args.torch_threads < 1
+        or args.opencv_threads < 1
+        or args.ffmpeg_threads < 1
+    ):
         raise ValueError("thread limits must be positive")
     if args.crf < 0 or args.crf > 51:
         raise ValueError("--crf must be between 0 and 51")
@@ -672,6 +685,7 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--min-motion-coverage", type=float, default=0.2)
     parser.add_argument("--max-motion-expansion", type=float, default=0.25)
     parser.add_argument("--crf", type=int, default=23)
+    parser.add_argument("--ffmpeg-threads", type=int, default=1)
     parser.add_argument("--force", action="store_true")
 
 
