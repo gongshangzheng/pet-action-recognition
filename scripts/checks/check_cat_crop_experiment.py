@@ -125,6 +125,20 @@ def paired_index_audit(index_root: Path) -> dict[str, Any]:
     return report
 
 
+def select_audit_videos(
+    index_videos: set[str],
+    requested: list[str],
+    max_videos: int | None,
+) -> list[str]:
+    if requested and max_videos is not None:
+        raise ValueError("--video cannot be combined with --max-videos")
+    if max_videos is not None and max_videos < 1:
+        raise ValueError("--max-videos must be positive")
+    pool = requested or index_videos
+    videos = sorted(set(pool))
+    return videos[:max_videos] if max_videos is not None else videos
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -148,6 +162,12 @@ def main() -> int:
             / "results/cat_crop_classification/gdino-crop-20261103a/crop_audit.json"
         ),
     )
+    parser.add_argument(
+        "--video",
+        action="append",
+        default=[],
+        help="Audit this source-relative video even when no interval is eligible",
+    )
     parser.add_argument("--max-videos", type=int)
     args = parser.parse_args()
 
@@ -156,15 +176,12 @@ def main() -> int:
         raise FileNotFoundError(manifest_path)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     paired = paired_index_audit(args.index_root)
-    videos = sorted(
-        {
-            row["video"]
-            for split in SPLITS
-            for row in read_jsonl(args.index_root / f"raw_{split}.jsonl")
-        }
-    )
-    if args.max_videos is not None:
-        videos = videos[: args.max_videos]
+    index_videos = {
+        row["video"]
+        for split in SPLITS
+        for row in read_jsonl(args.index_root / f"raw_{split}.jsonl")
+    }
+    videos = select_audit_videos(index_videos, args.video, args.max_videos)
     video_reports = []
     for index, video in enumerate(videos, 1):
         metadata = validate_metadata(video, args.asset_root)

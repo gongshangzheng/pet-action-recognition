@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import sys
 import tempfile
@@ -16,6 +17,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "scripts/checks"))
 
 from petlib.datasets.cat_crop import (  # noqa: E402
     build_frame_track,
@@ -24,8 +26,11 @@ from petlib.datasets.cat_crop import (  # noqa: E402
     interval_status,
     motion_correct_box,
 )
+import build_cat_crop_qc_sheets as qc  # noqa: E402
+import check_cat_crop_experiment as crop_check  # noqa: E402
 import prepare_cat_crop_experiment as prepare  # noqa: E402
 import run_cat_crop_experiment as runner  # noqa: E402
+import select_cat_crop_quality_sample as quality  # noqa: E402
 from petlib import videowriter  # noqa: E402
 
 
@@ -277,6 +282,247 @@ class VideoWriterTests(unittest.TestCase):
         with mock.patch.object(prepare.cv2, "setNumThreads") as set_threads:
             prepare.configure_opencv_threads(args)
         set_threads.assert_called_once_with(2)
+
+
+class QualitySelectionTests(unittest.TestCase):
+    @staticmethod
+    def rows() -> list[dict]:
+        rows = []
+        for label in range(len(quality.CLASSES)):
+            for index in range(5):
+                hour = (22, 23, 10, 11, 12)[index]
+                rows.append(
+                    {
+                        "video": (
+                            f"videos/event_202606{label + 1:02d}_"
+                            f"{hour:02d}00{index:02d}.mp4"
+                        ),
+                        "sample_id": f"{label}-{index}",
+                        "start_frame": 1,
+                        "end_frame": 20 + label * 10 + index,
+                        "label": label,
+                    }
+                )
+        return rows
+
+    def test_selection_is_class_balanced_unique_and_deterministic(self) -> None:
+        rows = self.rows()
+        first = quality.select_quality_rows(rows, salt="fixed")
+        second = quality.select_quality_rows(reversed(rows), salt="fixed")
+        self.assertEqual(first, second)
+        self.assertEqual(len(first), 20)
+        self.assertEqual(len({row["video"] for row in first}), 20)
+        class_counts = {
+            class_name: sum(row["class_name"] == class_name for row in first)
+            for class_name in quality.CLASSES
+        }
+        self.assertTrue(all(count >= 2 for count in class_counts.values()))
+        self.assertEqual(sum(class_counts.values()), 20)
+        reason_counts = {
+            reason: sum(
+                row["selection_reasons"] == [reason]
+                for row in first
+            )
+            for reason in (
+                *(f"class_stratified:{name}" for name in quality.CLASSES),
+                "shortest_duration",
+                "longest_duration",
+                "timestamp_night_candidate",
+            )
+        }
+        self.assertTrue(
+            all(
+                reason_counts[f"class_stratified:{name}"] == 2
+                for name in quality.CLASSES
+            )
+        )
+        self.assertEqual(reason_counts["shortest_duration"], 2)
+        self.assertEqual(reason_counts["longest_duration"], 2)
+        self.assertEqual(reason_counts["timestamp_night_candidate"], 2)
+
+    def test_missing_supplemental_stratum_fails_loudly(self) -> None:
+        rows = [
+            {
+                **row,
+                "video": row["video"].replace("_220", "_130").replace("_230", "_140"),
+            }
+            for row in self.rows()
+        ]
+        with self.assertRaisesRegex(
+            ValueError, "insufficient unique candidates for timestamp_night_candidate"
+        ):
+            quality.select_quality_rows(rows)
+
+    def test_sparse_night_rows_are_reserved_before_other_strata(self) -> None:
+        rows = self.rows()
+        for position, row in enumerate(rows):
+            label, index = row["sample_id"].split("-")
+            hour = 22 if position == 0 else 23 if position == 1 else 13
+            row["video"] = (
+                f"videos/event_202606{int(label) + 1:02d}_"
+                f"{hour:02d}00{int(index):02d}.mp4"
+            )
+        selected = quality.select_quality_rows(rows, salt="0")
+        self.assertEqual(
+            sum(
+                row["selection_reasons"] == ["timestamp_night_candidate"]
+                for row in selected
+            ),
+            2,
+        )
+
+    def test_invalid_inputs_and_quotas_are_rejected(self) -> None:
+        mutations = (
+            lambda rows: rows[0].update(label=1.5),
+            lambda rows: rows[0].update(start_frame=10, end_frame=5),
+            lambda rows: rows[1].update(sample_id=rows[0]["sample_id"]),
+        )
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
+                rows = self.rows()
+                mutate(rows)
+                with self.assertRaises(ValueError):
+                    quality.select_quality_rows(rows)
+        with self.assertRaisesRegex(ValueError, "supplemental quotas"):
+            quality.select_quality_rows(
+                self.rows(), night_count=-1
+            )
+        with self.assertRaisesRegex(ValueError, "target_total"):
+            quality.select_quality_rows(self.rows(), target_total=19)
+
+
+class QualitySheetTests(unittest.TestCase):
+    def test_random_order_is_deterministic_and_complete(self) -> None:
+        first = qc.review_order("sample", "salt")
+        second = qc.review_order("sample", "salt")
+        self.assertEqual(first, second)
+        self.assertEqual(set(first), set(qc.VARIANTS))
+        self.assertEqual(len(first), len(qc.VARIANTS))
+
+    def test_synthetic_assets_produce_a_readable_sheet(self) -> None:
+        fixture_root = ROOT / "results/tests"
+        fixture_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=fixture_root) as name:
+            root = Path(name)
+            video_root = root / "videos"
+            asset_root = root / "assets"
+            sheets_root = root / "out/sheets"
+            for path in (
+                video_root / "videos",
+                asset_root / "videos/gdino",
+                asset_root / "videos/gdino_motion",
+                asset_root / "metadata",
+                sheets_root,
+            ):
+                path.mkdir(parents=True, exist_ok=True)
+            paths = {
+                "raw": video_root / "videos/v.avi",
+                "gdino": asset_root / "videos/gdino/v.avi",
+                "gdino_motion": asset_root / "videos/gdino_motion/v.avi",
+            }
+            sizes = {
+                "raw": (96, 64),
+                "gdino": (32, 32),
+                "gdino_motion": (32, 32),
+            }
+            colors = {
+                "raw": (0, 0, 200),
+                "gdino": (0, 200, 0),
+                "gdino_motion": (200, 0, 0),
+            }
+            for variant, path in paths.items():
+                writer = cv2.VideoWriter(
+                    str(path),
+                    cv2.VideoWriter_fourcc(*"MJPG"),
+                    10,
+                    sizes[variant],
+                )
+                self.assertTrue(writer.isOpened())
+                for frame_index in range(6):
+                    frame = np.zeros(
+                        (sizes[variant][1], sizes[variant][0], 3),
+                        dtype=np.uint8,
+                    )
+                    frame[:] = colors[variant]
+                    writer.write(frame)
+                writer.release()
+            metadata = {
+                "status": "complete",
+                "frames": 6,
+                "size": 32,
+                "fps": 10.0,
+                "source_path": str(paths["raw"]),
+                "source_sha256": qc.sha256(paths["raw"]),
+                "gdino_video": str(paths["gdino"]),
+                "gdino_video_sha256": qc.sha256(paths["gdino"]),
+                "gdino_motion_video": str(paths["gdino_motion"]),
+                "gdino_motion_video_sha256": qc.sha256(paths["gdino_motion"]),
+                "track": [{"valid": True} for _ in range(6)],
+            }
+            (asset_root / "metadata/v.json").write_text(
+                json.dumps(metadata), encoding="utf-8"
+            )
+            selection = {
+                "rows": [
+                    {
+                        "video": "videos/v.avi",
+                        "sample_id": "sample",
+                        "start_frame": 2,
+                        "end_frame": 6,
+                        "label": 0,
+                        "class_name": "activity",
+                        "event_hour": None,
+                        "selection_reasons": ["class_stratified:activity"],
+                    }
+                ]
+            }
+            selection_path = root / "selection.json"
+            selection_path.write_text(json.dumps(selection), encoding="utf-8")
+            prepared = qc.prepare_review_rows(
+                selection["rows"], video_root, asset_root
+            )
+            review = qc.render_sheet(prepared[0], sheets_root, 32, "salt")
+            image = cv2.imread(review["sheet"])
+            self.assertIsNotNone(image)
+            self.assertEqual(image.shape, (198, 96, 3))
+            expected_channel = {
+                "raw": 2,
+                "gdino": 1,
+                "gdino_motion": 0,
+            }
+            for column, variant in enumerate(review["hidden_column_order"]):
+                pixel = image[50, column * 32 + 16]
+                self.assertEqual(
+                    int(np.argmax(pixel)),
+                    expected_channel[variant],
+                )
+            qc.write_outputs(root / "out", selection_path, [review])
+            with (root / "out/source.csv").open(encoding="utf-8") as stream:
+                self.assertEqual(len(list(csv.DictReader(stream))), 1)
+            with (root / "out/review_form.csv").open(encoding="utf-8") as stream:
+                self.assertEqual(len(list(csv.DictReader(stream))), 1)
+
+
+class AuditVideoSelectionTests(unittest.TestCase):
+    def test_explicit_videos_can_be_outside_indexes_and_are_deduplicated(self) -> None:
+        videos = crop_check.select_audit_videos(
+            {"indexed.mp4"},
+            ["other.mp4", "other.mp4", "indexed.mp4"],
+            None,
+        )
+        self.assertEqual(videos, ["indexed.mp4", "other.mp4"])
+
+    def test_explicit_videos_cannot_be_silently_truncated(self) -> None:
+        with self.assertRaisesRegex(ValueError, "cannot be combined"):
+            crop_check.select_audit_videos({"a.mp4"}, ["b.mp4"], 1)
+
+    def test_index_videos_honor_positive_maximum(self) -> None:
+        self.assertEqual(
+            crop_check.select_audit_videos({"b.mp4", "a.mp4"}, [], 1),
+            ["a.mp4"],
+        )
+        with self.assertRaisesRegex(ValueError, "must be positive"):
+            crop_check.select_audit_videos({"a.mp4"}, [], 0)
 
 
 if __name__ == "__main__":
