@@ -24,9 +24,16 @@ from petlib.datasets.cat_crop import (  # noqa: E402
     build_frame_track,
     classify_frame,
     crop_bounds,
+    crop_square,
     interval_status,
     letterbox_square,
     motion_correct_box,
+)
+from petlib.followcam import (  # noqa: E402
+    DEFAULT_MOVING_AVERAGE_WINDOW,
+    MotionOffsetSmoother,
+    centered_moving_average,
+    cosine_anchor_weight,
 )
 import build_cat_crop_qc_sheets as qc  # noqa: E402
 import check_cat_crop_experiment as crop_check  # noqa: E402
@@ -103,14 +110,50 @@ class TargetValidityTests(unittest.TestCase):
         self.assertEqual(result["reasons"], ["no_reliable_pet_detection"])
         self.assertFalse(result["target_valid"])
 
-    def test_edge_boxes_and_crop_are_clipped(self) -> None:
+    def test_edge_boxes_use_a_padded_square_window(self) -> None:
         left, top, right, bottom = crop_bounds(
-            [-20, -10, 40, 50], frame_width=100, frame_height=80
+            [-20, -10, 40, 50],
+            frame_width=100,
+            frame_height=80,
+            pad=1.0,
         )
-        self.assertEqual(left, 0)
-        self.assertEqual(top, 0)
-        self.assertGreater(right, left)
-        self.assertGreater(bottom, top)
+        self.assertEqual((left, top, right, bottom), (-20, -10, 40, 50))
+        self.assertEqual(right - left, bottom - top)
+
+    def test_crop_square_pads_without_shifting_target_inward(self) -> None:
+        frame = np.full((80, 100, 3), 200, dtype=np.uint8)
+        result = crop_square(
+            frame,
+            [-20, -10, 40, 50],
+            size=60,
+            pad=1.0,
+            background=7,
+        )
+        self.assertEqual(result.shape, (60, 60, 3))
+        self.assertTrue(np.all(result[:10, :20] == 7))
+        self.assertTrue(np.all(result[10:, 20:] == 200))
+
+    def test_wide_requested_square_is_not_capped_to_frame_minimum(self) -> None:
+        left, top, right, bottom = crop_bounds(
+            [20, 0, 170, 100],
+            frame_width=200,
+            frame_height=100,
+            pad=1.0,
+        )
+        self.assertEqual((right - left, bottom - top), (150, 150))
+        self.assertGreater(right - left, min(200, 100))
+        self.assertLess(top, 0)
+        frame = np.zeros((100, 200, 3), dtype=np.uint8)
+        frame[:, 20:170] = 255
+        result = crop_square(
+            frame,
+            [20, 0, 170, 100],
+            size=150,
+            pad=1.0,
+            background=7,
+        )
+        self.assertEqual(int(result[75, 0, 0]), 255)
+        self.assertEqual(int(result[75, 149, 0]), 255)
 
     def test_letterbox_fallback_keeps_non_square_source_content(self) -> None:
         frame = np.zeros((40, 80, 3), dtype=np.uint8)
@@ -121,6 +164,47 @@ class TargetValidityTests(unittest.TestCase):
 
 
 class TrackTests(unittest.TestCase):
+    def test_display_uses_centered_moving_average_without_changing_training_box(
+        self,
+    ) -> None:
+        anchors = {0: state([0, 0, 10, 10]), 10: state([100, 0, 110, 10])}
+        track = build_frame_track(anchors, 11, sample_stride=10, max_gap=20)
+        self.assertAlmostEqual(track[2]["display_box"][0], 20.0)
+        self.assertAlmostEqual(track[2]["camera_box"][0], 20)
+        self.assertEqual(
+            track[2]["display_smoothing"],
+            f"centered-moving-average-{DEFAULT_MOVING_AVERAGE_WINDOW}-"
+            "edge-padded-v1",
+        )
+
+    def test_display_track_is_continuous_through_missing_and_long_gaps(
+        self,
+    ) -> None:
+        anchors = {
+            0: state([10, 20, 30, 40]),
+            10: state(None),
+            40: state([50, 20, 70, 40]),
+        }
+        track = build_frame_track(anchors, 50, sample_stride=10, max_gap=20)
+        self.assertTrue(all(record["display_box"] is not None for record in track))
+        self.assertFalse(track[10]["valid"])
+        self.assertFalse(track[25]["valid"])
+        self.assertTrue(track[25]["display_long_gap"])
+        self.assertIsNone(track[25]["camera_box"])
+
+    def test_centered_average_edge_padding_does_not_pull_static_box_to_zero(
+        self,
+    ) -> None:
+        boxes = np.tile(np.array([[10.0, 20.0, 30.0, 40.0]]), (7, 1))
+        smoothed = centered_moving_average(
+            boxes, window_size=DEFAULT_MOVING_AVERAGE_WINDOW
+        )
+        np.testing.assert_allclose(smoothed, boxes)
+
+    def test_centered_average_requires_an_odd_window(self) -> None:
+        with self.assertRaisesRegex(ValueError, "positive odd"):
+            centered_moving_average([[0.0, 1.0]], window_size=4)
+
     def test_short_gap_interpolates_and_long_gap_does_not(self) -> None:
         anchors = {
             0: state([0, 0, 10, 10]),
@@ -175,6 +259,9 @@ class TrackTests(unittest.TestCase):
         self.assertTrue(track[20]["valid"])
         for record in track[1:20]:
             self.assertFalse(record["valid"])
+        self.assertTrue(all(record.get("display_box") is not None for record in track))
+        self.assertLess(track[20]["display_box"][0], 20)
+        self.assertIsNone(track[10]["camera_box"])
 
     def test_long_detection_gap_keeps_display_crop(self) -> None:
         anchors = {
@@ -253,6 +340,186 @@ class TrackTests(unittest.TestCase):
         self.assertGreater(second[2], 40)
 
 
+class FollowCameraTests(unittest.TestCase):
+    def test_valid_and_invalid_render_same_base_camera(self) -> None:
+        args = argparse.Namespace(size=64, pad=1.2)
+        frame = np.zeros((80, 100, 3), dtype=np.uint8)
+        valid = {"valid": True, "display_box": [10, 10, 40, 40]}
+        invalid = {"valid": False, "display_box": [10, 10, 40, 40]}
+        rendered = np.ones((64, 64, 3), dtype=np.uint8)
+        with mock.patch.object(
+            prepare, "crop_square", return_value=rendered
+        ) as crop:
+            valid_crop, valid_box = prepare.render_base_crop(frame, valid, args)
+            invalid_crop, invalid_box = prepare.render_base_crop(frame, invalid, args)
+        self.assertIs(valid_crop, rendered)
+        self.assertIs(invalid_crop, rendered)
+        self.assertEqual(valid_box, invalid_box)
+        self.assertEqual(crop.call_count, 2)
+
+    def test_streaming_render_keeps_display_camera_and_advances_offset_state(
+        self,
+    ) -> None:
+        fixture_root = ROOT / "results/tests"
+        fixture_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=fixture_root) as name:
+            root = Path(name)
+            paths = {
+                "gdino": root / "videos/gdino/v.mp4",
+                "gdino_motion": root / "videos/gdino_motion/v.mp4",
+                "metadata": root / "metadata/v.json",
+            }
+            frame = np.zeros((80, 100, 3), dtype=np.uint8)
+            track = [
+                {"valid": True, "display_box": [0, 0, 20, 20]},
+                {
+                    "valid": False,
+                    "display_box": [10, 0, 30, 20],
+                    "reason": "multi_pet_unsupported",
+                },
+                {"valid": True, "display_box": [20, 0, 40, 20]},
+            ]
+            detection = {
+                "source_sha256": "digest",
+                "fingerprint": {"detector": "frozen"},
+                "decoded_frames": 3,
+                "anchors": {"0": {}, "10": {}},
+            }
+
+            class FakeCapture:
+                def __init__(self, _path: str) -> None:
+                    self.remaining = 3
+
+                def isOpened(self) -> bool:
+                    return True
+
+                def get(self, prop: int) -> float:
+                    if prop == cv2.CAP_PROP_FPS:
+                        return 10.0
+                    if prop == cv2.CAP_PROP_FRAME_WIDTH:
+                        return 100.0
+                    return 0.0
+
+                def read(self):
+                    if self.remaining == 0:
+                        return False, None
+                    self.remaining -= 1
+                    return True, frame.copy()
+
+                def release(self) -> None:
+                    pass
+
+            background = mock.Mock()
+            background.apply.return_value = np.zeros((80, 100), dtype=np.uint8)
+            smoother = mock.Mock()
+            smoother.update.side_effect = (
+                lambda frame_index, base_box, assisted_box, previous, following: (
+                    base_box,
+                    np.zeros(4),
+                )
+            )
+            writers = [mock.MagicMock(), mock.MagicMock()]
+            for writer in writers:
+                writer.__enter__.return_value = writer
+                writer.__exit__.return_value = False
+            args = argparse.Namespace(
+                force=True,
+                size=64,
+                pad=1.2,
+                sample_stride=10,
+                max_gap=20,
+                bg_lr=0.002,
+                bg_warmup_frames=15,
+                min_motion_coverage=0.2,
+                max_motion_expansion=0.25,
+                off_alpha=0.6,
+                off_max_v=0.05,
+                off_alpha_size=0.15,
+                off_max_v_size=0.02,
+                crf=23,
+                ffmpeg_threads=1,
+            )
+            rendered = np.zeros((64, 64, 3), dtype=np.uint8)
+            with (
+                mock.patch.object(prepare, "load_detection", return_value=detection),
+                mock.patch.object(prepare, "cache_paths", return_value=paths),
+                mock.patch.object(prepare, "build_frame_track", return_value=track),
+                mock.patch.object(prepare.cv2, "VideoCapture", FakeCapture),
+                mock.patch.object(
+                    prepare.cv2,
+                    "createBackgroundSubtractorMOG2",
+                    return_value=background,
+                ),
+                mock.patch.object(prepare, "crop_square", return_value=rendered),
+                mock.patch.object(prepare, "letterbox_square") as letterbox,
+                mock.patch.object(
+                    prepare, "MotionOffsetSmoother", return_value=smoother
+                ),
+                mock.patch.object(
+                    prepare, "H264VideoWriter", side_effect=writers
+                ),
+                mock.patch.object(prepare, "sha256", return_value="digest"),
+                mock.patch.object(prepare, "atomic_json"),
+                mock.patch.object(prepare.os, "replace"),
+            ):
+                metadata = prepare.render_video(
+                    "v.mp4", Path("/videos"), root, args
+                )
+
+        self.assertEqual(metadata["frames"], 3)
+        self.assertEqual(metadata["invalid_frames"], 1)
+        letterbox.assert_not_called()
+        self.assertEqual(
+            [call.args[0] for call in smoother.update.call_args_list],
+            [0, 1, 2],
+        )
+        self.assertEqual(writers[0].write.call_count, 3)
+        self.assertEqual(writers[1].write.call_count, 3)
+
+    def test_cosine_window_zeroes_at_anchors_and_peaks_in_gap(self) -> None:
+        self.assertEqual(cosine_anchor_weight(0, 0, 10, 5), 0.0)
+        self.assertEqual(cosine_anchor_weight(5, 0, 10, 5), 1.0)
+        self.assertEqual(cosine_anchor_weight(10, 0, 10, 5), 0.0)
+
+    def test_motion_offset_returns_smoothly_and_resets_at_next_anchor(self) -> None:
+        smoother = MotionOffsetSmoother(frame_width=100, sample_stride=10)
+        base = np.array([10.0, 10.0, 40.0, 50.0])
+        assisted = base + np.array([20.0, 16.0, 10.0, 8.0])
+        peak = 0.0
+        for frame in range(1, 6):
+            _, offset = smoother.update(frame, base, assisted, 0, 10)
+            peak = max(peak, abs(offset[0]))
+        returning = []
+        for frame in range(6, 10):
+            _, offset = smoother.update(frame, base, base, 0, 10)
+            returning.append(abs(offset[0]))
+        self.assertGreater(peak, 0)
+        self.assertLess(returning[-1], returning[0])
+        camera, offset = smoother.update(10, base, base, 0, 10)
+        np.testing.assert_allclose(camera, base)
+        np.testing.assert_allclose(offset, np.zeros(4))
+
+    def test_motion_offset_honors_legacy_xyxy_channel_velocity_limits(
+        self,
+    ) -> None:
+        smoother = MotionOffsetSmoother(frame_width=200, sample_stride=10)
+        base = [0.0, 0.0, 20.0, 20.0]
+        assisted = [100.0, 100.0, 120.0, 120.0]
+        _, offset = smoother.update(5, base, assisted, 0, 10)
+        self.assertLessEqual(abs(offset[0]), 0.6 * 0.05 * 200 + 1e-9)
+        self.assertLessEqual(abs(offset[2]), 0.15 * 0.02 * 200 + 1e-9)
+
+    def test_square_crop_bounds_extend_past_frame_edges(self) -> None:
+        left, top, right, bottom = crop_bounds(
+            [-20, -10, 20, 30],
+            frame_width=100,
+            frame_height=80,
+            pad=1.0,
+        )
+        self.assertEqual((left, top, right, bottom), (-20, -10, 20, 30))
+        self.assertEqual(right - left, bottom - top)
+
+
 class CacheAndIndexTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -284,6 +551,10 @@ class CacheAndIndexTests(unittest.TestCase):
             size=512,
             pad=1.2,
             bg_warmup_frames=15,
+            off_alpha=0.6,
+            off_max_v=0.05,
+            off_alpha_size=0.15,
+            off_max_v_size=0.02,
             torch_threads=1,
             opencv_threads=1,
             ffmpeg_threads=1,
@@ -294,9 +565,15 @@ class CacheAndIndexTests(unittest.TestCase):
 
     def test_mismatched_render_outputs_are_not_reused(self) -> None:
         args = argparse.Namespace(force=False)
-        detection = {"fingerprint": {"new": True}, "source_sha256": "new"}
         with tempfile.TemporaryDirectory(dir=ROOT / "results/tests") as name:
             root = Path(name)
+            source = root / "videos/v.mp4"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"source")
+            detection = {
+                "fingerprint": {"new": True},
+                "source_sha256": prepare.sha256(source),
+            }
             paths = {
                 "gdino": root / "gdino.mp4",
                 "gdino_motion": root / "motion.mp4",
@@ -309,7 +586,250 @@ class CacheAndIndexTests(unittest.TestCase):
                 mock.patch.object(prepare, "cache_paths", return_value=paths),
             ):
                 with self.assertRaisesRegex(RuntimeError, "do not match"):
-                    prepare.render_video("v.mp4", Path("/videos"), root, args)
+                    prepare.render_video(
+                        "v.mp4", source.parent, root, args
+                    )
+
+    def test_render_video_rejects_stale_detection_source_hash_before_read(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT / "results/tests") as name:
+            root = Path(name)
+            source = root / "videos/v.mp4"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"current source")
+            detection = {
+                "source_sha256": "stale",
+                "fingerprint": {"detector": "frozen"},
+                "status": "complete",
+            }
+            with (
+                mock.patch.object(prepare, "load_detection", return_value=detection),
+                mock.patch.object(prepare.cv2, "VideoCapture") as capture,
+                self.assertRaisesRegex(RuntimeError, "source hash"),
+            ):
+                prepare.render_video(
+                    "v.mp4",
+                    root / "videos",
+                    root / "assets",
+                    argparse.Namespace(force=False),
+                )
+            capture.assert_not_called()
+
+    def test_index_build_rejects_cached_metadata_with_missing_media(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT / "results/tests") as name:
+            root = Path(name)
+            video_root = root / "sources"
+            asset_root = root / "assets"
+            dataset_root = root / "dataset"
+            video = "videos/v.mp4"
+            source = video_root / video
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"source")
+            paths = prepare.cache_paths(asset_root, video)
+            for path in (paths["detection"], paths["metadata"], paths["gdino"]):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            paths["detection"].write_text(
+                json.dumps(
+                    {
+                        "schema": prepare.CACHE_SCHEMA,
+                        "status": "complete",
+                        "source_sha256": prepare.sha256(source),
+                        "fingerprint": {"detector": "current"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            paths["gdino"].write_bytes(b"gdino")
+            args = argparse.Namespace(
+                index_root=root / "index",
+                video_root=video_root,
+                dataset_root=dataset_root,
+                dataset_id="test",
+                video=[video],
+                max_videos=1,
+                sample_stride=10,
+                max_gap=20,
+                size=512,
+                pad=1.2,
+                bg_lr=0.002,
+                bg_warmup_frames=15,
+                min_motion_coverage=0.2,
+                max_motion_expansion=0.25,
+                off_alpha=0.6,
+                off_max_v=0.05,
+                off_alpha_size=0.15,
+                off_max_v_size=0.02,
+                crf=23,
+                ffmpeg_threads=1,
+                force=True,
+                model_dir="/unused",
+                threshold=0.3,
+                text_threshold=0.3,
+            )
+            paths["metadata"].write_text(
+                json.dumps(
+                    {
+                        "status": "complete",
+                        "source_sha256": prepare.sha256(source),
+                        "detection_fingerprint": {"detector": "current"},
+                        "render_fingerprint": prepare.render_fingerprint(args),
+                        "gdino_video": str(paths["gdino"]),
+                        "gdino_video_sha256": prepare.sha256(paths["gdino"]),
+                        "gdino_motion_video": str(paths["gdino_motion"]),
+                        "gdino_motion_video_sha256": "missing",
+                        "track": [{"valid": True} for _ in range(3)],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            rows = [
+                {
+                    "video": video,
+                    "sample_id": "sample",
+                    "task_id": "task",
+                    "split": "train",
+                    "start_frame": 1,
+                    "end_frame": 3,
+                    "label": 0,
+                }
+            ]
+            with mock.patch.object(
+                prepare,
+                "detection_fingerprint_for_args",
+                return_value={"detector": "current"},
+            ):
+                manifest = prepare.build_indexes(
+                    rows, asset_root, dataset_root, args
+                )
+                gdino_train = (dataset_root / "gdino_train.jsonl").read_text()
+
+        self.assertEqual(manifest["eligible_rows"], 0)
+        self.assertEqual(
+            manifest["availability"]["train"]["unavailable_reasons"],
+            {"crop_media_missing": 1},
+        )
+        self.assertEqual(gdino_train, "")
+
+    def test_index_asset_gate_rejects_each_stale_dependency(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT / "results/tests") as name:
+            root = Path(name)
+            video = "videos/v.mp4"
+            video_root = root / "sources"
+            asset_root = root / "assets"
+            source = video_root / video
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"source")
+            paths = prepare.cache_paths(asset_root, video)
+            for path in paths.values():
+                path.parent.mkdir(parents=True, exist_ok=True)
+            paths["detection"].write_bytes(b"detection")
+            paths["gdino"].write_bytes(b"gdino")
+            paths["gdino_motion"].write_bytes(b"motion")
+
+            expected_detection = {"detector": "current"}
+            expected_render = {"render": "current"}
+
+            def write_valid_metadata() -> None:
+                paths["detection"].write_text(
+                    json.dumps(
+                        {
+                            "schema": prepare.CACHE_SCHEMA,
+                            "status": "complete",
+                            "source_sha256": prepare.sha256(source),
+                            "fingerprint": expected_detection,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                paths["metadata"].write_text(
+                    json.dumps(
+                        {
+                            "status": "complete",
+                            "source_sha256": prepare.sha256(source),
+                            "detection_fingerprint": expected_detection,
+                            "render_fingerprint": expected_render,
+                            "gdino_video": str(paths["gdino"]),
+                            "gdino_video_sha256": prepare.sha256(paths["gdino"]),
+                            "gdino_motion_video": str(paths["gdino_motion"]),
+                            "gdino_motion_video_sha256": prepare.sha256(
+                                paths["gdino_motion"]
+                            ),
+                            "track": [{"valid": True}],
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+
+            write_valid_metadata()
+            valid = prepare.validate_index_assets(
+                video,
+                asset_root,
+                video_root,
+                expected_detection,
+                expected_render,
+            )
+            self.assertTrue(valid["ready"])
+
+            mutations = (
+                (
+                    "source_hash_mismatch",
+                    lambda: source.write_bytes(b"changed source"),
+                    write_valid_metadata,
+                ),
+                (
+                    "detection_fingerprint_mismatch",
+                    lambda: paths["detection"].write_text(
+                        json.dumps(
+                            {
+                                "schema": prepare.CACHE_SCHEMA,
+                                "status": "complete",
+                                "source_sha256": prepare.sha256(source),
+                                "fingerprint": {"detector": "stale"},
+                            }
+                        ),
+                        encoding="utf-8",
+                    ),
+                    write_valid_metadata,
+                ),
+                (
+                    "render_fingerprint_mismatch",
+                    lambda: None,
+                    write_valid_metadata,
+                ),
+                (
+                    "crop_media_hash_mismatch",
+                    lambda: paths["gdino_motion"].write_bytes(b"changed"),
+                    write_valid_metadata,
+                ),
+                (
+                    "crop_media_missing",
+                    paths["gdino_motion"].unlink,
+                    write_valid_metadata,
+                ),
+            )
+            for expected_reason, mutate, restore in mutations:
+                with self.subTest(reason=expected_reason):
+                    write_valid_metadata()
+                    mutate()
+                    render_fingerprint = (
+                        {"render": "stale"}
+                        if expected_reason == "render_fingerprint_mismatch"
+                        else expected_render
+                    )
+                    result = prepare.validate_index_assets(
+                        video,
+                        asset_root,
+                        video_root,
+                        expected_detection,
+                        render_fingerprint,
+                    )
+                    self.assertFalse(result["ready"])
+                    self.assertEqual(result["reason"], expected_reason)
+                    motion_path = paths["gdino_motion"]
+                    motion_path.parent.mkdir(parents=True, exist_ok=True)
+                    motion_path.write_bytes(b"motion")
+                    restore()
 
     def test_paired_index_rejects_different_samples(self) -> None:
         old_root = runner.INDEX_ROOT
@@ -392,10 +912,26 @@ class VideoWriterTests(unittest.TestCase):
             bg_warmup_frames=15,
             min_motion_coverage=0.2,
             max_motion_expansion=0.25,
+            off_alpha=0.6,
+            off_max_v=0.05,
+            off_alpha_size=0.15,
+            off_max_v_size=0.02,
             crf=23,
             ffmpeg_threads=1,
         )
-        self.assertEqual(prepare.render_fingerprint(args)["ffmpeg_threads"], 1)
+        fingerprint = prepare.render_fingerprint(args)
+        self.assertEqual(fingerprint["ffmpeg_threads"], 1)
+        self.assertEqual(fingerprint["off_alpha"], 0.6)
+        self.assertEqual(fingerprint["off_max_v"], 0.05)
+        self.assertIn(
+            "centered-ma-5-edge-padded", fingerprint["display_track"]
+        )
+        self.assertEqual(
+            fingerprint["square_crop"],
+            "padded-square-preserve-source-aspect-v3",
+        )
+        self.assertIn("legacy-xyxy", fingerprint["motion_offset"])
+        self.assertNotIn("smooth_review", fingerprint)
 
     def test_opencv_threads_are_applied_before_render(self) -> None:
         args = mock.Mock(opencv_threads=2)

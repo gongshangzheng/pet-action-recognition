@@ -1,5 +1,11 @@
 # 实验证据
 
+### 2026-11-04：漏检时保持平滑裁剪（本地验证）
+
+- 用户要求漏检时裁剪框平滑变化，禁止突然切到完整画面。检查发现不同物种锚点之间未补显示框，仍会触发整帧回退。
+- 显示轨迹在不同物种锚点之间保持前框，同物种缺口使用 smoothstep 插值；所有显示帧使用系数 0.2 的指数平滑。有效与无效渲染分支共用显示轨迹，严格训练资格不变。
+- 专项测试 34 passed、3 subtests passed，OpenSpec strict validation 与 diff 检查通过。修改尚未部署，现有远程审阅视频不包含本次平滑；平滑系数和视觉效果仍待小批验证。
+
 ### 2026-11-03：实验启动与资产核验（`gdino-crop-20261103a`）
 
 - **skill 闸门**：已加载 `openspec-apply-change`、`experiment`、`remote-ops`、`training`、`testing`、`datasets`、`remote-server-discipline` 和 `remote-servers`。
@@ -87,3 +93,13 @@
 - **索引修复**：`sample20-v2` 和 `sample20-v3` 曾错误把全量 2,710 个区间写入小批 manifest，并标为 `training_ready=true`；两者保留为失败记录。修正后的 `sample20-v4` 只含 31 个候选区间，`source_rows=31`、`eligible_rows=2`、`training_ready=false`。
 - **产物**：检测与渲染在远程 `results/cat_crop_classification/gdino-crop-20261103a/assets/sample20-v2/`；正确索引和汇总在 `quality/sample20-v2/` 与 `quality/sample20-v4/`；人工审阅集为 `results/gate/review/cat-crop-gdino-20261103a-sample20-v2/`。
 - **当前边界**：新规则显著提高了整段有效帧比例，但没有改变预选区间可用率；单狗锚点较多，而预选动作区间内仍因缺口或多宠物不可用。人工 A/F/U 审核未完成，不能扩量或启动训练。
+
+### 2026-11-04：复用 follow_cam 修复（待远程验证）
+
+用户批准先更新 change 再运行。当前实现提取旧相机的 5 帧滑动平均与半余弦运动偏移阻尼，首尾改为端点填充。有效/无效帧共享显示轨迹，资格规则独立；删除临时 EMA 0.2 审阅模式。项目测试 `python3 -m pytest tests -q` 为 80 passed、3 subtests passed，OpenSpec strict 和 diff 检查通过，静态审计无匹配风险项。误执行未限定目录的 pytest 收集到第三方模型测试并在本机 torch 导入时退出，未执行 GPU 推理；后续只运行项目 tests。
+
+远程预检两 GPU 无计算进程，load 0.30/24 cores、可用内存约 119 GiB、磁盘余量 70 GiB。新批复用 v3 检测缓存，保持源视频与检测参数不变；媒体质量尚未确认。
+
+对旧结论的更正：Q004 的 146 是 v2 区间内训练无效帧数，不是完整画面回退数；v3 的 16 是整个源视频的回退帧数。二者分母和含义不同，撤回“146 降至 16”的改善结论。v3 审阅 availability 曾借用 v2 索引，本批必须重新生成匹配当前媒体的索引，不能沿用旧资格统计。
+
+代码审阅指出超大框被窗口截断、索引可混入旧媒体两项 HIGH，现均已修复并补回归。最终项目测试为 85 passed、8 subtests passed；超大窗口采用补边保持目标与比例，索引生成核验源、检测、渲染和媒体哈希。视觉效果仍待远程重渲染与用户确认。

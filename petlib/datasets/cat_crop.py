@@ -8,6 +8,11 @@ from typing import Any, Iterable
 import cv2
 import numpy as np
 
+from petlib.followcam import (
+    DEFAULT_MOVING_AVERAGE_WINDOW,
+    centered_moving_average,
+)
+
 
 def box_iou(left: Iterable[float], right: Iterable[float]) -> float:
     """Return intersection over union for two ``x1, y1, x2, y2`` boxes."""
@@ -244,19 +249,22 @@ def build_frame_track(
         gap = following - current
         if gap <= 1:
             continue
-        if target_class(anchors[current]) != target_class(anchors[following]):
-            continue
         left = np.asarray(target_box(anchors[current]), dtype=np.float64)
         right = np.asarray(target_box(anchors[following]), dtype=np.float64)
+        same_species = target_class(anchors[current]) == target_class(anchors[following])
         for intermediate in range(current + 1, following):
             if track[intermediate].get("display_box") is not None:
                 continue
             weight = (intermediate - current) / gap
+            if not same_species:
+                weight = 0.0
             box = left + weight * (right - left)
             track[intermediate]["display_box"] = [
                 round(float(value), 3) for value in box
             ]
             track[intermediate]["display_interpolated"] = True
+            if not same_species:
+                track[intermediate]["display_held_species_change"] = True
             if gap > max_gap:
                 track[intermediate]["display_long_gap"] = True
     if display_frames:
@@ -274,6 +282,19 @@ def build_frame_track(
                 round(float(value), 3) for value in last_box
             ]
             track[frame]["display_held_edge"] = True
+        requested_boxes = [record.get("display_box") for record in track]
+        if any(box is None for box in requested_boxes):
+            raise ValueError("Pet anchors exist but a display frame has no crop box")
+        smoothed = centered_moving_average(
+            requested_boxes,
+            window_size=DEFAULT_MOVING_AVERAGE_WINDOW,
+        )
+        for record, box in zip(track, smoothed):
+            record["display_box"] = [round(float(value), 3) for value in box]
+            record["display_smoothing"] = (
+                f"centered-moving-average-{DEFAULT_MOVING_AVERAGE_WINDOW}-"
+                "edge-padded-v1"
+            )
     return track
 
 
@@ -335,21 +356,22 @@ def crop_bounds(
     frame_height: int,
     pad: float = 1.2,
 ) -> tuple[int, int, int, int]:
-    """Return a clipped square around a box before resizing."""
+    """Return the requested square window, including positions outside frame."""
     if pad < 1:
         raise ValueError("pad must be at least 1")
+    if frame_width < 1 or frame_height < 1:
+        raise ValueError("frame dimensions must be positive")
     x1, y1, x2, y2 = map(float, box)
     side = max(x2 - x1, y2 - y1) * pad
     if side <= 0:
         raise ValueError("box has no area")
     center_x = (x1 + x2) / 2
     center_y = (y1 + y2) / 2
-    left = int(max(0, center_x - side / 2))
-    top = int(max(0, center_y - side / 2))
-    right = int(min(frame_width, center_x + side / 2))
-    bottom = int(min(frame_height, center_y + side / 2))
-    if right <= left or bottom <= top:
-        raise ValueError("box produces an empty crop")
+    side_px = max(1, int(round(side)))
+    left = int(round(center_x - side_px / 2))
+    top = int(round(center_y - side_px / 2))
+    right = left + side_px
+    bottom = top + side_px
     return left, top, right, bottom
 
 
@@ -358,15 +380,61 @@ def crop_square(
     box: Iterable[float],
     size: int,
     pad: float = 1.2,
+    background: int = 32,
 ) -> np.ndarray:
-    """Crop around ``box`` and resize the resulting pixels to a square."""
+    """Crop and pad the requested square window without excluding its interior."""
     if frame.ndim != 3 or frame.shape[0] < 1 or frame.shape[1] < 1:
         raise ValueError("frame must be a non-empty HxWxC image")
+    if size < 1:
+        raise ValueError("size must be positive")
     left, top, right, bottom = crop_bounds(box, frame.shape[1], frame.shape[0], pad)
-    crop = frame[top:bottom, left:right]
-    if crop.size == 0:
-        raise ValueError("empty crop")
-    return cv2.resize(crop, (size, size), interpolation=cv2.INTER_AREA)
+    source_left = max(0, left)
+    source_top = max(0, top)
+    source_right = min(frame.shape[1], right)
+    source_bottom = min(frame.shape[0], bottom)
+    if source_right <= source_left or source_bottom <= source_top:
+        raise ValueError("box produces no overlap with the source frame")
+
+    side_px = right - left
+    target_left = min(
+        size - 1,
+        max(0, round((source_left - left) * size / side_px)),
+    )
+    target_top = min(
+        size - 1,
+        max(0, round((source_top - top) * size / side_px)),
+    )
+    target_right = min(
+        size,
+        max(
+            target_left + 1,
+            round((source_right - left) * size / side_px),
+        ),
+    )
+    target_bottom = min(
+        size,
+        max(
+            target_top + 1,
+            round((source_bottom - top) * size / side_px),
+        ),
+    )
+    target_width = max(1, target_right - target_left)
+    target_height = max(1, target_bottom - target_top)
+    resized = cv2.resize(
+        frame[source_top:source_bottom, source_left:source_right],
+        (target_width, target_height),
+        interpolation=cv2.INTER_AREA,
+    )
+    canvas = np.full(
+        (size, size, frame.shape[2]),
+        background,
+        dtype=frame.dtype,
+    )
+    canvas[
+        target_top : target_top + target_height,
+        target_left : target_left + target_width,
+    ] = resized
+    return canvas
 
 
 def letterbox_square(

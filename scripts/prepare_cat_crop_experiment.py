@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import time
+from bisect import bisect_right
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,13 @@ from petlib.datasets.cat_crop import (  # noqa: E402
     interval_status,
     letterbox_square,
     motion_correct_box,
+)
+from petlib.followcam import (  # noqa: E402
+    DEFAULT_OFFSET_ALPHA,
+    DEFAULT_OFFSET_ALPHA_SIZE,
+    DEFAULT_OFFSET_MAX_VELOCITY,
+    DEFAULT_OFFSET_MAX_VELOCITY_SIZE,
+    MotionOffsetSmoother,
 )
 from petlib.videowriter import H264VideoWriter  # noqa: E402
 
@@ -301,6 +309,41 @@ def load_detection(asset_root: Path, video: str) -> dict[str, Any]:
     return data
 
 
+def detection_fingerprint_for_args(args: argparse.Namespace) -> dict[str, Any]:
+    """Return the current detector fingerprint required by production indexes."""
+    return {
+        **model_fingerprint(Path(args.model_dir).expanduser()),
+        "classes": ["cat", "dog"],
+        "sample_stride": args.sample_stride,
+        "box_threshold": args.threshold,
+        "text_threshold": args.text_threshold,
+    }
+
+
+def anchor_bounds(
+    anchor_frames: list[int], frame_index: int
+) -> tuple[int | None, int | None]:
+    """Return the nearest sampled anchor on each side of a frame."""
+    insertion = bisect_right(anchor_frames, frame_index)
+    previous = anchor_frames[insertion - 1] if insertion else None
+    following = (
+        anchor_frames[insertion] if insertion < len(anchor_frames) else None
+    )
+    return previous, following
+
+
+def render_base_crop(
+    frame: np.ndarray,
+    record: dict[str, Any],
+    args: argparse.Namespace,
+) -> tuple[np.ndarray, list[float] | None]:
+    """Render the eligibility-independent base camera for one source frame."""
+    display_box = record.get("display_box")
+    if display_box is not None:
+        return crop_square(frame, display_box, args.size, args.pad), display_box
+    return letterbox_square(frame, args.size), None
+
+
 def render_video(
     video: str,
     video_root: Path,
@@ -309,6 +352,12 @@ def render_video(
 ) -> dict[str, Any]:
     source = video_root / video
     detection = load_detection(asset_root, video)
+    source_hash = sha256(source)
+    if detection.get("source_sha256") != source_hash:
+        raise RuntimeError(
+            "Detection cache source hash does not match the current source; "
+            f"rerun detection before rendering: {source}"
+        )
     paths = cache_paths(asset_root, video)
     if (
         paths["gdino"].is_file()
@@ -318,7 +367,7 @@ def render_video(
     ):
         metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
         if (
-            metadata.get("source_sha256") == detection["source_sha256"]
+            metadata.get("source_sha256") == source_hash
             and metadata.get("detection_fingerprint") == detection["fingerprint"]
             and metadata.get("render_fingerprint") == render_fingerprint(args)
         ):
@@ -336,12 +385,27 @@ def render_video(
         args.sample_stride,
         args.max_gap,
     )
+    has_display_track = any(record.get("display_box") is not None for record in track)
+    if has_display_track and any(
+        record.get("display_box") is None for record in track
+    ):
+        raise RuntimeError("Continuous display track contains a missing frame")
     cap = cv2.VideoCapture(str(source))
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {source}")
     fps = float(cap.get(cv2.CAP_PROP_FPS))
+    frame_width = float(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     bg = cv2.createBackgroundSubtractorMOG2(
         history=120, varThreshold=25, detectShadows=False
+    )
+    anchor_frames = sorted(anchors)
+    offset_smoother = MotionOffsetSmoother(
+        frame_width=frame_width,
+        sample_stride=args.sample_stride,
+        translation_alpha=args.off_alpha,
+        translation_max_velocity=args.off_max_v,
+        scale_alpha=args.off_alpha_size,
+        scale_max_velocity=args.off_max_v_size,
     )
     previous_hit = False
     frame_index = 0
@@ -383,29 +447,23 @@ def render_video(
                 foreground, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)
             )
             record = track[frame_index]
+            gdino_crop, base_box = render_base_crop(frame, record, args)
             if not record["valid"]:
-                display_box = record.get("display_box")
-                if display_box is not None:
-                    fallback = crop_square(
-                        frame, display_box, args.size, args.pad
-                    )
+                if base_box is not None:
                     display_box_frames += 1
                 else:
-                    fallback = letterbox_square(frame, args.size)
                     letterbox_frames += 1
-                gdino_writer.write(fallback)
-                motion_writer.write(fallback)
                 invalid_frames += 1
                 previous_hit = False
-                frame_index += 1
-                continue
-
-            base_box = record["camera_box"]
-            gdino_crop = crop_square(frame, base_box, args.size, args.pad)
-            camera_box = base_box
+            assisted_box = base_box
             is_anchor = frame_index in anchors
-            if not is_anchor and frame_index >= args.bg_warmup_frames:
-                camera_box, corrected, previous_hit = motion_correct_box(
+            if (
+                record["valid"]
+                and base_box is not None
+                and not is_anchor
+                and frame_index >= args.bg_warmup_frames
+            ):
+                assisted_box, corrected, previous_hit = motion_correct_box(
                     foreground,
                     base_box,
                     previous_hit,
@@ -415,7 +473,22 @@ def render_video(
                 corrected_frames += int(corrected)
             else:
                 previous_hit = False
-            motion_crop = crop_square(frame, camera_box, args.size, args.pad)
+            if base_box is None:
+                motion_crop = gdino_crop
+            else:
+                previous_anchor, next_anchor = anchor_bounds(
+                    anchor_frames, frame_index
+                )
+                camera_box, _ = offset_smoother.update(
+                    frame_index,
+                    base_box,
+                    assisted_box,
+                    previous_anchor,
+                    next_anchor,
+                )
+                motion_crop = crop_square(
+                    frame, camera_box, args.size, args.pad
+                )
             gdino_writer.write(gdino_crop)
             motion_writer.write(motion_crop)
             frame_index += 1
@@ -435,7 +508,7 @@ def render_video(
         "created_utc": utc_now(),
         "video": video,
         "source_path": str(source),
-        "source_sha256": detection["source_sha256"],
+        "source_sha256": source_hash,
         "fps": fps,
         "frames": frame_index,
         "size": args.size,
@@ -475,40 +548,178 @@ def render_fingerprint(args: argparse.Namespace) -> dict[str, Any]:
         "max_motion_expansion": args.max_motion_expansion,
         "crf": args.crf,
         "ffmpeg_threads": args.ffmpeg_threads,
-        "invalid_frame_fallback": "cat-box-or-letterbox-v1",
+        "invalid_frame_fallback": "display-crop-or-letterbox-v2",
         "target_policy": "single-pet-cat-or-dog-v1",
+        "display_track": (
+            "continuous-target-anchors-centered-ma-5-edge-padded-"
+            "eligibility-independent-v2"
+        ),
+        "square_crop": "padded-square-preserve-source-aspect-v3",
+        "off_alpha": getattr(args, "off_alpha", DEFAULT_OFFSET_ALPHA),
+        "off_max_v": getattr(
+            args, "off_max_v", DEFAULT_OFFSET_MAX_VELOCITY
+        ),
+        "off_alpha_size": getattr(
+            args, "off_alpha_size", DEFAULT_OFFSET_ALPHA_SIZE
+        ),
+        "off_max_v_size": getattr(
+            args, "off_max_v_size", DEFAULT_OFFSET_MAX_VELOCITY_SIZE
+        ),
+        "motion_offset": (
+            "legacy-xyxy-coordinate-channels-cosine-anchor-window-"
+            "damped-limited-v3"
+        ),
+    }
+
+
+def validate_index_assets(
+    video: str,
+    asset_root: Path,
+    video_root: Path,
+    expected_detection_fingerprint: dict[str, Any],
+    expected_render_fingerprint: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate one source video and its crop artifacts for index admission."""
+    paths = cache_paths(asset_root, video)
+    if not paths["metadata"].is_file():
+        return {"ready": False, "reason": "crop_metadata_missing"}
+    try:
+        metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"ready": False, "reason": "crop_metadata_invalid"}
+    if metadata.get("status") != "complete":
+        return {"ready": False, "reason": "crop_metadata_incomplete"}
+
+    source = video_root / video
+    if not source.is_file():
+        return {"ready": False, "reason": "source_video_missing"}
+    source_hash = sha256(source)
+    if metadata.get("source_sha256") != source_hash:
+        return {
+            "ready": False,
+            "reason": "source_hash_mismatch",
+            "source_video_sha256": source_hash,
+        }
+
+    try:
+        detection = load_detection(asset_root, video)
+    except (FileNotFoundError, RuntimeError, json.JSONDecodeError):
+        return {"ready": False, "reason": "detection_cache_unavailable"}
+    if detection.get("source_sha256") != source_hash:
+        return {"ready": False, "reason": "detection_source_hash_mismatch"}
+    if detection.get("schema") != CACHE_SCHEMA:
+        return {"ready": False, "reason": "detection_cache_schema_mismatch"}
+    if detection.get("fingerprint") != expected_detection_fingerprint:
+        return {"ready": False, "reason": "detection_fingerprint_mismatch"}
+    if metadata.get("detection_fingerprint") != expected_detection_fingerprint:
+        return {"ready": False, "reason": "detection_fingerprint_mismatch"}
+    if metadata.get("render_fingerprint") != expected_render_fingerprint:
+        return {"ready": False, "reason": "render_fingerprint_mismatch"}
+
+    expected_media = (
+        (
+            "gdino",
+            "gdino_video",
+            "gdino_video_sha256",
+        ),
+        (
+            "gdino_motion",
+            "gdino_motion_video",
+            "gdino_motion_video_sha256",
+        ),
+    )
+    media_hashes: dict[str, str] = {}
+    for path_name, metadata_path, metadata_hash in expected_media:
+        media_path = paths[path_name]
+        if metadata.get(metadata_path) != str(media_path):
+            return {"ready": False, "reason": "crop_media_path_mismatch"}
+        if not media_path.is_file():
+            return {"ready": False, "reason": "crop_media_missing"}
+        media_hash = sha256(media_path)
+        media_hashes[metadata_hash] = media_hash
+        if media_hash != metadata.get(metadata_hash):
+            return {"ready": False, "reason": "crop_media_hash_mismatch"}
+
+    track = metadata.get("track")
+    if not isinstance(track, list) or not track:
+        return {"ready": False, "reason": "crop_track_missing"}
+    return {
+        "ready": True,
+        "reason": None,
+        "metadata": metadata,
+        "track": track,
+        "source_video_sha256": source_hash,
+        **media_hashes,
     }
 
 
 def interval_availability(
-    rows: list[dict[str, Any]], asset_root: Path
+    rows: list[dict[str, Any]],
+    asset_root: Path,
+    video_root: Path | None = None,
+    render_args: argparse.Namespace | None = None,
+    expected_detection_fingerprint: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    tracks: dict[str, list[dict[str, Any]]] = {}
-    metadata: dict[str, dict[str, Any]] = {}
+    """Return interval eligibility, optionally gated by current asset hashes."""
+    if (video_root is None) != (render_args is None):
+        raise ValueError("video_root and render_args must be provided together")
+    validate_current_assets = video_root is not None and render_args is not None
+    if validate_current_assets and expected_detection_fingerprint is None:
+        expected_detection_fingerprint = detection_fingerprint_for_args(render_args)
+    expected_render_fingerprint = (
+        render_fingerprint(render_args) if validate_current_assets else None
+    )
+    assets: dict[str, dict[str, Any]] = {}
     results: list[dict[str, Any]] = []
     for row in rows:
         video = row["video"]
-        if video not in metadata:
-            path = cache_paths(asset_root, video)["metadata"]
-            metadata[video] = (
-                json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        if video not in assets:
+            if validate_current_assets:
+                assets[video] = validate_index_assets(
+                    video,
+                    asset_root,
+                    video_root,
+                    expected_detection_fingerprint,
+                    expected_render_fingerprint,
+                )
+            else:
+                path = cache_paths(asset_root, video)["metadata"]
+                metadata = (
+                    json.loads(path.read_text(encoding="utf-8"))
+                    if path.is_file()
+                    else {}
+                )
+                assets[video] = (
+                    {
+                        "ready": True,
+                        "reason": None,
+                        "metadata": metadata,
+                        "track": metadata.get("track", []),
+                        "source_video_sha256": metadata.get("source_sha256"),
+                        "gdino_video_sha256": metadata.get("gdino_video_sha256"),
+                        "gdino_motion_video_sha256": metadata.get(
+                            "gdino_motion_video_sha256"
+                        ),
+                    }
+                    if metadata.get("track")
+                    else {"ready": False, "reason": "crop_not_prepared"}
+                )
+        asset = assets[video]
+        if asset["ready"]:
+            status = interval_status(
+                int(row["start_frame"]), int(row["end_frame"]), asset["track"]
             )
-            if metadata[video]:
-                tracks[video] = metadata[video]["track"]
-        status = (
-            interval_status(
-                int(row["start_frame"]), int(row["end_frame"]), tracks[video]
-            )
-            if video in tracks
-            else {
+        else:
+            status = {
                 "eligible": False,
-                "reason": "crop_not_prepared",
+                "reason": asset["reason"],
                 "invalid_frames": int(row["end_frame"]) - int(row["start_frame"]) + 1,
             }
-        )
         interval_rows = (
-            tracks[video][int(row["start_frame"]) - 1 : int(row["end_frame"])]
-            if video in tracks
+            asset["track"][
+                int(row["start_frame"]) - 1 : int(row["end_frame"])
+            ]
+            if asset["ready"]
             else []
         )
         target_classes = {
@@ -523,9 +734,9 @@ def interval_availability(
                 "available": bool(status["eligible"]),
                 "unavailable_reason": status["reason"],
                 "invalid_frames": status["invalid_frames"],
-                "source_video_sha256": metadata[video].get("source_sha256"),
-                "gdino_video_sha256": metadata[video].get("gdino_video_sha256"),
-                "gdino_motion_video_sha256": metadata[video].get(
+                "source_video_sha256": asset.get("source_video_sha256"),
+                "gdino_video_sha256": asset.get("gdino_video_sha256"),
+                "gdino_motion_video_sha256": asset.get(
                     "gdino_motion_video_sha256"
                 ),
             }
@@ -539,7 +750,14 @@ def build_indexes(
     dataset_root: Path,
     args: argparse.Namespace,
 ) -> dict[str, Any]:
-    availability = interval_availability(source_rows, asset_root)
+    expected_detection_fingerprint = detection_fingerprint_for_args(args)
+    availability = interval_availability(
+        source_rows,
+        asset_root,
+        video_root=args.video_root,
+        render_args=args,
+        expected_detection_fingerprint=expected_detection_fingerprint,
+    )
     if dataset_root.exists() and any(dataset_root.iterdir()) and not args.force:
         raise RuntimeError(
             "Dataset root already contains files; use a new dataset root "
@@ -676,6 +894,10 @@ def validate_args(args: argparse.Namespace) -> None:
         or args.ffmpeg_threads < 1
     ):
         raise ValueError("thread limits must be positive")
+    for name in ("off_alpha", "off_max_v", "off_alpha_size", "off_max_v_size"):
+        value = getattr(args, name)
+        if not 0 < value <= 1:
+            raise ValueError(f"--{name.replace('_', '-')} must be in (0, 1]")
     if args.crf < 0 or args.crf > 51:
         raise ValueError("--crf must be between 0 and 51")
 
@@ -727,20 +949,37 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--bg-warmup-frames", type=int, default=15)
     parser.add_argument("--min-motion-coverage", type=float, default=0.2)
     parser.add_argument("--max-motion-expansion", type=float, default=0.25)
+    parser.add_argument(
+        "--off-alpha",
+        type=float,
+        default=DEFAULT_OFFSET_ALPHA,
+        help="旧 xyxy 基线：x1/y1 坐标通道阻尼，非真实中心平移",
+    )
+    parser.add_argument(
+        "--off-max-v",
+        type=float,
+        default=DEFAULT_OFFSET_MAX_VELOCITY,
+        help="旧 xyxy 基线：x1/y1 坐标通道限速，非真实中心平移",
+    )
+    parser.add_argument(
+        "--off-alpha-size",
+        type=float,
+        default=DEFAULT_OFFSET_ALPHA_SIZE,
+        help="旧 xyxy 基线：x2/y2 坐标通道阻尼，非真实尺度或变焦",
+    )
+    parser.add_argument(
+        "--off-max-v-size",
+        type=float,
+        default=DEFAULT_OFFSET_MAX_VELOCITY_SIZE,
+        help="旧 xyxy 基线：x2/y2 坐标通道限速，非真实尺度或变焦",
+    )
     parser.add_argument("--crf", type=int, default=23)
     parser.add_argument("--ffmpeg-threads", type=int, default=1)
     parser.add_argument("--force", action="store_true")
 
 
 def run_detect(args: argparse.Namespace, videos: list[str]) -> None:
-    model_dir = Path(args.model_dir).expanduser()
-    fingerprint = {
-        **model_fingerprint(model_dir),
-        "classes": ["cat", "dog"],
-        "sample_stride": args.sample_stride,
-        "box_threshold": args.threshold,
-        "text_threshold": args.text_threshold,
-    }
+    fingerprint = detection_fingerprint_for_args(args)
     detector = build_detector(args)
     for index, video in enumerate(videos, 1):
         print(f"[detect] {index}/{len(videos)} {video}", flush=True)
