@@ -3,7 +3,7 @@
     <header class="gr-head">
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
-        <span v-if="isCropComparison" class="gr-hint">三路视频同步播放，依次为原始视频、GroundingDINO 裁剪、像素运动辅助裁剪。快捷键 P / F / U；空格播放/暂停，← → 翻页。</span>
+        <span v-if="isCropComparison" class="gr-hint">三路视频均可独立播放，请分别打开并拖动到同一时刻比较。快捷键 P / F / U；空格播放/暂停原始视频，← → 翻页。</span>
         <span v-else-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 F / A / U，空格播放/暂停，← → 翻页。</span>
         <span v-else-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
         <span v-else class="gr-hint">模型预标仅供参考，请确认有无宠物；看不清可跳过。（快捷键 P / A / U，← → 切换图片）</span>
@@ -52,15 +52,11 @@
                 <video
                   :ref="(element) => setCropVideo(arm.key, element)"
                   :src="videoUrl(currentSet, item.files?.[arm.key])"
-                  :controls="arm.key === 'raw'"
+                  controls
                   muted
                   playsinline
                   preload="auto"
                   @loadedmetadata="primeCropVideo"
-                  @play="arm.key === 'raw' && playSiblings()"
-                  @pause="arm.key === 'raw' && pauseSiblings()"
-                  @seeking="arm.key === 'raw' && seekSiblings()"
-                  @timeupdate="arm.key === 'raw' && syncSiblings()"
                 />
               </figure>
               <div class="crop-meta">
@@ -326,36 +322,6 @@ function primeCropVideo(event) {
   const video = event.currentTarget
   if (Number.isFinite(video.duration) && video.duration > 0) {
     video.currentTime = Math.min(0.04, video.duration / 2)
-  }
-}
-function playSiblings() {
-  const raw = cropVideos.get('raw')
-  if (!raw) return
-  for (const [arm, video] of cropVideos.entries()) {
-    if (arm === 'raw') continue
-    if (Math.abs(video.currentTime - raw.currentTime) > 0.12) video.currentTime = raw.currentTime
-    video.play().catch(console.error)
-  }
-}
-function pauseSiblings() {
-  for (const [arm, video] of cropVideos.entries()) {
-    if (arm !== 'raw') video.pause()
-  }
-}
-function seekSiblings() {
-  const raw = cropVideos.get('raw')
-  if (!raw) return
-  for (const [arm, video] of cropVideos.entries()) {
-    if (arm !== 'raw') video.currentTime = raw.currentTime
-  }
-}
-function syncSiblings() {
-  const raw = cropVideos.get('raw')
-  if (!raw) return
-  for (const [arm, video] of cropVideos.entries()) {
-    if (arm !== 'raw' && Math.abs(video.currentTime - raw.currentTime) > 0.12) {
-      video.currentTime = raw.currentTime
-    }
   }
 }
 
