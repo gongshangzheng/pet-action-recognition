@@ -711,6 +711,7 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--dataset-id", default=DEFAULT_DATASET_ID)
     parser.add_argument("--video", action="append", default=[])
+    parser.add_argument("--video-list", type=Path)
     parser.add_argument("--max-videos", type=int)
     parser.add_argument("--sample-stride", type=int, default=10)
     parser.add_argument("--max-gap", type=int, default=20)
@@ -768,6 +769,13 @@ def main() -> int:
     )
     add_common_arguments(parser)
     args = parser.parse_args()
+    if args.video_list is not None:
+        requested = [
+            line.strip()
+            for line in args.video_list.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        args.video.extend(requested)
     validate_args(args)
     configure_opencv_threads(args)
     rows, splits_by_video = source_records(args.index_root)
