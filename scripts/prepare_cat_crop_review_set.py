@@ -78,7 +78,7 @@ def export_clip(
         f"trim=start_frame={start_frame - 1}:end_frame={end_frame},"
         "setpts=PTS-STARTPTS,"
         "scale=512:512:force_original_aspect_ratio=decrease,"
-        "pad=512:512:(ow-iw)/2:(oh-ih)/2:color=114"
+        "pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x727272"
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(".mp4.writing.mp4")
