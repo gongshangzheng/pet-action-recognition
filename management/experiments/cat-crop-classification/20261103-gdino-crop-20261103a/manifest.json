@@ -57,6 +57,26 @@
       "sample_size": "12,174 帧",
       "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20/crop_audit.json",
       "limitation": "只说明触发比例，不说明修正是改善还是劣化。"
+    },
+    {
+      "name": "单宠物规则整段有效帧比例",
+      "unit": "%",
+      "baseline": "27.07",
+      "result": "48.01",
+      "delta": "+20.94 个百分点",
+      "sample_size": "12,174 帧",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20-v2/summary.json",
+      "limitation": "整段源视频帧比例，不是预选区间可用率、分类准确率或产品漏检率。"
+    },
+    {
+      "name": "单宠物规则预选区间可用",
+      "unit": "段",
+      "baseline": "1/20",
+      "result": "1/20",
+      "delta": "0",
+      "sample_size": "20 个预先冻结的训练区间",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20-v2/summary.json",
+      "limitation": "13 段多宠物、6 段无可靠检测；单狗锚点存在但对应区间仍未全区间有效。"
     }
   ],
   "cases": [
