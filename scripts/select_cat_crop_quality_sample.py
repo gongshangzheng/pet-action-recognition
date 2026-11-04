@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import time
 from collections import defaultdict
@@ -21,7 +22,7 @@ CLASSES = (
     "toileting",
     "abnormal",
 )
-DEFAULT_TRAIN_INDEX = Path("/home/wyy/pet-final-v1/datasets/cat_action_v1/train.jsonl")
+TRAIN_INDEX_ENV = "CAT_ACTION_TRAIN_INDEX"
 DEFAULT_OUT = Path(
     "/home/wyy/pet-action-recognition/results/cat_crop_classification/"
     "gdino-crop-20261103a/quality/sample20/selection.json"
@@ -326,10 +327,18 @@ def atomic_json(path: Path, payload: Any) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--train-index", type=Path, default=DEFAULT_TRAIN_INDEX)
+    parser.add_argument(
+        "--train-index",
+        type=Path,
+        default=Path(os.environ[TRAIN_INDEX_ENV])
+        if os.environ.get(TRAIN_INDEX_ENV)
+        else None,
+    )
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--salt", default=DEFAULT_SALT)
     args = parser.parse_args()
+    if args.train_index is None:
+        raise ValueError(f"--train-index or {TRAIN_INDEX_ENV} is required")
 
     rows = read_jsonl(args.train_index)
     selected = select_quality_rows(rows, salt=args.salt)

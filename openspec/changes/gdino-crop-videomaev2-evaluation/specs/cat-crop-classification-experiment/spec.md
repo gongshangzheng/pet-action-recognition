@@ -22,25 +22,27 @@ The system SHALL preserve original videos and labels and write separate spatiall
 
 ### Requirement: Explicit target validity and pixel assistance
 
-The system SHALL record detection, interpolation and pixel-correction provenance separately. Pixel assistance MUST NOT classify a stationary pet as absent. Missing detections and ambiguous multi-cat targets MUST remain visible, with no silent full-frame fallback that makes an invalid interval eligible for training or evaluation.
+The system SHALL record detection, target species, interpolation and pixel-correction provenance separately. Pixel assistance MUST NOT classify a stationary pet as absent. Missing detections and unsupported multi-pet frames MUST remain visible, with no silent full-frame fallback that makes an invalid interval eligible for training or evaluation.
 
 #### Scenario: An invalid frame is displayed for human review
 
 - **WHEN** a frame is ineligible for training but is displayed in the review interface
-- **THEN** the display uses the highest-confidence cat box, or the full source image if no cat box is available, while retaining its invalid status and reason
+- **THEN** the display uses the highest-confidence pet box, or the full source image if no pet box is available, while retaining its invalid status and reason
 - **AND** display fallback does not admit the interval to the common training or evaluation index
 
 #### Scenario: No reliable target exists
 
-- **WHEN** an interval samples frames in a long detection gap or an unresolved multi-cat region
+- **WHEN** an interval samples frames in a long detection gap or an unsupported multi-pet region
 - **THEN** the interval is marked unavailable with the reason and split
 - **AND** the report retains it in original-input coverage accounting
 
-#### Scenario: A dog is present or a cat is not detected
+#### Scenario: Species is labeled or a pet is not detected
 
-- **WHEN** sampled frames contain a dog or contain no reliable cat detection in a labeled cat-action interval
-- **THEN** the interval is marked unavailable as target-ambiguous or detection-missing
-- **AND** the system does not interpret low pixel motion as proof that the cat is absent
+- **WHEN** sampled frames contain one cat or one dog
+- **THEN** the target species is recorded as cat or dog and the crop follows that target
+- **WHEN** sampled frames contain no reliable pet detection
+- **THEN** the interval is marked unavailable as detection-missing
+- **AND** the system does not interpret low pixel motion as proof that the pet is absent
 
 #### Scenario: Pixel correction is compared with detection-only cropping
 

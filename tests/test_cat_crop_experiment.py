@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import csv
+import argparse
 import json
 import sys
 import tempfile
@@ -55,6 +56,14 @@ class TargetValidityTests(unittest.TestCase):
         result = classify_frame([detection("cat", [10, 20, 80, 100], 0.9)], 200, 120)
         self.assertTrue(result["target_valid"])
         self.assertEqual(result["cat_count"], 1)
+        self.assertEqual(result["target_class"], "cat")
+        self.assertEqual(result["reasons"], [])
+
+    def test_single_dog_is_valid_and_labeled(self) -> None:
+        result = classify_frame([detection("dog", [10, 20, 90, 110], 0.9)], 200, 120)
+        self.assertTrue(result["target_valid"])
+        self.assertEqual(result["dog_count"], 1)
+        self.assertEqual(result["target_class"], "dog")
         self.assertEqual(result["reasons"], [])
 
     def test_duplicate_cat_is_deduplicated(self) -> None:
@@ -69,7 +78,7 @@ class TargetValidityTests(unittest.TestCase):
         self.assertTrue(result["target_valid"])
         self.assertEqual(result["cat_count"], 1)
 
-    def test_multi_cat_and_dog_are_ambiguous(self) -> None:
+    def test_multi_pets_are_unsupported(self) -> None:
         cats = classify_frame(
             [
                 detection("cat", [10, 20, 80, 100], 0.9),
@@ -78,7 +87,7 @@ class TargetValidityTests(unittest.TestCase):
             200,
             120,
         )
-        self.assertIn("multi_cat_target_ambiguous", cats["reasons"])
+        self.assertIn("multi_pet_unsupported", cats["reasons"])
         dog = classify_frame(
             [
                 detection("cat", [10, 20, 80, 100], 0.9),
@@ -87,11 +96,11 @@ class TargetValidityTests(unittest.TestCase):
             200,
             120,
         )
-        self.assertIn("dog_present_target_ambiguous", dog["reasons"])
+        self.assertIn("multi_pet_unsupported", dog["reasons"])
 
-    def test_no_cat_is_detection_missing_not_confirmed_absence(self) -> None:
+    def test_no_pet_is_detection_missing_not_confirmed_absence(self) -> None:
         result = classify_frame([], 200, 120)
-        self.assertEqual(result["reasons"], ["no_reliable_cat_detection"])
+        self.assertEqual(result["reasons"], ["no_reliable_pet_detection"])
         self.assertFalse(result["target_valid"])
 
     def test_edge_boxes_and_crop_are_clipped(self) -> None:
@@ -124,6 +133,49 @@ class TrackTests(unittest.TestCase):
         self.assertFalse(track[25]["valid"])
         self.assertFalse(track[45]["valid"])
 
+    def test_single_dog_track_preserves_species(self) -> None:
+        anchors = {
+            0: {
+                "target_box": [0, 0, 10, 10],
+                "target_class": "dog",
+                "dog_count": 1,
+                "cat_count": 0,
+                "pet_count": 1,
+                "reasons": [],
+                "target_valid": True,
+            }
+        }
+        track = build_frame_track(anchors, 11, sample_stride=10, max_gap=20)
+        self.assertTrue(track[0]["valid"])
+        self.assertEqual(track[0]["target_class"], "dog")
+
+    def test_species_change_breaks_interpolation(self) -> None:
+        anchors = {
+            0: {
+                "target_box": [0, 0, 10, 10],
+                "target_class": "cat",
+                "cat_count": 1,
+                "dog_count": 0,
+                "pet_count": 1,
+                "reasons": [],
+                "target_valid": True,
+            },
+            20: {
+                "target_box": [20, 0, 30, 10],
+                "target_class": "dog",
+                "cat_count": 0,
+                "dog_count": 1,
+                "pet_count": 1,
+                "reasons": [],
+                "target_valid": True,
+            },
+        }
+        track = build_frame_track(anchors, 21, sample_stride=10, max_gap=20)
+        self.assertTrue(track[0]["valid"])
+        self.assertTrue(track[20]["valid"])
+        for record in track[1:20]:
+            self.assertFalse(record["valid"])
+
     def test_single_missing_detection_is_interpolated(self) -> None:
         anchors = {
             0: state([0, 0, 10, 10]),
@@ -140,7 +192,7 @@ class TrackTests(unittest.TestCase):
     def test_ambiguous_anchor_breaks_interpolation(self) -> None:
         anchors = {
             0: state([0, 0, 10, 10]),
-            10: state([10, 0, 20, 10], ["multi_cat_target_ambiguous"]),
+            10: state([10, 0, 20, 10], ["multi_pet_unsupported"]),
             20: state([20, 0, 30, 10]),
         }
         track = build_frame_track(anchors, 30, sample_stride=10, max_gap=20)
@@ -155,12 +207,12 @@ class TrackTests(unittest.TestCase):
     def test_interval_requires_every_frame(self) -> None:
         track = [
             {"valid": True, "reason": None},
-            {"valid": False, "reason": "dog_present_target_ambiguous"},
+            {"valid": False, "reason": "multi_pet_unsupported"},
             {"valid": True, "reason": None},
         ]
         result = interval_status(1, 3, track)
         self.assertFalse(result["eligible"])
-        self.assertEqual(result["reason"], "dog_present_target_ambiguous")
+        self.assertEqual(result["reason"], "multi_pet_unsupported")
         self.assertEqual(result["invalid_frames"], 1)
 
     def test_static_pet_keeps_box_and_motion_only_expands_after_two_hits(self) -> None:
@@ -201,6 +253,42 @@ class CacheAndIndexTests(unittest.TestCase):
             )
             with self.assertRaises(RuntimeError):
                 prepare.load_reusable_detection(path, Path("/new.mp4"), "new", {})
+
+    def test_source_roots_are_required(self) -> None:
+        args = argparse.Namespace(
+            index_root=None,
+            video_root=None,
+            sample_stride=10,
+            max_gap=20,
+            size=512,
+            pad=1.2,
+            bg_warmup_frames=15,
+            torch_threads=1,
+            opencv_threads=1,
+            ffmpeg_threads=1,
+            crf=23,
+        )
+        with self.assertRaisesRegex(ValueError, "index-root"):
+            prepare.validate_args(args)
+
+    def test_mismatched_render_outputs_are_not_reused(self) -> None:
+        args = argparse.Namespace(force=False)
+        detection = {"fingerprint": {"new": True}, "source_sha256": "new"}
+        with tempfile.TemporaryDirectory(dir=ROOT / "results/tests") as name:
+            root = Path(name)
+            paths = {
+                "gdino": root / "gdino.mp4",
+                "gdino_motion": root / "motion.mp4",
+                "metadata": root / "metadata.json",
+            }
+            for path in paths.values():
+                path.write_text("{}", encoding="utf-8")
+            with (
+                mock.patch.object(prepare, "load_detection", return_value=detection),
+                mock.patch.object(prepare, "cache_paths", return_value=paths),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "do not match"):
+                    prepare.render_video("v.mp4", Path("/videos"), root, args)
 
     def test_paired_index_rejects_different_samples(self) -> None:
         old_root = runner.INDEX_ROOT

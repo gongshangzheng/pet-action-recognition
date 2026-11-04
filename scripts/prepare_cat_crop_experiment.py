@@ -41,7 +41,7 @@ CLASSES = [
     "abnormal",
 ]
 ARMS = ("raw", "gdino", "gdino_motion")
-CACHE_SCHEMA = "cat-crop-detection-v1"
+CACHE_SCHEMA = "cat-crop-detection-v2"
 DEFAULT_RUN_ROOT = ROOT / "results/cat_crop_classification/gdino-crop-20261103a"
 DEFAULT_DATASET_ID = "gdino-v1"
 
@@ -324,6 +324,10 @@ def render_video(
         ):
             metadata["reused"] = True
             return metadata
+        raise RuntimeError(
+            "Existing crop outputs do not match the source or render settings; "
+            f"use a new asset root or pass --force deliberately: {paths['metadata']}"
+        )
 
     anchors = {int(frame): state for frame, state in detection["anchors"].items()}
     track = build_frame_track(
@@ -472,6 +476,7 @@ def render_fingerprint(args: argparse.Namespace) -> dict[str, Any]:
         "crf": args.crf,
         "ffmpeg_threads": args.ffmpeg_threads,
         "invalid_frame_fallback": "cat-box-or-letterbox-v1",
+        "target_policy": "single-pet-cat-or-dog-v1",
     }
 
 
@@ -524,6 +529,11 @@ def build_indexes(
     args: argparse.Namespace,
 ) -> dict[str, Any]:
     availability = interval_availability(source_rows, asset_root)
+    if dataset_root.exists() and any(dataset_root.iterdir()) and not args.force:
+        raise RuntimeError(
+            "Dataset root already contains files; use a new dataset root "
+            f"or pass --force deliberately: {dataset_root}"
+        )
     dataset_root.mkdir(parents=True, exist_ok=True)
     arm_rows: dict[str, dict[str, list[dict[str, Any]]]] = {
         arm: {split: [] for split in ("train", "val", "test")} for arm in ARMS
@@ -539,6 +549,7 @@ def build_indexes(
                 "end_frame",
                 "label",
                 "sample_id",
+                "target_class",
             )
         }
         arm_rows["raw"][row["split"]].append({"video": row["video"], **common})
@@ -577,6 +588,13 @@ def build_indexes(
             "eligible_classes": dict(
                 Counter(CLASSES[row["label"]] for row in rows if row["available"])
             ),
+            "eligible_target_classes": dict(
+                Counter(
+                    row.get("target_class", "cat")
+                    for row in rows
+                    if row["available"]
+                )
+            ),
         }
     manifest = {
         "schema": "cat-crop-dataset-v1",
@@ -610,6 +628,7 @@ def build_indexes(
                     "start_frame",
                     "end_frame",
                     "label",
+                    "target_class",
                     "available",
                     "unavailable_reason",
                     "invalid_frames",
@@ -626,6 +645,10 @@ def build_indexes(
 
 
 def validate_args(args: argparse.Namespace) -> None:
+    if args.index_root is None:
+        raise ValueError("--index-root or CAT_ACTION_INDEX_ROOT is required")
+    if args.video_root is None:
+        raise ValueError("--video-root or CAT_ACTION_VIDEO_ROOT is required")
     if args.sample_stride < 1:
         raise ValueError("--sample-stride must be positive")
     if args.max_gap < args.sample_stride:
@@ -654,22 +677,16 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--index-root",
         type=Path,
-        default=Path(
-            os.environ.get(
-                "CAT_ACTION_INDEX_ROOT",
-                "/home/wyy/pet-final-v1/datasets/cat_action_v1",
-            )
-        ),
+        default=Path(os.environ.get("CAT_ACTION_INDEX_ROOT"))
+        if os.environ.get("CAT_ACTION_INDEX_ROOT")
+        else None,
     )
     parser.add_argument(
         "--video-root",
         type=Path,
-        default=Path(
-            os.environ.get(
-                "CAT_ACTION_VIDEO_ROOT",
-                "/home/wyy/pet-final-v1/datasets/cat_raw",
-            )
-        ),
+        default=Path(os.environ.get("CAT_ACTION_VIDEO_ROOT"))
+        if os.environ.get("CAT_ACTION_VIDEO_ROOT")
+        else None,
     )
     parser.add_argument(
         "--asset-root",

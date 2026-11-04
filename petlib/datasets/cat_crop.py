@@ -60,7 +60,7 @@ def classify_frame(
     height: int,
     iou_threshold: float = 0.55,
 ) -> dict[str, Any]:
-    """Describe cat count, dog presence and target ambiguity for one frame."""
+    """Describe pet count, species and target ambiguity for one frame."""
     kept = deduplicate_detections(detections, iou_threshold)
     cats = sorted(
         (row for row in kept if row["class"] == "cat"),
@@ -75,23 +75,54 @@ def classify_frame(
     for row in (*cats, *dogs):
         row["box"] = list(clip_box(row["box"], width, height))
 
+    pets = sorted((*cats, *dogs), key=lambda row: float(row["confidence"]), reverse=True)
     reasons: list[str] = []
-    if not cats:
-        reasons.append("no_reliable_cat_detection")
-    if len(cats) > 1:
-        reasons.append("multi_cat_target_ambiguous")
-    if dogs:
-        reasons.append("dog_present_target_ambiguous")
+    if not pets:
+        reasons.append("no_reliable_pet_detection")
+    elif len(pets) > 1:
+        reasons.append("multi_pet_unsupported")
     return {
         "cat_count": len(cats),
         "dog_count": len(dogs),
-        "cat_box": cats[0]["box"] if cats else None,
-        "cat_confidence": float(cats[0]["confidence"]) if cats else None,
+        "pet_count": len(pets),
+        "target_class": pets[0]["class"] if pets else None,
+        "target_box": pets[0]["box"] if pets else None,
+        "target_confidence": float(pets[0]["confidence"]) if pets else None,
         "cat_candidates": cats,
         "dog_candidates": dogs,
         "reasons": reasons,
         "target_valid": not reasons,
     }
+
+
+def target_box(state: dict[str, Any]) -> list[float] | None:
+    """Return the target box and accept legacy cat-only caches."""
+    return state.get("target_box") or state.get("cat_box")
+
+
+def target_class(state: dict[str, Any]) -> str | None:
+    """Return the target species and accept legacy cat-only caches."""
+    return state.get("target_class") or ("cat" if state.get("cat_box") else None)
+
+
+def missing_pet_reasons(state: dict[str, Any]) -> bool:
+    reasons = set(state.get("reasons") or [])
+    return bool(
+        reasons
+        & {"no_reliable_pet_detection", "no_reliable_cat_detection"}
+    )
+
+
+def multi_pet_reasons(state: dict[str, Any]) -> bool:
+    reasons = set(state.get("reasons") or [])
+    return bool(
+        reasons
+        & {
+            "multi_pet_unsupported",
+            "multi_cat_target_ambiguous",
+            "dog_present_target_ambiguous",
+        }
+    )
 
 
 def build_frame_track(
@@ -103,8 +134,8 @@ def build_frame_track(
     """Build the strict crop track and a separate best-cat display track.
 
     ``camera_box`` follows the training eligibility rules. ``display_box`` keeps
-    the highest-confidence cat box for review rendering even when multi-cat or
-    dog ambiguity excludes the frame from training.
+    the highest-confidence pet box for review rendering even when an unsupported
+    multi-pet frame is excluded from training.
     """
     if sample_stride < 1:
         raise ValueError("sample_stride must be positive")
@@ -112,9 +143,9 @@ def build_frame_track(
         raise ValueError("total_frames must be positive")
     max_gap = max_gap or sample_stride * 2
     clean = {
-        int(frame): state["cat_box"]
+        int(frame): target_box(state)
         for frame, state in anchors.items()
-        if state.get("target_valid") and state.get("cat_box") is not None
+        if state.get("target_valid") and target_box(state) is not None
     }
     clean_frames = sorted(frame for frame in clean if 0 <= frame < total_frames)
     track: list[dict[str, Any]] = [
@@ -125,7 +156,7 @@ def build_frame_track(
             "display_box": None,
             "source": "invalid",
             "valid": False,
-            "reason": "no_reliable_cat_detection",
+            "reason": "no_reliable_pet_detection",
         }
         for frame in range(total_frames)
     ]
@@ -142,19 +173,19 @@ def build_frame_track(
             "reason": None,
             "cat_count": state.get("cat_count"),
             "dog_count": state.get("dog_count"),
+            "pet_count": state.get("pet_count"),
+            "target_class": target_class(state),
         }
         if anchor_index + 1 >= len(clean_frames):
             continue
         next_frame = clean_frames[anchor_index + 1]
+        next_state = anchors[next_frame]
+        if target_class(state) != target_class(next_state):
+            continue
         gap = next_frame - frame
         if any(
             frame < invalid_frame < next_frame
-            and (
-                "multi_cat_target_ambiguous"
-                in anchors[invalid_frame].get("reasons", [])
-                or "dog_present_target_ambiguous"
-                in anchors[invalid_frame].get("reasons", [])
-            )
+            and multi_pet_reasons(anchors[invalid_frame])
             for invalid_frame in anchors
         ):
             continue
@@ -177,9 +208,9 @@ def build_frame_track(
     for frame, state in anchors.items():
         if not (0 <= frame < total_frames) or state.get("target_valid"):
             continue
-        reasons = state.get("reasons") or ["no_reliable_cat_detection"]
+        reasons = state.get("reasons") or ["no_reliable_pet_detection"]
         if (
-            reasons == ["no_reliable_cat_detection"]
+            missing_pet_reasons(state)
             and track[frame].get("valid")
             and track[frame].get("source") == "interpolated"
         ):
@@ -190,8 +221,8 @@ def build_frame_track(
             "frame_index_base": 0,
             "camera_box": None,
             "display_box": (
-                [round(float(value), 3) for value in state["cat_box"]]
-                if state.get("cat_box") is not None
+                [round(float(value), 3) for value in target_box(state)]
+                if target_box(state) is not None
                 else None
             ),
             "source": "invalid",
@@ -200,19 +231,21 @@ def build_frame_track(
             "reasons": reasons,
             "cat_count": state.get("cat_count"),
             "dog_count": state.get("dog_count"),
+            "pet_count": state.get("pet_count"),
+            "target_class": target_class(state),
         }
 
     display_frames = sorted(
         frame
         for frame, state in anchors.items()
-        if state.get("cat_box") is not None and 0 <= frame < total_frames
+        if target_box(state) is not None and 0 <= frame < total_frames
     )
     for current, following in zip(display_frames, display_frames[1:]):
         gap = following - current
         if gap <= 1 or gap > max_gap:
             continue
-        left = np.asarray(anchors[current]["cat_box"], dtype=np.float64)
-        right = np.asarray(anchors[following]["cat_box"], dtype=np.float64)
+        left = np.asarray(target_box(anchors[current]), dtype=np.float64)
+        right = np.asarray(target_box(anchors[following]), dtype=np.float64)
         for intermediate in range(current + 1, following):
             if track[intermediate].get("display_box") is not None:
                 continue
@@ -246,8 +279,10 @@ def interval_status(
         }
     reasons = Counter(row.get("reason") or "track_invalid" for row in invalid)
     priority = (
+        "multi_pet_unsupported",
         "multi_cat_target_ambiguous",
         "dog_present_target_ambiguous",
+        "no_reliable_pet_detection",
         "no_reliable_cat_detection",
     )
     reason = next(
