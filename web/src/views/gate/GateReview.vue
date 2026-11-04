@@ -55,7 +55,8 @@
                   :controls="arm.key === 'raw'"
                   muted
                   playsinline
-                  preload="metadata"
+                  preload="auto"
+                  @loadedmetadata="primeCropVideo"
                   @play="arm.key === 'raw' && playSiblings()"
                   @pause="arm.key === 'raw' && pauseSiblings()"
                   @seeking="arm.key === 'raw' && seekSiblings()"
@@ -319,6 +320,12 @@ function resetCropVideos() {
   for (const video of cropVideos.values()) {
     video.pause()
     video.currentTime = 0
+  }
+}
+function primeCropVideo(event) {
+  const video = event.currentTarget
+  if (Number.isFinite(video.duration) && video.duration > 0) {
+    video.currentTime = Math.min(0.04, video.duration / 2)
   }
 }
 function playSiblings() {
@@ -762,7 +769,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   padding: 8px 0 0;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 720px) {
   .crop-compare {
     grid-template-columns: 1fr;
     overflow-y: auto;

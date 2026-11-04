@@ -35,6 +35,7 @@
 - **测试**：远程相关测试最终为 29 passed、3 subtests passed；新增审阅集、接口和审计测试随后为 4 passed。前端 `npm run build` 通过，静态审计为 0 high、0 medium、0 low。
 - **资源**：生成 20 段、60 个视频耗时约 26 秒；最终守卫峰值约 320% CPU、457 MiB RSS，GPU 未参与。第一次以 250% CPU 上限运行时被守卫终止，按项目默认 350% 上限、低优先级和看门狗重跑完成。
 - **成品审计**：远程和本地均对 20/20 段、60/60 视频审计通过。三路均为 512×512，帧数等于区间标注，三路时长与 FPS 一致，清单路径无缺失或额外文件，SHA-256 已记录到 `audit.json`。来源抽样 SHA-256 为 `59f34896cbb682a4ccc117f088198bd8bd0f2b28f37c58446733042215dc4344`。
+- **浏览器验收**：页面实际加载 20 段审阅集，Q001 的三路视频均完成加载且无媒体错误。并排首帧可见；播放约 0.46 秒时三路的 currentTime 分别为 0.4604、0.4481、0.4481 秒，确认同步机制工作。P/F/U、问题标记、页码和翻页控件均可见；本轮没有替用户点击任何结论。
 - **样本覆盖**：abnormal 4、activity 4、eating 3、grooming 3、prolonged_stationary 2、drinking 2、toileting 2；按严格规则仅 1 段可用，其余不是质量合格证据。
 - **产物**：本地 `results/gate/review/cat-crop-gdino-20261103a-sample20-v1/`；远程 `/home/wyy/pet-action-recognition/results/gate/review/cat-crop-gdino-20261103a-sample20-v1/`。报告详情页与侧栏均提供“裁剪人工审阅”入口。
 - **当前结论**：工程链路、同步播放和三路媒体一致性已通过自动核验；人工裁剪质量、目标归属和“是否适合训练”仍未确认。`labels.csv` 尚未生成，任务 3.2 保持未完成，不能据此启动全量裁剪、VideoMAEv2 训练或准确率评测。
