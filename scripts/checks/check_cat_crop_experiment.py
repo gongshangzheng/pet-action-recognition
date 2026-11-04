@@ -168,8 +168,15 @@ def main() -> int:
         default=[],
         help="Audit this source-relative video even when no interval is eligible",
     )
+    parser.add_argument("--video-list", type=Path)
     parser.add_argument("--max-videos", type=int)
     args = parser.parse_args()
+    if args.video_list is not None:
+        args.video.extend(
+            line.strip()
+            for line in args.video_list.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        )
 
     manifest_path = args.index_root / "manifest.json"
     if not manifest_path.is_file():
