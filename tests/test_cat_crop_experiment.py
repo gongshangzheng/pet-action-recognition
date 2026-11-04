@@ -215,6 +215,16 @@ class TrackTests(unittest.TestCase):
         self.assertEqual(result["reason"], "multi_pet_unsupported")
         self.assertEqual(result["invalid_frames"], 1)
 
+    def test_interval_rejects_species_change(self) -> None:
+        track = [
+            {"valid": True, "reason": None, "target_class": "cat"},
+            {"valid": True, "reason": None, "target_class": None},
+            {"valid": True, "reason": None, "target_class": "dog"},
+        ]
+        result = interval_status(1, 3, track)
+        self.assertFalse(result["eligible"])
+        self.assertEqual(result["reason"], "target_species_changed")
+
     def test_static_pet_keeps_box_and_motion_only_expands_after_two_hits(self) -> None:
         foreground = np.zeros((80, 100), dtype=np.uint8)
         first, corrected, hit = motion_correct_box(

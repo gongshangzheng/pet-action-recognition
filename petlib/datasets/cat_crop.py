@@ -270,6 +270,18 @@ def interval_status(
     invalid = [
         row for row in track[start_frame - 1 : end_frame] if not row.get("valid")
     ]
+    target_classes = {
+        row.get("target_class")
+        for row in track[start_frame - 1 : end_frame]
+        if row.get("valid") and row.get("target_class") is not None
+    }
+    if not invalid and len(target_classes) > 1:
+        return {
+            "eligible": False,
+            "reason": "target_species_changed",
+            "invalid_frames": 0,
+            "valid_frames": end_frame - start_frame + 1,
+        }
     if not invalid:
         return {
             "eligible": True,

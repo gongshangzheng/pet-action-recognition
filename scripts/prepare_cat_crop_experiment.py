@@ -506,9 +506,20 @@ def interval_availability(
                 "invalid_frames": int(row["end_frame"]) - int(row["start_frame"]) + 1,
             }
         )
+        interval_rows = (
+            tracks[video][int(row["start_frame"]) - 1 : int(row["end_frame"])]
+            if video in tracks
+            else []
+        )
+        target_classes = {
+            record.get("target_class")
+            for record in interval_rows
+            if record.get("valid") and record.get("target_class") is not None
+        }
         results.append(
             {
                 **row,
+                "target_class": next(iter(target_classes)) if target_classes else None,
                 "available": bool(status["eligible"]),
                 "unavailable_reason": status["reason"],
                 "invalid_frames": status["invalid_frames"],
