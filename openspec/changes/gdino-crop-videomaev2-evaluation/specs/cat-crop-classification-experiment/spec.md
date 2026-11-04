@@ -22,7 +22,13 @@ The system SHALL preserve original videos and labels and write separate spatiall
 
 ### Requirement: Explicit target validity and pixel assistance
 
-The system SHALL record detection, interpolation and pixel-correction provenance separately. Pixel assistance MUST NOT classify a stationary pet as absent. Missing detections and ambiguous multi-cat targets MUST remain visible, with no silent full-frame fallback.
+The system SHALL record detection, interpolation and pixel-correction provenance separately. Pixel assistance MUST NOT classify a stationary pet as absent. Missing detections and ambiguous multi-cat targets MUST remain visible, with no silent full-frame fallback that makes an invalid interval eligible for training or evaluation.
+
+#### Scenario: An invalid frame is displayed for human review
+
+- **WHEN** a frame is ineligible for training but is displayed in the review interface
+- **THEN** the display uses the highest-confidence cat box, or the full source image if no cat box is available, while retaining its invalid status and reason
+- **AND** display fallback does not admit the interval to the common training or evaluation index
 
 #### Scenario: No reliable target exists
 
