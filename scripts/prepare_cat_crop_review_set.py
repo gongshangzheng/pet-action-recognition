@@ -12,7 +12,7 @@ import argparse
 import json
 import os
 import subprocess
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -22,7 +22,7 @@ ARMS = ("raw", "gdino", "gdino_motion")
 
 
 def utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def atomic_json(path: Path, payload: Any) -> None:
