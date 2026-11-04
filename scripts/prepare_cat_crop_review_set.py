@@ -18,6 +18,8 @@ from typing import Any
 
 import cv2
 
+from petlib.videowriter import find_ffmpeg
+
 
 ARMS = ("raw", "gdino", "gdino_motion")
 
@@ -64,10 +66,13 @@ def export_clip(
         "scale=512:512:force_original_aspect_ratio=decrease,"
         "pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x727272"
     )
+    ffmpeg = find_ffmpeg()
+    if ffmpeg is None:
+        raise RuntimeError("ffmpeg is required to export review clips")
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(".mp4.writing.mp4")
     command = [
-        "ffmpeg",
+        ffmpeg,
         "-hide_banner",
         "-loglevel",
         "error",

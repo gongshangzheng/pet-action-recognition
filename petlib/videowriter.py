@@ -18,7 +18,8 @@ import cv2
 import numpy as np
 
 
-def _find_ffmpeg() -> str | None:
+def find_ffmpeg() -> str | None:
+    """Return a system or bundled ffmpeg executable when available."""
     exe = shutil.which("ffmpeg")
     if exe:
         return exe
@@ -27,6 +28,10 @@ def _find_ffmpeg() -> str | None:
         return imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:
         return None
+
+
+def _find_ffmpeg() -> str | None:
+    return find_ffmpeg()
 
 
 class H264VideoWriter:

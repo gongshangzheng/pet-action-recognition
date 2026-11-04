@@ -34,7 +34,10 @@ class CatCropReviewSetTests(unittest.TestCase):
             output = root / "output.mp4"
             with patch(
                 "scripts.prepare_cat_crop_review_set.subprocess.run"
-            ) as run:
+            ) as run, patch(
+                "scripts.prepare_cat_crop_review_set.find_ffmpeg",
+                return_value="/bin/ffmpeg",
+            ):
                 def write_temporary(command, check):
                     self.assertTrue(check)
                     Path(command[-1]).write_bytes(b"video")
