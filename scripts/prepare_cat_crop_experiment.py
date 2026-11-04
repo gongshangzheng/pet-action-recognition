@@ -772,6 +772,8 @@ def main() -> int:
     configure_opencv_threads(args)
     rows, splits_by_video = source_records(args.index_root)
     videos = selected_videos(splits_by_video, args.video, args.max_videos)
+    selected_video_set = set(videos)
+    rows = [row for row in rows if row["video"] in selected_video_set]
     if args.stage in ("detect", "all"):
         run_detect(args, videos)
     if args.stage in ("render", "all"):
