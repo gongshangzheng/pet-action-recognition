@@ -242,7 +242,9 @@ def build_frame_track(
     )
     for current, following in zip(display_frames, display_frames[1:]):
         gap = following - current
-        if gap <= 1 or gap > max_gap:
+        if gap <= 1:
+            continue
+        if target_class(anchors[current]) != target_class(anchors[following]):
             continue
         left = np.asarray(target_box(anchors[current]), dtype=np.float64)
         right = np.asarray(target_box(anchors[following]), dtype=np.float64)
@@ -254,6 +256,24 @@ def build_frame_track(
             track[intermediate]["display_box"] = [
                 round(float(value), 3) for value in box
             ]
+            track[intermediate]["display_interpolated"] = True
+            if gap > max_gap:
+                track[intermediate]["display_long_gap"] = True
+    if display_frames:
+        first_display = display_frames[0]
+        last_display = display_frames[-1]
+        first_box = target_box(anchors[first_display])
+        last_box = target_box(anchors[last_display])
+        for frame in range(min(first_display, total_frames)):
+            track[frame]["display_box"] = [
+                round(float(value), 3) for value in first_box
+            ]
+            track[frame]["display_held_edge"] = True
+        for frame in range(last_display + 1, total_frames):
+            track[frame]["display_box"] = [
+                round(float(value), 3) for value in last_box
+            ]
+            track[frame]["display_held_edge"] = True
     return track
 
 

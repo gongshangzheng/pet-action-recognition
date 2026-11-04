@@ -176,6 +176,17 @@ class TrackTests(unittest.TestCase):
         for record in track[1:20]:
             self.assertFalse(record["valid"])
 
+    def test_long_detection_gap_keeps_display_crop(self) -> None:
+        anchors = {
+            0: state([0, 0, 10, 10]),
+            40: state([40, 0, 50, 10]),
+        }
+        track = build_frame_track(anchors, 50, sample_stride=10, max_gap=20)
+        self.assertIsNone(track[20]["camera_box"])
+        self.assertIsNotNone(track[20]["display_box"])
+        self.assertTrue(track[20]["display_long_gap"])
+        self.assertIsNotNone(track[45]["display_box"])
+
     def test_single_missing_detection_is_interpolated(self) -> None:
         anchors = {
             0: state([0, 0, 10, 10]),

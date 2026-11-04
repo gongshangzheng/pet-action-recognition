@@ -27,7 +27,8 @@ The system SHALL record detection, target species, interpolation and pixel-corre
 #### Scenario: An invalid frame is displayed for human review
 
 - **WHEN** a frame is ineligible for training but is displayed in the review interface
-- **THEN** the display uses the highest-confidence pet box, or the full source image if no pet box is available, while retaining its invalid status and reason
+- **THEN** the display uses the highest-confidence pet box, nearest same-species interpolation, or an edge-held box when the video has any pet anchor, while retaining its invalid status, reason, and long-gap marker
+- **AND** the full source image appears only when the source video has no pet anchor at all
 - **AND** display fallback does not admit the interval to the common training or evaluation index
 
 #### Scenario: No reliable target exists
