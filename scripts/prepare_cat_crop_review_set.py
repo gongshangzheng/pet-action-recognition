@@ -76,7 +76,7 @@ def export_clip(
         raise ValueError(f"Invalid 1-based interval {start_frame}-{end_frame}")
     filter_graph = (
         f"trim=start_frame={start_frame - 1}:end_frame={end_frame},"
-        "setpts=PTS-STARTPTS,"
+        f"setpts=N/({fps:.12f}*TB),"
         "scale=512:512:force_original_aspect_ratio=decrease,"
         "pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x727272"
     )
@@ -93,8 +93,8 @@ def export_clip(
         "-vf",
         filter_graph,
         "-an",
-        "-r",
-        f"{fps:.12f}",
+        "-fps_mode",
+        "passthrough",
         "-c:v",
         "libx264",
         "-preset",

@@ -5,10 +5,40 @@ from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.prepare_cat_crop_review_set import build_review_set
+from scripts.prepare_cat_crop_review_set import build_review_set, export_clip
 
 
 class CatCropReviewSetTests(unittest.TestCase):
+    def test_export_preserves_one_output_frame_per_selected_source_frame(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.mp4"
+            output = root / "output.mp4"
+            with patch(
+                "scripts.prepare_cat_crop_review_set.subprocess.run"
+            ) as run:
+                def write_temporary(command, check):
+                    self.assertTrue(check)
+                    Path(command[-1]).write_bytes(b"video")
+
+                run.side_effect = write_temporary
+                export_clip(
+                    source=source,
+                    output=output,
+                    start_frame=1,
+                    end_frame=181,
+                    fps=10.933574136769685,
+                    crf=22,
+                )
+            command = run.call_args.args[0]
+            self.assertNotIn("-r", command)
+            self.assertEqual(command[command.index("-fps_mode") + 1], "passthrough")
+            filter_graph = command[command.index("-vf") + 1]
+            self.assertIn(
+                "setpts=N/(10.933574136770*TB)", filter_graph
+            )
+            self.assertTrue(output.is_file())
+
     def test_builds_frame_aligned_three_arm_manifest(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
