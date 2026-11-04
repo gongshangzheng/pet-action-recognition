@@ -69,6 +69,15 @@
             <n-tag v-if="detail.incomplete" size="small" :bordered="false" type="warning">不完整</n-tag>
             <span class="report-dim">run {{ detail.metadata.run_id }} · {{ detail.metadata.date }}</span>
             <a v-if="detail.metadata.change" class="report-dim change-link" :href="`/api/management/experiments`" @click.prevent>{{ detail.metadata.change }}</a>
+            <n-button
+              v-if="detail.metadata.run_id === 'gdino-crop-20261103a'"
+              size="small"
+              type="primary"
+              secondary
+              @click="openCropReview"
+            >
+              打开人工审阅
+            </n-button>
           </div>
           <p v-if="detail.metadata.summary" class="detail-summary">{{ detail.metadata.summary }}</p>
           <n-alert v-if="detail.incomplete && detail.problems?.length" type="warning" :bordered="false" class="problems-alert">
@@ -163,7 +172,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NCard, NSpin, NSpace, NSelect, NTag, NCheckbox, NDataTable,
-  NAlert, NRadioGroup, NRadioButton,
+  NAlert, NRadioGroup, NRadioButton, NButton,
 } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -241,6 +250,13 @@ async function loadDetail(t, s) {
 
 function open(r) {
   router.push(detailHref(r))
+}
+
+function openCropReview() {
+  router.push({
+    name: 'CropReview',
+    query: { set: 'cat-crop-gdino-20261103a-sample20-v1' },
+  })
 }
 
 const metricTables = computed(() => (detail.value?.metrics?.tables || []).filter(t => (t.rows || []).length))

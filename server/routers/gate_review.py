@@ -1,12 +1,13 @@
-"""门控人工核验路由：列出 review set、取帧、写人工标注。
+"""人工核验路由：列出 review set、取帧或视频、写人工标注。
 
-数据目录（`RESULTS_DIR/gate/review/<set>/`）：由 `scripts/prepare_gate_review_set.py` 生成
+数据目录（`RESULTS_DIR/gate/review/<set>/`）：由对应的 prepare 脚本生成。
 
   <set>/items.json   教师判定 + 框 + 场景标签
   <set>/frames/...   帧文件
-  <set>/labels.csv   人工标注（本路由写入；present / absent / uncertain）
+  <set>/labels.csv   人工标注（本路由写入）
 
-只读 + 单字段写入；不修改 items.json，不改帧文件。
+图像审核使用 present / absent / uncertain，视频裁剪审核使用 pass / fail /
+uncertain。路由只写 labels.csv，不修改 items.json 或媒体文件。
 """
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ from server.config import BASE_DIR
 router = APIRouter(prefix="/api/gate-review", tags=["gate-review"])
 
 REVIEW_ROOT = os.path.join(BASE_DIR, "results", "gate", "review")
-ALLOWED_LABELS = {"present", "absent", "uncertain"}
+ALLOWED_LABELS = {"present", "absent", "uncertain", "pass", "fail"}
 SAFE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 
 
@@ -99,7 +100,7 @@ def stats(name: str) -> dict:
     set_dir = _set_dir(name)
     data = _read_items(set_dir)
     labels = _read_labels(set_dir)
-    counts = {"present": 0, "absent": 0, "uncertain": 0, "unlabeled": 0}
+    counts = {"present": 0, "absent": 0, "uncertain": 0, "pass": 0, "fail": 0, "unlabeled": 0}
     by_scenario: dict[str, dict[str, int]] = {}
     for item in data.get("items", []):
         human = (labels.get(item["path"], {}) or {}).get("human_label", "") or ""
@@ -134,7 +135,16 @@ def frame(name: str, path: str) -> FileResponse:
 def video(name: str, path: str) -> FileResponse:
     set_dir = _set_dir(name)
     data = _read_items(set_dir)
-    if data.get("mode") != "video" or path not in {item.get("file") for item in data.get("items", [])}:
+    allowed = set()
+    for item in data.get("items", []):
+        if item.get("file"):
+            allowed.add(item["file"])
+        allowed.update(
+            media_path
+            for media_path in (item.get("files") or {}).values()
+            if media_path
+        )
+    if data.get("mode") not in {"video", "crop_comparison"} or path not in allowed:
         raise HTTPException(status_code=404, detail="该视频不在 review set 中")
     full = os.path.realpath(os.path.join(set_dir, path))
     if not full.startswith(os.path.realpath(set_dir) + os.sep) or not full.lower().endswith(".mp4"):
@@ -152,7 +162,7 @@ class LabelPayload(BaseModel):
 
 @router.post("/sets/{name}/label")
 def set_label(name: str, payload: LabelPayload) -> dict:
-    """写入单条人工标注（label ∈ present/absent/uncertain）；整表原子重写。"""
+    """写入单条人工标注；整表原子重写。"""
     if payload.human_label not in ALLOWED_LABELS:
         raise HTTPException(status_code=400, detail=f"非法标签: {payload.human_label}")
     set_dir = _set_dir(name)

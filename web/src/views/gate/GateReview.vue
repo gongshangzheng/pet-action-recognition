@@ -1,22 +1,23 @@
 <template>
-  <div class="gate-review" :class="{ 'video-mode': isVideo }">
+  <div class="gate-review" :class="{ 'video-mode': isSingleView }">
     <header class="gr-head">
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
-        <span v-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 F / A / U，空格播放/暂停，← → 翻页。</span>
+        <span v-if="isCropComparison" class="gr-hint">三路视频同步播放，依次为原始视频、GroundingDINO 裁剪、像素运动辅助裁剪。快捷键 P / F / U；空格播放/暂停，← → 翻页。</span>
+        <span v-else-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 F / A / U，空格播放/暂停，← → 翻页。</span>
         <span v-else-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
         <span v-else class="gr-hint">模型预标仅供参考，请确认有无宠物；看不清可跳过。（快捷键 P / A / U，← → 切换图片）</span>
       </div>
       <div class="gr-controls">
         <n-select v-model:value="currentSet" :options="setOptions" size="small" style="width: 200px"
                   placeholder="选择标注批次" @update:value="changeFilter" />
-        <n-select v-model:value="scenario" :options="scenarioOptions" size="small" style="width: 150px"
+        <n-select v-if="!isCropComparison" v-model:value="scenario" :options="scenarioOptions" size="small" style="width: 150px"
                   @update:value="changeFilter" />
         <n-switch v-model:value="onlyUnlabeled" size="small" @update:value="changeFilter">
           <template #checked>只看未标</template>
           <template #unchecked>全部</template>
         </n-switch>
-        <template v-if="!isVideo">
+        <template v-if="!isSingleView">
           <n-button size="small" @click="prevPage" :disabled="page <= 1">上一页</n-button>
           <span class="gr-page">{{ page }} / {{ maxPage }}</span>
           <n-button size="small" @click="nextPage" :disabled="page >= maxPage">下一页</n-button>
@@ -26,8 +27,14 @@
 
     <n-progress v-if="stats" type="line" :percentage="progressPercent" :height="10" :show-indicator="false" />
     <div v-if="stats" class="gr-stats">
-      共 {{ stats.total }} 帧 ｜ 已标 {{ labeled }}（present {{ stats.counts.present }} / absent
-      {{ stats.counts.absent }} / uncertain {{ stats.counts.uncertain }}）
+      <template v-if="isCropComparison">
+        共 {{ stats.total }} 段 ｜ 已审核 {{ labeled }}（合格 {{ stats.counts.pass }} / 不合格
+        {{ stats.counts.fail }} / 待复查 {{ stats.counts.uncertain }}）
+      </template>
+      <template v-else>
+        共 {{ stats.total }} 帧 ｜ 已标 {{ labeled }}（present {{ stats.counts.present }} / absent
+        {{ stats.counts.absent }} / uncertain {{ stats.counts.uncertain }}）
+      </template>
     </div>
 
     <n-spin :show="loading">
@@ -36,7 +43,35 @@
                 :class="{ labeled: item.human_label, selected: index === cursor }"
                 @click="cursor = index">
           <div class="gr-frame">
-            <video v-if="isVideo" ref="videoRef" :src="videoUrl(currentSet, item.file)" controls preload="metadata" />
+            <div v-if="isCropComparison" class="crop-compare">
+              <figure v-for="arm in CROP_ARMS" :key="arm.key" class="crop-pane">
+                <figcaption>
+                  <strong>{{ arm.label }}</strong>
+                  <span>{{ arm.note }}</span>
+                </figcaption>
+                <video
+                  :ref="(element) => setCropVideo(arm.key, element)"
+                  :src="videoUrl(currentSet, item.files?.[arm.key])"
+                  :controls="arm.key === 'raw'"
+                  muted
+                  playsinline
+                  preload="metadata"
+                  @play="arm.key === 'raw' && playSiblings()"
+                  @pause="arm.key === 'raw' && pauseSiblings()"
+                  @seeking="arm.key === 'raw' && seekSiblings()"
+                  @timeupdate="arm.key === 'raw' && syncSiblings()"
+                />
+              </figure>
+              <div class="crop-meta">
+                <span>{{ item.review_id }} · {{ item.class_name }}</span>
+                <span>{{ item.start_frame }}–{{ item.end_frame }}（{{ item.frame_count }} 帧）</span>
+                <span>{{ item.video }}</span>
+                <n-tag size="tiny" :bordered="false" :type="item.strict_available ? 'success' : 'warning'">
+                  {{ item.strict_available ? '严格规则可用' : (item.unavailable_reason || '规则排除') }}
+                </n-tag>
+              </div>
+            </div>
+            <video v-else-if="isVideo" ref="videoRef" :src="videoUrl(currentSet, item.file)" controls preload="metadata" />
             <img v-else :src="frameUrl(currentSet, item.file)" :alt="item.path" loading="lazy" />
             <!-- 教师框叠加：按原始像素 → 百分比换算 -->
             <svg v-if="!hideTeacher" class="gr-box" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -58,14 +93,22 @@
             <div v-if="item.human_label" class="gr-human">{{ item.human_label }}</div>
           </div>
           <figcaption class="gr-actions">
-            <button class="btn present" :class="{ active: item.human_label === 'present' }"
-                    @click.stop="label(item, 'present')">有宠物 {{ isVideo ? 'F' : 'P' }}</button>
-            <button class="btn absent" :class="{ active: item.human_label === 'absent' }"
-                    @click.stop="label(item, 'absent')">无宠物 A</button>
+            <template v-if="isCropComparison">
+              <button class="btn present" :class="{ active: item.human_label === 'pass' }"
+                      @click.stop="label(item, 'pass')">裁剪合格 P</button>
+              <button class="btn absent" :class="{ active: item.human_label === 'fail' }"
+                      @click.stop="label(item, 'fail')">裁剪不合格 F</button>
+            </template>
+            <template v-else>
+              <button class="btn present" :class="{ active: item.human_label === 'present' }"
+                      @click.stop="label(item, 'present')">有宠物 {{ isVideo ? 'F' : 'P' }}</button>
+              <button class="btn absent" :class="{ active: item.human_label === 'absent' }"
+                      @click.stop="label(item, 'absent')">无宠物 A</button>
+            </template>
             <button class="btn uncertain" :class="{ active: item.human_label === 'uncertain' }"
                     @click.stop="label(item, 'uncertain')">{{ hideTeacher ? '跳过待复核 U' : '不确定 U' }}</button>
           </figcaption>
-          <div v-if="isVideo" class="gr-video-pager">
+          <div v-if="isSingleView" class="gr-video-pager">
             <div class="gr-jump">
               <n-input-number v-model:value="jumpPageValue" :min="1" :max="maxPage" size="small"
                               placeholder="页码" @keydown.enter="jumpToPage" />
@@ -75,7 +118,13 @@
             <span class="gr-page">{{ page }} / {{ maxPage }}</span>
             <n-button size="small" type="primary" @click="nextPage" :disabled="page >= maxPage">下一页 →</n-button>
           </div>
-          <div v-if="!hideTeacher" class="gr-flags" :class="{ disabled: !item.human_label }">
+          <div v-if="isCropComparison" class="gr-flags" :class="{ disabled: !item.human_label }">
+            <span class="gr-flags-label">问题：</span>
+            <button v-for="flag in CROP_FLAGS" :key="flag.key" class="chip"
+                    :class="{ on: hasFlag(item, flag.key) }" :disabled="!item.human_label"
+                    @click.stop="toggleFlag(item, flag.key)">{{ flag.label }}</button>
+          </div>
+          <div v-else-if="!hideTeacher" class="gr-flags" :class="{ disabled: !item.human_label }">
             <span class="gr-flags-label">框问题：</span>
             <button v-for="flag in BOX_FLAGS" :key="flag.key" class="chip"
                     :class="{ on: hasFlag(item, flag.key) }" :disabled="!item.human_label"
@@ -89,8 +138,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { NButton, NEmpty, NInputNumber, NProgress, NSelect, NSpin, NSwitch, useMessage } from 'naive-ui'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { NButton, NEmpty, NInputNumber, NProgress, NSelect, NSpin, NSwitch, NTag, useMessage } from 'naive-ui'
 import { frameUrl, videoUrl, getStats, listItems, listSets, setLabel } from '../../api/gateReview'
 
 const message = useMessage()
@@ -100,7 +149,6 @@ const scenario = ref('')
 const onlyUnlabeled = ref(false)
 const page = ref(1)
 const jumpPageValue = ref(1)
-const pageSize = 24
 const items = ref([])
 const total = ref(0)
 const stats = ref(null)
@@ -112,6 +160,9 @@ let loadVersion = 0
 const selectedSet = computed(() => sets.value.find((s) => s.name === currentSet.value))
 const hideTeacher = computed(() => Boolean(selectedSet.value?.hide_teacher))
 const isVideo = computed(() => selectedSet.value?.mode === 'video')
+const isCropComparison = computed(() => selectedSet.value?.mode === 'crop_comparison')
+const isSingleView = computed(() => isVideo.value || isCropComparison.value)
+const pageSize = computed(() => (isSingleView.value ? 1 : 24))
 
 const setOptions = computed(() => sets.value.map((s) => {
   const live = stats.value && s.name === currentSet.value ? labeled.value : s.labeled
@@ -126,12 +177,14 @@ const scenarioOptions = [
   { label: 'day 白天', value: 'day' },
   { label: 'night 夜视', value: 'night' },
 ]
-const maxPage = computed(() => Math.max(1, Math.ceil(total.value / (isVideo.value ? 1 : pageSize))))
+const maxPage = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
 const labeled = ref(0)
 function syncLabeled() {
   if (!stats.value) { labeled.value = 0; return }
   const c = stats.value.counts
-  labeled.value = c.present + c.absent + c.uncertain
+  labeled.value = isCropComparison.value
+    ? (c.pass || 0) + (c.fail || 0) + (c.uncertain || 0)
+    : (c.present || 0) + (c.absent || 0) + (c.uncertain || 0)
 }
 const progressPercent = computed(() => (stats.value ? Math.round((labeled.value / Math.max(1, stats.value.total)) * 100) : 0))
 
@@ -180,12 +233,12 @@ async function reload() {
       scenario: scenario.value || undefined,
       only_unlabeled: onlyUnlabeled.value,
       page: page.value,
-      page_size: isVideo.value ? 1 : pageSize,
+      page_size: pageSize.value,
     })
     if (version !== loadVersion) return
     items.value = data.items.map((item) => ({ note: '', ...item }))
     total.value = data.total
-    const loadedMaxPage = Math.max(1, Math.ceil(data.total / (isVideo.value ? 1 : pageSize)))
+    const loadedMaxPage = Math.max(1, Math.ceil(data.total / pageSize.value))
     if (page.value > loadedMaxPage) {
       page.value = loadedMaxPage
       jumpPageValue.value = loadedMaxPage
@@ -195,6 +248,8 @@ async function reload() {
     }
     syncUrlState()
     cursor.value = 0
+    await nextTick()
+    resetCropVideos()
     const updatedStats = await getStats(batch)
     if (version !== loadVersion) return
     stats.value = updatedStats
@@ -236,6 +291,67 @@ const BOX_FLAGS = [
   { key: 'loose', label: '框偏大' },
 ]
 
+const CROP_ARMS = [
+  { key: 'raw', label: '原始视频', note: '完整画面，等比缩放后居中' },
+  { key: 'gdino', label: 'GroundingDINO 裁剪', note: '只使用检测跟踪框' },
+  { key: 'gdino_motion', label: '像素运动辅助裁剪', note: '检测框加像素前景扩展' },
+]
+
+const CROP_FLAGS = [
+  { key: 'body_cut', label: '身体切断' },
+  { key: 'wrong_target', label: '裁错目标' },
+  { key: 'target_jump', label: '跳猫/漂移' },
+  { key: 'jitter', label: '裁剪抖动' },
+  { key: 'gray_frames', label: '灰帧/无效帧' },
+  { key: 'text_watermark', label: '水印/文字污染' },
+  { key: 'multi_cat', label: '多猫歧义' },
+  { key: 'dog_present', label: '有狗歧义' },
+  { key: 'no_cat_detection', label: '未可靠检出猫' },
+  { key: 'other', label: '其他' },
+]
+
+const cropVideos = new Map()
+function setCropVideo(arm, element) {
+  if (element) cropVideos.set(arm, element)
+  else cropVideos.delete(arm)
+}
+function resetCropVideos() {
+  for (const video of cropVideos.values()) {
+    video.pause()
+    video.currentTime = 0
+  }
+}
+function playSiblings() {
+  const raw = cropVideos.get('raw')
+  if (!raw) return
+  for (const [arm, video] of cropVideos.entries()) {
+    if (arm === 'raw') continue
+    if (Math.abs(video.currentTime - raw.currentTime) > 0.12) video.currentTime = raw.currentTime
+    video.play().catch(console.error)
+  }
+}
+function pauseSiblings() {
+  for (const [arm, video] of cropVideos.entries()) {
+    if (arm !== 'raw') video.pause()
+  }
+}
+function seekSiblings() {
+  const raw = cropVideos.get('raw')
+  if (!raw) return
+  for (const [arm, video] of cropVideos.entries()) {
+    if (arm !== 'raw') video.currentTime = raw.currentTime
+  }
+}
+function syncSiblings() {
+  const raw = cropVideos.get('raw')
+  if (!raw) return
+  for (const [arm, video] of cropVideos.entries()) {
+    if (arm !== 'raw' && Math.abs(video.currentTime - raw.currentTime) > 0.12) {
+      video.currentTime = raw.currentTime
+    }
+  }
+}
+
 const noteFlags = (note) => (note || '').split(';').map((v) => v.trim()).filter(Boolean)
 const hasFlag = (item, key) => noteFlags(item.note).includes(key)
 
@@ -273,6 +389,20 @@ function onKey(event) {
   const key = event.key.toLowerCase()
   const item = items.value[cursor.value]
   if (!item) return
+  if (isCropComparison.value) {
+    if (key === 'p') label(item, 'pass')
+    else if (key === 'f') label(item, 'fail')
+    else if (key === 'u') label(item, 'uncertain')
+    else if (key === ' ') {
+      event.preventDefault()
+      const raw = cropVideos.get('raw')
+      if (!raw) return
+      if (raw.paused || raw.ended) raw.play().catch(console.error)
+      else raw.pause()
+    } else if (key === 'arrowright') nextPage()
+    else if (key === 'arrowleft') prevPage()
+    return
+  }
   if (key === (isVideo.value ? 'f' : 'p')) label(item, 'present')
   else if (key === 'a') label(item, 'absent')
   else if (key === 'u') label(item, 'uncertain')
@@ -413,6 +543,68 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     height: 100%;
     object-fit: contain;
     display: block;
+  }
+}
+
+.crop-compare {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  height: 100%;
+  padding: 10px;
+  background: #111;
+  box-sizing: border-box;
+}
+
+.crop-pane {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+
+  figcaption {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 9px;
+    color: rgba(255, 255, 255, 0.88);
+    background: #1b1b1b;
+    font-size: 12px;
+
+    span {
+      color: rgba(255, 255, 255, 0.52);
+      font-size: 11px;
+    }
+  }
+
+  video {
+    flex: 1;
+    min-height: 0;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+}
+
+.crop-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+
+  span:last-of-type {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -568,6 +760,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   justify-content: flex-end;
   flex-shrink: 0;
   padding: 8px 0 0;
+}
+
+@media (max-width: 900px) {
+  .crop-compare {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .crop-pane video {
+    min-height: 220px;
+  }
 }
 
 .gr-jump {
