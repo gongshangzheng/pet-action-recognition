@@ -3,7 +3,7 @@
     <header class="gr-head">
       <div class="gr-title">
         <h2>{{ selectedSet?.title || '门控核验' }}</h2>
-        <span v-if="isCropComparison" class="gr-hint">三路视频均可独立播放，请分别打开并拖动到同一时刻比较。快捷键 P / F / U；空格播放/暂停原始视频，← → 翻页。</span>
+        <span v-if="isCropComparison" class="gr-hint">三路视频均可独立播放，请分别打开并拖动到同一时刻比较。快捷键 A / F / U；空格播放/暂停原始视频，← → 翻页。</span>
         <span v-else-if="isVideo" class="gr-hint">两秒内任意时刻出现宠物即选有宠物，整个片段没有宠物才选无宠物；快捷键 F / A / U，空格播放/暂停，← → 翻页。</span>
         <span v-else-if="hideTeacher" class="gr-hint">只判断有没有宠物：有宠物 P / 无宠物 A；看不清可跳过待复核 U。← → 切换图片。</span>
         <span v-else class="gr-hint">模型预标仅供参考，请确认有无宠物；看不清可跳过。（快捷键 P / A / U，← → 切换图片）</span>
@@ -92,7 +92,7 @@
           <figcaption class="gr-actions">
             <template v-if="isCropComparison">
               <button class="btn present" :class="{ active: item.human_label === 'pass' }"
-                      @click.stop="label(item, 'pass')">裁剪合格 P</button>
+                      @click.stop="label(item, 'pass')">裁剪合格 A</button>
               <button class="btn absent" :class="{ active: item.human_label === 'fail' }"
                       @click.stop="label(item, 'fail')">裁剪不合格 F</button>
             </template>
@@ -363,7 +363,7 @@ function onKey(event) {
   const item = items.value[cursor.value]
   if (!item) return
   if (isCropComparison.value) {
-    if (key === 'p') label(item, 'pass')
+    if (key === 'a') label(item, 'pass')
     else if (key === 'f') label(item, 'fail')
     else if (key === 'u') label(item, 'uncertain')
     else if (key === ' ') {
