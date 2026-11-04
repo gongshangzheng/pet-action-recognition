@@ -109,3 +109,11 @@
 单段重试完成 405 帧，CPU 峰值 233%、RSS 约 1.35 GiB，守卫日志 `.run/guard/run-20261104-180052.log`。随后启动 20 段重渲染，使用同样线程限制与 350% CPU/3 GiB RSS 上限；本轮不训练。
 
 重渲染期间共享机 GPU1 出现外部计算进程（约 6.5 GiB 显存），GPU0 保持空闲。本任务仅 CPU 媒体处理，不进行性能比较；共享窗口资源记录不作为性能证据，后续 CPU 索引/审计/审阅导出前重新预检主机与 GPU0。
+
+### 2026-11-04：follow_cam 重渲染完成（sample20-followcam-v1）
+
+20/20 源视频、40 个 B/C 输出完成，12,174 帧，整批守卫日志 `.run/guard/run-20261104-180203.log`，运行 671 秒（含首段缓存复用），RSS 最高约 1.37 GiB。共享资源窗口不作为吞吐证据。20 段媒体审计 passed；本批严格索引 source_rows=31、eligible_rows=2、training_ready=false。新旧源哈希、检测指纹、检测状态及逐帧资格全部相同；有效帧 6,154，预选区间合格 1/20，显示缺框 0。像素辅助触发数 1,059 对旧批 1,061，仅为触发诊断，不代表收益。
+
+轨迹 summary 仅量化元数据中的基础显示框，不是历史 B 实际路径或 C 最终偏移路径，不能作视觉稳定性验收。60 个审阅短视频已在远程生成，availability 来自本批索引。远程产物：`results/cat_crop_classification/gdino-crop-20261103a/quality/sample20-followcam-v1/{crop_audit.json,camera_summary.json,dataset/}`；审阅集 `results/gate/review/cat-crop-gdino-20261103a-sample20-followcam-v1/`。视频未下载本地。用户视觉审阅仍待完成，不扩量、不训练。
+
+审阅媒体审计 `audit.json` 为 passed、count=20，60 文件全部通过；远程 API 返回 total=20，Q004 gdino 单字节 Range 请求返回 HTTP 206、video/mp4。HEAD 返回 405 是接口不支持该方法，不是媒体缺失。项目回归最终 87 passed、8 subtests passed；新增只读诊断脚本经审阅批准。
