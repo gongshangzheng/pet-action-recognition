@@ -8,10 +8,10 @@ import hashlib
 import json
 import math
 import os
-import subprocess
-from fractions import Fraction
 from pathlib import Path
 from typing import Any
+
+import cv2
 
 
 ARMS = ("raw", "gdino", "gdino_motion")
@@ -26,38 +26,26 @@ def sha256(path: Path) -> str:
 
 
 def probe_video(path: Path) -> dict[str, Any]:
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=width,height,avg_frame_rate,nb_frames,duration",
-            "-of",
-            "json",
-            str(path),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    streams = json.loads(result.stdout).get("streams") or []
-    if len(streams) != 1:
-        raise ValueError(f"Expected one video stream in {path}")
-    stream = streams[0]
-    frames = stream.get("nb_frames")
-    duration = stream.get("duration")
-    rate = stream.get("avg_frame_rate")
-    if frames in (None, "N/A") or duration in (None, "N/A") or not rate:
-        raise ValueError(f"Missing frame/duration/FPS metadata in {path}")
+    capture = cv2.VideoCapture(str(path))
+    if not capture.isOpened():
+        capture.release()
+        raise ValueError(f"Cannot open video: {path}")
+    frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = float(capture.get(cv2.CAP_PROP_FPS))
+    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    capture.release()
+    if frames < 1 or fps <= 0 or width < 1 or height < 1:
+        raise ValueError(
+            f"Missing frame/FPS/size metadata in {path}: "
+            f"frames={frames}, fps={fps}, size={width}x{height}"
+        )
     return {
-        "frames": int(frames),
-        "fps": float(Fraction(rate)),
-        "duration": float(duration),
-        "width": int(stream["width"]),
-        "height": int(stream["height"]),
+        "frames": frames,
+        "fps": fps,
+        "duration": frames / fps,
+        "width": width,
+        "height": height,
     }
 
 

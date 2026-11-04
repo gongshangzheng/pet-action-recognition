@@ -13,9 +13,10 @@ import json
 import os
 import subprocess
 from datetime import datetime, timezone
-from fractions import Fraction
 from pathlib import Path
 from typing import Any
+
+import cv2
 
 
 ARMS = ("raw", "gdino", "gdino_motion")
@@ -36,29 +37,12 @@ def atomic_json(path: Path, payload: Any) -> None:
 
 
 def probe_fps(path: Path) -> float:
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=avg_frame_rate:format=duration",
-            "-of",
-            "json",
-            str(path),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    payload = json.loads(result.stdout)
-    stream = (payload.get("streams") or [{}])[0]
-    rate = stream.get("avg_frame_rate")
-    if not rate or rate in {"0/0", "0"}:
-        raise ValueError(f"Cannot determine FPS: {path}")
-    fps = float(Fraction(rate))
+    capture = cv2.VideoCapture(str(path))
+    if not capture.isOpened():
+        capture.release()
+        raise ValueError(f"Cannot open video: {path}")
+    fps = float(capture.get(cv2.CAP_PROP_FPS))
+    capture.release()
     if fps <= 0:
         raise ValueError(f"Invalid FPS {fps}: {path}")
     return fps

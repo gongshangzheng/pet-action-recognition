@@ -5,10 +5,28 @@ from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.prepare_cat_crop_review_set import build_review_set, export_clip
+import cv2
+import numpy as np
+
+from scripts.prepare_cat_crop_review_set import build_review_set, export_clip, probe_fps
 
 
 class CatCropReviewSetTests(unittest.TestCase):
+    def test_probe_fps_uses_opencv_without_ffprobe(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "sample.avi"
+            writer = cv2.VideoWriter(
+                str(path),
+                cv2.VideoWriter_fourcc(*"MJPG"),
+                12.0,
+                (32, 24),
+            )
+            self.assertTrue(writer.isOpened())
+            for _ in range(4):
+                writer.write(np.zeros((24, 32, 3), dtype=np.uint8))
+            writer.release()
+            self.assertAlmostEqual(probe_fps(path), 12.0, delta=0.1)
+
     def test_export_preserves_one_output_frame_per_selected_source_frame(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

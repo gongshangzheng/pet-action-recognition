@@ -4,10 +4,33 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.checks.check_cat_crop_review_set import audit_set
+import cv2
+import numpy as np
+
+from scripts.checks.check_cat_crop_review_set import audit_set, probe_video
 
 
 class CatCropReviewAuditTests(unittest.TestCase):
+    def test_probe_video_uses_opencv_metadata(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "sample.avi"
+            writer = cv2.VideoWriter(
+                str(path),
+                cv2.VideoWriter_fourcc(*"MJPG"),
+                10.0,
+                (32, 24),
+            )
+            self.assertTrue(writer.isOpened())
+            for _ in range(5):
+                writer.write(np.zeros((24, 32, 3), dtype=np.uint8))
+            writer.release()
+            properties = probe_video(path)
+            self.assertEqual(properties["frames"], 5)
+            self.assertAlmostEqual(properties["fps"], 10.0, delta=0.1)
+            self.assertEqual(properties["width"], 32)
+            self.assertEqual(properties["height"], 24)
+            self.assertAlmostEqual(properties["duration"], 0.5, delta=0.02)
+
     def test_audits_declared_triplet(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
