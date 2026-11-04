@@ -100,7 +100,12 @@ def build_frame_track(
     sample_stride: int,
     max_gap: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Interpolate only bounded gaps between two independently valid anchors."""
+    """Build the strict crop track and a separate best-cat display track.
+
+    ``camera_box`` follows the training eligibility rules. ``display_box`` keeps
+    the highest-confidence cat box for review rendering even when multi-cat or
+    dog ambiguity excludes the frame from training.
+    """
     if sample_stride < 1:
         raise ValueError("sample_stride must be positive")
     if total_frames < 1:
@@ -117,6 +122,7 @@ def build_frame_track(
             "frame": frame,
             "frame_index_base": 0,
             "camera_box": None,
+            "display_box": None,
             "source": "invalid",
             "valid": False,
             "reason": "no_reliable_cat_detection",
@@ -130,6 +136,7 @@ def build_frame_track(
             "frame": frame,
             "frame_index_base": 0,
             "camera_box": [round(float(value), 3) for value in clean[frame]],
+            "display_box": [round(float(value), 3) for value in clean[frame]],
             "source": "detected",
             "valid": True,
             "reason": None,
@@ -182,6 +189,11 @@ def build_frame_track(
             "frame": frame,
             "frame_index_base": 0,
             "camera_box": None,
+            "display_box": (
+                [round(float(value), 3) for value in state["cat_box"]]
+                if state.get("cat_box") is not None
+                else None
+            ),
             "source": "invalid",
             "valid": False,
             "reason": reasons[0],
@@ -189,6 +201,26 @@ def build_frame_track(
             "cat_count": state.get("cat_count"),
             "dog_count": state.get("dog_count"),
         }
+
+    display_frames = sorted(
+        frame
+        for frame, state in anchors.items()
+        if state.get("cat_box") is not None and 0 <= frame < total_frames
+    )
+    for current, following in zip(display_frames, display_frames[1:]):
+        gap = following - current
+        if gap <= 1 or gap > max_gap:
+            continue
+        left = np.asarray(anchors[current]["cat_box"], dtype=np.float64)
+        right = np.asarray(anchors[following]["cat_box"], dtype=np.float64)
+        for intermediate in range(current + 1, following):
+            if track[intermediate].get("display_box") is not None:
+                continue
+            weight = (intermediate - current) / gap
+            box = left + weight * (right - left)
+            track[intermediate]["display_box"] = [
+                round(float(value), 3) for value in box
+            ]
     return track
 
 
@@ -268,6 +300,34 @@ def crop_square(
     if crop.size == 0:
         raise ValueError("empty crop")
     return cv2.resize(crop, (size, size), interpolation=cv2.INTER_AREA)
+
+
+def letterbox_square(
+    frame: np.ndarray,
+    size: int,
+    background: int = 32,
+) -> np.ndarray:
+    """Fit a complete frame into a square with neutral margins."""
+    if frame.ndim != 3 or frame.shape[0] < 1 or frame.shape[1] < 1:
+        raise ValueError("frame must be a non-empty HxWxC image")
+    height, width = frame.shape[:2]
+    scale = min(size / width, size / height)
+    resized = cv2.resize(
+        frame,
+        (max(1, round(width * scale)), max(1, round(height * scale))),
+        interpolation=cv2.INTER_AREA,
+    )
+    vertical = size - resized.shape[0]
+    horizontal = size - resized.shape[1]
+    return cv2.copyMakeBorder(
+        resized,
+        vertical // 2,
+        vertical - vertical // 2,
+        horizontal // 2,
+        horizontal - horizontal // 2,
+        cv2.BORDER_CONSTANT,
+        value=(background, background, background),
+    )
 
 
 def motion_correct_box(

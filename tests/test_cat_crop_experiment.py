@@ -24,6 +24,7 @@ from petlib.datasets.cat_crop import (  # noqa: E402
     classify_frame,
     crop_bounds,
     interval_status,
+    letterbox_square,
     motion_correct_box,
 )
 import build_cat_crop_qc_sheets as qc  # noqa: E402
@@ -102,6 +103,13 @@ class TargetValidityTests(unittest.TestCase):
         self.assertGreater(right, left)
         self.assertGreater(bottom, top)
 
+    def test_letterbox_fallback_keeps_non_square_source_content(self) -> None:
+        frame = np.zeros((40, 80, 3), dtype=np.uint8)
+        frame[10:30, 20:60] = (20, 120, 220)
+        result = letterbox_square(frame, 64)
+        self.assertEqual(result.shape, (64, 64, 3))
+        self.assertGreater(int(result.max()), 32)
+
 
 class TrackTests(unittest.TestCase):
     def test_short_gap_interpolates_and_long_gap_does_not(self) -> None:
@@ -140,6 +148,9 @@ class TrackTests(unittest.TestCase):
         self.assertFalse(track[5]["valid"])
         self.assertFalse(track[10]["valid"])
         self.assertFalse(track[15]["valid"])
+        self.assertIsNotNone(track[5]["display_box"])
+        self.assertIsNotNone(track[10]["display_box"])
+        self.assertIsNone(track[5]["camera_box"])
 
     def test_interval_requires_every_frame(self) -> None:
         track = [

@@ -25,6 +25,7 @@ from petlib.datasets.cat_crop import (  # noqa: E402
     classify_frame,
     crop_square,
     interval_status,
+    letterbox_square,
     motion_correct_box,
 )
 from petlib.videowriter import H264VideoWriter  # noqa: E402
@@ -335,16 +336,14 @@ def render_video(
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {source}")
     fps = float(cap.get(cv2.CAP_PROP_FPS))
-    write_box = crop_square(
-        np.zeros((1, 1, 3), dtype=np.uint8), [0, 0, 1, 1], args.size, args.pad
-    )
-    neutral = np.full_like(write_box, 114)
     bg = cv2.createBackgroundSubtractorMOG2(
         history=120, varThreshold=25, detectShadows=False
     )
     previous_hit = False
     frame_index = 0
     invalid_frames = 0
+    display_box_frames = 0
+    letterbox_frames = 0
     corrected_frames = 0
     paths["gdino"].parent.mkdir(parents=True, exist_ok=True)
     paths["gdino_motion"].parent.mkdir(parents=True, exist_ok=True)
@@ -381,8 +380,17 @@ def render_video(
             )
             record = track[frame_index]
             if not record["valid"]:
-                gdino_writer.write(neutral)
-                motion_writer.write(neutral)
+                display_box = record.get("display_box")
+                if display_box is not None:
+                    fallback = crop_square(
+                        frame, display_box, args.size, args.pad
+                    )
+                    display_box_frames += 1
+                else:
+                    fallback = letterbox_square(frame, args.size)
+                    letterbox_frames += 1
+                gdino_writer.write(fallback)
+                motion_writer.write(fallback)
                 invalid_frames += 1
                 previous_hit = False
                 frame_index += 1
@@ -433,6 +441,8 @@ def render_video(
         "render_fingerprint": render_fingerprint(args),
         "valid_frames": frame_index - invalid_frames,
         "invalid_frames": invalid_frames,
+        "display_box_fallback_frames": display_box_frames,
+        "letterbox_fallback_frames": letterbox_frames,
         "corrected_frames": corrected_frames,
         "gdino_video": str(paths["gdino"]),
         "gdino_video_sha256": sha256(paths["gdino"]),
@@ -461,6 +471,7 @@ def render_fingerprint(args: argparse.Namespace) -> dict[str, Any]:
         "max_motion_expansion": args.max_motion_expansion,
         "crf": args.crf,
         "ffmpeg_threads": args.ffmpeg_threads,
+        "invalid_frame_fallback": "cat-box-or-letterbox-v1",
     }
 
 
