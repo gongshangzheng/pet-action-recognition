@@ -31,6 +31,20 @@ The system SHALL record detection, target species, interpolation and pixel-corre
 - **AND** the full source image appears only when the source video has no pet anchor at all
 - **AND** display fallback does not admit the interval to the common training or evaluation index
 
+#### Scenario: Camera rendering crosses an eligibility boundary
+
+- **WHEN** a source video contains pet anchors and adjacent frames have different training eligibility
+- **THEN** both frames use the same interpolated and edge-padded moving-average camera path
+- **AND** missing detections do not switch rendering to the full source image
+- **AND** oversized square windows use border padding without stretching or truncating the detected box
+- **AND** pixel-assisted camera offsets use the legacy bounded damping with zero offset at detection anchors
+
+#### Scenario: An index is built independently of rendering
+
+- **WHEN** the system generates a training or evaluation index from existing crop artifacts
+- **THEN** it checks the current source hash, detection fingerprint, render fingerprint, output paths and both media hashes before admission
+- **AND** mismatched or missing assets remain unavailable with an explicit reason
+
 #### Scenario: No reliable target exists
 
 - **WHEN** an interval samples frames in a long detection gap or an unsupported multi-pet region
