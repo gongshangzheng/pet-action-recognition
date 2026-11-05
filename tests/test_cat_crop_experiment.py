@@ -616,6 +616,105 @@ class CacheAndIndexTests(unittest.TestCase):
                 )
             capture.assert_not_called()
 
+    def test_build_indexes_generates_all_arms_in_three_arm_mode(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT / "results/tests") as name:
+            root = Path(name)
+            video_root = root / "sources"
+            asset_root = root / "assets"
+            dataset_root = root / "dataset"
+            video = "videos/v.mp4"
+            source = video_root / video
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"source")
+            paths = prepare.cache_paths(asset_root, video)
+            for path in paths.values():
+                path.parent.mkdir(parents=True, exist_ok=True)
+            paths["gdino"].write_bytes(b"gdino")
+            paths["gdino_motion"].write_bytes(b"motion")
+
+            args = argparse.Namespace(
+                index_root=root / "index",
+                video_root=video_root,
+                dataset_root=dataset_root,
+                dataset_id="test",
+                video=[video],
+                max_videos=1,
+                sample_stride=10,
+                max_gap=20,
+                size=512,
+                pad=1.2,
+                bg_lr=0.002,
+                bg_warmup_frames=15,
+                min_motion_coverage=0.2,
+                max_motion_expansion=0.25,
+                off_alpha=0.6,
+                off_max_v=0.05,
+                off_alpha_size=0.15,
+                off_max_v_size=0.02,
+                crf=23,
+                ffmpeg_threads=1,
+                force=True,
+                gdino_only=False,
+                skip_default_availability=True,
+                full_dataset_preprocessing=False,
+                review_set=None,
+                model_dir="/unused",
+                threshold=0.3,
+                text_threshold=0.3,
+            )
+            paths["detection"].write_text(
+                json.dumps(
+                    {
+                        "schema": prepare.CACHE_SCHEMA,
+                        "status": "complete",
+                        "source_sha256": prepare.sha256(source),
+                        "fingerprint": {"detector": "current"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            paths["metadata"].write_text(
+                json.dumps(
+                    {
+                        "status": "complete",
+                        "source_sha256": prepare.sha256(source),
+                        "detection_fingerprint": {"detector": "current"},
+                        "render_fingerprint": prepare.render_fingerprint(args),
+                        "gdino_video": str(paths["gdino"]),
+                        "gdino_video_sha256": prepare.sha256(paths["gdino"]),
+                        "gdino_motion_video": str(paths["gdino_motion"]),
+                        "gdino_motion_video_sha256": prepare.sha256(paths["gdino_motion"]),
+                        "track": [{"valid": True} for _ in range(3)],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            rows = [
+                {
+                    "video": video,
+                    "sample_id": "sample-1",
+                    "task_id": "task-1",
+                    "split": "train",
+                    "start_frame": 1,
+                    "end_frame": 3,
+                    "label": 0,
+                }
+            ]
+            with mock.patch.object(
+                prepare,
+                "detection_fingerprint_for_args",
+                return_value={"detector": "current"},
+            ):
+                manifest = prepare.build_indexes(rows, asset_root, dataset_root, args)
+
+            self.assertEqual(manifest["eligible_rows"], 1)
+            for arm in ("raw", "gdino", "gdino_motion"):
+                train_file = dataset_root / f"{arm}_train.jsonl"
+                self.assertTrue(train_file.is_file(), f"{train_file} missing")
+                lines = [json.loads(line) for line in train_file.read_text().splitlines() if line]
+                self.assertEqual(len(lines), 1, f"{arm} lines count mismatch")
+                self.assertEqual(lines[0]["sample_id"], "sample-1")
+
     def test_index_build_rejects_cached_metadata_with_missing_media(self) -> None:
         with tempfile.TemporaryDirectory(dir=ROOT / "results/tests") as name:
             root = Path(name)

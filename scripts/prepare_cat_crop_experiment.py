@@ -812,6 +812,11 @@ def build_indexes(
         arm_rows["raw"][row["split"]].append({"video": row["video"], **common})
         relative_crop = f"videos/gdino/{Path(row['video']).stem}.mp4"
         arm_rows["gdino"][row["split"]].append({"video": relative_crop, **common})
+        if "gdino_motion" in arm_rows:
+            relative_motion = f"videos/gdino_motion/{Path(row['video']).stem}.mp4"
+            arm_rows["gdino_motion"][row["split"]].append(
+                {"video": relative_motion, **common}
+            )
 
     split_files: dict[str, dict[str, str]] = {}
     class_counts: dict[str, dict[str, dict[str, int]]] = {}
