@@ -8,6 +8,7 @@ GUARD_LOG_DIR=".run/guard"
 ALERT_FILE=".run/alert_status.json"
 DATASET_DIR="datasets/cat_crop_classification/gdino-v1-full"
 ASSET_DIR="results/cat_crop_classification/gdino-crop-20261103a/assets/full_run"
+STAGE_TRACKER=".run/stage_status.json"
 
 timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -21,6 +22,17 @@ if grep -En "(Traceback|RuntimeError|Exception|Error:)" "$LOG_FILE" 2>/dev/null 
     error_found=1
     alert_reason="Python error/exception detected in log: $(cat /tmp/log_errors.txt | head -n 1)"
   fi
+fi
+
+current_stage="UNKNOWN"
+if grep -q "Full preprocessing finished successfully!" "$LOG_FILE" 2>/dev/null; then
+  current_stage="COMPLETED"
+elif grep -q "Stage 3: Build manifest and indexes..." "$LOG_FILE" 2>/dev/null; then
+  current_stage="STAGE_3_INDEX"
+elif grep -q "Stage 2: Render B & C crops..." "$LOG_FILE" 2>/dev/null; then
+  current_stage="STAGE_2_RENDER"
+elif grep -q "Stage 1: Detection..." "$LOG_FILE" 2>/dev/null; then
+  current_stage="STAGE_1_DETECT"
 fi
 
 # 2. Check running processes
@@ -59,6 +71,7 @@ JSON
   exit 1
 else
   echo "[STATUS: HEALTHY] Processes running (pipeline PID: $pipeline_pid, python PID: $python_pid)"
+echo "[STAGE] Current execution stage: $current_stage"
   echo "[PROGRESS] Total assets generated: $asset_count"
   echo "[LATEST LOGS]"
   tail -n 8 "$LOG_FILE"
