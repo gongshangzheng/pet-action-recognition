@@ -117,3 +117,11 @@
 轨迹 summary 仅量化元数据中的基础显示框，不是历史 B 实际路径或 C 最终偏移路径，不能作视觉稳定性验收。60 个审阅短视频已在远程生成，availability 来自本批索引。远程产物：`results/cat_crop_classification/gdino-crop-20261103a/quality/sample20-followcam-v1/{crop_audit.json,camera_summary.json,dataset/}`；审阅集 `results/gate/review/cat-crop-gdino-20261103a-sample20-followcam-v1/`。视频未下载本地。用户视觉审阅仍待完成，不扩量、不训练。
 
 审阅媒体审计 `audit.json` 为 passed、count=20，60 文件全部通过；远程 API 返回 total=20，Q004 gdino 单字节 Range 请求返回 HTTP 206、video/mp4。HEAD 返回 405 是接口不支持该方法，不是媒体缺失。项目回归最终 87 passed、8 subtests passed；新增只读诊断脚本经审阅批准。
+
+### 2026-11-04：小批质量人工质检确认通过
+
+- **用户审阅结论**：用户已完成 `sample20-followcam-v1` 小批审阅，确认 20 段样本全部通过（无身体切断、目标跟踪连续稳定）。
+- **任务状态推进**：勾选并通过 Task 3.2、3.3 与 6.5，解除全量处理前置阻塞。
+- **下一阶段执行规划**：推进 Task 3.4（全量 GroundingDINO 检测与裁剪资产生成）。
+  - 全量涉及 `cat_action_v1`（包含 train 1,664、val 604、test 442，共 2,710 个动作区间），去重后对应 2,144 个源视频。
+  - 远程 pet 当前 2× RTX 4090 D 均处于空闲状态（显存占用 1 MiB，GPU 0%），`/home` 磁盘余量 11 TB，资源充裕。

@@ -344,6 +344,76 @@ def render_base_crop(
     return letterbox_square(frame, args.size), None
 
 
+def render_frames(
+    cap: cv2.VideoCapture,
+    track: list[dict[str, Any]],
+    anchors: dict[int, dict[str, Any]],
+    frame_width: float,
+    fps: float,
+    args: argparse.Namespace,
+    gdino_writer,
+    motion_writer,
+    bg,
+    offset_smoother,
+    video: str,
+) -> tuple[int, int, int, int, int]:
+    anchor_frames = sorted(anchors)
+    previous_hit = False
+    frame_index = invalid_frames = display_box_frames = 0
+    letterbox_frames = corrected_frames = 0
+    while True:
+        ok, frame = cap.read()
+        if not ok:
+            break
+        if frame_index >= len(track):
+            raise RuntimeError(f"Decoded more frames than detection cache for {video}")
+        foreground = None
+        if not getattr(args, "gdino_only", False):
+            foreground = bg.apply(frame, learningRate=args.bg_lr)
+            foreground = cv2.morphologyEx(
+                foreground, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)
+            )
+        record = track[frame_index]
+        gdino_crop, base_box = render_base_crop(frame, record, args)
+        if not record["valid"]:
+            if base_box is not None:
+                display_box_frames += 1
+            else:
+                letterbox_frames += 1
+            invalid_frames += 1
+            previous_hit = False
+        if motion_writer is not None:
+            assisted_box = base_box
+            is_anchor = frame_index in anchors
+            if (
+                record["valid"] and base_box is not None and not is_anchor
+                and frame_index >= args.bg_warmup_frames
+            ):
+                assisted_box, corrected, previous_hit = motion_correct_box(
+                    foreground, base_box, previous_hit,
+                    min_coverage=args.min_motion_coverage,
+                    max_expansion_ratio=args.max_motion_expansion,
+                )
+                corrected_frames += int(corrected)
+            else:
+                previous_hit = False
+            if base_box is None:
+                motion_crop = gdino_crop
+            else:
+                previous_anchor, next_anchor = anchor_bounds(anchor_frames, frame_index)
+                camera_box, _ = offset_smoother.update(
+                    frame_index, base_box, assisted_box,
+                    previous_anchor, next_anchor,
+                )
+                motion_crop = crop_square(frame, camera_box, args.size, args.pad)
+            motion_writer.write(motion_crop)
+        gdino_writer.write(gdino_crop)
+        frame_index += 1
+        if frame_index % 500 == 0:
+            print(f"[render] {Path(video).name}: {frame_index} frames", flush=True)
+    return frame_index, invalid_frames, display_box_frames, letterbox_frames, corrected_frames
+
+
 def render_video(
     video: str,
     video_root: Path,
@@ -359,12 +429,11 @@ def render_video(
             f"rerun detection before rendering: {source}"
         )
     paths = cache_paths(asset_root, video)
-    if (
-        paths["gdino"].is_file()
-        and paths["gdino_motion"].is_file()
-        and paths["metadata"].is_file()
-        and not args.force
-    ):
+    gdino_only = getattr(args, "gdino_only", False)
+    outputs_complete = paths["gdino"].is_file() and (
+        gdino_only or paths["gdino_motion"].is_file()
+    )
+    if outputs_complete and paths["metadata"].is_file() and not args.force:
         metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
         if (
             metadata.get("source_sha256") == source_hash
@@ -395,11 +464,15 @@ def render_video(
         raise RuntimeError(f"Cannot open video: {source}")
     fps = float(cap.get(cv2.CAP_PROP_FPS))
     frame_width = float(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    bg = cv2.createBackgroundSubtractorMOG2(
-        history=120, varThreshold=25, detectShadows=False
+    bg = (
+        None
+        if getattr(args, "gdino_only", False)
+        else cv2.createBackgroundSubtractorMOG2(
+            history=120, varThreshold=25, detectShadows=False
+        )
     )
     anchor_frames = sorted(anchors)
-    offset_smoother = MotionOffsetSmoother(
+    offset_smoother = None if getattr(args, "gdino_only", False) else MotionOffsetSmoother(
         frame_width=frame_width,
         sample_stride=args.sample_stride,
         translation_alpha=args.off_alpha,
@@ -414,93 +487,50 @@ def render_video(
     letterbox_frames = 0
     corrected_frames = 0
     paths["gdino"].parent.mkdir(parents=True, exist_ok=True)
-    paths["gdino_motion"].parent.mkdir(parents=True, exist_ok=True)
     temporary_gdino = paths["gdino"].with_suffix(".mp4.writing.mp4")
-    temporary_motion = paths["gdino_motion"].with_suffix(".mp4.writing.mp4")
-    with (
+    temporary_motion = (
+        None
+        if getattr(args, "gdino_only", False)
+        else paths["gdino_motion"].with_suffix(".mp4.writing.mp4")
+    )
+    writers = [
         H264VideoWriter(
             str(temporary_gdino),
             fps,
             (args.size, args.size),
             crf=args.crf,
             threads=args.ffmpeg_threads,
-        ) as gdino_writer,
-        H264VideoWriter(
+        )
+    ]
+    if not getattr(args, "gdino_only", False):
+        paths["gdino_motion"].parent.mkdir(parents=True, exist_ok=True)
+        writers.append(H264VideoWriter(
             str(temporary_motion),
             fps,
             (args.size, args.size),
             crf=args.crf,
             threads=args.ffmpeg_threads,
-        ) as motion_writer,
-    ):
-        while True:
-            ok, frame = cap.read()
-            if not ok:
-                break
-            if frame_index >= len(track):
-                cap.release()
-                raise RuntimeError(
-                    f"Decoded more frames than detection cache for {source}"
-                )
-            foreground = bg.apply(frame, learningRate=args.bg_lr)
-            foreground = cv2.morphologyEx(
-                foreground, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)
+        ))
+    with writers[0] as gdino_writer:
+        if getattr(args, "gdino_only", False):
+            frame_index, invalid_frames, display_box_frames, letterbox_frames, corrected_frames = render_frames(
+                cap, track, anchors, frame_width, fps, args, gdino_writer,
+                None, None, None, video,
             )
-            record = track[frame_index]
-            gdino_crop, base_box = render_base_crop(frame, record, args)
-            if not record["valid"]:
-                if base_box is not None:
-                    display_box_frames += 1
-                else:
-                    letterbox_frames += 1
-                invalid_frames += 1
-                previous_hit = False
-            assisted_box = base_box
-            is_anchor = frame_index in anchors
-            if (
-                record["valid"]
-                and base_box is not None
-                and not is_anchor
-                and frame_index >= args.bg_warmup_frames
-            ):
-                assisted_box, corrected, previous_hit = motion_correct_box(
-                    foreground,
-                    base_box,
-                    previous_hit,
-                    min_coverage=args.min_motion_coverage,
-                    max_expansion_ratio=args.max_motion_expansion,
+        else:
+            with writers[1] as motion_writer:
+                frame_index, invalid_frames, display_box_frames, letterbox_frames, corrected_frames = render_frames(
+                    cap, track, anchors, frame_width, fps, args, gdino_writer,
+                    motion_writer, bg, offset_smoother, video,
                 )
-                corrected_frames += int(corrected)
-            else:
-                previous_hit = False
-            if base_box is None:
-                motion_crop = gdino_crop
-            else:
-                previous_anchor, next_anchor = anchor_bounds(
-                    anchor_frames, frame_index
-                )
-                camera_box, _ = offset_smoother.update(
-                    frame_index,
-                    base_box,
-                    assisted_box,
-                    previous_anchor,
-                    next_anchor,
-                )
-                motion_crop = crop_square(
-                    frame, camera_box, args.size, args.pad
-                )
-            gdino_writer.write(gdino_crop)
-            motion_writer.write(motion_crop)
-            frame_index += 1
-            if frame_index % 500 == 0:
-                print(f"[render] {Path(video).name}: {frame_index} frames", flush=True)
     cap.release()
     if frame_index != len(track):
         raise RuntimeError(
             f"Decoded {frame_index} frames during render, expected {len(track)}: {source}"
         )
     os.replace(temporary_gdino, paths["gdino"])
-    os.replace(temporary_motion, paths["gdino_motion"])
+    if not getattr(args, "gdino_only", False):
+        os.replace(temporary_motion, paths["gdino_motion"])
 
     metadata = {
         "schema": "cat-crop-render-v1",
@@ -523,8 +553,8 @@ def render_video(
         "corrected_frames": corrected_frames,
         "gdino_video": str(paths["gdino"]),
         "gdino_video_sha256": sha256(paths["gdino"]),
-        "gdino_motion_video": str(paths["gdino_motion"]),
-        "gdino_motion_video_sha256": sha256(paths["gdino_motion"]),
+        "gdino_motion_video": None if getattr(args, "gdino_only", False) else str(paths["gdino_motion"]),
+        "gdino_motion_video_sha256": None if getattr(args, "gdino_only", False) else sha256(paths["gdino_motion"]),
         "track": track,
     }
     atomic_json(paths["metadata"], metadata)
@@ -565,6 +595,7 @@ def render_fingerprint(args: argparse.Namespace) -> dict[str, Any]:
         "off_max_v_size": getattr(
             args, "off_max_v_size", DEFAULT_OFFSET_MAX_VELOCITY_SIZE
         ),
+        "preprocessing_mode": "gdino_only" if getattr(args, "gdino_only", False) else "gdino_with_motion",
         "motion_offset": (
             "legacy-xyxy-coordinate-channels-cosine-anchor-window-"
             "damped-limited-v3"
@@ -616,18 +647,15 @@ def validate_index_assets(
     if metadata.get("render_fingerprint") != expected_render_fingerprint:
         return {"ready": False, "reason": "render_fingerprint_mismatch"}
 
-    expected_media = (
-        (
-            "gdino",
-            "gdino_video",
-            "gdino_video_sha256",
-        ),
-        (
+    expected_media = [
+        ("gdino", "gdino_video", "gdino_video_sha256")
+    ]
+    if expected_render_fingerprint.get("preprocessing_mode") != "gdino_only":
+        expected_media.append((
             "gdino_motion",
             "gdino_motion_video",
             "gdino_motion_video_sha256",
-        ),
-    )
+        ))
     media_hashes: dict[str, str] = {}
     for path_name, metadata_path, metadata_hash in expected_media:
         media_path = paths[path_name]
@@ -736,9 +764,7 @@ def interval_availability(
                 "invalid_frames": status["invalid_frames"],
                 "source_video_sha256": asset.get("source_video_sha256"),
                 "gdino_video_sha256": asset.get("gdino_video_sha256"),
-                "gdino_motion_video_sha256": asset.get(
-                    "gdino_motion_video_sha256"
-                ),
+        "gdino_motion_video_sha256": asset.get("gdino_motion_video_sha256"),
             }
         )
     return results
@@ -764,8 +790,10 @@ def build_indexes(
             f"or pass --force deliberately: {dataset_root}"
         )
     dataset_root.mkdir(parents=True, exist_ok=True)
+    dataset_arms = ("raw", "gdino") if getattr(args, "gdino_only", False) else ARMS
     arm_rows: dict[str, dict[str, list[dict[str, Any]]]] = {
-        arm: {split: [] for split in ("train", "val", "test")} for arm in ARMS
+        arm: {split: [] for split in ("train", "val", "test")}
+        for arm in dataset_arms
     }
     for row in availability:
         if not row["available"]:
@@ -783,15 +811,11 @@ def build_indexes(
         }
         arm_rows["raw"][row["split"]].append({"video": row["video"], **common})
         relative_crop = f"videos/gdino/{Path(row['video']).stem}.mp4"
-        relative_motion = f"videos/gdino_motion/{Path(row['video']).stem}.mp4"
         arm_rows["gdino"][row["split"]].append({"video": relative_crop, **common})
-        arm_rows["gdino_motion"][row["split"]].append(
-            {"video": relative_motion, **common}
-        )
 
     split_files: dict[str, dict[str, str]] = {}
     class_counts: dict[str, dict[str, dict[str, int]]] = {}
-    for arm in ARMS:
+    for arm in dataset_arms:
         class_counts[arm] = {}
         split_files[arm] = {}
         for split in ("train", "val", "test"):
@@ -830,7 +854,7 @@ def build_indexes(
         "created_utc": utc_now(),
         "dataset_id": args.dataset_id,
         "classes": CLASSES,
-        "arms": list(ARMS),
+        "arms": list(dataset_arms),
         "common_sample_set": True,
         "source_index_root": str(args.index_root),
         "source_video_root": str(args.video_root),
@@ -839,6 +863,8 @@ def build_indexes(
         "source_rows": len(source_rows),
         "eligible_rows": sum(row["available"] for row in availability),
         "training_ready": args.max_videos is None and not args.video,
+        "full_dataset_preprocessing": bool(getattr(args, "full_dataset_preprocessing", False)),
+        "review_set": getattr(args, "review_set", None),
         "availability": availability_counts,
         "class_counts": class_counts,
         "split_files": split_files,
@@ -868,7 +894,7 @@ def build_indexes(
         ],
     }
     atomic_json(dataset_root / "availability.json", availability_payload)
-    if args.max_videos is None and not args.video:
+    if args.max_videos is None and not args.video and not getattr(args, "skip_default_availability", False):
         atomic_json(DEFAULT_RUN_ROOT / "availability.json", availability_payload)
     return manifest
 
@@ -882,6 +908,8 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--sample-stride must be positive")
     if args.max_gap < args.sample_stride:
         raise ValueError("--max-gap must be at least the sample stride")
+    if getattr(args, "full_dataset_preprocessing", False) and not getattr(args, "gdino_only", False):
+        raise ValueError("full-dataset preprocessing requires --gdino-only")
     if args.size < 1 or args.size % 2:
         raise ValueError("--size must be a positive even integer")
     if args.pad < 1:
@@ -976,6 +1004,16 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--crf", type=int, default=23)
     parser.add_argument("--ffmpeg-threads", type=int, default=1)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--gdino-only", action="store_true",
+        help="render only the GroundingDINO crop; do not run pixel-motion assistance",
+    )
+    parser.add_argument(
+        "--skip-default-availability", action="store_true",
+        help="do not write the compatibility availability file under the default run root",
+    )
+    parser.add_argument("--full-dataset-preprocessing", action="store_true")
+    parser.add_argument("--review-set", default=None)
 
 
 def run_detect(args: argparse.Namespace, videos: list[str]) -> None:

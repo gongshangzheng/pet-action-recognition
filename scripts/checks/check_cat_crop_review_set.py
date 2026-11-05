@@ -55,6 +55,9 @@ def audit_set(set_root: Path) -> dict[str, Any]:
     if manifest.get("mode") != "crop_comparison":
         raise ValueError(f"Expected crop_comparison mode: {manifest_path}")
 
+    arms = tuple(manifest.get("arms") or ARMS)
+    if not set(arms).issubset(ARMS) or "raw" not in arms or "gdino" not in arms:
+        raise ValueError(f"Invalid review arms in {manifest_path}: {arms}")
     declared_paths: set[str] = set()
     items: list[dict[str, Any]] = []
     for item in manifest.get("items") or []:
@@ -62,7 +65,7 @@ def audit_set(set_root: Path) -> dict[str, Any]:
         expected_frames = int(item["frame_count"])
         properties: dict[str, dict[str, Any]] = {}
         hashes: dict[str, str] = {}
-        for arm in ARMS:
+        for arm in arms:
             relative = (item.get("files") or {}).get(arm)
             if not relative:
                 raise ValueError(f"{review_id} has no {arm} file")
@@ -76,7 +79,7 @@ def audit_set(set_root: Path) -> dict[str, Any]:
             hashes[arm] = sha256(media_path)
 
         raw = properties["raw"]
-        for arm in ARMS:
+        for arm in arms:
             actual = properties[arm]
             if actual["frames"] != expected_frames:
                 raise ValueError(

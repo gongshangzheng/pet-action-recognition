@@ -133,10 +133,11 @@ def build_review_set(args: argparse.Namespace) -> dict[str, Any]:
         inputs = {
             "raw": source,
             "gdino": generated_path(args.asset_root, "gdino", row["video"]),
-            "gdino_motion": generated_path(
-                args.asset_root, "gdino_motion", row["video"]
-            ),
         }
+        if not getattr(args, "gdino_only", False):
+            inputs["gdino_motion"] = generated_path(
+                args.asset_root, "gdino_motion", row["video"]
+            )
         missing = [str(path) for path in inputs.values() if not path.is_file()]
         if missing:
             raise FileNotFoundError(
@@ -144,7 +145,8 @@ def build_review_set(args: argparse.Namespace) -> dict[str, Any]:
             )
         fps = probe_fps(source)
         relative_files: dict[str, str] = {}
-        for arm in ARMS:
+        arms = tuple(inputs)
+        for arm in arms:
             relative = Path("media") / review_id / f"{arm}.mp4"
             destination = args.output / relative
             if args.force or not destination.is_file():
@@ -190,7 +192,7 @@ def build_review_set(args: argparse.Namespace) -> dict[str, Any]:
         "count": len(items),
         "selection": str(args.selection),
         "selection_sha256": args.selection_sha256,
-        "arms": list(ARMS),
+        "arms": list(arms),
         "items": items,
     }
     atomic_json(args.output / "items.json", payload)
@@ -207,6 +209,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--crf", type=int, default=22)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--gdino-only", action="store_true")
     args = parser.parse_args()
     if not 0 <= args.crf <= 51:
         parser.error("--crf must be between 0 and 51")
