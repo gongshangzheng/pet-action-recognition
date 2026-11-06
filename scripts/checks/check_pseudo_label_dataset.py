@@ -31,6 +31,8 @@ def event_day(video: str) -> str | None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dataset", type=Path, required=True, help="导出产物目录")
+    ap.add_argument("--emit-yolo-config", action="store_true",
+                    help="同时产出 Ultralytics 训练所需的 data.yaml 与 train/val/test 清单")
     args = ap.parse_args()
 
     manifest = json.loads((args.dataset / "dataset.json").read_text(encoding="utf-8"))
@@ -110,6 +112,24 @@ def main() -> int:
     print(json.dumps({k: v for k, v in selfcheck.items()
                       if k not in ("params", "same_event_day_cross_split")}, ensure_ascii=False))
     print(f"同事件日跨 split：{len(leaky_days)} 天")
+    if args.emit_yolo_config:
+        # Ultralytics：图像为扁平目录，用 txt 清单指定各 split
+        for split in ("train", "val", "test"):
+            imgs = sorted(r["image"] for r in records if r["split"] == split)
+            (args.dataset / f"{split}.txt").write_text(
+                "\n".join(imgs) + "\n", encoding="utf-8")
+            print(f"  {split}.txt: {len(imgs)} 张")
+        yaml_text = (
+            f"path: {args.dataset.resolve()}\n"
+            "train: train.txt\n"
+            "val: val.txt\n"
+            "test: test.txt\n"
+            "names:\n"
+            + "".join(f"  {i}: {n}\n" for i, n in enumerate(manifest["classes"]))
+        )
+        (args.dataset / "data.yaml").write_text(yaml_text, encoding="utf-8")
+        print(f"data.yaml -> {args.dataset / 'data.yaml'}")
+
     print(f"SELFCHECK DONE -> {args.dataset}")
     return 0 if not violations else 1
 
