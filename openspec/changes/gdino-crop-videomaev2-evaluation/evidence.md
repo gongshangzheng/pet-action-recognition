@@ -190,3 +190,13 @@
 - **成本**：`.run/logs/full_preprocessing.log` 记录 2026-11-05 10:05:06 开始、2026-11-06 10:25:52 成功结束，墙钟 24 小时 20 分 46 秒。分段：检测在 16:17:41 中断后重跑，守卫记录最后一次检测 `rc=0 in 15473s`（4 小时 17 分 53 秒），20:35:34 结束；渲染 `rc=0 in 49699s`（13 小时 48 分 19 秒），次日 10:23:53 结束；清单与索引生成 119 秒。
 - **磁盘**：`assets/full_run` 合计 6.8 GB，其中 `videos` 6.3 GB、`metadata` 364 MB、`detections` 116 MB；索引目录 1.4 MB。
 - **限制**：24 小时 20 分包含首次检测被中断的时段，不是干净吞吐量；共享机并发窗口未排除，不能作为性能结论。`manifest.json` 的 `full_dataset_preprocessing` 为 `false`，但该批次实际覆盖全部 2,144 段索引视频，因此这个标志不能用来判断是否全量，判据应是 `all_videos.txt` 行数与 `source_rows`。
+
+### 2026-11-06：2.3 核验 B/C 共用检测缓存与锚点（远程只读）
+
+- **方法**：新增只读核对脚本 `scripts/checks/check_cat_crop_arm_consistency.py`（提交 `104d838`），在 pet HEAD `104d838` 上以 `plf` 环境运行，守卫上限 250% CPU / 4 GiB RSS，耗时约 5 秒，未使用 GPU。报告 `results/cat_crop_classification/gdino-crop-20261103a/quality/arm-consistency/arm_consistency_v2.json`。
+- **共用检测缓存**：2,144 份渲染元数据的 `detection_fingerprint` 只有一个取值（变体数 0），指向同一 GroundingDINO 权重哈希 `1a2412ef…` 与同一配置；`render_fingerprint` 同样只有一个取值。B、C 不来自两次检测。
+- **锚点行为**：`petlib/followcam.py` 的 `MotionOffsetSmoother.update` 在 `frame_index in (previous_anchor, next_anchor)` 时执行 `reset()` 并原样返回 base；`scripts/prepare_cat_crop_experiment.py` 的 `anchor_bounds` 用 `bisect_right`，锚点帧自身会作为 `previous_anchor` 命中，因此锚点帧不做像素外扩。
+- **像素测量（3 段、每段逐帧对比两路视频）**：锚点帧差值中位数 1.9539 / 2.2208 / 2.2814，p90 ≤ 2.61；无效帧（两路按设计写同一裁剪）差值中位数 1.8644–2.2333，构成约 2.0 的编码噪声底；受像素辅助的帧 p90 为 14.55–16.87、最大 28.45–37.30，约为噪声底的 7 倍。锚点落在噪声底内，辅助帧明显高出，说明像素辅助没有污染锚点。
+- **对旧结论的更正**：同一脚本首版把 `metadata.track[].camera_box` 与 `display_box` 相比，报出 110,163 处“锚点不一致”（提交 `9fc7b45` 的结果，报告 `arm_consistency.json`）。核对源码后确认 `camera_box` 记录的是训练资格框、`display_box` 可能带审阅平滑，两者本就不应相等；该数字测量的是字段约定而不是渲染结果，**结论撤回**。现行版本改为比较解码帧。
+- **未证明的部分**：两路视频独立编码，帧间预测会带来约 1% 的均值差，因此不能从解码帧证明锚点裁剪“完全逐像素相同”。精确相等的证明需要比较编码前的裁剪帧，归入 2.8 的合成注入测试。
+- **限制**：像素检查只覆盖 3 段、共 5,169 帧，不是全量 2,144 段；噪声底用无效帧代理，未单独测量同源同帧的两次编码差。
