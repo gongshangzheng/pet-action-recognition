@@ -74,13 +74,52 @@ def read_frame(video: Path, frame: int) -> np.ndarray:
     return img
 
 
-def save_overlay(crop, box_in_crop, mask, path: Path) -> None:
-    vis = crop.copy()
-    if mask is not None:
-        vis[mask] = (0.35 * vis[mask] + 0.65 * np.array([0, 0, 255])).astype(np.uint8)
-    x1, y1, x2, y2 = [int(v) for v in box_in_crop]
-    cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    cv2.imwrite(str(path), vis)
+def mask_bbox(mask):
+    ys, xs = np.nonzero(mask)
+    if len(xs) == 0:
+        return None
+    return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
+
+
+def crop_with_margin(img, box, out_h=360, margin=PAD_RATIO):
+    """按框裁剪并外扩 margin，缩放到统一高度，便于并排对比。"""
+    h, w = img.shape[:2]
+    x1, y1, x2, y2 = [int(v) for v in box]
+    mw, mh = int((x2 - x1) * margin), int((y2 - y1) * margin)
+    cx1, cy1 = max(0, x1 - mw), max(0, y1 - mh)
+    cx2, cy2 = min(w, x2 + mw), min(h, y2 + mh)
+    crop = img[cy1:cy2, cx1:cx2].copy()
+    if crop.size == 0:
+        return None
+    scale = out_h / crop.shape[0]
+    return cv2.resize(crop, (max(1, int(crop.shape[1] * scale)), out_h))
+
+
+def save_compare(img, box, refined_box, mask, out_path: Path, label: str) -> None:
+    """左：当前管线的原框裁剪；右：按 mask 外接框重裁。同高并排，直接看谁裁得准。"""
+    left = crop_with_margin(img, box)
+    right = crop_with_margin(img, refined_box) if refined_box else None
+    panels = []
+    if left is not None:
+        cv2.rectangle(left, (2, 2), (left.shape[1] - 3, left.shape[0] - 3), (0, 200, 0), 2)
+        cv2.putText(left, f"ORIGINAL {int(box[2]-box[0])}x{int(box[3]-box[1])}",
+                    (8, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 0), 2)
+        panels.append(left)
+    if right is not None:
+        cv2.rectangle(right, (2, 2), (right.shape[1] - 3, right.shape[0] - 3), (255, 200, 0), 2)
+        rw, rh = int(refined_box[2] - refined_box[0]), int(refined_box[3] - refined_box[1])
+        cv2.putText(right, f"REFINED {rw}x{rh}", (8, 24),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 200, 0), 2)
+        panels.append(right)
+    if not panels:
+        return
+    h = max(p.shape[0] for p in panels)
+    panels = [cv2.copyMakeBorder(p, 0, h - p.shape[0], 0, 6,
+                                 cv2.BORDER_CONSTANT, value=(40, 40, 40)) for p in panels]
+    out = np.hstack(panels)
+    cv2.putText(out, label[:60], (8, out.shape[0] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+    cv2.imwrite(str(out_path), out)
 
 
 def build_mobile_sam(model_dir: Path, ckpt: Path):
@@ -101,20 +140,35 @@ def build_sam2(model_dir: Path, ckpt: Path):
     return predictor_mod.SAM2ImagePredictor(model)
 
 
-def run_case(predictor, kind: str, crop: np.ndarray, box_in_crop, out_png: Path) -> dict:
+def run_case(predictor, kind: str, img: np.ndarray, crop: np.ndarray,
+             crop_origin, box_in_crop, case_id: str, out_dir: Path, note: str) -> dict:
     rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
     predictor.set_image(rgb)
     box = np.array([box_in_crop], dtype=np.float32)
     masks, scores, _ = predictor.predict(box=box, multimask_output=False)
     mask = masks[0].astype(bool)
-    save_overlay(crop, box_in_crop, mask, out_png)
+
+    ox, oy = crop_origin
+    mb = mask_bbox(mask)
+    refined_frame_box = refined_wh = None
+    if mb is not None:
+        refined_frame_box = (ox + mb[0], oy + mb[1], ox + mb[2], oy + mb[3])
+        refined_wh = [int(mb[2] - mb[0] + 1), int(mb[3] - mb[1] + 1)]
+
+    png = out_dir / "overlays" / f"{case_id}__{kind}.png"
+    save_compare(img, (ox + box_in_crop[0], oy + box_in_crop[1],
+                       ox + box_in_crop[2], oy + box_in_crop[3]),
+                 refined_frame_box, mask, png, f"{case_id} / {kind} — {note}")
+
     iou = mask_box_iou(mask, box_in_crop)
     return {
         "model": kind,
         "fill_ratio": round(fill_ratio(mask, box_in_crop), 4),
         "mask_box_iou": None if iou is None else round(iou, 4),
         "score": round(float(scores[0]), 4),
-        "overlay": out_png.name,
+        "refined_box": None if refined_frame_box is None else [int(v) for v in refined_frame_box],
+        "refined_wh": refined_wh,
+        "overlay": png.name,
     }
 
 
@@ -150,8 +204,8 @@ def main() -> int:
             "results": [],
         }
         for kind, predictor in (("mobile_sam", mobile), ("sam2_small", sam2)):
-            png = args.out / "overlays" / f"{case['id']}__{kind}.png"
-            res = run_case(predictor, kind, crop, box_in_crop, png)
+            res = run_case(predictor, kind, img, crop, (cx1, cy1), box_in_crop,
+                           case["id"], args.out, case.get("note", ""))
             row["results"].append(res)
         rows.append(row)
         print(f"[probe] {case['id']}: " + " | ".join(
