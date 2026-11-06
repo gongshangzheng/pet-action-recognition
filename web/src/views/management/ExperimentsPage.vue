@@ -198,7 +198,7 @@ import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
-import { getExperiments, getExperimentDetail, getExperimentAssetUrl } from '../../api/experiments'
+import { getExperiments, getExperimentDetail, getExperimentAssetUrl, getExperimentMediaUrl } from '../../api/experiments'
 import { vClickable } from '../../directives/clickable'
 import { splitReportAppendix, narrativeEmbedsAsset } from './experimentReportContent'
 
@@ -342,6 +342,7 @@ const toggleIndex = ref(0)
 function assetUrl(c) {
   const parts = String(c.src || '').split('/')
   const file = parts[parts.length - 1]
+  if (parts[0] === 'media' || c.kind === 'video') return getExperimentMediaUrl(topic.value, slug.value, file)
   return getExperimentAssetUrl(topic.value, slug.value, file)
 }
 
