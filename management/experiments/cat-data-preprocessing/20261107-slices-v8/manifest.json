@@ -1,0 +1,95 @@
+{
+  "evidence": {
+    "实验类型": "正确性（数据管线）",
+    "baseline 数值来源": "旧索引 gdino-v1-cat（207 可用区间 / 2,710 标注区间，7.6%）；data-card.md",
+    "可辨识性": "逐区间 reasons 之和等于 3,927；片段上限 13,356 = 3,339 × 4，实际 7,554；同一 seed 重跑 clips.jsonl 哈希一致",
+    "样本量": "全量 3,927 区间 / 2,573 段视频；多宠物判定抽查 20 条；检测抽检 15 段",
+    "失败边界": "外延失败 143；静物/重复框只压“多报”不补“漏检”；seizure 不可训练",
+    "结论上界": "证明数据可用率与可追溯性达标，不证明分类准确率，也不构成端到端验收"
+  },
+  "metrics": [
+    {
+      "name": "可用区间占全部标注",
+      "unit": "%",
+      "baseline": "7.6（207/2,710）",
+      "result": "85.0（3,339/3,927）",
+      "delta": "+77.4",
+      "sample_size": "3,927",
+      "source": "slices_v8/summary.json",
+      "limitation": "可用率不等于准确率"
+    },
+    {
+      "name": "训练片段",
+      "unit": "个",
+      "baseline": "137",
+      "result": "4,506",
+      "delta": "+4,369",
+      "sample_size": "—",
+      "source": "datasets/cat_clip_v8/train.jsonl",
+      "limitation": "含同视频近似片段"
+    },
+    {
+      "name": "片段总数",
+      "unit": "个",
+      "baseline": "207",
+      "result": "7,554",
+      "delta": "+7,347",
+      "sample_size": "3,339",
+      "source": "slices_v8/summary.json",
+      "limitation": "未导出 mp4"
+    },
+    {
+      "name": "多宠物排除",
+      "unit": "条",
+      "baseline": "967（含重复框）",
+      "result": "482",
+      "delta": "-485",
+      "sample_size": "3,927",
+      "source": "slices_v8/summary.json",
+      "limitation": "仍不覆盖漏检"
+    },
+    {
+      "name": "外延失败",
+      "unit": "条",
+      "baseline": "106",
+      "result": "143",
+      "delta": "+37",
+      "sample_size": "607",
+      "source": "slices_v8/intervals.jsonl",
+      "limitation": "可用区间变多后邻接冲突增加"
+    },
+    {
+      "name": "activity 片段占比",
+      "unit": "%",
+      "baseline": "54.5",
+      "result": "50.1",
+      "delta": "-4.4",
+      "sample_size": "7,554",
+      "source": "slices_v8/clips_by_label",
+      "limitation": "未触发 3 倍上限"
+    }
+  ],
+  "cases": [
+    {
+      "id": "real-two-animals",
+      "kind": "image",
+      "src": "assets/7957fbfa91ce4fd75524f8da882eca00c26b2dc670ffae60c52dba0e650da7b1.jpg",
+      "source_run": "multi_pet_review",
+      "input": "前景一只猫 + 地板上一只躺卧的猫",
+      "selection_reason": "规整后仍判多宠物的形态，目标身份确实不唯一",
+      "sha256": "7957fbfa91ce4fd75524f8da882eca00c26b2dc670ffae60c52dba0e650da7b1"
+    },
+    {
+      "id": "seizure-two-cats",
+      "kind": "image",
+      "src": "assets/7458b5de5ba44bceb1ecfa9ff02737ea7f454a4db720570f7f8dc80351a40602.jpg",
+      "source_run": "seizure-check",
+      "input": "seizure 区间 317–375 帧，锚点 335",
+      "selection_reason": "两只真猫、空间无交叠；该区间被排除属多宠物目标不唯一，SORT 落地后可回收",
+      "sha256": "7458b5de5ba44bceb1ecfa9ff02737ea7f454a4db720570f7f8dc80351a40602"
+    }
+  ],
+  "diagnostics": [
+    "case duplicate-box: 文件不存在 tmp/multi_pet_review/08_event_20260611_183348_70.jpg"
+  ]
+}
