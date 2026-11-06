@@ -28,7 +28,8 @@ ARMS = ("raw", "gdino", "gdino_motion")
 SPLITS = ("train", "val", "test")
 RUN_ID = "gdino-crop-20261103a"
 RUN_ROOT = ROOT / "results/cat_crop_classification" / RUN_ID
-INDEX_ROOT = ROOT / "datasets/cat_crop_classification/gdino-v1"
+INDEX_ROOT = ROOT / "datasets/cat_crop_classification/gdino-v1-full"
+ASSET_ROOT = ROOT / "results/cat_crop_classification/gdino-crop-20261103a/assets/full_run"
 CONFIGS = {
     "raw": ROOT / "configs/cat_crop_videomaev2_raw.py",
     "gdino": ROOT / "configs/cat_crop_videomaev2_gdino.py",
@@ -97,6 +98,14 @@ def validate_common_indexes() -> dict[str, Any]:
         raise RuntimeError(
             "dataset was built from a smoke subset and is not training-ready"
         )
+    source_rows = sum(len(read_jsonl(Path(manifest["source_index_root"]) / f"{split}.jsonl")) for split in SPLITS)
+    if manifest.get("source_rows") != source_rows:
+        raise ValueError(
+            f"manifest source_rows mismatch: {manifest.get('source_rows')} != {source_rows}"
+        )
+    availability = json.loads((INDEX_ROOT / "availability.json").read_text(encoding="utf-8"))
+    if len(availability.get("rows", [])) != source_rows:
+        raise ValueError("availability rows do not match source index denominator")
     splits: dict[str, Any] = {}
     for split in SPLITS:
         arm_rows = {
@@ -118,6 +127,16 @@ def validate_common_indexes() -> dict[str, Any]:
             raise ValueError(f"{split} indexes are not paired")
         if not arm_rows["raw"]:
             raise ValueError(f"{split} contains no common samples")
+        for arm, rows in arm_rows.items():
+            for row in rows:
+                video_root = (
+                    Path(manifest["source_video_root"])
+                    if arm == "raw"
+                    else ASSET_ROOT / "videos" / arm
+                )
+                video_path = (video_root / row["video"]).resolve()
+                if not video_path.is_file():
+                    raise FileNotFoundError(f"{arm}/{split} video missing: {video_path}")
         splits[split] = {
             "samples": len(arm_rows["raw"]),
             "hashes": {
@@ -136,10 +155,23 @@ def config_data_root(config_path: Path) -> str:
 
 def arm_config_options(arm: str) -> list[str]:
     result_root = RUN_ROOT / arm
+    ann_file_prefix = INDEX_ROOT / f"{arm}_"
+    manifest = json.loads((INDEX_ROOT / "manifest.json").read_text(encoding="utf-8"))
+    arm_video_dir = (
+        Path(manifest["source_video_root"])
+        if arm == "raw"
+        else ASSET_ROOT / "videos" / arm
+    )
     return [
         f"work_dir={result_root / 'work'}",
         f"val_evaluator.out_file={result_root / 'val_metrics.json'}",
         f"test_evaluator.out_file={result_root / 'test_metrics.json'}",
+        f"train_dataloader.dataset.ann_file={ann_file_prefix}train.jsonl",
+        f"val_dataloader.dataset.ann_file={ann_file_prefix}val.jsonl",
+        f"test_dataloader.dataset.ann_file={ann_file_prefix}test.jsonl",
+        f"train_dataloader.dataset.data_prefix.video={arm_video_dir}",
+        f"val_dataloader.dataset.data_prefix.video={arm_video_dir}",
+        f"test_dataloader.dataset.data_prefix.video={arm_video_dir}",
     ]
 
 
@@ -198,7 +230,12 @@ def evaluation_command(
     work_dir: Path,
     out_file: Path,
 ) -> list[str]:
-    data_root = config_data_root(CONFIGS[arm])
+    manifest = json.loads((INDEX_ROOT / "manifest.json").read_text(encoding="utf-8"))
+    data_root = (
+        Path(manifest["source_video_root"])
+        if arm == "raw"
+        else ASSET_ROOT / "videos" / arm
+    )
     return [
         sys.executable,
         str(ROOT / "models/mmaction2/tools/test.py"),
@@ -567,6 +604,14 @@ def preflight_arm(arm: str, runtime_device: str) -> dict[str, Any]:
     from mmaction.registry import MODELS
 
     config = Config.fromfile(str(CONFIGS[arm]))
+    manifest = json.loads((INDEX_ROOT / "manifest.json").read_text(encoding="utf-8"))
+    video_root = (
+        Path(manifest["source_video_root"])
+        if arm == "raw"
+        else ASSET_ROOT / "videos" / arm
+    )
+    config.train_dataloader.dataset.ann_file = str(INDEX_ROOT / f"{arm}_train.jsonl")
+    config.train_dataloader.dataset.data_prefix.video = str(video_root)
     model = MODELS.build(config.model)
     model.init_weights()
     loader_config = copy.deepcopy(config.train_dataloader)
