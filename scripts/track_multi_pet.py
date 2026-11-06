@@ -26,24 +26,29 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.schemas import Detection  # noqa: E402
 from petlib.tracking.anchors import load_anchor_sequence  # noqa: E402
 from petlib.tracking.oc_sort import OCSortTracker  # noqa: E402
-from petlib.tracking.species_split import SPECIES_ID_OFFSET, SpeciesSplitTracker  # noqa: E402
+from petlib.tracking.species_split import (  # noqa: E402
+    SPECIES_ID_OFFSET,
+    SpeciesSplitTracker,
+)
 
 TRACKING_SCHEMA = "multi-pet-tracking-v1"
 
+# design 4.5：单流关联下，物种一致性低于此比例的轨迹标记为“物种存疑”
+SPECIES_CONSISTENCY_MIN = 0.80
+
 # design 4.7：生命周期按锚点数标定。3Hz 锚点下 max_age=8 ≈ 2.7s coast。
-DEFAULT_PARAMS = dict(
-    min_conf=0.10,       # 低于缓存 box_threshold=0.3 的候选不存在，此处不二次过滤
-    det_thresh=0.10,     # 关联门放低，依赖方向代价（design 4.7）
-    max_age=8,
-    min_hits=2,
-    iou_threshold=0.2,   # IoU 门放低，不硬卡（design 4.7）
-    delta_t=3,
-    inertia=0.2,
-    use_byte=True,
-)
+DEFAULT_PARAMS = {
+    "min_conf": 0.10,       # 低于缓存 box_threshold=0.3 的候选不存在，此处不二次过滤
+    "det_thresh": 0.10,     # 关联门放低，依赖方向代价（design 4.7）
+    "max_age": 8,
+    "min_hits": 2,
+    "iou_threshold": 0.2,   # IoU 门放低，不硬卡（design 4.7）
+    "delta_t": 3,
+    "inertia": 0.2,
+    "use_byte": True,
+}
 
 
 def utc_now() -> str:
@@ -58,24 +63,60 @@ def species_of(track_id: int) -> str:
     return "cat" if track_id < SPECIES_ID_OFFSET else "dog"
 
 
-def track_video(detection_path: Path, params: dict) -> dict:
+def _box_iou(a, b) -> float:
+    x1, y1 = max(a[0], b[0]), max(a[1], b[1])
+    x2, y2 = min(a[2], b[2]), min(a[3], b[3])
+    inter = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+    if inter <= 0:
+        return 0.0
+    area_a = (a[2] - a[0]) * (a[3] - a[1])
+    area_b = (b[2] - b[0]) * (b[3] - b[1])
+    return inter / (area_a + area_b - inter)
+
+
+def track_video(detection_path: Path, params: dict, association: str = "species_split") -> dict:
     seq = load_anchor_sequence(detection_path)
-    tracker = SpeciesSplitTracker(lambda cfg: OCSortTracker(**cfg), params)
-    for frame, dets in zip(seq.frames, seq.detections):
+    if association == "species_split":
+        tracker = SpeciesSplitTracker(lambda cfg: OCSortTracker(**cfg), params)
+    elif association == "single":
+        # design 4.5（2026-11-07 修订）：单流关联，物种不再硬分实例
+        tracker = OCSortTracker(**params)
+    else:
+        raise ValueError(f"unknown association mode: {association}")
+    for frame, dets in zip(seq.frames, seq.detections, strict=True):
         tracker.update(dets, frame)
     tracks = tracker.finalize()
 
+    # 物种元数据（design 4.5）：每个错点取与轨迹框 IoU 最大的检测，按物种多数投票
+    dets_by_frame = dict(zip(seq.frames, seq.detections, strict=True))
     track_rows = []
     anchors_out: dict[str, list] = {}
     for tr in tracks:
-        points = [
-            {"frame": p.frame, "box": list(p.box), "conf": round(p.conf, 6)}
-            for p in tr.boxes
-        ]
+        votes: dict[str, int] = {}
+        points = []
+        for p in tr.boxes:
+            best = max(dets_by_frame.get(p.frame, []),
+                       key=lambda d: _box_iou(d.box, p.box), default=None)
+            if best is not None:
+                votes[best.cls] = votes.get(best.cls, 0) + 1
+            points.append({"frame": p.frame, "box": list(p.box), "conf": round(p.conf, 6)})
+
+        if association == "species_split":
+            # 硬分实例下物种由流决定，一致性恒为 1（保留基线产物可比性）
+            species, consistency = species_of(tr.track_id), 1.0
+        else:
+            total = sum(votes.values())
+            species = "unknown"
+            if votes:
+                species = sorted(votes.items(), key=lambda kv: (-kv[1], kv[0]))[0][0]
+            consistency = round(votes.get(species, 0) / total, 4) if total else 0.0
+
         track_rows.append(
             {
                 "track_id": tr.track_id,
-                "species": species_of(tr.track_id),
+                "species": species,
+                "species_consistency": consistency,
+                "species_flagged": consistency < SPECIES_CONSISTENCY_MIN,
                 "state": "confirmed" if len(tr.boxes) >= params["min_hits"] else "tentative",
                 "n_anchors": len(tr.boxes),
                 "first_frame": tr.boxes[0].frame,
@@ -87,7 +128,7 @@ def track_video(detection_path: Path, params: dict) -> dict:
             anchors_out.setdefault(str(p.frame), []).append(
                 {
                     "track_id": tr.track_id,
-                    "species": species_of(tr.track_id),
+                    "species": species,
                     "box": list(p.box),
                     "conf": round(p.conf, 6),
                 }
@@ -102,7 +143,8 @@ def track_video(detection_path: Path, params: dict) -> dict:
         "detection_fingerprint": seq.fingerprint,
         "sample_stride": seq.sample_stride,
         "n_anchors": len(seq.frames),
-        "tracker": "oc_sort(species_split)",
+        "tracker": f"oc_sort({association})",
+        "association": association,
         "params": params,
         "n_tracks": len(track_rows),
         "tracks": track_rows,
@@ -120,6 +162,8 @@ def main() -> int:
     parser.add_argument("--inertia", type=float, default=DEFAULT_PARAMS["inertia"],
                         help="方向代价权重；0 = 关闭 OCM（SORT 对照用）")
     parser.add_argument("--no-use-byte", action="store_true", help="关闭低分二次关联（SORT 对照用）")
+    parser.add_argument("--association", choices=("species_split", "single"), default="species_split",
+                        help="关联模式；single = 单流 + 物种作元数据（design 4.5 修订）")
     args = parser.parse_args()
 
     params = dict(DEFAULT_PARAMS)

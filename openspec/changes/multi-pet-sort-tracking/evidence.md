@@ -82,3 +82,12 @@
 - 因此本轮不产出区间级轨迹结论（单一目标 / 多目标可枚举 / 身份不可靠），也不输出失效清单——按 design 4.4，不达标的跟踪器不得接入裁剪流程，此时生成区间结论会让下游误以为可用。
 - 该条不因“进度未满”而勾选为已执行；它的完成判据是**如实记录不触发**，本条即该记录。
 - 后续若 3.2–3.6 恢复达标，区间三分类需重新立条目（不在本轮补做）。
+
+### 2026-11-07：3.2 单流关联臂实现（判据：物种抖动下保持同一 track id + 产物记录物种与一致性）
+
+- 实现：`scripts/track_multi_pet.py` 新增 `--association {species_split,single}`，默认仍是 `species_split`（保基线可比）。`single` 直接把全部检测喂给一个 `OCSortTracker`，不再按物种拆实例。
+- 物种元数据：`record species = 各锚点中与轨迹框 IoU 最大的检测的物种 多数投票`，同一条轨迹记录 `species_consistency`（一致性比例）与 `species_flagged`（< 0.80 标“物种存疑”）。硬分实例臂一致性恒为 1，保留原产物可比性。
+- 判据验证（`tests/test_multi_pet_tracking.py`，合成缓存 20 锚点、单目标匀速、锚点 8–10 物种翻成 dog）：
+  - `single`：confirmed 轨迹 **1 条**，species=cat，consistency=0.85，未标记存疑 —— 通过。
+  - `species_split`（反证）：confirmed 轨迹 **2 条**（cat + dog），复现 2.4 在真实数据观测到的断裂 —— 证明该测试有判别力。
+- 回归：基线臂（species_split）三份产物与改动前逐点比对，轨迹/框/物种**完全一致**，仅新增字段。
