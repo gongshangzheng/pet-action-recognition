@@ -48,7 +48,7 @@ A 为原视频，B 为 GroundingDINO 裁剪，C 为同一检测缓存加像素�
 - [x] 4.4 在数据冻结后，用真实 batch 核验预训练骨干加载、前反向和区间采样。通过资源守卫记录显存与内存峰值，三臂有效 batch 一致。
 - [x] 4.6 让训练入口配置与 design 对齐：打开 `configs/cat_action_v1_base.py` 的 `save_optimizer` 与 `save_param_scheduler`，并把 `run_cat_crop_experiment.py` 的 `INDEX_ROOT` 指向 `gdino-v1-cat`。判据：解析后的配置显示两个 `save_*` 为真、`INDEX_ROOT` 指向 `gdino-v1-cat`，写入 evidence；新检查点是否真带优化器状态由 4.7 核对。（可与 4.5 并行）
 - [ ] 4.7 训练启动后检查第一个检查点：加载后必须含 `optimizer` 与 `param_scheduler`，否则立即停止训练并报告。判据：字段清单写入 evidence；不单独跑冒烟。（依赖 4.6）
-- [ ] 4.8 推送 4.6 的改动，pet 工作树重置到该提交。判据：远端 HEAD 等于提交号且工作树无跟踪改动。（依赖 4.6；4.7 的证据在训练启动后产生）
+- [x] 4.8 推送 4.6 的改动，pet 工作树重置到该提交。判据：远端 HEAD 等于提交号且工作树无跟踪改动。已完成：本地与远端均为 `a77aafb`，跟踪文件无改动。（依赖 4.6；4.7 的证据在训练启动后产生）
 - [ ] 4.9 记录数据划分 seed 与训练 seed（训练 seed 0），估算 207 区间的训练时长与磁盘占用。判据：数值写入 evidence；不足时写成阻塞并停止。（依赖 3.8、4.1、4.3、4.5、4.6、4.7）
 - [ ] 4.10 复核旧七类权重哈希 `39a1baa1…` 与历史 top-1/macro-F1（val 85.93%/70.97%，test 81.90%/67.66%）。判据：核对结果写入 evidence。（可与 4.9 并行）
 - [ ] 4.11 训练 B 臂：seed 0、20 epoch、micro-batch 4 + 累积 4（有效 batch 16）、3.8 的索引、`plf` 环境、预检加守卫。判据：20 epoch 完成，运行记录的解析配置显示有效 batch 16，best checkpoint 按 val macro-F1 保存，配置/环境/日志/权重哈希齐备。（依赖 4.8、4.9）

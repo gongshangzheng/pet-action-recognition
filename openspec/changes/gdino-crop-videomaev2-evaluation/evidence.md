@@ -358,3 +358,8 @@
 - **编号保留空位**：4.5 不再使用，其余编号不变，避免整段重排与引用改动。`openspec instructions apply` 的任务顺序与文件一致。
 - **原 4.7 改为训练内联检查**：不再单独跑 1 epoch 冒烟，改为训练启动后检查第一个检查点是否含 `optimizer` 与 `param_scheduler`，缺则立即停止。这样省一轮训练，同时保住“别再一次白跑 8 个 epoch”的防线。
 - **风险登记**：训练将使用 pet HEAD 上的旧版守卫（工作区改版未部署）。旧版曾留下孤儿进程，因此每轮结束必须手工核对进程与显存；本地 `tests/test_resource_guard_process_tree.py` 的两条失败不影响旧版守卫的既有行为。
+
+### 2026-11-06：4.8 部署核验
+
+- 本地与 pet 均位于 `a77aafb`，远端跟踪文件无改动（`git status --porcelain --untracked-files=no` 为 0）。本轮部署内容：配置对齐（`447ba4d`）、索引阶段 `--target-class`（`7a1db27`）、失效用例修复（`be71494`）、计划修订（至 `23d944b`）。
+- 训练将使用 pet 上的旧版 `resource_guard.sh`；本地那份改版仍未提交、未部署。
