@@ -26,3 +26,19 @@ def test_tree_pids_includes_grandchildren(tmp_path):
         process.terminate()
         subprocess.run(["pkill", "-P", str(process.pid)], check=False)
         process.wait(timeout=5)
+
+
+def test_cpu_stat_parser_handles_spaces_in_process_name(tmp_path):
+    stat_file = tmp_path / "stat"
+    stat_file.write_text("123 (worker pool) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16\n")
+    output = subprocess.check_output(
+        [
+            "bash",
+            "-c",
+            "sed 's/^.*) //' \"$1\" | awk '{print $12+$13}'",
+            "bash",
+            str(stat_file),
+        ],
+        text=True,
+    ).strip()
+    assert output == "27"

@@ -220,7 +220,7 @@ tree_cpu_jiffies() {
   local total=0 pid stat
   for pid in $(tree_pids "$1"); do
     [[ -r /proc/$pid/stat ]] || continue
-    stat=$(awk '{print $14+$15}' "/proc/$pid/stat" 2>/dev/null) || continue
+    stat=$(sed 's/^.*) //' "/proc/$pid/stat" | awk '{print $12+$13}' 2>/dev/null) || continue
     total=$(( total + ${stat:-0} ))
   done
   echo "$total"
@@ -286,18 +286,18 @@ guard_run() {
   log "started pid $child (log $log_file)"
 
   local prev_jiffies prev_t now_jiffies cpu_pct rss gpu_pct elapsed
-  prev_jiffies=$(tree_cpu_jiffies "$child"); prev_t=$(date +%s)
+  prev_jiffies=$(tree_cpu_jiffies "$child"); prev_t=$(date +%s%3N)
   local verdict=0 reason=""
 
   while kill -0 "$child" 2>/dev/null; do
     sleep "$interval"
     kill -0 "$child" 2>/dev/null || break
-    now_jiffies=$(tree_cpu_jiffies "$child"); t=$(date +%s)
+    now_jiffies=$(tree_cpu_jiffies "$child"); t=$(date +%s%3N)
     local hz=100
     [[ -r /proc/self/stat ]] && hz=$(getconf CLK_TCK 2>/dev/null || echo 100)
-    local dj=$(( now_jiffies - prev_jiffies )) dt=$(( t - prev_t ))
-    (( dt > 0 )) || dt=1
-    cpu_pct=$(( dj * 100 / (dt * hz) ))
+    local dj=$(( now_jiffies - prev_jiffies )) dt_ms=$(( t - prev_t ))
+    (( dt_ms > 0 )) || dt_ms=1
+    cpu_pct=$(( dj * 100000 / (dt_ms * hz) ))
     rss=$(tree_rss_mb "$child")
     gpu_pct=$(gpu_mem_pct "$gpu_index")
     elapsed=$(( t - start_s ))
