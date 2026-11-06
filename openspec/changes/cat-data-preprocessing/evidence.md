@@ -171,3 +171,14 @@
 - **决定**：只保留一份数据报告 `20261107-slices-v8`，删除过程稿 `20261107-slices-v3` 与 `20261107-slices-v7`，避免以后拿错分母。
 - **保留方式**：v8 报告的「指标与趋势」新增“版本演进”表，列出 v3/v7/v8 的片段数、多宠物数、外延失败数与各自的主要更正，过程不丢。
 - **旧报告的两处错误**：v3 的 `sample_id` 用了 `annotation_id`（同任务多行共用），导致每区间片段数错乱；v7 的外延失败数 18 是同一缺陷的假象，正确值 106。
+
+### 2026-11-07：九条待办的逐条结论
+
+- **1.4 物种策略**：`species` 已进片段清单与索引文件（v8：猫 5,892 / 狗 1,662 片段），纯狗区间参与训练；评测按物种分组的接入点在训练 change 的 `cat_clip_videomaev2_b.py`（`support_by_split` 按类给出）。运行时参数位尚未接，留作接口说明。
+- **2.4 检测指纹**：权重 SHA-256 `1a2412ef99bd74bc…`、`box_threshold` 0.3、`text_threshold` 0.3、`sample_stride` 5、`classes` `["cat","dog"]`；`max_gap` 10 与代码提交见 `scripts/remote/run_missing_detection.sh` 与 evidence 2026-11-07 补检测条目。
+- **3.1 阈值与命中**：现行规则（锚点覆盖 ≥0.5 且连续 ≥3，先去重复框与退化框）命中 **482** 个区间；任务原文里的 967 是改规则前的数字，已过期。
+- **4.3 仲裁前后**：被压制 22 条（cat/val 10、cat/train 9、cat/test 2、dog/train 1）；保留侧标签 eating 8、activity 5、scratching 4、grooming 3、drinking 2；被压制标签 activity 13、prolonged_stationary 7、grooming 1、drinking 1。
+- **5.4 fall / seizure**：`fall` 产出 2 个片段；`seizure` 0 个，原因是 `multi_pet`（两只真猫、空间无交叠），不是外延失败。
+- **6.1 切片与确定性**：每个区间的片段数 ≤4；`slices_v8` 与 `slices_v8_rerun` 的 `clips.jsonl` SHA-256 同为 `e24876d1…`。
+- **6.2 清单可追溯**：400 条抽样中，非外延片段全部落在来源区间内、标签一致，越界 0 条；25 条 `extended` 片段按设计允许越出原区间（受邻区间与视频边界约束），检查时跳过。
+- **7.2 activity 分母**：activity 3,784 片段，是第二大类（1,309）的 2.89 倍，未触发 3 倍上限，因此没有抽样削减；按 split 2,276 / 899 / 609，按物种猫 3,054 / 狗 730。
