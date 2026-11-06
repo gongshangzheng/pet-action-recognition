@@ -115,7 +115,9 @@ def main() -> int:
     if args.emit_yolo_config:
         # Ultralytics：图像为扁平目录，用 txt 清单指定各 split
         for split in ("train", "val", "test"):
-            imgs = sorted(r["image"] for r in records if r["split"] == split)
+            # Ultralytics 不按 data.yaml 的 path 解析 txt 里的相对路径，故写绝对路径
+            imgs = sorted(str((args.dataset / r["image"]).resolve())
+                          for r in records if r["split"] == split)
             (args.dataset / f"{split}.txt").write_text(
                 "\n".join(imgs) + "\n", encoding="utf-8")
             print(f"  {split}.txt: {len(imgs)} 张")
