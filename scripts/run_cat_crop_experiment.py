@@ -132,7 +132,7 @@ def validate_common_indexes() -> dict[str, Any]:
                 video_root = (
                     Path(manifest["source_video_root"])
                     if arm == "raw"
-                    else ASSET_ROOT / "videos" / arm
+                    else ASSET_ROOT
                 )
                 video_path = (video_root / row["video"]).resolve()
                 if not video_path.is_file():
@@ -160,7 +160,7 @@ def arm_config_options(arm: str) -> list[str]:
     arm_video_dir = (
         Path(manifest["source_video_root"])
         if arm == "raw"
-        else ASSET_ROOT / "videos" / arm
+        else ASSET_ROOT
     )
     return [
         f"work_dir={result_root / 'work'}",
@@ -234,7 +234,7 @@ def evaluation_command(
     data_root = (
         Path(manifest["source_video_root"])
         if arm == "raw"
-        else ASSET_ROOT / "videos" / arm
+        else ASSET_ROOT
     )
     return [
         sys.executable,
@@ -608,7 +608,7 @@ def preflight_arm(arm: str, runtime_device: str) -> dict[str, Any]:
     video_root = (
         Path(manifest["source_video_root"])
         if arm == "raw"
-        else ASSET_ROOT / "videos" / arm
+        else ASSET_ROOT
     )
     config.train_dataloader.dataset.ann_file = str(INDEX_ROOT / f"{arm}_train.jsonl")
     config.train_dataloader.dataset.data_prefix.video = str(video_root)
