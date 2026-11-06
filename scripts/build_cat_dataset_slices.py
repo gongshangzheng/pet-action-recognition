@@ -172,6 +172,10 @@ def main() -> int:
         species = species_of(states)
         day = event_day(stem)
         split = day_splits.get(day, "unassigned") if day else "unassigned"
+        if split == "unassigned":
+            losses["unassigned_split"] += 1
+            by_class_loss[mapped]["unassigned_split"] += 1
+            continue
         survivors.append(
             {
                 "sample_id": row.get("annotation_id") or f"{stem}:{start}-{end}",
