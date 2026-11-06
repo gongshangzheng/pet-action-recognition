@@ -129,9 +129,11 @@
                 <n-radio-button value="side" label="并排" />
                 <n-radio-button value="toggle" label="交替" />
               </n-radio-group>
-              <n-radio-group v-if="compareMode === 'toggle' && additionalCases.length > 1" v-model:value="toggleIndex" size="small" name="case-pick">
-                <n-radio-button v-for="(c, i) in additionalCases" :key="c.id" :value="i" :label="c.id" />
-              </n-radio-group>
+              <n-select
+                v-if="compareMode === 'toggle' && additionalCases.length > 1"
+                v-model:value="toggleIndex" size="small" class="case-pick"
+                :options="casePickerOptions" aria-label="选择案例"
+              />
             </div>
 
             <div v-if="compareMode === 'side'" class="cases-grid">
@@ -302,6 +304,8 @@ const manifestMetrics = computed(() => detail.value?.manifest?.metrics || [])
 const evidenceEntries = computed(() => Object.entries(detail.value?.manifest?.evidence || {}).filter(([, v]) => v))
 const cases = computed(() => (detail.value?.manifest?.cases || []).filter(c => (c.kind === 'image' || c.kind === 'video') && c.src))
 const reportParts = computed(() => splitReportAppendix(detail.value?.content || ''))
+
+const casePickerOptions = computed(() => additionalCases.value.map((c, i) => ({ label: c.id, value: i })))
 
 const tocItems = computed(() => {
   const markdown = reportParts.value?.narrative || ''
@@ -617,7 +621,8 @@ watch(() => route.query, (q) => {
 .metric-table { margin-bottom: 12px; }
 .trend-chart { height: 260px; }
 
-.cases-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.cases-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.case-pick { width: 176px; }
 
 .cases-grid {
   display: grid;
