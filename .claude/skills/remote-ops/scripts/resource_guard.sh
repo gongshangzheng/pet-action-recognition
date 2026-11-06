@@ -66,6 +66,10 @@ load_1m() {
   awk '{print $1}' /proc/loadavg
 }
 
+monotonic_ms() {
+  awk '{printf "%.0f", $1 * 1000}' /proc/uptime
+}
+
 gpu_rows() {
   nvidia-smi --query-gpu=index,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null
 }
@@ -279,20 +283,20 @@ guard_run() {
          NUMEXPR_NUM_THREADS="$threads" TOKENIZERS_PARALLELISM=false
   export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
-  local start_s
-  start_s=$(date +%s)
+  local start_ms
+  start_ms=$(monotonic_ms)
   nice -n "$nice_level" "$@" &
   local child=$!
   log "started pid $child (log $log_file)"
 
   local prev_jiffies prev_t now_jiffies cpu_pct rss gpu_pct elapsed
-  prev_jiffies=$(tree_cpu_jiffies "$child"); prev_t=$(date +%s%3N)
+  prev_jiffies=$(tree_cpu_jiffies "$child"); prev_t=$(monotonic_ms)
   local verdict=0 reason=""
 
   while kill -0 "$child" 2>/dev/null; do
     sleep "$interval"
     kill -0 "$child" 2>/dev/null || break
-    now_jiffies=$(tree_cpu_jiffies "$child"); t=$(date +%s%3N)
+    now_jiffies=$(tree_cpu_jiffies "$child"); t=$(monotonic_ms)
     local hz=100
     [[ -r /proc/self/stat ]] && hz=$(getconf CLK_TCK 2>/dev/null || echo 100)
     local dj=$(( now_jiffies - prev_jiffies )) dt_ms=$(( t - prev_t ))
@@ -300,7 +304,7 @@ guard_run() {
     cpu_pct=$(( dj * 100000 / (dt_ms * hz) ))
     rss=$(tree_rss_mb "$child")
     gpu_pct=$(gpu_mem_pct "$gpu_index")
-    elapsed=$(( t - start_s ))
+    elapsed=$(( (t - start_ms) / 1000 ))
     printf '%s pid=%s cpu=%s%% rss=%sMB gpu%s=%s%% elapsed=%ss\n' \
       "$(date +%H:%M:%S)" "$child" "$cpu_pct" "$rss" "$gpu_index" "${gpu_pct:-?}" "$elapsed" >> "$log_file"
     printf '[guard %s] cpu=%s%% rss=%sMB gpu%s=%s%% %ss\n' \
@@ -336,7 +340,7 @@ guard_run() {
 
   wait "$child"
   local rc=$?
-  log "command finished rc=$rc in $(( $(date +%s) - start_s ))s; samples in $log_file"
+  log "command finished rc=$rc in $((( $(monotonic_ms) - start_ms ) / 1000))s; samples in $log_file"
   (( rc == 0 )) && return 0 || return 5
 }
 
