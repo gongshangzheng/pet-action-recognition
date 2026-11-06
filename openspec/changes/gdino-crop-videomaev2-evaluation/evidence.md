@@ -303,3 +303,12 @@
 - **4.5** 守卫验证改为一次 CPU-only 演练，三项断言看日志，不新增测试文件。
 - **4.7** 由“补无 GPU 续训测试”改为一次 1 epoch 冒烟：检查点字段与恢复后的学习率，证据是字段清单，不写测试用例。理由是本轮不做多次续训，测试代码的收益低于一次核对。
 - **未变**：2.6、2.7 已是“两条例句级用例 + 两条补断言”，符合最小测试；4.1、4.9、4.10、5.4、5.5 是核对类任务，本来不产出测试代码。
+
+### 2026-11-06：3.8 猫专用索引冻结（远程只读重建）
+
+- **实现**：`scripts/prepare_cat_crop_experiment.py` 新增 `--target-class`，在索引阶段按 `target_class` 过滤准入区间，并把过滤值与被剔除数量写入 manifest（提交 `7a1db27`）。不重新检测、不重新渲染。
+- **运行**：pet HEAD `7a1db27`，`plf` 解释器，命令行与 2026-11-05 全量预处理第 3 阶段一致，另加 `--dataset-root datasets/cat_crop_classification/gdino-v1-cat --dataset-id gdino-v1-cat --target-class cat`。守卫上限 250% CPU / 6 GiB，201 秒完成，退出码 0，日志 `.run/logs/index_cat_20261106.log`；峰值 RSS 约 915 MB，未使用 GPU（执行期间 GPU0 有其他进程，与本任务无关）。
+- **结果**：`source_rows` 2,710、`eligible_rows` 207、`excluded_by_target_class` 7、`training_ready` true、`target_class_filter` cat。三臂 train/val/test 均为 131/32/44，行数一致。
+- **类别计数（train）**：activity 55、prolonged_stationary 47、drinking 8、eating 7、grooming 6、abnormal 6、toileting 2。**val**：activity 11、prolonged_stationary 7、eating 5、drinking 4、grooming 4、abnormal 1，无 toileting。toileting 全轮只有 2 个训练样本，类别级指标不可信，报告须逐类给 support。
+- **哈希**：`manifest.json` `14284290c4711aeae21501d687dcf2445ab4ee2e79d82599b4ae930fe38ba6c6`；`availability.json` `6d6aa945829404b750e2399c306d4192e46fbc5517d0ba0c5497c21c859e1cae`；`raw_train` `97e68b09…`、`raw_val` `9ee3b6ad…`、`raw_test` `f87085fd…`；`gdino_train` `47cf983c…`、`gdino_val` `53d08736…`、`gdino_test` `e5af18f6…`；`gdino_motion_train` `b4cdd22e…`、`gdino_motion_val` `99082ff9…`、`gdino_motion_test` `74cb3412…`。
+- **与旧索引并存**：1.4 记录的 214 区间索引 `gdino-v1-full` 未改动，保留为三臂索引的历史记录；本轮训练使用 `gdino-v1-cat`。
