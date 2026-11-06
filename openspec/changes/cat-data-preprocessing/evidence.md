@@ -139,3 +139,11 @@
 - **用户意见**：SAM 细化/核对 GDINO 结果只在训练前的预处理用，推理不用；现在先不做，仅记录想法。
 - **记录位置**：design 的 Open Questions，含位置（GDINO 之后、计数之前）、能力边界（压“多报”、不补“漏检”）、成本量级与启用前提（20 条微型验证，掩码 IoU 需把重复框与真两只动物分开）。
 - **未产生任务**：不进入 tasks；需要 SAM 权重与下载批准后才可能立项。
+
+### 2026-11-07：记录检测与分割的候选模型（不实施）
+
+- 用户要求只做记录，不推进。已写入 design 的 Open Questions：
+  - 分割侧候选：SAM ViT-H、SAM 2、SAM-HQ、EfficientSAM、MobileSAM、FastSAM，附各自取舍与“先裁再分割”的结论。
+  - 检测侧候选：Grounding DINO 1.5 Pro/Edge、DINO-X、MM-Grounding-DINO、OWLv2、YOLO-World/YOLOE、Florence-2、T-Rex2，以及“自标几百帧微调闭集小检测器”这条更务实的路线。
+  - 共同前置：200 帧人工标注评估集，否则无法判断谁更准。
+- 未产生任务，也未下载任何权重。
