@@ -54,6 +54,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-clips", type=int, default=4)
     parser.add_argument("--min-frames", type=int, default=15)
     parser.add_argument("--pet-coverage", type=float, default=0.5)
+    parser.add_argument("--min-detection-coverage", type=float, default=0.6,
+                        help="单目标区间内锚点检测覆盖率下限；低于此值判不可用（design 4.11）")
     parser.add_argument("--pet-run", type=int, default=3)
     parser.add_argument("--activity-cap-ratio", type=float, default=3.0)
     parser.add_argument("--fps", type=float, default=15.0)
@@ -131,6 +133,11 @@ def distinct_pets(state: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         kept.append(item)
     return kept
+
+
+def detection_coverage(states: list[dict[str, Any]]) -> float:
+    """锚点上至少有一个宠物的比例（单目标区间的稳定性度量）。"""
+    return sum(1 for s in states if len(distinct_pets(s)) >= 1) / len(states)
 
 
 def pet_flags(states: list[dict[str, Any]]) -> list[bool]:
@@ -231,6 +238,13 @@ def main() -> int:
             by_class_loss[mapped]["multi_pet"] += 1
             record(row, mapped, "multi_pet", species_of(states), None,
                    coverage=round(coverage, 3), longest_run=longest_run(flags))
+            continue
+        cov = detection_coverage(states)
+        if cov < args.min_detection_coverage:
+            losses["low_detection_coverage"] += 1
+            by_class_loss[mapped]["low_detection_coverage"] += 1
+            record(row, mapped, "low_detection_coverage", species_of(states), None,
+                   coverage=round(cov, 3))
             continue
         species = species_of(states)
         max_cats = max(sum(1 for p in distinct_pets(st) if p["class"] == "cat") for st in states)
@@ -430,6 +444,7 @@ def main() -> int:
             "max_clips": args.max_clips,
             "min_frames": args.min_frames,
             "pet_coverage": args.pet_coverage,
+            "min_detection_coverage": args.min_detection_coverage,
             "pet_run": args.pet_run,
             "activity_cap_ratio": args.activity_cap_ratio,
             "fps": args.fps,

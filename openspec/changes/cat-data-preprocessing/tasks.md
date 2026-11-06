@@ -19,6 +19,7 @@
 - [x] 3.2 产出并核对三分类中间清单：单宠物（带 `species`）/ 多宠物 / 无可靠检测三类互斥。判据：三类计数之和等于 3,893，清单路径写入 evidence；当前 `slices_v2/summary.json` 只有损失聚合，需补逐区间清单。已完成：`intervals.jsonl` 3,927 条，原因分布与总数吻合。（依赖 3.1）
 - [x] 3.3 多宠物区间登记为 `pending_multi_pet_tracking`，不视为永久丢弃，供 `multi-pet-sort-tracking` 落地后回收。判据：登记清单与区间数（967）写入 evidence。已完成：`pending_multi_pet.jsonl` 967 条。（依赖 3.2）
 - [x] 3.5 处理 `unassigned` split 的区间：用户定为“直接排除”。这些区间只出现在补检测批次里，事件日期不在旧 `split_days` 中。判据：`unassigned` 归零且有排除计数。已完成：12 个区间排除并记 `unassigned_split`，`slices_v3` 中 split 只剩 train/val/test。（依赖 3.2）
+- [ ] 3.7 单目标区间的最小检测覆盖率（design 4.11，已实现）：区间通过多宠物排除后，按「锚点至少检出 1 个宠物的比例」判定，低于 `--min-detection-coverage`（默认 0.6）则整段不可用，原因记 `low_detection_coverage`。判据：全量重跑后 `low_detection_coverage` 计数与按类分布写入 evidence，并与排除前的 `intervals_used` 对比。
 
 ## 4. 重叠仲裁
 
