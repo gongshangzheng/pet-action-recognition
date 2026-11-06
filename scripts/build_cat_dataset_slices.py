@@ -212,29 +212,51 @@ def main() -> int:
                 kept.append(item)
         arbitrated.extend(kept)
 
-    # extension and slicing
-    clips: list[dict[str, Any]] = []
     total_frames = {
         stem: int(cache.get("decoded_frames") or 0) for stem, cache in caches.items()
     }
+
+    # neighbour boundaries: extension must not swallow another interval
+    neighbours: dict[str, tuple[int, int]] = {}
+    per_video: dict[str, list[dict]] = defaultdict(list)
+    for item in arbitrated:
+        per_video[item["video"]].append(item)
+    for video, items in per_video.items():
+        items.sort(key=lambda r: r["start"])
+        limit = total_frames.get(video.split("/")[-1], 0)
+        for index, item in enumerate(items):
+            lower = items[index - 1]["end"] + 1 if index else 1
+            upper = items[index + 1]["start"] - 1 if index + 1 < len(items) else limit
+            neighbours[item["sample_id"]] = (lower, upper)
+
+    # extension and slicing
+    clips: list[dict[str, Any]] = []
     for item in arbitrated:
         length = item["end"] - item["start"] + 1
         start, end = item["start"], item["end"]
         extended = False
         if length < args.clip_frames:
-            need = args.clip_frames - length
-            left = need // 2
-            right = need - left
             stem = item["video"].split("/")[-1]
             limit = total_frames.get(stem, 0)
-            new_start = max(1, start - left)
-            new_end = min(limit, end + right)
+            lower, upper = neighbours.get(item["sample_id"], (1, limit))
+            need = args.clip_frames - length
+            left_room = start - lower
+            right_room = upper - end
+            take_left = min(max(0, left_room), need // 2)
+            take_right = min(max(0, right_room), need - take_left)
+            short = need - take_left - take_right
+            if short > 0:
+                extra_left = min(max(0, left_room - take_left), short)
+                take_left += extra_left
+                short -= extra_left
+            if short > 0:
+                take_right += min(max(0, right_room - take_right), short)
+            new_start = start - take_left
+            new_end = end + take_right
             if new_end - new_start + 1 < args.clip_frames:
-                new_start = max(1, new_end - args.clip_frames + 1)
-                if new_end - new_start + 1 < args.clip_frames:
-                    losses["extension_failed"] += 1
-                    by_class_loss[item["label"]]["extension_failed"] += 1
-                    continue
+                losses["extension_failed"] += 1
+                by_class_loss[item["label"]]["extension_failed"] += 1
+                continue
             start, end = new_start, new_end
             extended = True
         length = end - start + 1
