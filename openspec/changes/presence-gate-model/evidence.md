@@ -145,7 +145,26 @@
 
 # 2026-11-02：视频首轮人工标签冻结（实验启动前）
 
+## 2026-11-02：训练完成，测试等待资源
+
+- `video-pilot-x3d-xs-20261102a` 完成12轮训练，耗时455秒，退出码0；守卫日志 `.run/guard/run-20261102-110852.log`。按验证集balanced accuracy@0.5选择第2轮，冻结阈值0.796302。
+- 冻结阈值下验证集60条：TP56、FN1、FP3、TN0，accuracy93.33%、present recall98.25%、FPR100%。验证集仅3条absent，全部误报；不能凭总体accuracy认定门控有效。训练loss从0.3705降至0.0015，验证表现未同步改善，需后续诊断泛化。
+- 12:27尝试一次性测试，资源预检发现GPU1被其他进程占用15588MiB、CPU load18.34超过16.8，拒绝执行。test未读取，速度未测。等待空闲资源后继续，不抢占。
+- 守卫日志出现负CPU百分比，表明进程树CPU采样存在计算缺陷；不能把负值解释为空闲或据此声称CPU监控完全可靠，后续需修复审计。
+
 - 用户完成400条两秒片段标注：present 341 / absent 59 / uncertain 0；训练235/45，验证57/3，测试49/11。白天258/44，夜视83/15。标签文件为 `results/gate/review/video-pilot-20261101-r1/labels.csv`（SHA-256 `762d77b45e6c49711f7ffa48284521af27208fbe77ad73ece5cb33857c9af3c4`），片段清单 `items.json`（SHA-256 `1b4351aff775c2913a2e5ccb8bdf20d949a9aab8e60001b08baf67f4d4ab7e12`）。
 - 首轮实验采用已确认的X3D-XS、仅RGB、每clip均匀采4帧、160×288 letterbox整幅输入、类别平衡采样；验证集选择balanced accuracy@0.5最优轮次，并按present召回约束选阈值，test只做一次冻结评估。验证集absent仅3条（夜视为0），阈值与FPR只能作首轮参考，不得作为最终验收。
 - pet GPU 0被他人任务占用14.8GB，守卫拒绝使用；GPU 1空闲，CPU load 8.62/16.8、内存111.6GB可用、磁盘68GB可用，容量预检通过。训练使用GPU 1并保持资源守卫。
 - 实施代码commit `2247d99`。训练/冻结与一次性测试分开执行；`labels.csv` 是结果数据产物，经复制落到远程同一 review set 目录，不进入Git。执行命令：先 `bash .claude/skills/remote-ops/scripts/env_check.sh --expect-commit 2247d99 --env plf --checkpoint checkpoints/x3d-xs/x3d-xs_pretrained.pth --json results/gate/runs/video-pilot-x3d-xs-20261102a/env.json`；训练用 `bash .claude/skills/remote-ops/scripts/remote_run.sh --gpu-index 1 --max-cpu-pct 250 --max-rss-mb 16000 --timeout-s 2400 --threads 2 -- /home/wyy/miniconda3/envs/plf/bin/python scripts/train_gate_video.py --review-root results/gate/review/video-pilot-20261101-r1 --labels results/gate/review/video-pilot-20261101-r1/labels.csv --checkpoint checkpoints/x3d-xs/x3d-xs_pretrained.pth --out results/gate/runs/video-pilot-x3d-xs-20261102a --frames 4 --height 160 --width 288 --epochs 12 --batch 8 --lr 0.0003 --workers 1 --device cuda:1`；冻结测试用同一守卫与 `--eval-only`，时长900秒。
+
+## 2026-11-04：视频模型一次性冻结测试完成
+
+- 远端机器 pet 容量预检通过（GPU 0/1 显存空闲，load 1.05），通过 remote_run.sh 守卫（GPU 1, max-cpu 250%, max-rss 16GB, timeout 900s）执行 train_gate_video.py --eval-only，耗时 61 秒，退出码 0。日志落盘于 .run/guard/run-20261104-204015.log。
+- 评测绑定与哈希校验：eval_binding 验证 labels_sha256、items_sha256、预训练权重哈希及 best_checkpoint_sha256 全部严格匹配。
+- 测试集 60 条样本（present 49 / absent 11）在冻结阈值 0.796302 下表现：
+  - 总体：TP 48, FN 1, FP 3, TN 8；Accuracy 93.33%, Present Recall 97.96%, Absent FPR 27.27% (3/11), Precision 94.12%, Balanced Accuracy 85.34%。
+  - 白天（n=48，present 42 / absent 6）：TP 41, FN 1, FP 2, TN 4；Accuracy 93.75%, Recall 97.62%, FPR 33.33% (2/6)。
+  - 夜视（n=12，present 7 / absent 5）：TP 7, FN 0, FP 1, TN 4；Accuracy 91.67%, Recall 100.00%, FPR 20.00% (1/5)。
+- 前向推理测速（GPU 1，batch=8，4 帧输入，纯前向耗时）：
+  - p50: 0.51 ms/clip（约 0.127 ms/frame）；p90: 0.51 ms/clip。
+- 结论与限制：相较于单帧 MobileNetV3-Small（测试集 FPR 52.9%），4 帧 X3D-XS 在保持近 98% 召回的同时将测试集误报率降至 27.27%，前向速度极快。但测试集负样本绝对数量仅 11 条（误报 3 条），统计方差依然较大；验证集因仅 3 条负样本导致其自身 FPR 达 100%，不能认为门控已达到最终部署标准，后续仍需针对负样本扩增验证。
