@@ -387,3 +387,11 @@
 - **4.12 选择冻结**：`select --arms gdino` 生成 `selection.json`，winner 为 `gdino`，选中 `best_macro_f1_epoch_11.pth`。为跑通选择，给 `select` 与 `test` 增加 `--arms`（提交见下方），否则会因早前失败的 `raw` 臂状态阻塞。
 - **守卫观察**：本轮的守卫日志再次出现 `cpu=-40%` 的负值（已知缺陷，见 2026-11-06 记录），GPU 显存读数正常（GPU1 峰值约 62%）。训练结束后进程已由守卫收尾，`rc=0`。
 - **限制**：验证集仅 32 个样本、单 seed，最优轮与最后一轮相差 9 个百分点的 macro-F1，说明小样本下轮次波动很大；不得把 epoch 11 的成绩当作稳定水平，也不得据此比较不同配方。
+
+### 2026-11-07：5.1 一次性测试与 5.2 分母核对
+
+- **测试**：`test --arms gdino --device 1`，守卫 350% CPU / 12 GiB / 90% GPU，被测样本 44（测试 split 的全部可用区间）。结果：top-1 **70.45%**、macro-F1 **39.63%**、balanced accuracy **50.85%**。产物 `results/.../gdino/test_metrics.json`，运行次数为 1，测试后未调参重跑。
+- **首次运行失败并已修复**：第一次 `test` 在 gdino 测完后报 `FileNotFoundError: gdino_motion/run_status.json`，原因是 `build_report` 仍遍历三个臂。改为按 `selection["arms"]` 遍历，并让配对比较只生成两臂都存在时的项（提交见本条之后的 commit）。修复后重跑，gdino 因状态为 `complete` 且已有 `test_metrics.json` 被跳过，未重复推理。
+- **逐类别（测试集）**：activity support 21 / recall 81.0%、prolonged_stationary 10 / 100%、abnormal 5 / **0%**、grooming 4 / 75%、eating 2 / **0%**、drinking 1 / 100%、toileting 1 / **0%**。六个类别的 support ≤5，单样本即可翻转 recall，不能作为类别能力结论。
+- **可用率分母**：测试 split 原始 442 个区间，可用 44（9.95%），因此“含预处理的区间成功率”为 31/442 = **7.01%**，条件 top-1 为 70.45%。全语料口径为 2,710 原始区间、207 猫区间可用、7 狗区间按物种策略剔除、1,551 多宠物、945 无可靠检测。
+- **限制**：历史测试集此前已被旧模型结果暴露，本轮只是基准复验；44 个样本、单 seed，且类别 support 极不均衡，结论只能是“裁剪输入下的分类水平”，不能声称裁剪带来提升。
