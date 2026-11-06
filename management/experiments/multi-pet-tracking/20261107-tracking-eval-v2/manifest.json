@@ -1,0 +1,158 @@
+{
+  "evidence": {
+    "实验类型": "跟踪质量正确性评估（无 GT 代理指标 + 用户人工核对）+ 框细化机制探针",
+    "baseline 数值来源": "同实现内关断对照（OcSort inertia=0、use_byte=False ≈ 原版 SORT），避免自研近似使对照失效；四臂在同一 10 段上只改一个变量递进",
+    "可辨识性": "四臂指标来自 scripts/eval_multi_pet_tracking.py；误检信号的判别力用用户人工核对的 8 条轨迹真值检验；框细化用填充率（mask∩框/框面积）与 mask bbox IoU 两个互补量，并打开叠加图确认",
+    "样本量": "10 段视频（643 段稳定多宠物视频按种子 20261107 抽取）；人工核对 3 段；判别力检验 8 条轨迹；框细化探针 6 个手挑用例 × 2 模型",
+    "失败边界": "碎片/个体最大 3 > 阈值 2；3 段抽样仅 1 段个体数一致；持久低置信误检（狗粮包装）无解，四信号判别力为零；框细化仅探针，MobileSAM 夜间松框失败（fill 0.005）",
+    "结论上界": "可确认关联层缺陷已修、观测密度不是瓶颈、ReID 无实证需求；不能确认轨迹可接入训练裁剪，也不能确认框细化有效"
+  },
+  "metrics": [
+    {
+      "name": "碎片/个体最大值",
+      "unit": "段",
+      "baseline": "阈值 ≤2（事先写定）",
+      "result": "A=4 / B=3 / C=3 / D(stride2)=4",
+      "delta": "均未达标",
+      "sample_size": "10 段视频",
+      "source": "results/tracking_eval_20261107/metrics_*.json",
+      "limitation": "碎片按时间近邻聚类估计，非逐帧身份 GT；对「轨迹彻底消失」不计数"
+    },
+    {
+      "name": "锚点一致性（中位）",
+      "unit": "比率",
+      "baseline": "A 硬分实例 0.8182",
+      "result": "B=0.8889 / C=1.0000 / D=1.0000",
+      "delta": "C 臂最高",
+      "sample_size": "10 段视频",
+      "source": "results/tracking_eval_20261107/metrics_single_dedup_v1.json",
+      "limitation": "分母必须取跟踪器实际看到的输入流；用原始缓存会把去重后的轨迹数算低"
+    },
+    {
+      "name": "交换代理信号",
+      "unit": "次",
+      "baseline": "A=0",
+      "result": "B=16 / C=0 / D=0",
+      "delta": "C 臂归零",
+      "sample_size": "10 段视频",
+      "source": "results/tracking_eval_20261107/metrics_single_dedup_v1.json",
+      "limitation": "B 臂的 16 次经核实全部来自被标记为物种存疑的垃圾轨迹重叠，不是真实猫狗互换"
+    },
+    {
+      "name": "OC-SORT vs 原版 SORT 帧级差异",
+      "unit": "帧",
+      "baseline": "0（若有增益应 >0）",
+      "result": "0",
+      "delta": "逐帧等价",
+      "sample_size": "10 段全部轨迹",
+      "source": "results/tracking_eval_20261107/tracks_sort_baseline_v1/",
+      "limitation": "只说明该评估集匹配歧义不足以让 OCM/use_byte 改变分配，不能外推到其他数据"
+    },
+    {
+      "name": "stride=2 加密成本",
+      "unit": "秒",
+      "baseline": "stride=5 等效约 107 秒",
+      "result": "267 秒",
+      "delta": "约 2.5 倍",
+      "sample_size": "10 段视频",
+      "source": "results/tracking_stride2/assets/detections/",
+      "limitation": "GPU 利用率仅 9%，受视频解码限制；不能当作检测器极限吞吐"
+    },
+    {
+      "name": "框细化：松框 vs 紧框 mask bbox IoU",
+      "unit": "IoU",
+      "baseline": "紧框 0.93–0.96（SAM 基本不改）",
+      "result": "松框 0.44–0.45（明显收紧）",
+      "delta": "机制方向正确",
+      "sample_size": "6 个手挑用例",
+      "source": "results/tracking_eval_20261107/refine_probe/probe.json",
+      "limitation": "手挑用例，非随机样本；未接入训练流程，不能证明裁剪质量提升"
+    },
+    {
+      "name": "框细化：真猫 vs 印刷误检 填充率",
+      "unit": "比率",
+      "baseline": "静止真猫 0.399",
+      "result": "狗粮包装 0.407",
+      "delta": "无法区分",
+      "sample_size": "6 个手挑用例",
+      "source": "results/tracking_eval_20261107/refine_probe/probe.json",
+      "limitation": "SAM 无类别语义；叠加图显示它把包装上印刷的动物完整分割出来了"
+    },
+    {
+      "name": "MobileSAM 夜间松框填充率",
+      "unit": "比率",
+      "baseline": "SAM2-small 0.375",
+      "result": "MobileSAM 0.005",
+      "delta": "MobileSAM 失败",
+      "sample_size": "1 个用例",
+      "source": "results/tracking_eval_20261107/refine_probe/probe.json",
+      "limitation": "单用例，但 mask 分数 0.461 与叠加图均显示未分割出目标"
+    }
+  ],
+  "cases": [
+    {
+      "id": "核对A-中位段基线(硬分实例)",
+      "kind": "video",
+      "src": "media/8531fbed59af23a011a889465bb411a4901fb83f32541c34e17e8b08b9bdba7e.mp4",
+      "source_run": "tracking-eval-20261107a",
+      "input": "硬分实例臂：id0 猫 36 锚点 + id10000 假狗 2 锚点（frames 40-45）",
+      "selection_reason": "对照用：猫进狭窄通道时有 2 个锚点被判成 dog，硬分实例下无法并回猫流，视觉上是同一只猫断成两种颜色",
+      "sha256": "8531fbed59af23a011a889465bb411a4901fb83f32541c34e17e8b08b9bdba7e"
+    },
+    {
+      "id": "核对B-中位段单流版",
+      "kind": "video",
+      "src": "media/6a359dfc9652b20257a71f5f0b267b6eea4e4304c9d434c8939da92358101957.mp4",
+      "source_run": "tracking-eval-20261107a",
+      "input": "单流臂：假狗轨迹消失，猫轨迹 36→40 锚点，另有 id2（一致性 0.5，标记物种存疑）",
+      "selection_reason": "修复后的对照：同一只猫不再换色；残留的 id2 经追查是嵌套重复框，由 IoS 去重消除",
+      "sha256": "6a359dfc9652b20257a71f5f0b267b6eea4e4304c9d434c8939da92358101957"
+    },
+    {
+      "id": "核对C-最好段单流版",
+      "kind": "video",
+      "src": "media/f7d0af550574d6eb231e107d437e22837aeb45aa434dba0f20334b0dd9c71313.mp4",
+      "source_run": "tracking-eval-20261107a",
+      "input": "2 条 cat 轨迹：id0 覆盖 0-25 帧（活动猫，之后离场）、id1 全长（静止猫）",
+      "selection_reason": "用于确认「短轨迹」是目标离场还是跟踪丢失——用户确认为真的离场，据此更正了接力丢失的判断",
+      "sha256": "f7d0af550574d6eb231e107d437e22837aeb45aa434dba0f20334b0dd9c71313"
+    },
+    {
+      "id": "SAM-真猫紧框(sam2)",
+      "kind": "image",
+      "src": "assets/b35c582b666877dd3f381e6f8a57229df090fa1e6f032b35b32b0547beff518e.png",
+      "source_run": "tracking-eval-20261107a",
+      "input": "真猫紧框 [267,734,545,1057]，夜间红外",
+      "selection_reason": "mask bbox IoU 0.944：SAM 基本同意原框，说明精修不会破坏本来就对的框",
+      "sha256": "b35c582b666877dd3f381e6f8a57229df090fa1e6f032b35b32b0547beff518e"
+    },
+    {
+      "id": "SAM-狗粮包装误检(sam2)",
+      "kind": "image",
+      "src": "assets/1600e9798f5baf870aab2a3ebc2a50de6c300fed74c477a62eb92a24e5de80c0.png",
+      "source_run": "tracking-eval-20261107a",
+      "input": "低置信狗轨迹 [1290,543,1552,767]，实为包装上印刷的动物",
+      "selection_reason": "决定性反例：SAM2 把印刷动物精确分割出来（mask 分数 0.964 全场最高），证明 SAM 不能过滤误检",
+      "sha256": "1600e9798f5baf870aab2a3ebc2a50de6c300fed74c477a62eb92a24e5de80c0"
+    },
+    {
+      "id": "SAM-夜间松框-sam2",
+      "kind": "image",
+      "src": "assets/5b23ac6410129d5525d71ff818034780d8382bfde78491dc2d6cafdb461a122a.png",
+      "source_run": "tracking-eval-20261107a",
+      "input": "松框 [380,836,852,1054]，比同帧紧框右多约 300px",
+      "selection_reason": "mask bbox IoU 0.877、填充率 0.375：SAM2 能收紧松框，是框细化真正有价值的场景",
+      "sha256": "5b23ac6410129d5525d71ff818034780d8382bfde78491dc2d6cafdb461a122a"
+    },
+    {
+      "id": "SAM-夜间松框-MobileSAM失败",
+      "kind": "image",
+      "src": "assets/d1d0a22b40186471d98da700f619b2f554f21b050ce2ccb379e052993a30366a.png",
+      "source_run": "tracking-eval-20261107a",
+      "input": "同一松框，MobileSAM 推理",
+      "selection_reason": "填充率 0.005、mask IoU 0.095：只有零星像素，证明 MobileSAM 不足以做精修，只能做粗粒度判重",
+      "sha256": "d1d0a22b40186471d98da700f619b2f554f21b050ce2ccb379e052993a30366a"
+    }
+  ],
+  "diagnostics": []
+}
