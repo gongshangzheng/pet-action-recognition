@@ -66,7 +66,7 @@
       "delta": "几乎不变，收益很小",
       "sample_size": "6 个手挑用例",
       "source": "results/tracking_eval_20261107/refine_probe/probe.json",
-      "limitation": "5 个手挑用例；只说明 DINO 框已接近 SAM 边界，不能证明整体裁剪质量"
+      "limitation": "掩码本身紧贴目标（见真猫案例），但掩码外接框受细长部位（尾巴/腿）撑满影响，与原框接近；不能证明整体裁剪质量"
     },
     {
       "name": "框细化：印刷误检的 mask 分数",
@@ -120,38 +120,38 @@
     {
       "id": "对比-印刷金毛误检(sam2)",
       "kind": "image",
-      "src": "assets/d77030ec3f4317018d72571b62caa080fb5d16c7bfa2397df6c15825de2e86ac.png",
+      "src": "assets/158945e7e509faf0d050753d9c353c5aa49de0ba9a03aeba1f87616eac925077.png",
       "source_run": "tracking-eval-20261107a",
       "input": "狗粮袋面印刷的金毛，DINO 框 180×212",
-      "selection_reason": "左原框右精修框：178×210 几乎不变、mask 分数 0.977，证明 SAM 不能过滤误检",
-      "sha256": "d77030ec3f4317018d72571b62caa080fb5d16c7bfa2397df6c15825de2e86ac"
+      "selection_reason": "左 DINO 框 180×212（绿），右 SAM 掩码红色着色+轮廓、外接框 177×209（青）：SAM 精确分割了印刷的金毛，框几乎不变——证明它不能过滤误检",
+      "sha256": "158945e7e509faf0d050753d9c353c5aa49de0ba9a03aeba1f87616eac925077"
     },
     {
       "id": "对比-真猫(sam2)",
       "kind": "image",
-      "src": "assets/01b5b3fa4da05764878a626b5603d1a34929bc64ebd09b72f45935ad6dfcf7c5.png",
+      "src": "assets/d1ff250278353364264fba56c4d95d57d555f96b9316bec525b4e707e332c266.png",
       "source_run": "tracking-eval-20261107a",
       "input": "趴在狗粮袋上的真猫，DINO 框 262×224",
-      "selection_reason": "原框与精修框 259×223 几乎相同，说明该场景精修收益很小",
-      "sha256": "01b5b3fa4da05764878a626b5603d1a34929bc64ebd09b72f45935ad6dfcf7c5"
+      "selection_reason": "左 DINO 框 262×224，右 SAM 掩码+外接框 258×222：掩码紧贴猫身，但尾巴撑满外接框，所以框几乎不变——精修收益小的直接原因",
+      "sha256": "d1ff250278353364264fba56c4d95d57d555f96b9316bec525b4e707e332c266"
     },
     {
       "id": "对比-夜间松框(sam2)",
       "kind": "image",
-      "src": "assets/4f37e27e36e0ab3e0f4284d37984832278fff4584de2c37e14c86da413a27583.png",
+      "src": "assets/6415c4003cbcb5b2937bee3957b0c1b195a0688397a7cd16416fc328cca72e55.png",
       "source_run": "tracking-eval-20261107a",
       "input": "夜间重复松框 ~472×218",
-      "selection_reason": "唯一明显收紧的形态：SAM2 收到 464×196，是精修真正有价值的场景",
-      "sha256": "4f37e27e36e0ab3e0f4284d37984832278fff4584de2c37e14c86da413a27583"
+      "selection_reason": "唯一明显收紧的形态：SAM2 掩码+外接框 464×196（原框约 472×218）",
+      "sha256": "6415c4003cbcb5b2937bee3957b0c1b195a0688397a7cd16416fc328cca72e55"
     },
     {
       "id": "对比-夜间松框(MobileSAM崩溃)",
       "kind": "image",
-      "src": "assets/1e2d2c80c2da7873e9306bc73f9efdaef58d797d50390c9ee6b0f39f7ab96c08.png",
+      "src": "assets/2839f654f955da6239fb3fbe3a5e778320bc3b2bc50ab9ede778905e6278c755.png",
       "source_run": "tracking-eval-20261107a",
       "input": "同一松框，MobileSAM 推理",
-      "selection_reason": "给出 126×79、IoU 0.095：只有零星像素，证明 MobileSAM 不足以做精修",
-      "sha256": "1e2d2c80c2da7873e9306bc73f9efdaef58d797d50390c9ee6b0f39f7ab96c08"
+      "selection_reason": "同一松框，MobileSAM 掩码几乎为空（fill 0.005、分数 0.461）：不足以做精修",
+      "sha256": "2839f654f955da6239fb3fbe3a5e778320bc3b2bc50ab9ede778905e6278c755"
     }
   ],
   "diagnostics": []
