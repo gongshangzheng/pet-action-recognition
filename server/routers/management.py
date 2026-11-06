@@ -20,6 +20,7 @@ from server.parsers.projects_parser import (
 )
 from server.parsers.experiments_parser import (
     list_experiments, get_experiment_detail, resolve_experiment_asset,
+    resolve_experiment_media,
 )
 
 router = APIRouter(prefix="/api/management", tags=["management"])
@@ -224,7 +225,7 @@ async def get_monthly_detail(year: str, month: str, author: str):
 
 
 @router.get("/tasks")
-async def get_tasks(slug: str = None):
+async def get_tasks(slug: str | None = None):
     """获取任务看板数据（从 per-project tasks.json 派生，按项目切换）。
 
     slug 缺省时取首个项目。返回 {in_progress, pending, completed} 三桶。
@@ -508,3 +509,20 @@ async def get_experiment_asset(topic: str, slug: str, filename: str):
         '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
     }
     return FileResponse(path, media_type=media.get(os.path.splitext(path)[1].lower(), 'application/octet-stream'))
+
+
+@router.get("/experiments/{topic}/{slug}/media/{filename}")
+async def get_experiment_media(topic: str, slug: str, filename: str):
+    """报告案例视频（持久媒体目录，只放行该报告 manifest 登记过的文件）
+
+    媒体根目录由环境变量 PET_EXPERIMENT_MEDIA_ROOT 指定（对齐上游
+    CYBERVERSE_EXPERIMENT_MEDIA_ROOT 约定）；未配置时一律 404。
+    """
+    media_root = os.environ.get("PET_EXPERIMENT_MEDIA_ROOT", "")
+    path = resolve_experiment_media(_EXPERIMENTS_DIR, topic, slug, filename, media_root)
+    if not path or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Media not found")
+    ext = os.path.splitext(path)[1].lower()
+    mime = {'.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime'}.get(ext, 'application/octet-stream')
+    return FileResponse(path, media_type=mime, filename=filename,
+                        headers={"Cache-Control": "no-cache, must-revalidate"})

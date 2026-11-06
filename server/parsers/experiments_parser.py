@@ -22,6 +22,7 @@ REQUIRED_ENV_KEYS = ["模型", "数据集", "配置", "运行时间戳", "执行
 STATUS_ENUM = ("complete", "partial", "failed")
 VERDICT_ENUM = ("improved", "no-gain", "worse", "inconclusive")
 ASSET_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+MEDIA_EXTS = {".mp4", ".webm", ".mov"}
 _SEGMENT_RE = re.compile(r'^[^/\\\x00-\x1f\x7f]+$')
 
 
@@ -264,6 +265,39 @@ def resolve_experiment_asset(experiments_dir, topic, slug, filename):
     path = os.path.join(experiments_dir, topic, slug, "assets", filename)
     real = os.path.realpath(path)
     base = os.path.realpath(os.path.join(experiments_dir, topic, slug, "assets"))
+    if real != base and not real.startswith(base + os.sep):
+        return None
+    return path
+
+
+def resolve_experiment_media(experiments_dir, topic, slug, filename, media_root):
+    """解析报告视频/音频媒体路径：仅放行该报告 manifest 登记过的 media/<name>。
+
+    与 CyberVerse 上游同规则（experiments.go experimentCaseValid + ExperimentMediaPath）：
+    - 文件名必须是 <sha256>.<ext> 形态且在 MEDIA_EXTS 白名单内
+    - manifest 里必须存在 src == media/<filename> 且 sha256 与文件名一致的 case
+    - media_root 为空（未配置）时一律拒绝
+    """
+    if not media_root:
+        return None
+    if not (valid_segment(topic) and valid_segment(slug) and valid_segment(filename)):
+        return None
+    stem, ext = os.path.splitext(filename)
+    if ext.lower() not in MEDIA_EXTS or not re.fullmatch(r"[0-9a-f]{64}", stem):
+        return None
+    manifest = _load_json(os.path.join(experiments_dir, topic, slug, "manifest.json")) or {}
+    registered = any(
+        isinstance(c, dict)
+        and c.get("kind") == "video"
+        and c.get("src") == f"media/{filename}"
+        and str(c.get("sha256", "")).lower() == stem
+        for c in manifest.get("cases", [])
+    )
+    if not registered:
+        return None
+    path = os.path.join(media_root, filename)
+    real = os.path.realpath(path)
+    base = os.path.realpath(media_root)
     if real != base and not real.startswith(base + os.sep):
         return None
     return path
