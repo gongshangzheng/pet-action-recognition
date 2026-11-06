@@ -53,23 +53,16 @@ The system SHALL record detection, target species, interpolation and pixel-corre
 
 #### Scenario: Target species is the cat
 
-- **WHEN** a frame contains exactly one cat, with or without dogs
+- **WHEN** a frame contains exactly one pet and it is a cat
 - **THEN** the training target is that cat and the crop follows the cat box
-- **AND** dogs in the same frame do not change the selected target
-- **WHEN** a frame contains two or more cats
-- **THEN** the interval is marked unavailable as `multi_pet_unsupported` because the target identity is ambiguous
+- **WHEN** a frame contains a dog or more than one pet
+- **THEN** the interval is marked unavailable as `multi_pet_unsupported`
+- **AND** dogs are never used as a training target
 - **WHEN** the training set is assembled
 - **THEN** dog-only intervals are excluded and the exclusion is reported with counts by split
 - **WHEN** a frame contains no reliable cat detection
 - **THEN** the interval is marked unavailable as detection-missing
 - **AND** the system does not interpret low pixel motion as proof that the pet is absent
-
-#### Scenario: Pixel-assisted variant is generated but not trained
-
-- **WHEN** the pixel-assisted variant is generated alongside the detection-only crop
-- **THEN** both consume the same frozen detection cache and share detection anchors
-- **AND** only the detection-only crop enters this training scope
-- **AND** the assisted variant remains recorded for later analysis
 
 ### Requirement: Reproducible cropped-classifier training
 
