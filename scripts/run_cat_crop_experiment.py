@@ -538,14 +538,15 @@ def build_report(selection: dict[str, Any]) -> dict[str, Any]:
     dataset_manifest = json.loads(
         (INDEX_ROOT / "manifest.json").read_text(encoding="utf-8")
     )
+    run_arms = list(selection["arms"])
     states = {
         arm: json.loads(
             (RUN_ROOT / arm / "run_status.json").read_text(encoding="utf-8")
         )
-        for arm in ARMS
+        for arm in run_arms
     }
     denominator = original_denominator(Path(dataset_manifest["source_index_root"]))
-    for arm in ARMS:
+    for arm in run_arms:
         metrics = states[arm]["test_metrics"]
         correct = sum(
             row["label"] == row["predicted"] for row in metrics["predictions"]
@@ -575,11 +576,12 @@ def build_report(selection: dict[str, Any]) -> dict[str, Any]:
                 "checkpoint": states[arm]["checkpoint"],
                 "checkpoint_sha256": states[arm]["checkpoint_sha256"],
             }
-            for arm in ARMS
+            for arm in run_arms
         },
         "paired_comparisons": {
-            "crop_vs_raw": comparison("raw", "gdino", states),
-            "motion_vs_crop": comparison("gdino", "gdino_motion", states),
+            f"{left}_vs_{right}": comparison(left, right, states)
+            for left, right in (("raw", "gdino"), ("gdino", "gdino_motion"))
+            if left in states and right in states
         },
     }
     save(RUN_ROOT / "summary.json", summary)
@@ -591,7 +593,7 @@ def build_report(selection: dict[str, Any]) -> dict[str, Any]:
         "| arm | val top1 | val macro-F1 | test top1 | test macro-F1 | test balanced acc |",
         "|---|---:|---:|---:|---:|---:|",
     ]
-    for arm in ARMS:
+    for arm in run_arms:
         data = summary["arms"][arm]
         lines.append(
             f"| {arm} | {data['best_val']['top1_acc_percent']:.2f}% | "
