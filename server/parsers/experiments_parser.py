@@ -89,24 +89,38 @@ def _case_problems(report_dir, cases):
         for f in CASE_FIELDS:
             if not str(c.get(f, "")).strip():
                 problems.append(f"case {cid} 缺字段：{f}")
-        if c.get("kind") != "image":
-            problems.append(f"case {cid}: 暂不支持 kind={c.get('kind')}")
+        kind = c.get("kind")
+        if kind not in ("image", "video"):
+            problems.append(f"case {cid}: 暂不支持 kind={kind}")
             continue
         src = str(c.get("src", ""))
         parts = src.split("/")
-        if len(parts) != 2 or parts[0] != "assets" or not valid_segment(parts[1]):
-            problems.append(f"case {cid}: src 须为 assets/<file>（得到 {src}）")
-            continue
-        if os.path.splitext(parts[1])[1].lower() not in ASSET_EXTS:
-            problems.append(f"case {cid}: 扩展名不在白名单")
-            continue
-        asset = os.path.join(report_dir, *parts)
-        if not os.path.isfile(asset):
-            problems.append(f"case {cid}: 文件不存在 {src}")
-            continue
-        want = str(c.get("sha256", "")).lower()
-        if want and _sha256(asset) != want:
-            problems.append(f"case {cid}: sha256 不匹配")
+        if kind == "image":
+            if len(parts) != 2 or parts[0] != "assets" or not valid_segment(parts[1]):
+                problems.append(f"case {cid}: src 须为 assets/<file>（得到 {src}）")
+                continue
+            if os.path.splitext(parts[1])[1].lower() not in ASSET_EXTS:
+                problems.append(f"case {cid}: 扩展名不在白名单")
+                continue
+            asset = os.path.join(report_dir, *parts)
+            if not os.path.isfile(asset):
+                problems.append(f"case {cid}: 文件不存在 {src}")
+                continue
+            want = str(c.get("sha256", "")).lower()
+            if want and _sha256(asset) != want:
+                problems.append(f"case {cid}: sha256 不匹配")
+        else:
+            # video：文件在持久媒体目录（PET_EXPERIMENT_MEDIA_ROOT）或报告内 media/，
+            # 存在性由 media 路由按清单校验；这里只校验 src 形态与 sha256 命名一致性
+            if len(parts) != 2 or parts[0] != "media" or not valid_segment(parts[1]):
+                problems.append(f"case {cid}: src 须为 media/<file>（得到 {src}）")
+                continue
+            if os.path.splitext(parts[1])[1].lower() not in MEDIA_EXTS:
+                problems.append(f"case {cid}: 视频扩展名不在白名单")
+                continue
+            want = str(c.get("sha256", "")).lower()
+            if want and os.path.splitext(parts[1])[0].lower() != want:
+                problems.append(f"case {cid}: 文件名与 sha256 不一致")
     return problems
 
 
