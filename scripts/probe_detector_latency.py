@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 import statistics
@@ -24,7 +25,6 @@ import time
 from pathlib import Path
 
 import cv2
-import importlib
 import torch
 
 
