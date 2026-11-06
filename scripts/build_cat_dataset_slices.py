@@ -148,7 +148,7 @@ def main() -> int:
     def record(row, label, reason, species=None, split=None, **extra):
         decisions.append(
             {
-                "sample_id": row.get("annotation_id") or f"{row['video']}:{row['start_frame']}-{row['end_frame']}",
+                "sample_id": f"{Path(row['video']).stem}:{row['start_frame']}-{row['end_frame']}:{label}",
                 "video": row["video"],
                 "label": label,
                 "species": species,
@@ -209,7 +209,7 @@ def main() -> int:
             continue
         survivors.append(
             {
-                "sample_id": row.get("annotation_id") or f"{stem}:{start}-{end}",
+                "sample_id": f"{Path(row['video']).stem}:{start}-{end}:{mapped}",
                 "video": row["video"],
                 "label": mapped,
                 "species": species,
