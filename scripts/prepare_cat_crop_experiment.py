@@ -113,14 +113,12 @@ def selected_videos(
     videos = sorted(splits_by_video)
     if requested:
         names = {Path(value).name for value in requested}
-        videos = [
-            video for video in videos if video in requested or Path(video).name in names
-        ]
-        missing = sorted(names - {Path(video).name for video in videos})
-        if missing:
-            raise ValueError(
-                f"Requested videos are absent from source index: {missing}"
-            )
+        known = {Path(video).name for video in videos}
+        videos = [video for video in videos if Path(video).name in names]
+        # An explicit list may name videos whose intervals the source index has
+        # already filtered out. Detection only needs the video path, so admit
+        # them instead of failing the whole run.
+        videos.extend(sorted(f"videos/{name}" for name in names - known))
     if max_videos is not None:
         if max_videos < 1:
             raise ValueError("--max-videos must be positive")
