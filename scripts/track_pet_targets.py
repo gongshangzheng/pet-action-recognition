@@ -5,7 +5,7 @@
 把逐锚点轨迹写入独立输出目录。产物 schema 见 TRACKING_SCHEMA。
 
 用法（本地，零 GPU）：
-    python3 scripts/track_multi_pet.py \
+    python3 scripts/track_pet_targets.py \
         --detections results/tracking_eval_20261107/sample_detections/*.json \
         --out results/tracking_eval_20261107/tracks_v1
 

@@ -26,7 +26,7 @@ cat_raw/videos/*.mp4  (原始事件视频 2880×1620, 15fps)
    │        → assets/full_run/videos/gdino_motion/<stem>.mp4 (C 臂)
    │        → assets/full_run/metadata/<stem>.json         (逐帧 camera_box/display_box/valid)
    │
-   ├─ ②b 跟踪  scripts/track_multi_pet.py  (OC-SORT，单流，物种作元数据)
+   ├─ ②b 跟踪  scripts/track_pet_targets.py  (OC-SORT，单流，物种作元数据)
    │        → <out>/<stem>.track.json  逐锚点轨迹（含输入指纹与参数）
    │        规则见 petlib/tracking/：IoS≥0.8 去嵌套重复、生命周期标定、放弃不稳定轨迹
    │
@@ -99,7 +99,7 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 |---|---|
 | 检测/渲染阶段、`--stage`、路径与指纹 | `scripts/prepare_cat_crop_experiment.py` |
 | 方形裁剪、补边、逐帧轨迹与显示平滑 | `petlib/datasets/cat_crop.py`（`crop_square` 378、`build_frame_track` 133、`classify_frame`） |
-| 跟踪算法、IoS 去重、生命周期、轨迹合并 | `petlib/tracking/`（`anchors.py` 的 `dedup_nested`、`oc_sort.py`、`merge.py`）、入口 `scripts/track_multi_pet.py` |
+| 跟踪算法、IoS 去重、生命周期、轨迹合并 | `petlib/tracking/`（`anchors.py` 的 `dedup_nested`、`oc_sort.py`、`merge.py`）、入口 `scripts/track_pet_targets.py` |
 | 切片、损失归因、多宠物判定、activity 上限 | `scripts/build_cat_dataset_slices.py` |
 | 训练标注导出、帧数 clamp | `scripts/export_clip_annotations.py` |
 | 数据集读取、区间限制、评测指标 | `petlib/datasets/cat_intervals.py`（`IntervalVideoDataset`、`RestrictFrameRange`、`CatIntervalMetric`） |

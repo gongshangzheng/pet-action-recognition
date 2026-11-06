@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 
 from petlib.schemas import Detection  # noqa: E402
 from petlib.tracking.anchors import dedup_nested  # noqa: E402
-from scripts.track_multi_pet import DEFAULT_PARAMS, track_video  # noqa: E402
+from scripts.track_pet_targets import DEFAULT_PARAMS, track_video  # noqa: E402
 
 STRIDE = 5
 N_ANCHORS = 20

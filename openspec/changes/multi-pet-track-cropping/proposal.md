@@ -15,6 +15,6 @@
 
 ## Impact
 
-- 复用 `scripts/track_multi_pet.py` 与 `scripts/build_cat_dataset_slices.py`，新增轨迹→片段步骤。
+- 复用 `scripts/track_pet_targets.py` 与 `scripts/build_cat_dataset_slices.py`，新增轨迹→片段步骤。
 - 训练数据从 4,506 个训练片段增加若干百条（多宠物区间贡献的部分），噪声率需在报告中量化。
 - 不改 `slices_v8` 与当前训练任务；新数据以新索引版本提供，待训练侧另行切换。
