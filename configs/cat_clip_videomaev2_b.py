@@ -40,7 +40,17 @@ test_dataloader = dict(
     ),
 )
 
-model = dict(cls_head=dict(num_classes=len(classes)))
+# 训练集类别频次：activity 2276 / prolonged 787 / eating 689 / drinking 324 /
+# toileting 59 / grooming 117 / scratching 245 / gnawing 13 / fall 1 / seizure 0
+# 权重取 sqrt(N/(K*n)) 并封顶 6；seizure 无样本，权重设为 0。
+class_weight = [0.45, 0.76, 0.81, 1.18, 2.77, 1.96, 1.36, 5.89, 6.0, 0.0]
+
+model = dict(
+    cls_head=dict(
+        num_classes=len(classes),
+        loss_cls=dict(type="CrossEntropyLoss", class_weight=class_weight),
+    )
+)
 
 val_evaluator = dict(classes=classes, out_file=f"{result_root}/val_metrics.json")
 test_evaluator = dict(classes=classes, out_file=f"{result_root}/test_metrics.json")
