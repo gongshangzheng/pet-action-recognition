@@ -26,9 +26,6 @@ import cv2
 import numpy as np
 
 
-BOX_TOLERANCE = 1e-6
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -70,6 +67,10 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -78,37 +79,17 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def box_equal(left: list[float] | None, right: list[float] | None) -> bool:
-    if left is None or right is None:
-        return left is None and right is None
-    if len(left) != len(right):
-        return False
-    return all(abs(a - b) <= BOX_TOLERANCE for a, b in zip(left, right))
-
-
-def read_frame(capture: cv2.VideoCapture, index: int) -> np.ndarray:
-    capture.set(cv2.CAP_PROP_POS_FRAMES, index)
-    ok, frame = capture.read()
-    if not ok or frame is None:
-        raise RuntimeError(f"Cannot decode frame {index}")
-    return frame
-
-
 def compare_video(
-    stem: str, asset_root: Path, max_anchors: int
+    stem: str, asset_root: Path, anchor_limit: int
 ) -> dict[str, Any]:
+    """Compare every frame of the two encoded crops and group by detection state."""
     left = asset_root / "videos" / "gdino" / f"{stem}.mp4"
     right = asset_root / "videos" / "gdino_motion" / f"{stem}.mp4"
     metadata = json.loads(
         (asset_root / "metadata" / f"{stem}.json").read_text(encoding="utf-8")
     )
-    anchors = [
-        record["frame"]
-        for record in metadata["track"]
-        if record.get("source") == "detected"
-    ][:max_anchors]
-    if not anchors:
-        return {"video": stem, "anchors": [], "skipped": "no detected frame"}
+    track = metadata["track"]
+    warmup = int(metadata.get("render_fingerprint", {}).get("bg_warmup_frames", 0))
 
     capture_left = cv2.VideoCapture(str(left))
     capture_right = cv2.VideoCapture(str(right))
@@ -117,25 +98,77 @@ def compare_video(
         capture_right.release()
         raise RuntimeError(f"Cannot open one of the two crops for {stem}")
 
-    results = []
+    groups: dict[str, list[float]] = {
+        "anchor": [],
+        "interpolated_after_warmup": [],
+        "interpolated_in_warmup": [],
+        "invalid": [],
+    }
+    frame_rows: list[dict[str, Any]] = []
+    index = 0
     try:
-        for anchor in anchors:
-            frame_left = read_frame(capture_left, anchor).astype(np.int16)
-            frame_right = read_frame(capture_right, anchor).astype(np.int16)
-            if frame_left.shape != frame_right.shape:
-                raise RuntimeError(f"Frame shape mismatch at {stem}:{anchor}")
-            delta = np.abs(frame_left - frame_right)
-            results.append(
+        while True:
+            ok_left, frame_left = capture_left.read()
+            ok_right, frame_right = capture_right.read()
+            if not ok_left or not ok_right:
+                break
+            if index >= len(track):
+                raise RuntimeError(f"Decoded more frames than metadata for {stem}")
+            record = track[index]
+            source = record.get("source")
+            if source == "detected":
+                group = "anchor"
+            elif source == "invalid":
+                group = "invalid"
+            elif index < warmup:
+                group = "interpolated_in_warmup"
+            else:
+                group = "interpolated_after_warmup"
+            delta = np.abs(
+                frame_left.astype(np.int16) - frame_right.astype(np.int16)
+            )
+            mean_diff = float(delta.mean())
+            groups[group].append(mean_diff)
+            frame_rows.append(
                 {
-                    "frame": anchor,
-                    "mean_abs_diff": round(float(delta.mean()), 4),
+                    "frame": index,
+                    "group": group,
+                    "mean_abs_diff": round(mean_diff, 4),
                     "max_abs_diff": int(delta.max()),
                 }
             )
+            index += 1
     finally:
         capture_left.release()
         capture_right.release()
-    return {"video": stem, "anchors": results}
+
+    summary = {}
+    for name, values in groups.items():
+        if not values:
+            summary[name] = {"frames": 0}
+            continue
+        summary[name] = {
+            "frames": len(values),
+            "median_mean_abs_diff": round(float(np.median(values)), 4),
+            "p90_mean_abs_diff": round(float(np.percentile(values, 90)), 4),
+            "max_mean_abs_diff": round(max(values), 4),
+        }
+
+    anchor_rows = [row for row in frame_rows if row["group"] == "anchor"]
+    return {
+        "video": stem,
+        "frames": index,
+        "corrected_frames": metadata.get("corrected_frames"),
+        "warmup_frames": warmup,
+        "group_summary": summary,
+        "anchor_samples": anchor_rows[:anchor_limit],
+        "anchor_max_abs_diff": max(
+            (row["max_abs_diff"] for row in anchor_rows), default=0
+        ),
+        "largest_anchor_means": sorted(
+            anchor_rows, key=lambda row: row["mean_abs_diff"], reverse=True
+        )[:5],
+    }
 
 
 def main() -> int:
@@ -149,15 +182,11 @@ def main() -> int:
     if not paths:
         raise SystemExit(f"No render metadata in {metadata_dir}")
 
-    detection_fingerprints: dict[str, list[str]] = {}
-    render_fingerprints: dict[str, list[str]] = {}
-    anchor_frames = 0
-    anchor_mismatches: list[dict[str, Any]] = []
-    anchor_missing_camera: list[dict[str, Any]] = []
-    assisted_invalid: list[dict[str, Any]] = []
-    assisted_during_warmup: list[dict[str, Any]] = []
-    missing_videos: list[str] = []
+    detection_fingerprints: dict[str, int] = {}
+    render_fingerprints: dict[str, int] = {}
     incomplete: list[str] = []
+    missing_videos: list[str] = []
+    corrected: list[tuple[str, int]] = []
 
     for path in paths:
         metadata = json.loads(path.read_text(encoding="utf-8"))
@@ -166,131 +195,113 @@ def main() -> int:
             incomplete.append(stem)
         for key in ("gdino_video", "gdino_motion_video"):
             reference = metadata.get(key)
-            if not reference:
-                missing_videos.append(f"{stem}:{key}=null")
-                continue
-            if not Path(reference).is_file():
+            if not reference or not Path(reference).is_file():
                 missing_videos.append(f"{stem}:{key}")
-
-        detection_fingerprint = json.dumps(
+        detection_key = json.dumps(
             metadata.get("detection_fingerprint"), sort_keys=True
         )
-        render_fingerprint = json.dumps(
-            metadata.get("render_fingerprint"), sort_keys=True
+        render_key = json.dumps(metadata.get("render_fingerprint"), sort_keys=True)
+        detection_fingerprints[detection_key] = (
+            detection_fingerprints.get(detection_key, 0) + 1
         )
-        detection_fingerprints.setdefault(detection_fingerprint, []).append(stem)
-        render_fingerprints.setdefault(render_fingerprint, []).append(stem)
+        render_fingerprints[render_key] = render_fingerprints.get(render_key, 0) + 1
+        corrected_frames = int(metadata.get("corrected_frames") or 0)
+        if corrected_frames > 0:
+            corrected.append((stem, corrected_frames))
 
-        warmup = int(metadata.get("render_fingerprint", {}).get("bg_warmup_frames", 0))
-        for record in metadata["track"]:
-            frame = record.get("frame")
-            source = record.get("source")
-            camera_box = record.get("camera_box")
-            display_box = record.get("display_box")
-            if source == "detected":
-                anchor_frames += 1
-                if display_box is None:
-                    continue
-                if camera_box is None:
-                    anchor_missing_camera.append({"video": stem, "frame": frame})
-                elif not box_equal(camera_box, display_box):
-                    anchor_mismatches.append(
-                        {
-                            "video": stem,
-                            "frame": frame,
-                            "camera_box": camera_box,
-                            "display_box": display_box,
-                        }
-                    )
-            elif source == "invalid" and camera_box is not None:
-                assisted_invalid.append({"video": stem, "frame": frame})
-            if (
-                source == "interpolated"
-                and frame is not None
-                and frame < warmup
-                and not box_equal(camera_box, display_box)
-            ):
-                assisted_during_warmup.append(
-                    {
-                        "video": stem,
-                        "frame": frame,
-                        "camera_box": camera_box,
-                        "display_box": display_box,
-                    }
-                )
+    sample: list[str] = []
+    corrected_sorted = sorted(corrected, key=lambda item: item[1], reverse=True)
+    for stem, _ in corrected_sorted[: args.pixel_videos]:
+        sample.append(stem)
+    if len(sample) < args.pixel_videos:
+        step = max(1, len(paths) // max(1, args.pixel_videos))
+        for path in paths[::step]:
+            if path.stem in sample:
+                continue
+            sample.append(path.stem)
+            if len(sample) >= args.pixel_videos:
+                break
 
-    pixel_checks = []
-    if args.pixel_videos > 0:
-        step = max(1, len(paths) // args.pixel_videos)
-        for path in paths[::step][: args.pixel_videos]:
-            pixel_checks.append(
-                compare_video(path.stem, asset_root, args.pixel_anchors)
-            )
-
-    pixel_failures = [
-        {"video": item["video"], **anchor}
-        for item in pixel_checks
-        for anchor in item["anchors"]
-        if anchor["mean_abs_diff"] > args.max_mean_pixel_diff
-        or anchor["max_abs_diff"] > args.max_frame_pixel_diff
+    pixel_checks = [
+        compare_video(stem, asset_root, args.pixel_anchors) for stem in sample
     ]
 
+    anchor_median_failures = [
+        {
+            "video": item["video"],
+            "anchor_median_mean_abs_diff": item["group_summary"]["anchor"][
+                "median_mean_abs_diff"
+            ],
+        }
+        for item in pixel_checks
+        if item["group_summary"]["anchor"].get("frames", 0) > 0
+        and item["group_summary"]["anchor"]["median_mean_abs_diff"]
+        > args.max_mean_pixel_diff
+    ]
+
+    discrimination = []
+    for item in pixel_checks:
+        summary = item["group_summary"]
+        anchor_median = summary["anchor"].get("median_mean_abs_diff")
+        assisted = summary["interpolated_after_warmup"].get("median_mean_abs_diff")
+        discrimination.append(
+            {
+                "video": item["video"],
+                "corrected_frames": item["corrected_frames"],
+                "anchor_median": anchor_median,
+                "interpolated_after_warmup_median": assisted,
+                "assisted_exceeds_anchor": (
+                    anchor_median is not None
+                    and assisted is not None
+                    and assisted > anchor_median
+                ),
+            }
+        )
+
+    failures = {
+        "fingerprint_variants": max(
+            0, len(detection_fingerprints) - 1
+        ),
+        "render_fingerprint_variants": max(0, len(render_fingerprints) - 1),
+        "incomplete_metadata": len(incomplete),
+        "missing_videos": len(missing_videos),
+        "anchor_median_above_threshold": len(anchor_median_failures),
+    }
     report = {
-        "schema": "cat-crop-arm-consistency-v1",
+        "schema": "cat-crop-arm-consistency-v2",
         "asset_root": str(asset_root),
         "metadata_files": len(paths),
+        "videos_with_motion_correction": len(corrected),
         "detection_fingerprint_variants": len(detection_fingerprints),
-        "detection_fingerprint_samples": {
-            key: len(value) for key, value in detection_fingerprints.items()
-        },
         "render_fingerprint_variants": len(render_fingerprints),
-        "render_fingerprint_samples": {
-            key: len(value) for key, value in render_fingerprints.items()
-        },
-        "anchor_frames": anchor_frames,
-        "anchor_mismatches": anchor_mismatches[:20],
-        "anchor_mismatch_count": len(anchor_mismatches),
-        "anchor_missing_camera_count": len(anchor_missing_camera),
-        "assisted_invalid_count": len(assisted_invalid),
-        "assisted_invalid_samples": assisted_invalid[:20],
-        "assisted_during_warmup_count": len(assisted_during_warmup),
-        "assisted_during_warmup_samples": assisted_during_warmup[:20],
+        "detection_fingerprint_sha256": sorted(
+            sha256_text(key) for key in detection_fingerprints
+        ),
         "incomplete_count": len(incomplete),
         "incomplete_samples": incomplete[:20],
         "missing_video_count": len(missing_videos),
         "missing_video_samples": missing_videos[:20],
+        "pixel_thresholds": {"max_anchor_median_mean_abs_diff": args.max_mean_pixel_diff},
         "pixel_checks": pixel_checks,
-        "pixel_failures": pixel_failures,
-        "pixel_thresholds": {
-            "max_mean_abs_diff": args.max_mean_pixel_diff,
-            "max_abs_diff": args.max_frame_pixel_diff,
-        },
-        "detected_frame_source_values": {
-            "anchor": "detected",
-            "interpolated": "interpolated",
-            "invalid": "invalid",
-        },
+        "anchor_median_failures": anchor_median_failures,
+        "discrimination": discrimination,
+        "failures": failures,
+        "passed": all(count == 0 for count in failures.values()),
+        "notes": [
+            "camera_box in metadata records the strict eligibility box, not the "
+            "rendered arm C camera path; anchor equality is therefore measured on "
+            "decoded frames of the two videos, not on metadata boxes",
+            "mean_abs_diff includes H.264 quantization noise between two separate "
+            "encodes of the same crop",
+        ],
     }
-
-    failures = {
-        "anchor_mismatch": len(anchor_mismatches),
-        "anchor_missing_camera": len(anchor_missing_camera),
-        "assisted_invalid": len(assisted_invalid),
-        "assisted_during_warmup": len(assisted_during_warmup),
-        "detection_cache_variants": max(0, len(detection_fingerprints) - 1),
-        "render_fingerprint_variants": max(0, len(render_fingerprints) - 1),
-        "incomplete_metadata": len(incomplete),
-        "missing_videos": len(missing_videos),
-        "pixel_anchor_mismatch": len(pixel_failures),
-    }
-    report["failures"] = failures
-    report["passed"] = all(count == 0 for count in failures.values())
     report["script_sha256"] = sha256(Path(__file__).resolve())
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps({"passed": report["passed"], "failures": failures}, ensure_ascii=False))
+    print(json.dumps(discrimination, ensure_ascii=False))
     return 0 if report["passed"] else 1
 
 
