@@ -117,3 +117,10 @@
 - **划分隔离**：2,150 个视频的片段全部落在单一 split，跨 split 视频 0 个。
 - **逐类 support（train/val/test）**：activity 2147/732/598、prolonged_stationary 745/163/251、eating 392/284/87、drinking 201/125/43、scratching 231/36/28、grooming 107/50/48、toileting 54/2/19、gnawing 14/0/4、fall 1/1/0、seizure 0/0/0。
 - **2.2 抽检**：随机 15 段视频，metadata 的 `decoded_frames` 与实际解码帧数全部一致。
+
+### 2026-11-07：v7 报告发布（含 20 张抽查图）
+
+- **报告**：`management/experiments/cat-data-preprocessing/20261107-slices-v7/`，`status=partial`、`verdict=inconclusive`，生成器完整度 0 项缺失，案例 21 个（20 张多宠物抽查图 + 1 张 seizure 帧）。
+- **内容**：v7 全部数字（6,285 片段、猫 5,284 / 狗 1,001、外延失败 106、可切上限 11,468）；三张数据表（各类片段数、损失归因、20 条抽查清单）；局限中写明静物误检未定量与 seizure 不可训练。
+- **重复素材**：`review-04` 与 `review-18` 两张图内容完全相同（sha256 一致），说明这两条区间取自内容重复的事件视频；已在抽样表里按两条独立记录保留。
+- **确定性**：v7 与 v7_rerun 的 `clips.jsonl` SHA-256 同为 `3c4fdd97…`。
