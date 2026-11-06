@@ -198,6 +198,8 @@ def main() -> int:
                    coverage=round(coverage, 3), longest_run=longest_run(flags))
             continue
         species = species_of(states)
+        max_cats = max((st.get("cat_count") or 0) for st in states)
+        max_dogs = max((st.get("dog_count") or 0) for st in states)
         day = event_day(stem)
         split = day_splits.get(day, "unassigned") if day else "unassigned"
         if split == "unassigned":
@@ -211,6 +213,8 @@ def main() -> int:
                 "video": row["video"],
                 "label": mapped,
                 "species": species,
+                "cat_count": max_cats,
+                "dog_count": max_dogs,
                 "split": split,
                 "start": start,
                 "end": end,
@@ -317,6 +321,8 @@ def main() -> int:
                     "video": item["video"],
                     "label": item["label"],
                     "species": item["species"],
+                    "cat_count": item.get("cat_count"),
+                    "dog_count": item.get("dog_count"),
                     "split": item["split"],
                     "start": clip_start,
                     "end": clip_end,
@@ -348,6 +354,33 @@ def main() -> int:
             )
 
     args.out.mkdir(parents=True, exist_ok=True)
+    pending = [
+        row for row in decisions if row["reason"] == "multi_pet"
+    ]
+    with (args.out / "pending_multi_pet.jsonl").open("w", encoding="utf-8") as stream:
+        for row in pending:
+            stream.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    index_dir = args.out / "index"
+    index_dir.mkdir(parents=True, exist_ok=True)
+    for split in ("train", "val", "test"):
+        rows = sorted(
+            (clip for clip in clips if clip["split"] == split),
+            key=lambda clip: (clip["video"], clip["start"]),
+        )
+        with (index_dir / f"{split}.jsonl").open("w", encoding="utf-8") as stream:
+            for clip in rows:
+                stream.write(json.dumps(clip, ensure_ascii=False) + "\n")
+
+    video_splits: dict[str, set[str]] = defaultdict(set)
+    for clip in clips:
+        video_splits[clip["video"]].add(clip["split"])
+    spanning = sorted(video for video, splits in video_splits.items() if len(splits) > 1)
+    support = {
+        split: dict(Counter(clip["label"] for clip in clips if clip["split"] == split))
+        for split in ("train", "val", "test")
+    }
+
     with (args.out / "intervals.jsonl").open("w", encoding="utf-8") as stream:
         for row in decisions:
             stream.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -375,6 +408,20 @@ def main() -> int:
         "clips_by_label": dict(Counter(c["label"] for c in clips)),
         "clips_by_species": dict(Counter(c["species"] for c in clips)),
         "clips_by_split": dict(Counter(c["split"] for c in clips)),
+        "utilization": {
+            "videos_with_intervals": len({row["video"] for row in rows}),
+            "videos_with_detection": len(caches),
+            "intervals_in": len(rows),
+            "intervals_used": len(arbitrated),
+            "clips": len(clips),
+            "clip_upper_bound": len(arbitrated) * args.max_clips,
+        },
+        "support_by_split": support,
+        "split_isolation": {
+            "videos": len(video_splits),
+            "spanning_videos": spanning,
+        },
+        "pending_multi_pet": len(pending),
     }
     (args.out / "summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
