@@ -137,7 +137,8 @@
             <div v-if="compareMode === 'side'" class="cases-grid">
               <figure v-for="c in additionalCases" :key="c.id" class="case-fig">
                 <div class="case-img-wrap">
-                  <img :src="assetUrl(c)" :alt="`${c.id}：${c.selection_reason}`" loading="lazy" />
+                  <video v-if="isVideoCase(c)" :src="assetUrl(c)" controls preload="metadata" playsinline class="case-video" />
+                  <img v-else :src="assetUrl(c)" :alt="`${c.id}：${c.selection_reason}`" loading="lazy" />
                 </div>
                 <figcaption>
                   <strong>{{ c.id }}</strong> · {{ c.input }}
@@ -148,7 +149,8 @@
 
             <figure v-else class="case-fig case-toggle">
               <div class="case-img-wrap">
-                <img :src="assetUrl(additionalCases[toggleIndex])" :alt="`${additionalCases[toggleIndex].id}：${additionalCases[toggleIndex].selection_reason}`" />
+                <video v-if="isVideoCase(additionalCases[toggleIndex])" :src="assetUrl(additionalCases[toggleIndex])" controls preload="metadata" playsinline class="case-video" />
+                <img v-else :src="assetUrl(additionalCases[toggleIndex])" :alt="`${additionalCases[toggleIndex].id}：${additionalCases[toggleIndex].selection_reason}`" />
               </div>
               <figcaption>
                 <strong>{{ additionalCases[toggleIndex].id }}</strong> · {{ additionalCases[toggleIndex].input }}
@@ -298,7 +300,7 @@ const metricTables = computed(() => (detail.value?.metrics?.tables || []).filter
 const hasSeries = computed(() => (detail.value?.metrics?.series || []).some(s => (s.points || []).length))
 const manifestMetrics = computed(() => detail.value?.manifest?.metrics || [])
 const evidenceEntries = computed(() => Object.entries(detail.value?.manifest?.evidence || {}).filter(([, v]) => v))
-const cases = computed(() => (detail.value?.manifest?.cases || []).filter(c => c.kind === 'image' && c.src))
+const cases = computed(() => (detail.value?.manifest?.cases || []).filter(c => (c.kind === 'image' || c.kind === 'video') && c.src))
 const reportParts = computed(() => splitReportAppendix(detail.value?.content || ''))
 
 const tocItems = computed(() => {
@@ -344,6 +346,10 @@ function assetUrl(c) {
   const file = parts[parts.length - 1]
   if (parts[0] === 'media' || c.kind === 'video') return getExperimentMediaUrl(topic.value, slug.value, file)
   return getExperimentAssetUrl(topic.value, slug.value, file)
+}
+
+function isVideoCase(c) {
+  return c?.kind === 'video'
 }
 
 const chartOption = computed(() => {
@@ -631,6 +637,14 @@ watch(() => route.query, (q) => {
     // 原始像素纪律：不缩放、不平滑，容器滚动看细节
     image-rendering: pixelated;
     max-width: none;
+  }
+
+  // 视频需要看运动：按容器宽度缩放，不做像素化
+  video.case-video {
+    display: block;
+    width: 100%;
+    max-width: 720px;
+    background: #000;
   }
 }
 
