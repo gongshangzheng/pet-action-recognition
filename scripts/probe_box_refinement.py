@@ -95,30 +95,42 @@ def crop_with_margin(img, box, out_h=360, margin=PAD_RATIO):
     return cv2.resize(crop, (max(1, int(crop.shape[1] * scale)), out_h))
 
 
-def save_compare(img, box, refined_box, mask, out_path: Path, label: str) -> None:
-    """左：当前管线的原框裁剪；右：按 mask 外接框重裁。同高并排，直接看谁裁得准。"""
-    left = crop_with_margin(img, box)
-    right = crop_with_margin(img, refined_box) if refined_box else None
-    panels = []
-    if left is not None:
-        cv2.rectangle(left, (2, 2), (left.shape[1] - 3, left.shape[0] - 3), (0, 200, 0), 2)
-        cv2.putText(left, f"ORIGINAL {int(box[2]-box[0])}x{int(box[3]-box[1])}",
-                    (8, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 0), 2)
-        panels.append(left)
-    if right is not None:
-        cv2.rectangle(right, (2, 2), (right.shape[1] - 3, right.shape[0] - 3), (255, 200, 0), 2)
-        rw, rh = int(refined_box[2] - refined_box[0]), int(refined_box[3] - refined_box[1])
-        cv2.putText(right, f"REFINED {rw}x{rh}", (8, 24),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 200, 0), 2)
-        panels.append(right)
-    if not panels:
-        return
+def save_compare(crop: np.ndarray, box_in_crop, mask, refined_in_crop,
+                 out_path: Path, label: str, out_h: int = 360) -> None:
+    """左：原框；右：SAM 掩码着色 + 掩码轮廓 + 精修框。两图同一区域，便于直接对比。"""
+    def to_panel(img):
+        scale = out_h / img.shape[0]
+        return cv2.resize(img, (max(1, int(img.shape[1] * scale)), out_h))
+
+    left = crop.copy()
+    x1, y1, x2, y2 = [int(v) for v in box_in_crop]
+    cv2.rectangle(left, (x1, y1), (x2, y2), (0, 220, 0), 2)
+    bw, bh = int(x2 - x1), int(y2 - y1)
+    cv2.putText(left, f"DINO box {bw}x{bh}", (6, 22),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 220, 0), 2)
+
+    right = crop.copy()
+    if mask is not None and mask.any():
+        tint = right.copy()
+        tint[mask] = (0.45 * tint[mask] + 0.55 * np.array([0, 0, 255])).astype(np.uint8)
+        right = cv2.addWeighted(tint, 0.75, right, 0.25, 0)
+        contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL,
+                                       cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(right, contours, -1, (0, 0, 255), 2)
+    if refined_in_crop is not None:
+        rx1, ry1, rx2, ry2 = [int(v) for v in refined_in_crop]
+        cv2.rectangle(right, (rx1, ry1), (rx2, ry2), (255, 220, 0), 2)
+        rw, rh = rx2 - rx1, ry2 - ry1
+        cv2.putText(right, f"SAM mask bbox {rw}x{rh}", (6, 22),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 220, 0), 2)
+
+    panels = [to_panel(left), to_panel(right)]
     h = max(p.shape[0] for p in panels)
     panels = [cv2.copyMakeBorder(p, 0, h - p.shape[0], 0, 6,
                                  cv2.BORDER_CONSTANT, value=(40, 40, 40)) for p in panels]
     out = np.hstack(panels)
-    cv2.putText(out, label[:60], (8, out.shape[0] - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+    cv2.putText(out, label[:70], (8, out.shape[0] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (210, 210, 210), 1)
     cv2.imwrite(str(out_path), out)
 
 
@@ -156,9 +168,9 @@ def run_case(predictor, kind: str, img: np.ndarray, crop: np.ndarray,
         refined_wh = [int(mb[2] - mb[0] + 1), int(mb[3] - mb[1] + 1)]
 
     png = out_dir / "overlays" / f"{case_id}__{kind}.png"
-    save_compare(img, (ox + box_in_crop[0], oy + box_in_crop[1],
-                       ox + box_in_crop[2], oy + box_in_crop[3]),
-                 refined_frame_box, mask, png, f"{case_id} / {kind} — {note}")
+    refined_in_crop = None if mb is None else (mb[0], mb[1], mb[2], mb[3])
+    save_compare(crop, box_in_crop, mask, refined_in_crop, png,
+                 f"{case_id} / {kind} — {note}")
 
     iou = mask_box_iou(mask, box_in_crop)
     return {
