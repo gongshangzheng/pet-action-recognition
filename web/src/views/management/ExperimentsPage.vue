@@ -492,8 +492,11 @@ watch(() => route.query, (q) => {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 16px;
+  // 阅读列居中：宽屏下不让正文贴住侧栏
+  max-width: 960px;
+  margin-inline: auto;
 
-  @media (min-width: 640px) { padding: 24px 28px; }
+  @media (min-width: 640px) { padding: 24px 32px; }
 }
 
 .doc-header {
@@ -561,15 +564,6 @@ watch(() => route.query, (q) => {
 .detail-article { margin-top: 8px; }
 
 // 段落保持可读行宽；表格、代码、图占满正文区
-// 窄屏横向像素稀缺，段落直接铺满；超宽屏才限制行宽，避免一行过长
-@media (min-width: 1200px) {
-  .detail-article :deep(p),
-  .detail-article :deep(li),
-  .detail-article :deep(blockquote) {
-    max-width: 78ch;
-  }
-}
-
 .detail-article :deep(table),
 .detail-article :deep(pre),
 .detail-article :deep(.n-data-table),
