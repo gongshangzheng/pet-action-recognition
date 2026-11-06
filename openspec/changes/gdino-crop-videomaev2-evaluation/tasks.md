@@ -24,7 +24,7 @@ A 为原视频，B 为 GroundingDINO 裁剪，C 为同一检测缓存加像素�
 - [x] 2.4 输出不新增文字、框或分数的 B/C 视频；空裁剪及轨迹长度不符时报错。审阅显示框与训练资格分离，检测缺口保持相机轨迹；整段无检测时仅以原画供审阅，不写灰帧。
 - [x] 2.5 `scripts/prepare_cat_crop_experiment.py` 在渲染参数不匹配时拒绝覆盖旧输出，显式 `--force` 才允许重建；准备及抽样脚本不再内置远程绝对路径，必须用参数或环境变量提供源路径。
 - [x] 2.6 补两条裁剪测试：传入完全落在画面外的框时必须报错，不能输出灰帧或黑帧；在合成画面里画一个已知位置的标记，裁剪后标记必须落在按坐标换算算出的位置。判据：两条用例通过，逐用例结果写入 evidence。已通过：空框与零面积框抛 `ValueError`，白块按 1:1 与 1:2 缩放都落在换算位置。（可与 2.7 并行）
-- [ ] 2.7 补齐场景回归测试：无宠物、长缺口、多宠物、单狗、静止宠物与缓存不匹配。判据：每类场景各有一条通过的用例，清单写入 evidence。（可与 2.6 并行）
+- [ ] 2.7 核对 `petlib/datasets/cat_crop.py` 的 `classify_frame` 与 `build_frame_track` 在六类输入下的现有覆盖，只补缺口、不改已有断言。六类与应有行为：无宠物 → 记 `no_reliable_pet_detection`，不写“确认无宠物”；长缺口 → 不生成插值框；多宠物 → 记 `multi_pet_unsupported`；单狗 → `target_class=dog` 且按狗框裁剪；静止宠物 → 框保持不变、不判无宠物；缓存不匹配 → 拒绝复用。判据：六条行为各有一条通过的用例，用例名与文件的映射表写入 evidence。（可与 2.6 并行）
 
 ## 3. 人工质检与数据冻结
 
@@ -40,27 +40,27 @@ A 为原视频，B 为 GroundingDINO 裁剪，C 为同一检测缓存加像素�
 
 本轮只训练 B（GroundingDINO 裁剪）。A 与 C 的资产已生成，不训练、不参与评测结论。
 
-- [ ] 4.1 保存并核验 B 臂解析后的完整配置，确认与 design 3.5 的配方一致。`configs/cat_crop_videomaev2_gdino.py` 已存在。判据：解析后的配置落在结果目录，逐项核对记录写入 evidence。
+- [ ] 4.1 用 mmaction2 的配置解析读取 `configs/cat_crop_videomaev2_gdino.py`，逐项核对 design 3.5 的配方：16 帧、间隔 4、224 输入、AdamW lr 5e-5、weight decay 0.05、20 epoch、warmup 2、AMP、micro-batch 4、累积 4、七类。只读核对，不改配置。判据：解析后的配置 JSON 落到 B 臂结果目录，逐项对照表写入 evidence，不一致处写明。
 - [x] 4.2 提供 `scripts/run_cat_crop_experiment.py`，包含预检、训练、验证选择和测试入口，使用独立结果目录。真实训练验收见 4.4、4.11。
-- [ ] 4.3 补齐可用索引、原始分母、失败计数和测试前冻结的无 GPU 测试并运行。判据：相关用例全部通过，结果写入 evidence。
+- [ ] 4.3 核对 `tests/test_cat_crop_experiment.py` 中可用索引、原始分母（2,710）、失败计数与测试前冻结的现有用例，修复因接口变更而失效的用例（已知 `test_paired_index_rejects_different_samples` 的固件缺 `source_index_root`），缺的补上。判据：`python3 -m pytest tests/test_cat_crop_experiment.py -q` 全绿，命令与结果写入 evidence。非目标：不改判定口径。
 - [x] 4.4 在数据冻结后，用真实 batch 核验预训练骨干加载、前反向和区间采样。通过资源守卫记录显存与内存峰值，三臂有效 batch 一致。
-- [ ] 4.5 在真实 worker 生命周期下验证资源守卫：远程 CPU-only 场景创建并退出多个 worker，断言 CPU 百分比非负、elapsed 合理、超限时整组无残留。判据：日志给出三项断言结果，路径与退出码写入 evidence。（可与 4.6 并行）
-- [ ] 4.6 让检查点保存优化器与学习率调度器状态，覆盖基础配置的 `save_optimizer=False`、`save_param_scheduler=False`。判据：新检查点同时含优化器与调度器状态，字段清单写入 evidence。（可与 4.5 并行）
-- [ ] 4.7 补无 GPU 续训测试：证明优化器状态与学习率可从保存的检查点恢复。判据：测试显示恢复后的学习率与优化器步数与保存时一致。（依赖 4.6）
-- [ ] 4.8 提交并推送 4.5–4.7 的改动，核验远端 HEAD 与所推分支一致。判据：远端 `git rev-parse HEAD` 与所推提交相同，记录写入 evidence。（依赖 4.5、4.6、4.7）
-- [ ] 4.9 记录数据划分 seed 与训练 seed，估算 B 臂训练时长与 checkpoint 磁盘占用；容量不足则停下报告。判据：两个 seed 与估算值写入 evidence，或写明阻塞。（依赖 4.1、4.3、4.5、4.6、4.7）
-- [ ] 4.10 复核历史锚点：旧七类 checkpoint 哈希与历史 top-1/macro-F1 记录一致。判据：核对的哈希与指标写入 evidence，差异处写明原因。（可与 4.9 并行）
-- [ ] 4.11 在独立结果目录从预训练骨干训练 B 臂，seed 0、20 epoch，保存配置、环境、日志、状态与权重哈希。训练入口依赖 `scikit-learn`；复用已存在且验证通过的 `plf` 环境，不改共享 `pet` 环境。判据：20 epoch 跑完、状态文件为完成、按 val macro-F1 保存 best checkpoint，四类产物齐备。（依赖 4.8、4.9）
-- [ ] 4.12 仅按验证结果冻结最佳 checkpoint 与预处理设置，保存 `selection.json`，说明小样本、单 seed 以及测试集已被历史结果暴露的限制。判据：`selection.json` 落盘且写明限制说明。（依赖 4.11）
+- [ ] 4.5 在 pet 上用 CPU-only 场景验证资源守卫（`.claude/skills/remote-ops/scripts/resource_guard.sh`，含工作区未提交改动）：脚本创建并退出多个 worker，三项断言必须成立——CPU 百分比不为负、elapsed 与实际耗时相符、超限终止后同进程组无残留。判据：守卫日志与三项断言结果写入 evidence，含退出码；未通过时不得进入 4.8。非目标：不调守卫阈值。（可与 4.6 并行）
+- [ ] 4.6 在 `configs/cat_action_v1_base.py` 及其派生配置中打开优化器与学习率调度器状态保存，覆盖现有 `save_optimizer=False`、`save_param_scheduler=False`。判据：新生成的检查点在 PyTorch 加载后可见 `optimizer` 与 `param_scheduler` 字段，字段清单写入 evidence。非目标：不改保存频率与保留数量。（可与 4.5 并行）
+- [ ] 4.7 为 4.6 补一条无 GPU 测试：保存检查点后从该检查点恢复，恢复出的学习率与优化器 step 必须等于保存时的值。判据：新增用例通过，测试名与断言写入 evidence。（依赖 4.6）
+- [ ] 4.8 提交并推送 4.5–4.7 的改动到 `exp/gdino-crop-videomaev2-evaluation`，在 pet 上把工作树重置到该提交并核对。判据：远端 `git rev-parse HEAD` 等于所推提交号，且工作树无跟踪文件改动，两者写入 evidence。（依赖 4.5、4.6、4.7）
+- [ ] 4.9 记录数据划分 seed 与训练 seed（design 指定训练 seed 0），并按 214 个区间的实际 batch 吞吐估算 B 臂 20 epoch 的墙钟时长与检查点磁盘占用。判据：两个 seed、估算时长、估算占用写入 evidence；容量或时间不足时写成阻塞并停止。（依赖 4.1、4.3、4.5、4.6、4.7）
+- [ ] 4.10 复核历史锚点：旧七类 VideoMAEv2-B 最佳权重哈希应为 `39a1baa1…`，历史 val top-1/macro-F1 为 85.93%/70.97%、test 为 81.90%/67.66%。判据：哈希与指标的核对结果写入 evidence，差异处写明原因。（可与 4.9 并行）
+- [ ] 4.11 用 `scripts/run_cat_crop_experiment.py` 在独立结果目录从 K710 预训练骨干训练 B 臂：seed 0、20 epoch、冻结的 214 区间索引，环境用已核验的 `plf`，不改共享 `pet` 环境，运行前按 `remote-ops` 预检并套守卫。判据：20 epoch 跑完且状态文件为完成，best checkpoint 按 val macro-F1 选出，配置、环境、日志、权重哈希四类产物齐备。（依赖 4.8、4.9）
+- [ ] 4.12 只依据验证集结果冻结 B 臂最佳 checkpoint 与预处理设置，写 `selection.json`，其中必须说明：训练集仅 137 个区间、单 seed、测试集 44 个区间已被历史结果暴露。判据：`selection.json` 落盘且含上述三条限制；写入后不得再按测试集改动选择。（依赖 4.11）
 
 ## 5. 测试与结论
 
-- [ ] 5.1 在 4.12 冻结选择后测试一次，保存逐样本预测、top-1、macro-F1、balanced accuracy、混淆矩阵和各类 precision/recall/F1/support。判据：上述产物全部落盘，测试只运行一次。（依赖 4.12）
-- [ ] 5.2 按原评测清单报告可用率、失败原因及含失败的区间成功率，单列可用子集的分类准确率，保留 2,710 的原始分母。判据：报告同时给出两个分母与失败分类计数。（依赖 5.1）
-- [ ] 5.3 更新实验报告和 evidence.md，写明历史参照、本轮结果、资源成本与失败案例；结论限定为“裁剪输入下的分类水平”，不声称裁剪带来提升。判据：报告 `status` 与 `verdict` 按事实填写，生成器完整度检查通过。（依赖 5.2）
-- [ ] 5.4 核验源数据、旧权重与旧排名未被修改，记录核验方式与结果。判据：源视频、区间表与旧权重的哈希核对记录写入 evidence。
-- [ ] 5.5 确认运行资源已释放（GPU 显存、主机进程），记录核对结果。判据：核对输出写入 evidence。
-- [ ] 5.6 完成 OpenSpec 严格校验与 `git diff --check`，提交本 change 的实现与结论。判据：两项检查通过且有对应提交。（依赖 5.3、5.4、5.5）
+- [ ] 5.1 在 4.12 冻结后对 B 臂测试一次，用 `CatIntervalMetric` 输出逐 sample_id 预测、top-1、macro-F1、balanced accuracy、混淆矩阵与各类 precision/recall/F1/support。判据：产物全部落盘且记录运行次数为 1；测试后不得调参重跑。（依赖 4.12）
+- [ ] 5.2 按原始 2,710 个区间写可用率报告：不可用按 `multi_pet_unsupported` 1,551 与 `no_reliable_pet_detection` 945 分开计数，给出含预处理的区间成功率，另单列 214 个可用区间的分类准确率。判据：报告同时出现 2,710 与 214 两个分母及两类失败计数，来源为 `availability.json`。（依赖 5.1）
+- [ ] 5.3 用 `.agents/skills/experiment/scripts/build_report.py` 生成 B 臂实验报告并更新 evidence：写明历史参照、本轮指标、资源成本与失败案例，结论限定为“裁剪输入下的分类水平”，不声称裁剪带来提升。判据：报告 `status` 与 `verdict` 按事实填写，生成器完整度检查 0 项缺失。（依赖 5.2）
+- [ ] 5.4 核验源数据与旧产物未被修改：`cat_raw` 区间表哈希应为 `80da23af…`，旧七类权重哈希应为 `39a1baa1…`，旧 model-zoo 排名文件未出现本轮写入。判据：三项核对结果写入 evidence，差异即视为失败。
+- [ ] 5.5 确认训练与测试进程已退出、两块 GPU 显存回到基线。判据：`nvidia-smi` 与进程列表的核对输出写入 evidence。
+- [ ] 5.6 运行 `openspec validate gdino-crop-videomaev2-evaluation --strict` 与 `git diff --check`，把实现与结论一起提交到 `exp/gdino-crop-videomaev2-evaluation`。判据：两项检查通过，提交号写入 evidence。（依赖 5.3、5.4、5.5）
 
 ## 6. follow_cam 稳定性修复（2026-11-04 用户批准）
 

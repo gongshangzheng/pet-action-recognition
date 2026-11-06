@@ -245,3 +245,11 @@
 - **逐用例结果**：`python3 -m pytest tests/test_cat_crop_experiment.py -q -k "out_of_frame or known_marker"` → 2 passed。
 - **全文件与全仓状态**：`tests/test_cat_crop_experiment.py` 为 51 passed、1 failed、8 subtests；`tests/` 全仓为 89 passed、3 failed、8 subtests。三个失败均与本条无关：`test_paired_index_rejects_different_samples` 的固件缺少 `source_index_root` 字段，HEAD 版本的 `validate_common_indexes` 已要求该字段，属既有失效用例；另两个 `tests/test_resource_guard_process_tree.py` 失败来自工作区中未提交的 `resource_guard.sh` 改动。
 - **未修**：上述三个失败不在 2.6 范围，未修改；其中失效用例归入 4.3 的无 GPU 测试整理，守卫相关的两个失败属于 4.5 的守卫验证。
+
+### 2026-11-06：待办任务改写成自足文字（用户要求）
+
+- **问题**：原条目如“补齐坐标恢复、空裁剪与帧号映射等测试”，没有写明对象、输入与判据。我当时是按 `petlib/datasets/cat_crop.py` 的函数与现有测试名反推含义的，同一句换个人会写出不同范围。这属于任务文字缺陷，不是执行者的理解问题。
+- **规则落点**：按用户指示写入 OpenSpec 补充扩展 `~/.pi/agent/extensions/openspec-house-rules/rules/authoring.md`，新增“任务文字必须自足”一节：四要素（对象、动作、判据、非目标）、禁用“等/相关/完善/处理一下”、判据须可被第三方核对。未写入 `.agents/skills/openspec-*`。
+- **改写范围**：17 条未完成条目（2.7、4.1、4.3、4.5–4.12、5.1–5.6）改为自足文字，逐条补上对象（文件、函数、产物）、动作、判据与非目标。已完成条目与编号未动，无增删与重排。
+- **2.7 语义变化**：由“补齐场景回归测试”改为“核对现有覆盖、只补缺口”。依据是六类场景已有 8 条通过用例（`pytest -k "no_pet or long_gap or multi_pets or single_dog or static_pet or cache_mismatch"` 全绿），不需要重写。
+- **4.3 增加了已知失效用例**：`test_paired_index_rejects_different_samples` 的固件缺 `source_index_root`，现有代码要求该字段，属既有失效，归入 4.3 修复。
