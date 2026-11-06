@@ -336,3 +336,10 @@
 - **4.6 扩为训练入口配置对齐**：除原有的两个 `save_*` 开关，增加把 `run_cat_crop_experiment.py` 的 `INDEX_ROOT` 指向 `gdino-v1-cat`。合并理由是三处修改共同构成“训练入口与 design 一致”这一个结果，证据同为解析后的配置与索引路径。
 - **4.11 增加梯度累积**：训练参数写明 micro-batch 4 + 累积 4（有效 batch 16），判据增加“运行记录的解析配置显示有效 batch 16”。
 - **未动**：编号、并行标注、依赖关系与其它条目均未改；proposal、spec、design 无需修订，因为 design 3.5 本来就要求有效 batch 16，缺的是实现而非计划。
+
+### 2026-11-06：4.3 修复失效用例
+
+- **改动**：`test_paired_index_rejects_different_samples` 的固件补齐 `validate_common_indexes` 现在需要的字段：`source_index_root`（三个 split 各一行源索引）、`source_video_root`、`source_rows`，并补 `availability.json`。断言未改，仍要求三臂 `sample_id` 不一致时抛 `ValueError`。
+- **结果**：`python3 -m pytest tests/test_cat_crop_experiment.py -q` → **54 passed、8 subtests passed**（此前 1 failed）。
+- **全仓状态**：`tests/` 为 92 passed、2 failed、8 subtests。两个失败是 `tests/test_resource_guard_process_tree.py`，来源是工作区里未提交的 `resource_guard.sh` 改动（+65/−11），不属于本条，归 4.5 的守卫演练处理。
+- **未新增测试**：按最小测试只修固件，没有加用例。

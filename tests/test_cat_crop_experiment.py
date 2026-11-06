@@ -990,14 +990,27 @@ class CacheAndIndexTests(unittest.TestCase):
             with tempfile.TemporaryDirectory(dir=ROOT / "results/tests") as name:
                 root = Path(name)
                 runner.INDEX_ROOT = root
+                source_root = root / "source"
+                source_root.mkdir()
+                for split in runner.SPLITS:
+                    (source_root / f"{split}.jsonl").write_text(
+                        json.dumps({"video": "v.mp4", "task_id": 1}) + "\n",
+                        encoding="utf-8",
+                    )
                 manifest = {
                     "classes": runner.CLASSES,
                     "arms": list(runner.ARMS),
                     "common_sample_set": True,
                     "training_ready": True,
+                    "source_index_root": str(source_root),
+                    "source_video_root": str(root),
+                    "source_rows": 1,
                 }
                 (root / "manifest.json").write_text(
                     json.dumps(manifest), encoding="utf-8"
+                )
+                (root / "availability.json").write_text(
+                    json.dumps({"rows": [{"sample_id": "same"}]}), encoding="utf-8"
                 )
                 for split in runner.SPLITS:
                     for arm in runner.ARMS:

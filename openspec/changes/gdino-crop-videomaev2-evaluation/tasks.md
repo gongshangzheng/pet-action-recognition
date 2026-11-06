@@ -44,7 +44,7 @@ A 为原视频，B 为 GroundingDINO 裁剪，C 为同一检测缓存加像素�
 
 - [x] 4.1 解析 `configs/cat_crop_videomaev2_gdino.py`，逐项核对 design 3.5 的配方，不改配置。判据：解析后的配置 JSON 落到结果目录，对照表写入 evidence。已完成：配方各项一致；累积 4 未设置、`INDEX_ROOT` 仍指向含狗的旧索引，两处记为缺口。
 - [x] 4.2 提供 `scripts/run_cat_crop_experiment.py`，包含预检、训练、验证选择和测试入口，使用独立结果目录。真实训练验收见 4.4、4.11。
-- [ ] 4.3 修掉 `tests/test_cat_crop_experiment.py` 的失效用例（固件缺 `source_index_root`），不新增测试。判据：该文件 `pytest -q` 全绿。
+- [x] 4.3 修掉 `tests/test_cat_crop_experiment.py` 的失效用例（固件缺 `source_index_root`），不新增测试。判据：该文件 `pytest -q` 全绿。已完成：54 passed、8 subtests。
 - [x] 4.4 在数据冻结后，用真实 batch 核验预训练骨干加载、前反向和区间采样。通过资源守卫记录显存与内存峰值，三臂有效 batch 一致。
 - [ ] 4.5 在 pet 上做一次 CPU-only 守卫演练：多个 worker 创建并退出，检查 CPU 非负、elapsed 合理、超限后整组无残留。判据：演练日志与退出码写入 evidence；不新增测试文件。（可与 4.6 并行）
 - [ ] 4.6 让训练入口配置与 design 对齐：打开 `configs/cat_action_v1_base.py` 的 `save_optimizer` 与 `save_param_scheduler`，并把 `run_cat_crop_experiment.py` 的 `INDEX_ROOT` 指向 `gdino-v1-cat`。判据：解析后的配置与索引路径写入 evidence；旧检查点加载后含 `optimizer` 与 `param_scheduler` 字段。（可与 4.5 并行）
