@@ -364,12 +364,12 @@ def main() -> int:
     index_dir = args.out / "index"
     index_dir.mkdir(parents=True, exist_ok=True)
     for split in ("train", "val", "test"):
-        rows = sorted(
+        split_clips = sorted(
             (clip for clip in clips if clip["split"] == split),
             key=lambda clip: (clip["video"], clip["start"]),
         )
         with (index_dir / f"{split}.jsonl").open("w", encoding="utf-8") as stream:
-            for clip in rows:
+            for clip in split_clips:
                 stream.write(json.dumps(clip, ensure_ascii=False) + "\n")
 
     video_splits: dict[str, set[str]] = defaultdict(set)
