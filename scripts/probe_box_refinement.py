@@ -18,6 +18,7 @@ cases.json 结构：[{"id": "...", "video": "/abs/path.mp4", "frame": 185,
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -83,29 +84,21 @@ def save_overlay(crop, box_in_crop, mask, path: Path) -> None:
 
 
 def build_mobile_sam(model_dir: Path, ckpt: Path):
+    """模型代码只在目标机器（仓库外）存在，因此用 importlib 动态导入。"""
     sys.path.insert(0, str(model_dir))
-    from mobile_sam import (  # type: ignore[import-not-found]  # noqa: E402
-        SamPredictor,
-        sam_model_registry,
-    )
-
-    sam = sam_model_registry["vit_t"](checkpoint=str(ckpt))
+    module = importlib.import_module("mobile_sam")
+    sam = module.sam_model_registry["vit_t"](checkpoint=str(ckpt))
     sam.eval()
-    return SamPredictor(sam)
+    return module.SamPredictor(sam)
 
 
 def build_sam2(model_dir: Path, ckpt: Path):
     sys.path.insert(0, str(model_dir))
-    from sam2.build_sam import (
-        build_sam2,  # type: ignore[import-not-found]  # noqa: E402
-    )
-    from sam2.sam2_image_predictor import (
-        SAM2ImagePredictor,  # type: ignore[import-not-found]  # noqa: E402
-    )
-
-    model = build_sam2("configs/sam2/sam2_hiera_s.yaml", str(ckpt))
+    build = importlib.import_module("sam2.build_sam")
+    predictor_mod = importlib.import_module("sam2.sam2_image_predictor")
+    model = build.build_sam2("configs/sam2/sam2_hiera_s.yaml", str(ckpt))
     model.eval()
-    return SAM2ImagePredictor(model)
+    return predictor_mod.SAM2ImagePredictor(model)
 
 
 def run_case(predictor, kind: str, crop: np.ndarray, box_in_crop, out_png: Path) -> dict:
