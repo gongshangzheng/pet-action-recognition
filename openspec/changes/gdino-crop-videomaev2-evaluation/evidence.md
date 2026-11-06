@@ -330,3 +330,9 @@
   - `run_cat_crop_experiment.py` 的 `INDEX_ROOT` 仍指向 `datasets/cat_crop_classification/gdino-v1-full`（214 区间、含狗），而本轮训练应使用 3.8 的 `gdino-v1-cat`（207 区间）。
 - **另确认**：`CheckpointHook` 同时为 `save_optimizer=False`、`save_param_scheduler=False`、`save_best=macro_f1`、`max_keep_ckpts=2`，对应 4.6 的修改目标。
 - **计划缺口**：上述两处不一致没有对应任务。梯度累积属于训练运行参数，可并入 4.11；索引指向属于训练前置的代码修正，需要一条明确的归属。等用户确认后再改 tasks。
+
+### 2026-11-06：4.1 两处缺口落入任务（用户确认）
+
+- **4.6 扩为训练入口配置对齐**：除原有的两个 `save_*` 开关，增加把 `run_cat_crop_experiment.py` 的 `INDEX_ROOT` 指向 `gdino-v1-cat`。合并理由是三处修改共同构成“训练入口与 design 一致”这一个结果，证据同为解析后的配置与索引路径。
+- **4.11 增加梯度累积**：训练参数写明 micro-batch 4 + 累积 4（有效 batch 16），判据增加“运行记录的解析配置显示有效 batch 16”。
+- **未动**：编号、并行标注、依赖关系与其它条目均未改；proposal、spec、design 无需修订，因为 design 3.5 本来就要求有效 batch 16，缺的是实现而非计划。
