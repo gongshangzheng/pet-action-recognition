@@ -97,3 +97,11 @@
 - **影响一（多宠物判定）**：这条区间的排除是合理的——多宠物目标不唯一，与置信度阈值无关。
 - **影响二（静物误检判据）**：design 4.3 里“静物误检”的判据不能再以本案为证据，已改为“待 2.3 抽查验证的风险”，阈值保留为待校准初值。
 - **影响三（SORT 价值）**：两只猫无交叠，是关联算法最容易处理的形态；该区间可作为 `multi-pet-sort-tracking` 落地后的候选回收样本。用户决定现在不做。
+
+### 2026-11-07：逐区间决策清单（3.2 / 4.1 / 5.2）
+
+- **新增产出**：`build_cat_dataset_slices.py` 增加 `intervals.jsonl`，为每个输入区间记录去向与原因（提交见下）。`slices_v4` 结果与 `slices_v3` 完全一致（确定性），保留两份。
+- **3.2 三分类**：3,927 条记录，原因分布为 multi_pet 967、unmapped_label 34、too_short 33、unassigned_split 12、no_detection 3、overlap_suppressed 11、extension_failed 18，其余 2,849 条为 sliced。`sliced` 中按物种：猫多于狗（详见 summary 的 `clips_by_species`）。三类互斥且计数之和与总数一致。
+- **4.1 重叠压制 11 条**：逐条核对后全部符合“单宠物区间内具体动作优先于 activity/prolonged_stationary”的规则，未发现误压多宠物区间或同类嵌套。样例：`activity 251–265` 被 `eating` 压制；`prolonged_stationary 1–239` 被 `grooming` 压制；`prolonged_stationary 209–369` 被 `activity` 压制（符合 activity > prolonged）。
+- **5.2 外延失败 18 条**：全部因相邻区间或视频边界导致可借帧数不足 60（可用帧数 16–58，例如 `toileting 186–233` 只有 48 帧可借）。没有一条是“窗口算法本身”造成的失败；首次运行的 142 条失败已由两侧借位修复消除。
+- **限制**：这三项都是对管线自身产出的核对，没有独立真值；多宠物数量仍缺人工抽查（2.3）。
