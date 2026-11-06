@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import statistics
 import sys
 from pathlib import Path
 from typing import Any
@@ -43,10 +42,10 @@ def parse_args() -> argparse.Namespace:
         help="how many videos to check, spread evenly over the metadata list",
     )
     parser.add_argument(
-        "--jitter-ms",
-        type=float,
-        default=1.0,
-        help="largest tolerated deviation of a PTS delta from the nominal interval",
+        "--jitter-ticks",
+        type=int,
+        default=1,
+        help="largest tolerated deviation of a PTS delta from the modal delta, in time-base ticks",
     )
     parser.add_argument(
         "--max-frames",
@@ -58,59 +57,82 @@ def parse_args() -> argparse.Namespace:
 
 
 def frame_pts(path: Path, max_frames: int = 0) -> dict[str, Any]:
-    """Return frame count, nominal interval and delta statistics for one stream."""
+    """Return frame count and PTS deltas expressed in time-base ticks."""
     container = av.open(str(path))
     try:
         stream = container.streams.video[0]
         rate = stream.average_rate
-        nominal = 1.0 / float(rate) if rate else None
+        base_rate = stream.base_rate
+        time_base = stream.time_base
+        tick = float(time_base) if time_base else None
         pts: list[float] = []
         for index, frame in enumerate(container.decode(stream)):
             if frame.pts is None:
                 raise RuntimeError(f"Frame without PTS in {path}")
-            pts.append(float(frame.pts * frame.time_base))
+            pts.append(float(frame.pts))
             if max_frames and index + 1 >= max_frames:
                 break
     finally:
         container.close()
+    nominal = 1.0 / float(rate) if rate else None
     if len(pts) < 2:
         return {
             "frames": len(pts),
             "nominal_interval_s": nominal,
-            "deltas_s": [],
+            "average_rate": str(rate) if rate else None,
+            "base_rate": str(base_rate) if base_rate else None,
+            "time_base": str(time_base) if time_base else None,
+            "delta_ticks": [],
         }
-    deltas = [round(b - a, 6) for a, b in zip(pts, pts[1:])]
+    delta_ticks = [int(round((b - a))) for a, b in zip(pts, pts[1:])]
     return {
         "frames": len(pts),
         "nominal_interval_s": nominal,
-        "first_pts_s": round(pts[0], 6),
-        "last_pts_s": round(pts[-1], 6),
-        "deltas_s": deltas,
+        "average_rate": str(rate) if rate else None,
+        "base_rate": str(base_rate) if base_rate else None,
+        "time_base": str(time_base) if time_base else None,
+        "tick_seconds": tick,
+        "delta_ticks": delta_ticks,
     }
 
 
-def summarize(measurement: dict[str, Any], jitter_s: float) -> dict[str, Any]:
-    deltas = measurement["deltas_s"]
-    nominal = measurement["nominal_interval_s"]
-    if not deltas:
+def summarize(measurement: dict[str, Any], jitter_ticks: int) -> dict[str, Any]:
+    ticks = measurement["delta_ticks"]
+    if not ticks:
         return {
             "frames": measurement["frames"],
-            "constant_rate": None,
-            "median_interval_s": None,
-            "max_deviation_s": None,
-            "distinct_intervals": 0,
+            "pattern": None,
+            "modal_delta_ticks": None,
+            "max_deviation_ticks": None,
+            "irregular_deltas": 0,
         }
-    median = statistics.median(deltas)
-    max_deviation = max(abs(value - median) for value in deltas)
-    target = nominal if nominal else median
+    counts: dict[int, int] = {}
+    for value in ticks:
+        counts[value] = counts.get(value, 0) + 1
+    modal = max(counts, key=lambda key: counts[key])
+    deviations = [abs(value - modal) for value in ticks]
+    max_deviation = max(deviations)
+    if max_deviation == 0:
+        pattern = "uniform"
+    elif max_deviation <= jitter_ticks:
+        pattern = "quantized_uniform"
+    else:
+        pattern = "irregular"
     return {
         "frames": measurement["frames"],
-        "constant_rate": max(abs(value - target) for value in deltas) <= jitter_s,
-        "median_interval_s": round(median, 6),
-        "max_deviation_s": round(max_deviation, 6),
-        "distinct_intervals": len({round(value, 4) for value in deltas}),
-        "first_pts_s": measurement.get("first_pts_s"),
-        "last_pts_s": measurement.get("last_pts_s"),
+        "pattern": pattern,
+        "modal_delta_ticks": modal,
+        "modal_interval_s": (
+            round(modal * measurement["tick_seconds"], 6)
+            if measurement.get("tick_seconds")
+            else None
+        ),
+        "max_deviation_ticks": max_deviation,
+        "irregular_deltas": sum(1 for value in deviations if value > jitter_ticks),
+        "distinct_deltas": len(counts),
+        "average_rate": measurement["average_rate"],
+        "base_rate": measurement["base_rate"],
+        "time_base": measurement["time_base"],
     }
 
 
@@ -122,7 +144,6 @@ def main() -> int:
         raise SystemExit(f"No metadata in {asset_root / 'metadata'}")
     step = max(1, len(metadata_paths) // max(1, args.sample))
     selected = metadata_paths[::step][: args.sample]
-    jitter_s = args.jitter_ms / 1000.0
 
     results: list[dict[str, Any]] = []
     frame_count_mismatches: list[dict[str, Any]] = []
@@ -141,12 +162,12 @@ def main() -> int:
             / f"{stem}.mp4",
         }
         entry: dict[str, Any] = {"video": stem, "source": str(source)}
-        source_summary = summarize(frame_pts(source, args.max_frames), jitter_s)
+        source_summary = summarize(frame_pts(source, args.max_frames), args.jitter_ticks)
         entry["source"] = source_summary
-        if source_summary["constant_rate"] is False:
+        if source_summary["pattern"] == "irregular":
             vfr_sources.append(stem)
         for arm, path in crops.items():
-            summary = summarize(frame_pts(path, args.max_frames), jitter_s)
+            summary = summarize(frame_pts(path, args.max_frames), args.jitter_ticks)
             entry[arm] = summary
             if summary["frames"] != source_summary["frames"]:
                 frame_count_mismatches.append(
@@ -157,7 +178,7 @@ def main() -> int:
                         "crop_frames": summary["frames"],
                     }
                 )
-            if summary["constant_rate"] is False:
+            if summary["pattern"] == "irregular":
                 irregular_crops.append({"video": stem, "arm": arm})
         entry["index_mapping_preserved"] = (
             entry["gdino"]["frames"] == source_summary["frames"]
@@ -174,7 +195,7 @@ def main() -> int:
         "asset_root": str(asset_root),
         "sampled": len(results),
         "available_metadata": len(metadata_paths),
-        "jitter_tolerance_ms": args.jitter_ms,
+        "jitter_tolerance_ticks": args.jitter_ticks,
         "vfr_source_count": len(vfr_sources),
         "vfr_sources": vfr_sources,
         "frame_count_mismatches": frame_count_mismatches,
