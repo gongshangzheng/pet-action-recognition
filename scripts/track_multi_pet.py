@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.tracking.anchors import load_anchor_sequence  # noqa: E402
+from petlib.tracking.anchors import DEDUP_IOS_MIN, load_anchor_sequence  # noqa: E402
 from petlib.tracking.oc_sort import OCSortTracker  # noqa: E402
 from petlib.tracking.species_split import (  # noqa: E402
     SPECIES_ID_OFFSET,
@@ -74,8 +74,9 @@ def _box_iou(a, b) -> float:
     return inter / (area_a + area_b - inter)
 
 
-def track_video(detection_path: Path, params: dict, association: str = "species_split") -> dict:
-    seq = load_anchor_sequence(detection_path)
+def track_video(detection_path: Path, params: dict, association: str = "species_split",
+                apply_dedup: bool = True) -> dict:
+    seq = load_anchor_sequence(detection_path, apply_dedup=apply_dedup)
     if association == "species_split":
         tracker = SpeciesSplitTracker(lambda cfg: OCSortTracker(**cfg), params)
     elif association == "single":
@@ -147,6 +148,7 @@ def track_video(detection_path: Path, params: dict, association: str = "species_
         "association": association,
         "params": params,
         "n_tracks": len(track_rows),
+        "dedup": {"ios_min": DEDUP_IOS_MIN, "dropped": len(seq.dedup_log), "log": seq.dedup_log},
         "tracks": track_rows,
         "anchors": {f: sorted(rows, key=lambda r: r["track_id"]) for f, rows in sorted(anchors_out.items(), key=lambda kv: int(kv[0]))},
     }
@@ -164,6 +166,8 @@ def main() -> int:
     parser.add_argument("--no-use-byte", action="store_true", help="关闭低分二次关联（SORT 对照用）")
     parser.add_argument("--association", choices=("species_split", "single"), default="species_split",
                         help="关联模式；single = 单流 + 物种作元数据（design 4.5 修订）")
+    parser.add_argument("--no-dedup", action="store_true",
+                        help="关闭 design 4.11 的 IoS 嵌套重复去重（对照臂用）")
     args = parser.parse_args()
 
     params = dict(DEFAULT_PARAMS)
@@ -176,7 +180,8 @@ def main() -> int:
     entries = []
     for det_path in args.detections:
         det_path = Path(det_path)
-        payload = track_video(det_path, params, association=args.association)
+        payload = track_video(det_path, params, association=args.association,
+                              apply_dedup=not args.no_dedup)
         # created_utc 不参与内容指纹：可复现判据比较时剔除
         content = {k: v for k, v in payload.items() if k != "created_utc"}
         out_path = args.out / f"{det_path.stem}.track.json"

@@ -19,6 +19,12 @@ import json
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from petlib.tracking.anchors import load_anchor_sequence  # noqa: E402
+
 
 def box_iou(a, b) -> float:
     x1, y1 = max(a[0], b[0]), max(a[1], b[1])
@@ -69,7 +75,7 @@ def overlap_swaps(tracks: list[dict], iou_thr: float = 0.5) -> int:
             continue
         by_species.setdefault(t["species"], []).append(t)
     n = 0
-    for species, seq in by_species.items():
+    for seq in by_species.values():
         for i in range(len(seq)):
             for j in range(i + 1, len(seq)):
                 fa = {p["frame"]: p["box"] for p in seq[i]["points"]}
@@ -80,17 +86,20 @@ def overlap_swaps(tracks: list[dict], iou_thr: float = 0.5) -> int:
     return n
 
 
-def anchor_consistency(track_payload: dict, detection_payload: dict) -> dict:
-    """每个锚点：活跃 confirmed 轨迹数 vs 检测 pet_count。"""
+def anchor_consistency(track_payload: dict, pet_counts: dict[str, int]) -> dict:
+    """每个锚点：活跃 confirmed 轨迹数 vs 该锚点的宠物数。
+
+    pet_counts 必须来自跟踪器实际看到的输入流（含 design 4.11 的 IoS 去重），
+    否则去重后轨迹数减少、分母却仍按原缓存计，一致性会被系统性低估。
+    """
     anchors_track = track_payload["anchors"]
-    anchors_det = detection_payload["anchors"]
+    anchors_det = pet_counts
     n_total = n_multi = n_match = 0
     for frame, rows in anchors_track.items():
-        det_state = anchors_det.get(frame)
-        if det_state is None:
+        pet_count = anchors_det.get(frame)
+        if pet_count is None:
             continue
         n_total += 1
-        pet_count = (det_state.get("cat_count") or 0) + (det_state.get("dog_count") or 0)
         if pet_count >= 2:
             n_multi += 1
             if len(rows) == pet_count:
@@ -108,16 +117,19 @@ def main() -> int:
     parser.add_argument("--tracks-dir", type=Path, required=True)
     parser.add_argument("--detections-dir", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--no-dedup", action="store_true",
+                        help="按未去重的原始候选计较对齐（对照臂用）")
     args = parser.parse_args()
 
     per_video = []
     for track_path in sorted(args.tracks_dir.glob("*.track.json")):
         payload = json.loads(track_path.read_text(encoding="utf-8"))
         det_path = args.detections_dir / f"{track_path.name.removesuffix('.track.json')}.json"
-        det_payload = json.loads(det_path.read_text(encoding="utf-8"))
+        seq = load_anchor_sequence(det_path, apply_dedup=not args.no_dedup)
+        pet_counts = {str(f): len(dets) for f, dets in zip(seq.frames, seq.detections, strict=True)}
         tracks = payload["tracks"]
         clusters = cluster_individuals(tracks)
-        cons = anchor_consistency(payload, det_payload)
+        cons = anchor_consistency(payload, pet_counts)
         per_video.append(
             {
                 "video": payload["video"],

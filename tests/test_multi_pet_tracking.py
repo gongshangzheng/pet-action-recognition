@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from petlib.schemas import Detection  # noqa: E402
+from petlib.tracking.anchors import dedup_nested  # noqa: E402
 from scripts.track_multi_pet import DEFAULT_PARAMS, track_video  # noqa: E402
 
 STRIDE = 5
@@ -61,6 +63,29 @@ def write_synthetic_cache(path: Path) -> None:
         "anchors": anchors,
     }
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+class NestedDedupTest(unittest.TestCase):
+    """design 4.11：嵌套重复去重用 IoS，而非 IoU。坐标取自实测中位段 frame 185。"""
+
+    def test_cross_class_nested_duplicate_is_removed(self) -> None:
+        """同一只猫被分别标成 cat（紧框）与 dog（松框），类内去重清不掉，IoS 能。"""
+        tight = Detection(frame=185, box=(267.0, 734.0, 545.0, 1057.0), conf=0.58, cls="cat")
+        loose = Detection(frame=185, box=(266.0, 734.0, 845.0, 1057.0), conf=0.41, cls="dog")
+        kept, log = dedup_nested([tight, loose], 185)
+        self.assertEqual(len(kept), 1, f"应去重为 1 个，实际 {kept}")
+        self.assertEqual(kept[0].cls, "cat", "应保留置信度高的紧框")
+        self.assertEqual(len(log), 1)
+        self.assertEqual(log[0]["dropped_class"], "dog")
+        self.assertGreaterEqual(log[0]["ios"], 0.80)
+
+    def test_two_separate_animals_are_kept(self) -> None:
+        """两只位置分开的动物不得被误删。"""
+        cat = Detection(frame=0, box=(100.0, 100.0, 300.0, 400.0), conf=0.6, cls="cat")
+        dog = Detection(frame=0, box=(900.0, 100.0, 1400.0, 600.0), conf=0.5, cls="dog")
+        kept, log = dedup_nested([cat, dog], 0)
+        self.assertEqual(len(kept), 2)
+        self.assertEqual(log, [])
 
 
 class AssociationModeTest(unittest.TestCase):
