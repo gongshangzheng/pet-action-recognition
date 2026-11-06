@@ -198,3 +198,36 @@
 - 需要**框级（crop 级）外观判定**能力："这块裁剪里是不是活体动物"，而非仅帧级 present/absent。印刷物、包装、海报上的动物图案必须能被判否。
 - **负样本集必须显式覆盖此类非活物负样本**：当前冻结测试集负样本仅 11 条（absent FPR 27.27%，见 2026-11-04 记录），不足以支撑框级判定；若负样本只含"空房间"，模型会把印刷动物当活物放行。
 - 该能力若落地，`multi-pet-sort-tracking` 的下游裁剪可据此排除误检轨迹；在此之前，多宠物跟踪只**记录**置信度/面积/孤立性等原始信号，不输出"误检"结论。
+
+## 2026-11-07：候选方案备案——Grounded-SAM 与 SAM 3（用户要求写入）
+
+由 `multi-pet-sort-tracking` 4.1 的结论延伸：既然 SAM 系本身没有类别语义，那"给概念让它判断"的方案是否可行？本节备案两条候选，均**未安装、未下载权重、未实验**。
+
+### Grounded-SAM / Grounded-SAM-2
+
+| 项 | 事实 |
+|---|---|
+| 仓库 | `IDEA-Research/Grounded-Segment-Anything`（17,791 stars，最后推送 2024-09-05）、`IDEA-Research/Grounded-SAM-2`（3,803 stars，2025-11-11） |
+| 许可证 | **Apache-2.0**（与 `GroundingDINO`、`facebookresearch/sam2` 同为 Apache-2.0，无 GPL 传染） |
+| 工作原理 | GroundingDINO 出「框 + 类别」→ 把框当 prompt 喂 SAM → 出精确掩码 |
+
+**为什么它不解决我们的问题**：语义**全部继承自 GroundingDINO**。狗粮袋面印刷的金毛，DINO 判成 "dog"，SAM 就精确切出印刷图案，输出 `{label: "dog", mask: 印刷狗}`——看起来比现状更有说服力，但依然是误检。它提供的是「类别 + 掩码」，不是「这个类别对不对」。
+
+**结论**：本项目已直接持有 GroundingDINO 与 SAM2，再引入 Grounded-SAM 的增量只有"掩码更准"，而对误检判定无帮助。不作为候选。
+
+### SAM 3（`facebookresearch/sam3`）
+
+| 项 | 事实 |
+|---|---|
+| 规模 | **848M 参数**（detector + tracker 共享 vision encoder）；对照 SAM2-small ≈46M、MobileSAM ≈10M |
+| 关键能力 | **Promptable Concept Segmentation**——给概念/文本，分割该概念的所有实例 |
+| 许可证 | 自定义 **SAM License**（Last Updated 2025-11-19）：非独占、全球、免版税，**允许商用与衍生作品**；限制为军事/ITAR、反向工程、发表需致谢、需遵守贸易管制。**无"非商用"条款** |
+| 权重要求 | **gated**——需在 HF 申请访问（`facebook/sam3`，新版 3.1 在 `facebook/sam3.1`）并 `hf auth login` |
+| 依赖要求 | PyTorch **≥2.7**（README 装 2.10.0+cu128）、CUDA **12.6+**、**flash-attn-3**、**cc_torch**（自定义 CUDA op，需编译） |
+| 现有环境匹配度 | pet 上 `yolo`/`dlc` 为 torch 2.8.0+cu128（版本可行），但 flash-attn-3 与 cc_torch 均需新装与编译 |
+
+**唯一值得单独验证的点**：给概念「a real living dog / cat」时，它是否**不再**检出印刷动物。它的 detector 是概念驱动的，理论上可能比 DINO 更挑。**但这是未知的**——印刷动物照片对任何视觉模型都是强负样本难题，本 change 没有证据支持任一结论。且其纯分割模式与 SAM2 一样无类别语义（我们已实测 SAM2 在印刷金毛上给出 mask 分数 0.977，高于真猫的 0.964）。
+
+**成本与前置**：① 用户需先在 HF 申请权重访问；② 需在 pet 上编译 flash-attn-3 + cc_torch（共享机，且不得动 `plf` 主环境）；③ 848M 模型 × 逐框推理，离线全量成本远高于 SAM2-small。
+
+**结论**：**暂不引入**。若将来要做，正确用途是「概念提示能否拒绝非活体负样本」这个独立实验，不是框细化（4.1 已证明外接框精修收益仅 1–3%）。
