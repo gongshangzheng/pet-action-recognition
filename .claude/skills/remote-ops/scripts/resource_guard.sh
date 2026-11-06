@@ -193,6 +193,7 @@ preflight() {
 
 tree_pids() {
   local root=$1
+  echo "$root"
   ps -eo pid=,ppid= 2>/dev/null | awk -v root="$root" '
     { parent[$1]=$2 }
     END {

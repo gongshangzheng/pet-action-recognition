@@ -269,7 +269,8 @@ def train_arm(arm: str, device: str, epochs: int) -> dict[str, Any]:
     work_dir = result / "work"
     checkpoint_pointer = work_dir / "last_checkpoint"
     resume_checkpoint = None
-    if existing.get("status") == "train_failed" and checkpoint_pointer.is_file():
+    resumable_statuses = {"train_failed", "training"}
+    if existing.get("status") in resumable_statuses and checkpoint_pointer.is_file():
         checkpoint_path = Path(checkpoint_pointer.read_text(encoding="utf-8").strip())
         if checkpoint_path.is_file():
             resume_checkpoint = checkpoint_path.resolve()
