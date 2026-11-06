@@ -24,11 +24,24 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--clips", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--video-root", type=Path, required=True,
+                        help="root the clip 'video' paths are relative to; used to clamp frame ranges")
     return parser.parse_args()
+
+
+def probe_frames(path: Path) -> int:
+    import cv2
+
+    capture = cv2.VideoCapture(str(path))
+    frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    capture.release()
+    return frames
 
 
 def main() -> int:
     args = parse_args()
+    lengths: dict[str, int] = {}
+    dropped = 0
     index = {label: i for i, label in enumerate(CLASSES)}
     counts: dict[str, dict[str, int]] = {}
     args.out.mkdir(parents=True, exist_ok=True)
@@ -48,12 +61,21 @@ def main() -> int:
             label = clip["label"]
             if label not in index:
                 raise ValueError(f"unexpected label {label!r} in {source}")
+            video = clip["video"]
+            if video not in lengths:
+                lengths[video] = probe_frames(args.video_root / video)
+            frames = lengths[video]
+            start_frame = max(1, int(clip["start"]))
+            end_frame = min(int(clip["end"]), frames)
+            if frames <= 0 or end_frame - start_frame + 1 < 8:
+                dropped += 1
+                continue
             rows.append(
                 {
-                    "video": clip["video"],
+                    "video": video,
                     "label": index[label],
-                    "start_frame": int(clip["start"]),
-                    "end_frame": int(clip["end"]),
+                    "start_frame": start_frame,
+                    "end_frame": end_frame,
                     "task_id": len(rows),
                     "sample_id": clip["sample_id"],
                     "species": clip.get("species"),
@@ -71,7 +93,8 @@ def main() -> int:
     (args.out / "classes.json").write_text(
         json.dumps(CLASSES, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    print(json.dumps({"classes": CLASSES, "counts": counts}, ensure_ascii=False))
+    print(json.dumps({"classes": CLASSES, "counts": counts, "dropped": dropped,
+                      "videos_probed": len(lengths)}, ensure_ascii=False))
     return 0
 
 
