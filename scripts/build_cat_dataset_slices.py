@@ -47,7 +47,7 @@ DEFAULT_PRIORITY = 2
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--intervals", type=Path, required=True)
-    parser.add_argument("--metadata-dir", type=Path, required=True)
+    parser.add_argument("--detection-dir", type=Path, required=True)
     parser.add_argument("--split-manifest", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--clip-frames", type=int, default=60)
@@ -76,26 +76,29 @@ def load_day_splits(path: Path) -> dict[str, str]:
     return mapping
 
 
-def load_tracks(metadata_dir: Path) -> dict[str, tuple[list[dict[str, Any]], int]]:
-    tracks = {}
-    for path in metadata_dir.glob("*.json"):
+def load_detections(detection_dir: Path) -> dict[str, dict[str, Any]]:
+    """Load detection caches: per-video anchors, stride and frame count."""
+    caches = {}
+    for path in detection_dir.glob("*.json"):
         payload = json.loads(path.read_text(encoding="utf-8"))
-        tracks[payload["video"].split("/")[-1]] = (
-            payload["track"],
-            int(payload["sample_stride"]),
-        )
-    return tracks
+        if payload.get("status") != "complete":
+            continue
+        caches[payload["video"].split("/")[-1]] = payload
+    return caches
 
 
-def pet_flags(track: list[dict], stride: int, start: int, end: int) -> list[bool]:
-    frames = [f for f in track[max(0, start - 1) : end] if f["frame"] % stride == 0]
-    return [((f.get("cat_count") or 0) + (f.get("dog_count") or 0)) >= 2 for f in frames]
+def anchors_in(cache: dict[str, Any], start: int, end: int) -> list[dict[str, Any]]:
+    anchors = cache["anchors"]
+    return [anchors[key] for key in anchors if start <= int(key) <= end]
 
 
-def species_of(track: list[dict], stride: int, start: int, end: int) -> str:
-    frames = [f for f in track[max(0, start - 1) : end] if f["frame"] % stride == 0]
-    cats = sum(1 for f in frames if (f.get("cat_count") or 0) > 0)
-    dogs = sum(1 for f in frames if (f.get("dog_count") or 0) > 0)
+def pet_flags(states: list[dict[str, Any]]) -> list[bool]:
+    return [((s.get("cat_count") or 0) + (s.get("dog_count") or 0)) >= 2 for s in states]
+
+
+def species_of(states: list[dict[str, Any]]) -> str:
+    cats = sum(1 for s in states if (s.get("cat_count") or 0) > 0)
+    dogs = sum(1 for s in states if (s.get("dog_count") or 0) > 0)
     return "dog" if dogs > cats else "cat"
 
 
@@ -128,7 +131,7 @@ def main() -> int:
     args = parse_args()
     rng = random.Random(args.seed)
     day_splits = load_day_splits(args.split_manifest)
-    tracks = load_tracks(args.metadata_dir)
+    caches = load_detections(args.detection_dir)
     rows = list(csv.DictReader(args.intervals.open(encoding="utf-8")))
     if args.limit:
         rows = rows[: args.limit]
@@ -150,13 +153,13 @@ def main() -> int:
             by_class_loss[mapped]["too_short"] += 1
             continue
         stem = row["video"].split("/")[-1]
-        entry = tracks.get(stem)
-        if entry is None:
+        cache = caches.get(stem)
+        if cache is None:
             losses["no_detection"] += 1
             by_class_loss[mapped]["no_detection"] += 1
             continue
-        track, stride = entry
-        flags = pet_flags(track, stride, start, end)
+        states = anchors_in(cache, start, end)
+        flags = pet_flags(states)
         if not flags:
             losses["no_detection"] += 1
             by_class_loss[mapped]["no_detection"] += 1
@@ -166,7 +169,7 @@ def main() -> int:
             losses["multi_pet"] += 1
             by_class_loss[mapped]["multi_pet"] += 1
             continue
-        species = species_of(track, stride, start, end)
+        species = species_of(states)
         day = event_day(stem)
         split = day_splits.get(day, "unassigned") if day else "unassigned"
         survivors.append(
@@ -212,7 +215,7 @@ def main() -> int:
     # extension and slicing
     clips: list[dict[str, Any]] = []
     total_frames = {
-        stem: len(track) for stem, (track, _stride) in tracks.items()
+        stem: int(cache.get("decoded_frames") or 0) for stem, cache in caches.items()
     }
     for item in arbitrated:
         length = item["end"] - item["start"] + 1
