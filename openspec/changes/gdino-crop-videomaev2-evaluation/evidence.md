@@ -371,3 +371,10 @@
 - **吞吐测量**：同配方的上一轮（train 137，batch 4 + 累积 4）在 `raw/work` 留下 `epoch_7.pth` 与 `epoch_8.pth`，时间戳相差 39 秒，即约 **39 秒/epoch**。按 131 个训练样本、20 epoch 估算墙钟约 15–20 分钟（含每轮验证）。
 - **磁盘估算**：上一轮 weights-only 检查点约 334 MiB；本轮打开 `save_optimizer` 与 `save_param_scheduler` 后单个检查点预计约 1 GB，`max_keep_ckpts=2` 加 best 共约 3–4 GB。仓库根盘此前余量 71 GB，不需要额外清理。
 - **结论**：容量与时间均充足，不构成阻塞。
+
+### 2026-11-06：4.10 历史锚点复核
+
+- 命令：在 `pet-final` 只读核对 `/home/wyy/pet-final/results/training/cat_action_v1/videomaev2_b/`。
+- 哈希：`work/best_macro_f1_epoch_12.pth` = `39a1baa176d66b85244dde40521b11d05ed84f5a4815d64038122454c0e518ae`，与 `docs/cat_action_training_v1.md` 记录的前 16 位一致。
+- 指标：`best_val_metrics.json` top-1 85.9272%、macro-F1 70.975%（样本 604）；`test_metrics.json` top-1 81.9005%、macro-F1 67.6552%（样本 442），与 evidence 记录的历史值一致。
+- **限制**：这些是既有测试集上的历史结果，样本为原始七个类的全量区间，与本轮 207 区间、单一猫目标的评测分母不同，不能直接比较或作为提升的证据。
