@@ -378,3 +378,12 @@
 - 哈希：`work/best_macro_f1_epoch_12.pth` = `39a1baa176d66b85244dde40521b11d05ed84f5a4815d64038122454c0e518ae`，与 `docs/cat_action_training_v1.md` 记录的前 16 位一致。
 - 指标：`best_val_metrics.json` top-1 85.9272%、macro-F1 70.975%（样本 604）；`test_metrics.json` top-1 81.9005%、macro-F1 67.6552%（样本 442），与 evidence 记录的历史值一致。
 - **限制**：这些是既有测试集上的历史结果，样本为原始七个类的全量区间，与本轮 207 区间、单一猫目标的评测分母不同，不能直接比较或作为提升的证据。
+
+### 2026-11-07：4.7 / 4.11 / 4.12 训练、检查点核对与选择冻结
+
+- **运行**：pet HEAD `d94f25e`，`plf` 环境，`scripts/run_cat_crop_experiment.py train --arms gdino --device 1 --epochs 20`，守卫上限 350% CPU / 12 GiB RSS / 90% GPU，247 秒完成，`train_exit_code=0`、`status=trained`。预检在启动前通过（GPU1 空闲、load 0.15、可用内存 113 GiB）。日志 `.run/logs/train_gdino_20261106.log`，守卫日志 `.run/guard/train_gdino_20261106.log`。
+- **4.7 检查点字段**：`epoch_20.pth` 约 1,040 MB，键含 `optimizer` 与 `param_schedulers`（**注意键名是复数**），确认优化器与调度器状态已保存；训练日志在第 14 轮显示 `base_lr=1.7121e-05`，说明学习率按 cosine 正常衰减而非重置回 warmup。**best 检查点（`best_macro_f1_epoch_11.pth`，约 350 MB）只含 `state_dict`**，可用于评测但不可续训，这是 mmengine 的保存行为，需在报告里写明。
+- **4.11 训练结果**：20 epoch 全部完成，验证集 32 个样本，最优轮为 **epoch 11**（`best_val_metrics`：top-1 59.375%、macro-F1 39.25%、balanced accuracy 38.29%）；第 20 轮 top-1 50.0%、macro-F1 29.91%。运行记录含 `checkpoint` 与 `checkpoint_sha256`（`cd07b4fc…`）、`config_sha256`（`53c2a27b…`）、`index_hashes`（train `47cf983c…`）、`index_samples` 131/32/44、`seed=0`、`code_commit=d94f25e`、`versions`（torch 2.1.2、mmcv 2.1.0、mmengine 0.10.7、mmaction2 1.2.0）四类产物齐备。
+- **4.12 选择冻结**：`select --arms gdino` 生成 `selection.json`，winner 为 `gdino`，选中 `best_macro_f1_epoch_11.pth`。为跑通选择，给 `select` 与 `test` 增加 `--arms`（提交见下方），否则会因早前失败的 `raw` 臂状态阻塞。
+- **守卫观察**：本轮的守卫日志再次出现 `cpu=-40%` 的负值（已知缺陷，见 2026-11-06 记录），GPU 显存读数正常（GPU1 峰值约 62%）。训练结束后进程已由守卫收尾，`rc=0`。
+- **限制**：验证集仅 32 个样本、单 seed，最优轮与最后一轮相差 9 个百分点的 macro-F1，说明小样本下轮次波动很大；不得把 epoch 11 的成绩当作稳定水平，也不得据此比较不同配方。
