@@ -795,9 +795,21 @@ def build_indexes(
         arm: {split: [] for split in ("train", "val", "test")}
         for arm in dataset_arms
     }
-    for row in availability:
-        if not row["available"]:
-            continue
+    target_class = getattr(args, "target_class", None)
+    admitted = [
+        row
+        for row in availability
+        if row["available"]
+        and (target_class is None or row.get("target_class") == target_class)
+    ]
+    excluded_by_target_class = sum(
+        1
+        for row in availability
+        if row["available"]
+        and target_class is not None
+        and row.get("target_class") != target_class
+    )
+    for row in admitted:
         common = {
             key: row[key]
             for key in (
@@ -866,7 +878,9 @@ def build_indexes(
         "asset_root": str(asset_root),
         "dataset_root": str(dataset_root),
         "source_rows": len(source_rows),
-        "eligible_rows": sum(row["available"] for row in availability),
+        "eligible_rows": len(admitted),
+        "target_class_filter": target_class,
+        "excluded_by_target_class": excluded_by_target_class,
         "training_ready": args.max_videos is None and not args.video,
         "full_dataset_preprocessing": bool(getattr(args, "full_dataset_preprocessing", False)),
         "review_set": getattr(args, "review_set", None),
@@ -1019,6 +1033,12 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--full-dataset-preprocessing", action="store_true")
     parser.add_argument("--review-set", default=None)
+    parser.add_argument(
+        "--target-class",
+        choices=("cat", "dog"),
+        default=None,
+        help="admit only intervals whose crop target is this species",
+    )
 
 
 def run_detect(args: argparse.Namespace, videos: list[str]) -> None:
