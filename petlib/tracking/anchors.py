@@ -26,6 +26,7 @@ class AnchorSequence:
     source_sha256: str
     fingerprint: dict
     dedup_log: list[dict] = field(default_factory=list)
+    frame_size: tuple[int, int] = (0, 0)
 
 
 DEDUP_IOS_MIN = 0.80
@@ -122,4 +123,5 @@ def load_anchor_sequence(path: str | Path, apply_dedup: bool = True) -> AnchorSe
         source_sha256=payload["source_sha256"],
         fingerprint=payload["fingerprint"],
         dedup_log=dedup_log,
+        frame_size=(int(payload["properties"]["width"]), int(payload["properties"]["height"])),
     )

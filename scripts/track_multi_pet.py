@@ -38,6 +38,12 @@ TRACKING_SCHEMA = "multi-pet-tracking-v1"
 # design 4.5：单流关联下，物种一致性低于此比例的轨迹标记为“物种存疑”
 SPECIES_CONSISTENCY_MIN = 0.80
 
+# design 4.12：只记录信号，不判定误检。阈值仅用于生成 suspect_reasons 提示，
+# 判别力未经证明（假目标置信度可高于真猫），误检消除移交 presence-gate-model。
+SUSPECT_MEAN_CONF_MAX = 0.45
+SUSPECT_AREA_RATIO_MIN = 0.01
+SUSPECT_ISOLATED_GAP_ANCHORS = 20
+
 # design 4.7：生命周期按锚点数标定。3Hz 锚点下 max_age=8 ≈ 2.7s coast。
 DEFAULT_PARAMS = {
     "min_conf": 0.10,       # 低于缓存 box_threshold=0.3 的候选不存在，此处不二次过滤
@@ -72,6 +78,21 @@ def _box_iou(a, b) -> float:
     area_a = (a[2] - a[0]) * (a[3] - a[1])
     area_b = (b[2] - b[0]) * (b[3] - b[1])
     return inter / (area_a + area_b - inter)
+
+
+def _nearest_gap_anchors(track, all_tracks, sample_stride: int) -> int | None:
+    """与其它轨迹在时间上的最近间隔（锚点数）；画面内无其它轨迹时返回 None。"""
+    gaps = []
+    for other in all_tracks:
+        if other.track_id == track.track_id:
+            continue
+        if other.boxes[0].frame > track.boxes[-1].frame:
+            gaps.append(other.boxes[0].frame - track.boxes[-1].frame)
+        elif track.boxes[0].frame > other.boxes[-1].frame:
+            gaps.append(track.boxes[0].frame - other.boxes[-1].frame)
+    if not gaps:
+        return None
+    return min(gaps) // sample_stride
 
 
 def track_video(detection_path: Path, params: dict, association: str = "species_split",
@@ -112,10 +133,30 @@ def track_video(detection_path: Path, params: dict, association: str = "species_
                 species = sorted(votes.items(), key=lambda kv: (-kv[1], kv[0]))[0][0]
             consistency = round(votes.get(species, 0) / total, 4) if total else 0.0
 
+        confs = [p.conf for p in tr.boxes]
+        mean_conf = round(sum(confs) / len(confs), 4) if confs else 0.0
+        areas = [(p.box[2] - p.box[0]) * (p.box[3] - p.box[1]) for p in tr.boxes]
+        frame_area = seq.frame_size[0] * seq.frame_size[1]
+        areas_sorted = sorted(areas)
+        median_area = areas_sorted[len(areas_sorted) // 2] if areas_sorted else 0.0
+        area_ratio = round(median_area / frame_area, 6) if frame_area else 0.0
+        nearest_gap = _nearest_gap_anchors(tr, tracks, seq.sample_stride)
+        reasons = []
+        if mean_conf < SUSPECT_MEAN_CONF_MAX:
+            reasons.append("low_conf")
+        if frame_area and area_ratio < SUSPECT_AREA_RATIO_MIN:
+            reasons.append("small_area")
+        if nearest_gap is None or nearest_gap > SUSPECT_ISOLATED_GAP_ANCHORS:
+            reasons.append("isolated")
+
         track_rows.append(
             {
                 "track_id": tr.track_id,
                 "species": species,
+                "mean_conf": mean_conf,
+                "median_area_ratio": area_ratio,
+                "nearest_track_gap_anchors": nearest_gap,
+                "suspect_reasons": reasons,
                 "species_consistency": consistency,
                 "species_flagged": consistency < SPECIES_CONSISTENCY_MIN,
                 "state": "confirmed" if len(tr.boxes) >= params["min_hits"] else "tentative",
