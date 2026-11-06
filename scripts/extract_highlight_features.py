@@ -3,7 +3,7 @@
 提取画面亮度、对比度、宠物活动幅度、宠物身体面积占比与时长、面部暴露面积占比与时长，
 并附行为识别时间轴，供上报云端判断。本脚本不做网络上传。
 
-示例（服务器 GPU，v1 七类 X3D-S + YOLO11n-seg + Haar 猫脸）：
+示例（需 CUDA GPU，v1 七类 X3D-S + YOLO11n-seg + Haar 猫脸）：
   python scripts/extract_highlight_features.py --video datasets/cat_raw/videos/x.mp4 \
       --pet-source yolo_seg --yolo-weights checkpoints/ultralytics/yolo11n-seg.pt \
       --action-config configs/cat_action_x3d_s_v1.py \

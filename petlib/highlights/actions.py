@@ -1,4 +1,4 @@
-"""行为识别时间轴：读取已有结果，或用 MMAction2 配置滑窗推理（懒加载，仅服务器 GPU）。"""
+"""行为识别时间轴：读取已有结果，或用 MMAction2 配置滑窗推理（懒加载，需 GPU）。"""
 from __future__ import annotations
 
 import json

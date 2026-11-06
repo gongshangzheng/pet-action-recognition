@@ -68,7 +68,8 @@
 - 来源 B：`--action-config` + `--action-checkpoint`，用 v1 七类配置
   （如 `configs/cat_action_x3d_s_v1.py`）的 `test_dataloader.dataset.pipeline`，
   以 `interval_start/interval_end` 方式在窗口（默认 4 s，步长 2 s）内采样，
-  `inference_recognizer` 推理；mmaction2 懒加载，只在服务器 GPU 上运行。
+  逐窗口前向推理；mmaction2 懒加载。原计划只在服务器 GPU 上运行，2026-11-02
+  服务器被占，按用户指示改在本机 RTX 3060 运行 X3D-S（见 D11）。
 - 相邻同标签窗口合并为行为段，分数取均值；`abnormal` 类与置信度低于
   `review_score`（默认 0.5）的段标 `needs_cloud_review: true`，对应需求
   “相近异常行为如无法准确区分可以标记异常和区分大类，上报到云端进一步识别”。
@@ -96,5 +97,8 @@
 
 - 核心计算只依赖 numpy + OpenCV（端侧可移植）；ultralytics 与 mmaction2 都在
   实现类构造时才 import。
-- 本地无 GPU，按项目规则不在本地跑模型推理；本地只运行合成数据测试。
-- 服务器验证（真实猫视频、YOLO11n-seg、v1 行为模型）需先提交代码，留作后续任务。
+- 项目规则原本禁止在本地跑模型推理。2026-11-02 服务器被占，用户明确要求在本机
+  跑示例，故在本机 RTX 3060（隔离 venv，Python 3.8，torch 2.4.1+cu121）上运行了
+  YOLO11n-seg、Haar 与 X3D-S，只推理不训练；真实单猫视频结果见
+  `docs/highlight_features.md`“本机示例”。
+- 端侧（RV1126B）部署需把 YOLO11n-seg 与行为模型转换为 RKNN，不在本 change 范围。
