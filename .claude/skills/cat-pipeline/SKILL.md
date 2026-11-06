@@ -26,6 +26,10 @@ cat_raw/videos/*.mp4  (原始事件视频 2880×1620, 15fps)
    │        → assets/full_run/videos/gdino_motion/<stem>.mp4 (C 臂)
    │        → assets/full_run/metadata/<stem>.json         (逐帧 camera_box/display_box/valid)
    │
+   ├─ ②b 跟踪  scripts/track_multi_pet.py  (OC-SORT，单流，物种作元数据)
+   │        → <out>/<stem>.track.json  逐锚点轨迹（含输入指纹与参数）
+   │        规则见 petlib/tracking/：IoS≥0.8 去嵌套重复、生命周期标定、放弃不稳定轨迹
+   │
    ├─ ③切片  scripts/build_cat_dataset_slices.py
    │        → results/cat_data_preprocessing/slices_v8/clips.jsonl    (7,554 条片段)
    │        → .../index/{train,val,test}.jsonl  .../intervals.jsonl  .../summary.json
@@ -89,6 +93,27 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 - **裁剪输入的正确接法**：把索引 `video` 指向 `assets/full_run/videos/gdino/<stem>.mp4`（帧数/fps 一致，媒体审计已验），不需要新 transform。
 - 实测吞吐：`num_workers=6` 时 0.47 s/迭代（1,127 迭代/轮 ≈ 11 分钟），20 轮 ≈ 4.4 小时；`num_workers=2` 会掉到 1.0 s/迭代。
 
+## 代码地图（想改什么 → 改哪里）
+
+| 想改的东西 | 文件 |
+|---|---|
+| 检测/渲染阶段、`--stage`、路径与指纹 | `scripts/prepare_cat_crop_experiment.py` |
+| 方形裁剪、补边、逐帧轨迹与显示平滑 | `petlib/datasets/cat_crop.py`（`crop_square` 378、`build_frame_track` 133、`classify_frame`） |
+| 跟踪算法、IoS 去重、生命周期、轨迹合并 | `petlib/tracking/`（`anchors.py` 的 `dedup_nested`、`oc_sort.py`、`merge.py`）、入口 `scripts/track_multi_pet.py` |
+| 切片、损失归因、多宠物判定、activity 上限 | `scripts/build_cat_dataset_slices.py` |
+| 训练标注导出、帧数 clamp | `scripts/export_clip_annotations.py` |
+| 数据集读取、区间限制、评测指标 | `petlib/datasets/cat_intervals.py`（`IntervalVideoDataset`、`RestrictFrameRange`、`CatIntervalMetric`） |
+| 逐帧裁剪 transform（未接入） | `petlib/datasets/cat_crop_transforms.py`（`SampledBoxCrop`/`BoxSquareCrop`） |
+| 训练配置（十类、累加、权重） | `configs/cat_clip_videomaev2_b.py` 与 `configs/cat_action_videomaev2_b_v1.py` |
+| 训练入口 / 产物解析 / checkpoint | `scripts/run_cat_crop_experiment.py`、`models/mmaction2/tools/train.py` |
+| 远程启动与守卫 | `scripts/remote/run_missing_detection.sh`、`scripts/remote/run_clip_training.sh`、`.claude/skills/remote-ops/` |
+
+## 裁剪输入：现状与已定方案
+
+- **现状**：训练读整帧（索引 `video` 指向 `cat_raw/videos/*.mp4`）。整段渲染好的裁剪视频（`assets/full_run/videos/gdino*`，2,144 段）**不用于训练**，只保留审阅与对照——它用“最高置信度宠物框”，多宠物会裁到狗，也拿不到轨迹。
+- **已定方案（change `clip-box-crop-input`）**：对片段视频跑跟踪 → 取覆盖片段帧数最多的轨迹 → 插值到逐帧、缺口沿用端点、5 帧滑动平均 → 框序列写入索引 `boxes` → 读训练样本时按 `frame_inds` 逐帧裁剪（补边不拉伸，无框回落整帧）。
+- **不要**再另写一套“连续优先选框”规则：IoS 去重、单流关联、生命周期、放弃不稳定轨迹都已在 `multi-pet-sort-tracking` 定过并实测，直接复用。
+
 ## 开工前检查表（每次训练/改数据都过一遍）
 
 1. 读的是整帧还是裁剪画面？在索引里看 `video` 指向哪个目录。
@@ -97,6 +122,7 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 4. `accumulative_counts` 属于 `optim_wrapper`，不属于 `train_cfg`。
 5. 训练命令必须带 `PYTHONPATH=<repo>`，否则 `petlib` 导入失败。
 6. 守卫上限：CPU 900%、RSS 24 GB、GPU 92%；时长按 20 轮 + 验证估。
+6b. 裁剪是否真的生效？看索引里是否有 `boxes`、pipeline 里是否有裁剪 transform；两者缺一个就是整帧训练。
 7. 跑完核对：`best_macro_f1_epoch_*.pth` 存在、checkpoint 含 `optimizer` 与 `param_schedulers`（基类默认 `save_optimizer=False`，改过才有效）。
 8. 报数口径：端到端准确率 = 可用率 × 条件准确率（AGENTS.md 有定义），不要只报条件准确率。
 
