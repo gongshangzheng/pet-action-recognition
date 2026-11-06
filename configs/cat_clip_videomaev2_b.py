@@ -11,7 +11,9 @@ index_root = "datasets/cat_clip_v8"
 video_root = "/home/wyy/pet-final/datasets/cat_raw"
 result_root = "results/cat_clip_v8/videomaev2_b"
 
-train_cfg = dict(max_epochs=20, val_begin=1, val_interval=2, accumulative_counts=4)
+train_cfg = dict(max_epochs=20, val_begin=1, val_interval=2)
+# 有效 batch 16：micro-batch 4 × 累积 4（accumulative_counts 属于 optim_wrapper）
+optim_wrapper = dict(accumulative_counts=4)
 
 train_dataloader = dict(
     batch_size=4,
