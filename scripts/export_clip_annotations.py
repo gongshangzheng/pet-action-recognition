@@ -49,9 +49,11 @@ def main() -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     for split in ("train", "val", "test"):
         rows: list[dict[str, Any]] = []
-        source = args.clips.parent / "index" / f"{split}.jsonl"
-        if not source.is_file():
-            raise FileNotFoundError(source)
+        candidates = [
+            args.clips.parent / f"{split}.jsonl",
+            args.clips.parent / "index" / f"{split}.jsonl",
+        ]
+        source = next((path for path in candidates if path.is_file()), candidates[0])
         try:
             lines = source.read_text(encoding="utf-8").splitlines()
         except OSError as error:
