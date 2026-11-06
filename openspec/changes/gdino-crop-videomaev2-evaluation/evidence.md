@@ -363,3 +363,11 @@
 
 - 本地与 pet 均位于 `a77aafb`，远端跟踪文件无改动（`git status --porcelain --untracked-files=no` 为 0）。本轮部署内容：配置对齐（`447ba4d`）、索引阶段 `--target-class`（`7a1db27`）、失效用例修复（`be71494`）、计划修订（至 `23d944b`）。
 - 训练将使用 pet 上的旧版 `resource_guard.sh`；本地那份改版仍未提交、未部署。
+
+### 2026-11-06：4.9 随机种子与预算
+
+- **训练 seed**：0（design 3.5 指定）。**数据划分 seed**：无——划分来自冻结的 `cat_action_v1` 索引（按日期隔离），本轮不重新划分，因此不存在划分 seed。
+- **待写参数**：`select_arms` 与 status 会记录 `seed=0`；训练入口 `scripts/run_cat_crop_experiment.py --stage train --arms gdino --epochs 20`，`artifact` 目录为 `results/cat_crop_classification/gdino-crop-20261103a/gdino/`。
+- **吞吐测量**：同配方的上一轮（train 137，batch 4 + 累积 4）在 `raw/work` 留下 `epoch_7.pth` 与 `epoch_8.pth`，时间戳相差 39 秒，即约 **39 秒/epoch**。按 131 个训练样本、20 epoch 估算墙钟约 15–20 分钟（含每轮验证）。
+- **磁盘估算**：上一轮 weights-only 检查点约 334 MiB；本轮打开 `save_optimizer` 与 `save_param_scheduler` 后单个检查点预计约 1 GB，`max_keep_ckpts=2` 加 best 共约 3–4 GB。仓库根盘此前余量 71 GB，不需要额外清理。
+- **结论**：容量与时间均充足，不构成阻塞。
