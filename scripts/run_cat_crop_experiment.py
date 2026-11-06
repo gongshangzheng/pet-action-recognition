@@ -28,7 +28,7 @@ ARMS = ("raw", "gdino", "gdino_motion")
 SPLITS = ("train", "val", "test")
 RUN_ID = "gdino-crop-20261103a"
 RUN_ROOT = ROOT / "results/cat_crop_classification" / RUN_ID
-INDEX_ROOT = ROOT / "datasets/cat_crop_classification/gdino-v1-full"
+INDEX_ROOT = ROOT / "datasets/cat_crop_classification/gdino-v1-cat"
 ASSET_ROOT = ROOT / "results/cat_crop_classification/gdino-crop-20261103a/assets/full_run"
 CONFIGS = {
     "raw": ROOT / "configs/cat_crop_videomaev2_raw.py",
@@ -259,6 +259,7 @@ def evaluation_command(
 def train_arm(arm: str, device: str, epochs: int) -> dict[str, Any]:
     result = RUN_ROOT / arm
     status_path = result / "run_status.json"
+    existing: dict[str, Any] = {}
     if status_path.is_file():
         existing = json.loads(status_path.read_text(encoding="utf-8"))
         if existing.get("status") == "trained":

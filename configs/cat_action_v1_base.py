@@ -71,8 +71,8 @@ default_hooks = dict(
         max_keep_ckpts=2,
         save_best="macro_f1",
         rule="greater",
-        save_optimizer=False,
-        save_param_scheduler=False,
+        save_optimizer=True,
+        save_param_scheduler=True,
     ),
 )
 randomness = dict(seed=0, deterministic=False)
