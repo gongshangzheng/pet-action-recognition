@@ -68,7 +68,10 @@ def event_day(video: str) -> str | None:
 
 
 def load_day_splits(path: Path) -> dict[str, str]:
-    manifest = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"unreadable split manifest: {path}") from error
     mapping: dict[str, str] = {}
     for split, days in manifest["split_days"].items():
         for day in days:
@@ -80,7 +83,10 @@ def load_detections(detection_dir: Path) -> dict[str, dict[str, Any]]:
     """Load detection caches: per-video anchors, stride and frame count."""
     caches = {}
     for path in detection_dir.glob("*.json"):
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise RuntimeError(f"unreadable detection cache: {path}") from error
         if payload.get("status") != "complete":
             continue
         caches[payload["video"].split("/")[-1]] = payload
@@ -137,6 +143,22 @@ def main() -> int:
         rows = rows[: args.limit]
 
     losses: Counter = Counter()
+    decisions: list[dict[str, Any]] = []
+
+    def record(row, label, reason, species=None, split=None, **extra):
+        decisions.append(
+            {
+                "sample_id": row.get("annotation_id") or f"{row['video']}:{row['start_frame']}-{row['end_frame']}",
+                "video": row["video"],
+                "label": label,
+                "species": species,
+                "split": split,
+                "start": int(row["start_frame"]),
+                "end": int(row["end_frame"]),
+                "reason": reason,
+                **extra,
+            }
+        )
     by_class_loss: dict[str, Counter] = defaultdict(Counter)
     survivors: list[dict[str, Any]] = []
 
@@ -144,6 +166,7 @@ def main() -> int:
         label = row["label"]
         if label in DROPPED_LABELS:
             losses["unmapped_label"] += 1
+            record(row, label, "unmapped_label")
             continue
         mapped = LABEL_MAP[label]
         start, end = int(row["start_frame"]), int(row["end_frame"])
@@ -151,23 +174,28 @@ def main() -> int:
         if length < args.min_frames:
             losses["too_short"] += 1
             by_class_loss[mapped]["too_short"] += 1
+            record(row, mapped, "too_short")
             continue
         stem = row["video"].split("/")[-1]
         cache = caches.get(stem)
         if cache is None:
             losses["no_detection"] += 1
             by_class_loss[mapped]["no_detection"] += 1
+            record(row, mapped, "no_detection")
             continue
         states = anchors_in(cache, start, end)
         flags = pet_flags(states)
         if not flags:
             losses["no_detection"] += 1
             by_class_loss[mapped]["no_detection"] += 1
+            record(row, mapped, "no_detection")
             continue
         coverage = sum(flags) / len(flags)
         if coverage >= args.pet_coverage and longest_run(flags) >= args.pet_run:
             losses["multi_pet"] += 1
             by_class_loss[mapped]["multi_pet"] += 1
+            record(row, mapped, "multi_pet", species_of(states), None,
+                   coverage=round(coverage, 3), longest_run=longest_run(flags))
             continue
         species = species_of(states)
         day = event_day(stem)
@@ -175,6 +203,7 @@ def main() -> int:
         if split == "unassigned":
             losses["unassigned_split"] += 1
             by_class_loss[mapped]["unassigned_split"] += 1
+            record(row, mapped, "unassigned_split", species)
             continue
         survivors.append(
             {
@@ -195,7 +224,7 @@ def main() -> int:
     for item in survivors:
         by_video[item["video"]].append(item)
     arbitrated: list[dict] = []
-    for video, items in by_video.items():
+    for _video, items in by_video.items():
         items.sort(key=lambda r: (r["start"], -r["end"]))
         kept: list[dict] = []
         for item in items:
@@ -209,6 +238,15 @@ def main() -> int:
                         break
             if winner is not None:
                 losses["overlap_suppressed"] += 1
+                decisions.append(
+                    {
+                        "sample_id": item["sample_id"], "video": item["video"],
+                        "label": item["label"], "species": item["species"],
+                        "split": item["split"], "start": item["start"], "end": item["end"],
+                        "reason": "overlap_suppressed", "suppressed_by": winner["sample_id"],
+                        "winner_label": winner["label"],
+                    }
+                )
                 by_class_loss[item["label"]]["overlap_suppressed"] += 1
                 winner["suppressed_by"] = winner["suppressed_by"] or []
                 winner["suppressed_by"].append(item["sample_id"])
@@ -260,6 +298,12 @@ def main() -> int:
             if new_end - new_start + 1 < args.clip_frames:
                 losses["extension_failed"] += 1
                 by_class_loss[item["label"]]["extension_failed"] += 1
+                record(
+                    {"video": item["video"], "start_frame": item["start"], "end_frame": item["end"],
+                     "annotation_id": item["sample_id"]},
+                    item["label"], "extension_failed", item["species"], item["split"],
+                    available_span=new_end - new_start + 1,
+                )
                 continue
             start, end = new_start, new_end
             extended = True
@@ -295,7 +339,18 @@ def main() -> int:
         clips = [c for c in clips if id(c) not in drop_ids]
         losses["activity_capped"] += len(drop_ids)
 
+    sliced_ids = {clip["sample_id"] for clip in clips}
+    for item in arbitrated:
+        if item["sample_id"] in sliced_ids:
+            decisions.append(
+                {k: item[k] for k in ("sample_id", "video", "label", "species", "split", "start", "end")}
+                | {"reason": "sliced", "suppressed_by": item.get("suppressed_by")}
+            )
+
     args.out.mkdir(parents=True, exist_ok=True)
+    with (args.out / "intervals.jsonl").open("w", encoding="utf-8") as stream:
+        for row in decisions:
+            stream.write(json.dumps(row, ensure_ascii=False) + "\n")
     with (args.out / "clips.jsonl").open("w", encoding="utf-8") as stream:
         for clip in clips:
             stream.write(json.dumps(clip, ensure_ascii=False) + "\n")
@@ -316,6 +371,7 @@ def main() -> int:
         "clips": len(clips),
         "losses": dict(losses),
         "losses_by_class": {k: dict(v) for k, v in by_class_loss.items()},
+        "intervals_decided": len(decisions),
         "clips_by_label": dict(Counter(c["label"] for c in clips)),
         "clips_by_species": dict(Counter(c["species"] for c in clips)),
         "clips_by_split": dict(Counter(c["split"] for c in clips)),
