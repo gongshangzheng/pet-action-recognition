@@ -1,6 +1,6 @@
 ## Purpose
 
-为猫行为分类实验提供可追溯的 GroundingDINO 空间裁剪视频与像素运动辅助变体，并在固定数据划分下比较 VideoMAEv2 分类结果，完整暴露预处理失败和测试集复用的限制。
+为猫行为分类实验提供可追溯的 GroundingDINO 空间裁剪视频，并在固定数据划分下训练与评估裁剪输入的 VideoMAEv2 分类器，完整暴露预处理失败和测试集复用的限制。
 
 ## ADDED Requirements
 
@@ -59,21 +59,22 @@ The system SHALL record detection, target species, interpolation and pixel-corre
 - **THEN** the interval is marked unavailable as detection-missing
 - **AND** the system does not interpret low pixel motion as proof that the pet is absent
 
-#### Scenario: Pixel correction is compared with detection-only cropping
+#### Scenario: Pixel-assisted variant is generated but not trained
 
-- **WHEN** detection-only and pixel-assisted variants are generated
-- **THEN** both consume the same frozen detection cache
-- **AND** correction is distinguishable from detection and preserves sampled anchor boxes
+- **WHEN** the pixel-assisted variant is generated alongside the detection-only crop
+- **THEN** both consume the same frozen detection cache and share detection anchors
+- **AND** only the detection-only crop enters this training scope
+- **AND** the assisted variant remains recorded for later analysis
 
-### Requirement: Paired reproducible classifier training
+### Requirement: Reproducible cropped-classifier training
 
-The experiment SHALL compare raw input, detection-based cropping and cropping with pixel assistance using a frozen common sample set, identical class mapping, day-disjoint split, pretrained initialization, training seed and classifier recipe. Each run MUST record resolved configuration, hashes, environment, logs and completion status.
+The experiment SHALL train the classifier on the GroundingDINO crop arm (B) using a frozen index, one class mapping, a day-disjoint split, a documented pretrained initialization, a recorded training seed and a fixed recipe. Every run MUST record resolved configuration, hashes, environment, logs and completion status. Raw and pixel-assisted assets MAY exist, but only the crop arm is trained in this scope.
 
-#### Scenario: Crop failures reduce the common sample set
+#### Scenario: Crop failures reduce the training set
 
-- **WHEN** either crop variant cannot provide an eligible interval
-- **THEN** all paired training arms use the same frozen common index
-- **AND** the report states excluded counts by class and split and the resulting scope of comparison
+- **WHEN** an interval has no eligible crop
+- **THEN** it is excluded from the frozen index with a recorded reason
+- **AND** the report states excluded counts by class and split and the resulting scope of the result
 
 #### Scenario: Legacy assets are present
 
@@ -90,11 +91,12 @@ The experiment SHALL select checkpoints and the preferred preprocessing variant 
 - **THEN** a persisted selection record identifies their frozen checkpoints and preprocessing settings before their test runs
 - **AND** test outcomes do not change that selection or trigger tuning on the same test set
 
-#### Scenario: Accuracy improves only on available crops
+#### Scenario: Accuracy is reported for the crop arm
 
-- **WHEN** successful-crop classification accuracy is reported
+- **WHEN** classification accuracy on the crop arm is reported
 - **THEN** the report also provides the original denominator, crop failures and success rate over all original intervals
 - **AND** it distinguishes conditional accuracy from pipeline availability
+- **AND** it does not claim that cropping improved accuracy, because no raw-input arm is trained in this scope
 
 #### Scenario: Previously used test data is reused
 
