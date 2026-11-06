@@ -395,3 +395,11 @@
 - **逐类别（测试集）**：activity support 21 / recall 81.0%、prolonged_stationary 10 / 100%、abnormal 5 / **0%**、grooming 4 / 75%、eating 2 / **0%**、drinking 1 / 100%、toileting 1 / **0%**。六个类别的 support ≤5，单样本即可翻转 recall，不能作为类别能力结论。
 - **可用率分母**：测试 split 原始 442 个区间，可用 44（9.95%），因此“含预处理的区间成功率”为 31/442 = **7.01%**，条件 top-1 为 70.45%。全语料口径为 2,710 原始区间、207 猫区间可用、7 狗区间按物种策略剔除、1,551 多宠物、945 无可靠检测。
 - **限制**：历史测试集此前已被旧模型结果暴露，本轮只是基准复验；44 个样本、单 seed，且类别 support 极不均衡，结论只能是“裁剪输入下的分类水平”，不能声称裁剪带来提升。
+
+### 2026-11-07：5.4 源数据未改与 5.5 资源释放
+
+- **源数据**：`/home/wyy/pet-final/datasets/cat_raw/annotations/intervals.csv` SHA-256 = `80da23af3c6a6db4bac739fc2c1dc8714b8b5dc063b55abe7c9762932eeb04ff`，与 2026-11-03 记录一致，未被本轮修改。
+- **旧权重**：`videomaev2_b/work/best_macro_f1_epoch_12.pth` 仍为 `39a1baa1…`，与 4.10 一致。
+- **旧排名**：`results/training/cat_action_v1/model_zoo_ranking.json` 修改时间为 10-25，本轮未写入。
+- **资源**：训练与测试进程已退出（`ps` 匹配 `run_cat_crop_experiment` 计数为 0）；GPU1 显存回到 1 MiB。GPU0 仍有 5,708 MiB 由他人进程占用，与本轮无关。
+- **未覆盖**：`sha256sum` 只覆盖源区间表与旧权重，没有逐段核验 2,144 个源视频（工作量大且本轮未写入源目录）；这一限制记在报告中。
