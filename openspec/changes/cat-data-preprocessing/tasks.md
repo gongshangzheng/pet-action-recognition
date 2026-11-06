@@ -16,7 +16,7 @@
 
 ## 4. 重叠仲裁
 
-- [ ] 4.1 与用户逐对确认重叠类别对的优先级（待议：activity × eating、activity × drinking、activity × grooming、scratching × eating、grooming × scratching、toileting × prolonged_stationary；已定 scratching > prolonged_stationary）。判据：优先级表写入 evidence，未确认的对标注为待裁定。（可与 2.1、3.1 并行）
+- [ ] 4.1 确认简化后的优先级规则并核对适用性：单宠物区间内按“具体动作 > activity > prolonged_stationary”仲裁（用户已定 activity 与 prolonged_stationary 最低）；多宠物区间的重叠不套用该表，整段留待 SORT 落地后按个体处理。判据：规则写入 evidence，并核对补检测后的重叠对是否都落在上述两类之一，异常项单独列出。（可与 2.1、3.1 并行）
 - [ ] 4.2 实现仲裁：按优先级保留一条，被压制者记录 `suppressed_by` 与原因；未确认优先级的类别对不进索引。判据：被压制清单每项都有 `suppressed_by`，待裁定对的区间数单独列出。（依赖 3.2、4.1）
 - [ ] 4.3 报告仲裁前后按类别与 split 的计数变化。判据：两份计数都在报告中。（依赖 4.2）
 
