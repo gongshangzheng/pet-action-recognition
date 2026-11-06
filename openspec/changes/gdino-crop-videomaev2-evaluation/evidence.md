@@ -174,3 +174,19 @@
 - **新增并行标注**：1.4 与 1.5、2.7 与 2.9、4.5 与 4.6、4.9 与 4.10 四对，其余按编号串行。
 - **历史例外清单**：2.2、2.4、2.5、3.1、3.4、3.5、4.2、4.4 仍为复合条目，其勾选代表整组结果同时成立。按“保留已完成条目及其证据、不为重排而回退”的规则不补拆，此清单供后续审阅时识别。
 - **未勾选的保持未勾选**：本次只做结构重组，未产生新的执行结果。1.1–1.3、2.1、2.2、2.4、2.5、3.1–3.7、4.2、4.4、6.1–6.5 的勾选状态与原文保持不变。
+
+### 2026-11-06：1.4 冻结事实回填与 1.5 成本统计（远程只读）
+
+- **方式**：在 pet `/home/wyy/pet-action-recognition`（HEAD `55c9789`）只读执行 `sha256sum`、`wc -l` 与对索引 JSON 的统计，未启动任何容器、训练或渲染。项目代码与数据未被修改。
+- **源视频清单**：`results/cat_crop_classification/gdino-crop-20261103a/all_videos.txt`，2,144 行，SHA-256 `f4082a147b93d0c36913bab8413dceebffa04759c89dabc22b5a04861e6ed7a5`。
+- **清单与索引 SHA-256**（`datasets/cat_crop_classification/gdino-v1-full/`）：
+  - `manifest.json` `20db7ae253b445cf15234c313b9c189f749962c3226d9e1915842866c5a5ddb7`
+  - `availability.json` `5ccb4bd781cffc11596a7da32780882bbba446ac11bb75043a93aee927cd9fdf`
+  - `raw_train` `cb2ba613c7cf7a569de2d4865e46664a7d5133737f961fe6db838001f7afc50f`，`raw_val` `26effa5d66b3ea60c228d78c26c8e447ea73c0c7d9dc49b3da4a432d895d6249`，`raw_test` `f87085fd15c628687ae4c46f23c3d4b3212a4a52169bea390848cc9eb8337c3a`
+  - `gdino_train` `c16520d47dffefff25bbf4fb389c5fbf6135aa28fdda65a77f7ef8245a4e1bf7`，`gdino_val` `835d31da47560f7a7201c79919f779ed98ffdd6c408bba3099fabf7f2dcb5552`，`gdino_test` `e5af18f67a5b426a88d34c2df343397c30b52f832cbac763de3fb3ac517f5a4a`
+  - `gdino_motion_train` `553cbdb4d2c79650c1b16c12fd419e08954fae62ab2c31021371678a45844a6a`，`gdino_motion_val` `87263151cd5f75d7e5edd3cf199bf2c0ea74fac5ea83240421575ffbf5913c17`，`gdino_motion_test` `74cb3412e2839661a59c915a7f62ec7046500011e3d5abbb656c3d949d67956b`
+- **失败清单**：来自 `availability.json` 的 2,710 行，可用 214；不可用 2,496，其中 `multi_pet_unsupported` 1,551、`no_reliable_pet_detection` 945。两类原因合并计 2,496，没有其他原因值。
+- **索引自检**：三臂 train/val/test 行数均为 137/33/44，三臂类别计数相同（train：activity 58、prolonged_stationary 47、abnormal 9、drinking 8、eating 7、grooming 6、toileting 2）。
+- **成本**：`.run/logs/full_preprocessing.log` 记录 2026-11-05 10:05:06 开始、2026-11-06 10:25:52 成功结束，墙钟 24 小时 20 分 46 秒。分段：检测在 16:17:41 中断后重跑，守卫记录最后一次检测 `rc=0 in 15473s`（4 小时 17 分 53 秒），20:35:34 结束；渲染 `rc=0 in 49699s`（13 小时 48 分 19 秒），次日 10:23:53 结束；清单与索引生成 119 秒。
+- **磁盘**：`assets/full_run` 合计 6.8 GB，其中 `videos` 6.3 GB、`metadata` 364 MB、`detections` 116 MB；索引目录 1.4 MB。
+- **限制**：24 小时 20 分包含首次检测被中断的时段，不是干净吞吐量；共享机并发窗口未排除，不能作为性能结论。`manifest.json` 的 `full_dataset_preprocessing` 为 `false`，但该批次实际覆盖全部 2,144 段索引视频，因此这个标志不能用来判断是否全量，判据应是 `all_videos.txt` 行数与 `source_rows`。
