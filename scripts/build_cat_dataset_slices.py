@@ -98,13 +98,48 @@ def anchors_in(cache: dict[str, Any], start: int, end: int) -> list[dict[str, An
     return [anchors[key] for key in anchors if start <= int(key) <= end]
 
 
+def _area(box: list[float]) -> float:
+    return max(1e-9, (box[2] - box[0]) * (box[3] - box[1]))
+
+
+def _iou(a: list[float], b: list[float]) -> float:
+    x1, y1 = max(a[0], b[0]), max(a[1], b[1])
+    x2, y2 = min(a[2], b[2]), min(a[3], b[3])
+    if x2 <= x1 or y2 <= y1:
+        return 0.0
+    inter = (x2 - x1) * (y2 - y1)
+    return inter / (_area(a) + _area(b) - inter)
+
+
+def distinct_pets(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Drop duplicate boxes on the same animal and degenerate sizes.
+
+    The detector often reports the same cat twice (IoU 1.0) or scores a small
+    object as an extra pet, so a raw count of two boxes is not two animals.
+    """
+    candidates = list(state.get("cat_candidates", [])) + list(state.get("dog_candidates", []))
+    if not candidates:
+        return []
+    candidates.sort(key=lambda item: -_area(item["box"]))
+    primary = candidates[0]
+    kept = [primary]
+    for item in candidates[1:]:
+        if _iou(primary["box"], item["box"]) >= 0.8:
+            continue
+        ratio = _area(item["box"]) / _area(primary["box"])
+        if ratio < 0.15 or ratio > 3:
+            continue
+        kept.append(item)
+    return kept
+
+
 def pet_flags(states: list[dict[str, Any]]) -> list[bool]:
-    return [((s.get("cat_count") or 0) + (s.get("dog_count") or 0)) >= 2 for s in states]
+    return [len(distinct_pets(s)) >= 2 for s in states]
 
 
 def species_of(states: list[dict[str, Any]]) -> str:
-    cats = sum(1 for s in states if (s.get("cat_count") or 0) > 0)
-    dogs = sum(1 for s in states if (s.get("dog_count") or 0) > 0)
+    cats = sum(1 for s in states if any(p["class"] == "cat" for p in distinct_pets(s)))
+    dogs = sum(1 for s in states if any(p["class"] == "dog" for p in distinct_pets(s)))
     return "dog" if dogs > cats else "cat"
 
 
@@ -198,8 +233,8 @@ def main() -> int:
                    coverage=round(coverage, 3), longest_run=longest_run(flags))
             continue
         species = species_of(states)
-        max_cats = max((st.get("cat_count") or 0) for st in states)
-        max_dogs = max((st.get("dog_count") or 0) for st in states)
+        max_cats = max(sum(1 for p in distinct_pets(st) if p["class"] == "cat") for st in states)
+        max_dogs = max(sum(1 for p in distinct_pets(st) if p["class"] == "dog") for st in states)
         day = event_day(stem)
         split = day_splits.get(day, "unassigned") if day else "unassigned"
         if split == "unassigned":
