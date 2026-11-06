@@ -266,3 +266,12 @@
   - 缓存不匹配 → `test_cache_mismatch_is_rejected`：缓存记录旧 `source_sha256`，`load_reusable_detection` 对新哈希必须抛 `RuntimeError`。
 - **补齐的两条缺口**：原有多宠物用例只断言原因字符串存在，没有断言“不可训练”；原有单狗用例只断言物种字段，没有断言裁剪框确实取狗框。新增两条补齐，未改动已有断言。
 - **逐用例结果**：`python3 -m pytest tests -q -k "no_pet or long_gap or multi_pet or single_dog or static_pet or cache_mismatch"` → 10 passed。`tests/test_cat_crop_experiment.py` 为 53 passed、1 failed（既有失效用例 `test_paired_index_rejects_different_samples`，归 4.3）。
+
+### 2026-11-06：训练目标改为只含猫、多宠物帧用猫框（用户要求）
+
+- **决定一**：训练与评测只含猫目标，狗区间不进入。理由是用例数量不足以支撑，且会让验证集物种构成不稳定。实测 `availability.json`：可用 214 个区间中猫 207、狗 7（train 6、val 1、test 0）；剔除后为 207（train 131、val 32、test 44）。
+- **决定二**：多宠物帧只要恰好一只猫就用猫框训练，狗不参与目标选择；两只及以上猫仍按 `multi_pet_unsupported` 排除。
+- **实测影响（远程只读统计 1,551 个 `multi_pet_unsupported` 区间的 408,301 帧）**：猫狗都未检出 328,993 帧（80.6%）；恰好一只猫 54,371 帧（13.3%，其中 23,345 帧同时有狗）；两只及以上猫 5,884 帧（1.4%）。按“区间内每帧都必须有效”的现行规则，放宽多宠物策略后新增可训练区间为 **0**；主要障碍是漏检，不是多宠物策略。
+- **因此**：决定二已写入 design 3.3 与 spec 的物种场景，但它在本轮不产生新样本；是否允许区间内存在部分无效帧（覆盖率阈值）列为 design 的 Open Questions，需另行裁定。
+- **类别稀疏提示**：207 个区间中 toileting 训练样本仅 2 个，已在 design 的 Risks 写明必须逐类别报 support。
+- **未改 tasks.md**：改为猫专用索引需要新增一条构建与冻结索引的任务，并同步 4.9、4.11、4.12、5.1、5.2 的样本数与分母。这属于 tasks 结构改动，等用户确认后再动。

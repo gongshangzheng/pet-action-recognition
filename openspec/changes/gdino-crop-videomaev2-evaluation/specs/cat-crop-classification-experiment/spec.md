@@ -51,11 +51,16 @@ The system SHALL record detection, target species, interpolation and pixel-corre
 - **THEN** the interval is marked unavailable with the reason and split
 - **AND** the report retains it in original-input coverage accounting
 
-#### Scenario: Species is labeled or a pet is not detected
+#### Scenario: Target species is the cat
 
-- **WHEN** sampled frames contain one cat or one dog
-- **THEN** the target species is recorded as cat or dog and the crop follows that target
-- **WHEN** sampled frames contain no reliable pet detection
+- **WHEN** a frame contains exactly one cat, with or without dogs
+- **THEN** the training target is that cat and the crop follows the cat box
+- **AND** dogs in the same frame do not change the selected target
+- **WHEN** a frame contains two or more cats
+- **THEN** the interval is marked unavailable as `multi_pet_unsupported` because the target identity is ambiguous
+- **WHEN** the training set is assembled
+- **THEN** dog-only intervals are excluded and the exclusion is reported with counts by split
+- **WHEN** a frame contains no reliable cat detection
 - **THEN** the interval is marked unavailable as detection-missing
 - **AND** the system does not interpret low pixel motion as proof that the pet is absent
 
