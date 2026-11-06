@@ -192,7 +192,16 @@ def main() -> int:
     ap.add_argument("--mobile-sam-ckpt", type=Path, required=True)
     ap.add_argument("--sam2-dir", type=Path, required=True)
     ap.add_argument("--sam2-ckpt", type=Path, required=True)
+    ap.add_argument("--threads", type=int, default=4,
+                    help="torch/OpenMP 线程上限（共享机默认 4，避免触发 CPU 守卫）")
     args = ap.parse_args()
+
+    # 共享机纪律：限制线程，避免推理高峰触发 resource_guard 的 CPU 上限
+    import os as _os
+    for _v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+        _os.environ[_v] = str(args.threads)
+    import torch as _torch
+    _torch.set_num_threads(args.threads)
 
     cases = json.loads(args.cases.read_text(encoding="utf-8"))
     args.out.mkdir(parents=True, exist_ok=True)
