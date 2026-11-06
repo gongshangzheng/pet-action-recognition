@@ -236,3 +236,12 @@
 - **缺口**：没有“空框或退化框必须报错”的用例；没有用已知标记做一次坐标往返的用例。
 - **修订**：2.6 原条目“坐标恢复、空裁剪与帧号映射的单元测试”收窄为上述两条，措辞改为可直接判断的句子。编号与并行标注未变，2.7 未动。
 - **未做**：没有删除 2.6。用户确认按收窄后的两条执行。
+
+### 2026-11-06：2.6 两条裁剪测试通过
+
+- **新增用例**（`tests/test_cat_crop_experiment.py`，提交见本条之后的 commit）：
+  - `test_out_of_frame_and_degenerate_boxes_raise_instead_of_blank_output`：完全落在画面外的框 `[500,500,600,600]` 与零面积框 `[10,10,10,10]` 都必须抛 `ValueError`，不会输出灰帧或黑帧。
+  - `test_known_marker_lands_at_the_converted_position`：在合成帧的 `[10,30)×[40,60)` 画白块，用 `[0,0,100,100]` 窗口按 1:1 裁剪时白块必须落在同一行列区间；`size=50` 缩放一半时白块中心必须落在 `(10,25)`。两处都检查白块外区域为背景值。
+- **逐用例结果**：`python3 -m pytest tests/test_cat_crop_experiment.py -q -k "out_of_frame or known_marker"` → 2 passed。
+- **全文件与全仓状态**：`tests/test_cat_crop_experiment.py` 为 51 passed、1 failed、8 subtests；`tests/` 全仓为 89 passed、3 failed、8 subtests。三个失败均与本条无关：`test_paired_index_rejects_different_samples` 的固件缺少 `source_index_root` 字段，HEAD 版本的 `validate_common_indexes` 已要求该字段，属既有失效用例；另两个 `tests/test_resource_guard_process_tree.py` 失败来自工作区中未提交的 `resource_guard.sh` 改动。
+- **未修**：上述三个失败不在 2.6 范围，未修改；其中失效用例归入 4.3 的无 GPU 测试整理，守卫相关的两个失败属于 4.5 的守卫验证。

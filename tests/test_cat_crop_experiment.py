@@ -155,6 +155,30 @@ class TargetValidityTests(unittest.TestCase):
         self.assertEqual(int(result[75, 0, 0]), 255)
         self.assertEqual(int(result[75, 149, 0]), 255)
 
+    def test_out_of_frame_and_degenerate_boxes_raise_instead_of_blank_output(
+        self,
+    ) -> None:
+        frame = np.zeros((80, 100, 3), dtype=np.uint8)
+        with self.assertRaises(ValueError):
+            crop_square(frame, [500, 500, 600, 600], size=64, pad=1.0)
+        with self.assertRaises(ValueError):
+            crop_square(frame, [10, 10, 10, 10], size=64, pad=1.0)
+
+    def test_known_marker_lands_at_the_converted_position(self) -> None:
+        frame = np.zeros((120, 120, 3), dtype=np.uint8)
+        frame[40:60, 10:30] = 255
+        unscaled = crop_square(
+            frame, [0, 0, 100, 100], size=100, pad=1.0, background=7
+        )
+        self.assertTrue(np.all(unscaled[40:60, 10:30] == 255))
+        self.assertEqual(int(unscaled[5, 5, 0]), 0)
+        self.assertEqual(int(unscaled[95, 95, 0]), 0)
+
+        half = crop_square(frame, [0, 0, 100, 100], size=50, pad=1.0, background=7)
+        self.assertEqual(int(half[25, 10, 0]), 255)
+        self.assertEqual(int(half[2, 2, 0]), 0)
+        self.assertEqual(int(half[47, 47, 0]), 0)
+
     def test_letterbox_fallback_keeps_non_square_source_content(self) -> None:
         frame = np.zeros((40, 80, 3), dtype=np.uint8)
         frame[10:30, 20:60] = (20, 120, 220)
