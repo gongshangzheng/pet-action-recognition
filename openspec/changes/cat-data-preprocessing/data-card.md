@@ -48,25 +48,25 @@
 - activity 训练/测试取子集（按视频抽样，约与第二大类持平），种子固定。
 - 评测 `num_clips=1`，不引入官方 5 窗口平均。
 
-## 5. 首轮全量切片结果（2026-11-07，`results/cat_data_preprocessing/slices_v2/`）
+## 5. 首轮全量切片结果（2026-11-07，`results/cat_data_preprocessing/slices_v3/`）
 
 | 项 | 数值 |
 |---|---:|
 | 输入标注区间 | 3,927 |
-| 进入切片的区间 | 2,879 |
-| 产出片段 | 6,393 |
-| 猫片段 / 狗片段 | 5,371 / 1,022 |
-| train / val / test / 未分配 | 3,897 / 1,396 / 1,078 / **22** |
+| 进入切片的区间 | 2,867 |
+| 产出片段 | 6,363 |
+| 猫片段 / 狗片段 | 5,348 / 1,015 |
+| train / val / test | 3,892 / 1,393 / 1,078 |
 
-损失归因：未映射 34、短于 1 秒 33、多宠物 967、无可靠检测 3、重叠压制 11、外延失败 19。
+损失归因：多宠物 967、未映射 34、短于 1 秒 33、未分配 split 12、无可靠检测 3、重叠压制 11、外延失败 18、activity 上限削减 10。
 
-各类片段：activity 3,490、prolonged_stationary 1,170、eating 763、drinking 369、scratching 300、grooming 206、toileting 75、gnawing 18、fall 2、**seizure 0**。
+各类片段：activity 3,477、prolonged_stationary 1,159、eating 763、drinking 369、scratching 295、grooming 205、toileting 75、gnawing 18、fall 2、**seizure 0**。
 
 已知限制：
 
 - `seizure` 为 0：唯一区间 12 个锚点 `pet_count` 全为 2（两只猫），被多宠物规则整段排除，SORT 落地前不可训练。
 - activity 占 55%，倍数 2.98，刚好在 3 倍上限内，上限未触发。
-- 22 个片段 split 为 `unassigned`，事件日期不在旧 `split_days` 中。
+- 12 个区间因事件日期不在 `split_days` 中已排除（`unassigned_split`），不再进入索引。
 - 片段清单当前缺猫数、狗数两个字段。
 
 ## 6. 待补字段

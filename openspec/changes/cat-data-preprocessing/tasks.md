@@ -17,7 +17,7 @@
 - [ ] 3.1 核对多宠物阈值与命中结果：现行实现取锚点覆盖率 ≥0.5 且连续 ≥3，全量命中 **967** 个区间（按类：activity 467、prolonged_stationary 156、eating 149、scratching 83、drinking 73、grooming 28、toileting 9、gnawing 1、seizure 1）。判据：阈值依据与按类命中数写入 evidence，并与 2.3 的画面核对结论对照。（依赖 2.3）
 - [ ] 3.2 产出并核对三分类中间清单：单宠物（带 `species`）/ 多宠物 / 无可靠检测三类互斥。判据：三类计数之和等于 3,893，清单路径写入 evidence；当前 `slices_v2/summary.json` 只有损失聚合，需补逐区间清单。（依赖 3.1）
 - [ ] 3.3 多宠物区间登记为 `pending_multi_pet_tracking`，不视为永久丢弃，供 `multi-pet-sort-tracking` 落地后回收。判据：登记清单与区间数（967）写入 evidence。（依赖 3.2）
-- [ ] 3.5 处理 22 个 `unassigned` split 的片段：这些区间不在旧索引中，事件日期没有落在 `split_days`。需要定规则（按日期就近归类，或整段排除）并重跑。判据：`unassigned` 归零或有明确排除记录，规则写入 evidence。（依赖 3.2）
+- [x] 3.5 处理 `unassigned` split 的区间：用户定为“直接排除”。这些区间只出现在补检测批次里，事件日期不在旧 `split_days` 中。判据：`unassigned` 归零且有排除计数。已完成：12 个区间排除并记 `unassigned_split`，`slices_v3` 中 split 只剩 train/val/test。（依赖 3.2）
 
 ## 4. 重叠仲裁
 
