@@ -253,3 +253,16 @@
 - **改写范围**：17 条未完成条目（2.7、4.1、4.3、4.5–4.12、5.1–5.6）改为自足文字，逐条补上对象（文件、函数、产物）、动作、判据与非目标。已完成条目与编号未动，无增删与重排。
 - **2.7 语义变化**：由“补齐场景回归测试”改为“核对现有覆盖、只补缺口”。依据是六类场景已有 8 条通过用例（`pytest -k "no_pet or long_gap or multi_pets or single_dog or static_pet or cache_mismatch"` 全绿），不需要重写。
 - **4.3 增加了已知失效用例**：`test_paired_index_rejects_different_samples` 的固件缺 `source_index_root`，现有代码要求该字段，属既有失效，归入 4.3 修复。
+
+### 2026-11-06：2.7 六类场景覆盖核对
+
+- **输入来源**：六类场景全部由测试当场构造的字典与数组驱动，不读任何视频。`classify_frame` 的输入是检测列表（`detection("cat", [...], 0.9)`），`build_frame_track` 的输入是锚点字典（`state([...])`），`motion_correct_box` 的输入是前景掩码数组与框。合成输入只证明规则逻辑，不证明真实检测分布；分布证据来自 `availability.json` 与 20 段人工审阅。
+- **映射表**：
+  - 无宠物 → `test_no_pet_is_detection_missing_not_confirmed_absence`：输入空检测列表，断言 `reasons == ["no_reliable_pet_detection"]` 且 `target_valid` 为假，不写“确认无宠物”。
+  - 长缺口 → `test_long_detection_gap_keeps_display_crop`（40 帧缺口、`max_gap=20`：`camera_box` 为 None、`display_long_gap` 为真）与 `test_short_gap_interpolates_and_long_gap_does_not`（短缺口插值、长缺口无效）。
+  - 多宠物 → `test_multi_pets_are_unsupported`（两猫与猫加狗都含 `multi_pet_unsupported`）＋本条新增 `test_multi_pet_frame_is_not_training_eligible`（断言 `pet_count == 2`、`target_valid` 为假、原因列表恰好一项）。
+  - 单狗 → `test_single_dog_is_valid_and_labeled`（分类层 `target_class == "dog"`）＋本条新增 `test_single_dog_track_crops_with_the_dog_box`（轨道层 `camera_box` 等于狗框，证明按狗裁剪）。
+  - 静止宠物 → `test_static_pet_keeps_box_and_motion_only_expands_after_two_hits`：空前景（宠物不动）时框不变、`corrected` 为假；静止不会被判成无宠物。
+  - 缓存不匹配 → `test_cache_mismatch_is_rejected`：缓存记录旧 `source_sha256`，`load_reusable_detection` 对新哈希必须抛 `RuntimeError`。
+- **补齐的两条缺口**：原有多宠物用例只断言原因字符串存在，没有断言“不可训练”；原有单狗用例只断言物种字段，没有断言裁剪框确实取狗框。新增两条补齐，未改动已有断言。
+- **逐用例结果**：`python3 -m pytest tests -q -k "no_pet or long_gap or multi_pet or single_dog or static_pet or cache_mismatch"` → 10 passed。`tests/test_cat_crop_experiment.py` 为 53 passed、1 failed（既有失效用例 `test_paired_index_rejects_different_samples`，归 4.3）。

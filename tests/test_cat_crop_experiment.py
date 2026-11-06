@@ -105,6 +105,19 @@ class TargetValidityTests(unittest.TestCase):
         )
         self.assertIn("multi_pet_unsupported", dog["reasons"])
 
+    def test_multi_pet_frame_is_not_training_eligible(self) -> None:
+        result = classify_frame(
+            [
+                detection("cat", [10, 20, 80, 100], 0.9),
+                detection("dog", [120, 20, 190, 100], 0.8),
+            ],
+            200,
+            120,
+        )
+        self.assertEqual(result["pet_count"], 2)
+        self.assertFalse(result["target_valid"])
+        self.assertEqual(result["reasons"], ["multi_pet_unsupported"])
+
     def test_no_pet_is_detection_missing_not_confirmed_absence(self) -> None:
         result = classify_frame([], 200, 120)
         self.assertEqual(result["reasons"], ["no_reliable_pet_detection"])
@@ -256,6 +269,23 @@ class TrackTests(unittest.TestCase):
         track = build_frame_track(anchors, 11, sample_stride=10, max_gap=20)
         self.assertTrue(track[0]["valid"])
         self.assertEqual(track[0]["target_class"], "dog")
+
+    def test_single_dog_track_crops_with_the_dog_box(self) -> None:
+        dog_box = [7.0, 9.0, 61.0, 63.0]
+        anchors = {
+            0: {
+                "target_box": dog_box,
+                "target_class": "dog",
+                "dog_count": 1,
+                "cat_count": 0,
+                "pet_count": 1,
+                "reasons": [],
+                "target_valid": True,
+            }
+        }
+        track = build_frame_track(anchors, 1, sample_stride=10, max_gap=20)
+        self.assertEqual(track[0]["target_class"], "dog")
+        self.assertEqual(track[0]["camera_box"], dog_box)
 
     def test_species_change_breaks_interpolation(self) -> None:
         anchors = {
