@@ -147,3 +147,14 @@
   - 检测侧候选：Grounding DINO 1.5 Pro/Edge、DINO-X、MM-Grounding-DINO、OWLv2、YOLO-World/YOLOE、Florence-2、T-Rex2，以及“自标几百帧微调闭集小检测器”这条更务实的路线。
   - 共同前置：200 帧人工标注评估集，否则无法判断谁更准。
 - 未产生任务，也未下载任何权重。
+
+### 2026-11-07：训练接线与 1 epoch 冒烟通过
+
+- **接线**：新增 `scripts/export_clip_annotations.py`（字符串标签 → 十类整数标签、`start/end` → `start_frame/end_frame`、补齐 `task_id`），新增 `configs/cat_clip_videomaev2_b.py`（十类、`accumulative_counts=4`、`num_workers=6`、sqrt 逆频类别权重、`val_interval=2`）。
+- **格式决定（6.3）**：片段**不导出 mp4**，训练直接读原始视频的帧范围，因此片段产物保持“清单 + 索引”形态。
+- **三次失败与修复**：① 缺 `PYTHONPATH` → 补项目根；② `accumulative_counts` 放错位置（属 optim_wrapper，不属 train_cfg）；③ 基类类别权重是 7 个 → 与十类冲突，改为十类权重（seizure 权重 0）。
+- **数据修正**：检测缓存报告的帧数对少数视频偏大，导致片段越界（如 `[1119,1178]` vs 实际 1031 帧）。导出时逐视频探测帧数并裁剪，丢弃 10 个片段，探测 2,335 个视频。
+- **冒烟结果**：1 epoch 完整跑完，1,127/1,127 迭代，loss 2.34 → 1.70，checkpoint 已保存；耗时 650 秒。
+- **吞吐**：把 `num_workers` 从 2 提到 6 后，`data_time` 从 0.88 s 降到 0.34 s，单迭代 1.00 s → 0.47 s。**此前“20 轮约 2 小时”的估算作废**；按当前吞吐，20 epoch ≈ 3.6 小时，加上每 2 轮一次验证（468 迭代 × 约 0.5 s）约 40 分钟，合计约 **4.4 小时**。
+- **资源**：训练峰值约 12.4 GB 显存、9.8 GB RSS、CPU 约 800%（24 核机器）。守卫上限需放宽到 CPU 900% 才能容纳 6 个解码 worker。
+- **未完成**：正式 20 epoch 训练未启动；该训练应另开 change（本 change 只负责数据与“可训练”验证）。
