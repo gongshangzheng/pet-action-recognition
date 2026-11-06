@@ -17,7 +17,7 @@ optim_wrapper = dict(accumulative_counts=4)
 
 train_dataloader = dict(
     batch_size=4,
-    num_workers=2,
+    num_workers=6,
     dataset=dict(
         ann_file=f"{index_root}/train.jsonl",
         data_prefix=dict(video=video_root),
@@ -25,7 +25,7 @@ train_dataloader = dict(
 )
 val_dataloader = dict(
     batch_size=4,
-    num_workers=2,
+    num_workers=6,
     dataset=dict(
         ann_file=f"{index_root}/val.jsonl",
         data_prefix=dict(video=video_root),
@@ -33,7 +33,7 @@ val_dataloader = dict(
 )
 test_dataloader = dict(
     batch_size=4,
-    num_workers=2,
+    num_workers=6,
     dataset=dict(
         ann_file=f"{index_root}/test.jsonl",
         data_prefix=dict(video=video_root),
