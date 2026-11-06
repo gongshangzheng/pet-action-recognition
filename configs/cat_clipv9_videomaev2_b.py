@@ -2,6 +2,12 @@
 
 _base_ = ["./cat_clip_videomaev2_b.py"]
 
+# 子配置里引用不到父配置的 Python 变量，这里重新声明一次
+classes = [
+    "activity", "prolonged_stationary", "eating", "drinking", "toileting",
+    "grooming", "scratching", "gnawing", "fall", "seizure",
+]
+
 index_root = "datasets/cat_clip_v9"
 video_root = "results/cat_clip_v9/assets/clips"
 result_root = "results/cat_clip_v9/videomaev2_b"
