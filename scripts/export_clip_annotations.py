@@ -26,6 +26,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--video-root", type=Path, required=True,
                         help="root the clip 'video' paths are relative to; used to clamp frame ranges")
+    parser.add_argument("--clip-files", type=Path, default=None,
+                        help="when set, read rendered clip mp4 files under this root and use 1..60 frames")
     return parser.parse_args()
 
 
@@ -59,6 +61,25 @@ def main() -> int:
                 continue
             clip = json.loads(line)
             label = clip["label"]
+            if args.clip_files is not None:
+                stem = Path(clip["video"]).stem
+                name = f"{stem}__{clip['start']}-{clip['end']}__t{clip.get('track_id', 0)}.mp4"
+                relative = Path(clip["split"]) / name
+                if not (args.clip_files / relative).is_file():
+                    dropped += 1
+                    continue
+                rows.append(
+                    {
+                        "video": str(relative),
+                        "label": index[label],
+                        "start_frame": 1,
+                        "end_frame": 60,
+                        "task_id": len(rows),
+                        "sample_id": clip["sample_id"],
+                        "species": clip.get("species"),
+                    }
+                )
+                continue
             if label not in index:
                 raise ValueError(f"unexpected label {label!r} in {source}")
             video = clip["video"]
