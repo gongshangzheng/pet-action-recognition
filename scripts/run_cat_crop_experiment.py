@@ -357,12 +357,12 @@ def selection_score(state: dict[str, Any]) -> tuple[float, ...]:
     )
 
 
-def select_arms() -> dict[str, Any]:
+def select_arms(arms: list[str] | None = None) -> dict[str, Any]:
     selection_path = RUN_ROOT / "selection.json"
     if selection_path.is_file():
         return json.loads(selection_path.read_text(encoding="utf-8"))
     states = {}
-    for arm in ARMS:
+    for arm in arms or ARMS:
         path = RUN_ROOT / arm / "run_status.json"
         if not path.is_file():
             raise FileNotFoundError(path)
@@ -398,10 +398,10 @@ def select_arms() -> dict[str, Any]:
     return selection
 
 
-def test_arms(device: str) -> dict[str, Any]:
-    selection = select_arms()
+def test_arms(device: str, arms: list[str] | None = None) -> dict[str, Any]:
+    selection = select_arms(arms)
     env = environment(device)
-    for arm in ARMS:
+    for arm in arms or ARMS:
         result = RUN_ROOT / arm
         status_path = result / "run_status.json"
         status = json.loads(status_path.read_text(encoding="utf-8"))
@@ -706,10 +706,10 @@ def main() -> int:
                 return 1
         return 0
     if args.stage == "select":
-        print(json.dumps(select_arms(), ensure_ascii=False, indent=2))
+        print(json.dumps(select_arms(args.arms), ensure_ascii=False, indent=2))
         return 0
     if args.stage == "test":
-        print(json.dumps(test_arms(args.device), ensure_ascii=False, indent=2))
+        print(json.dumps(test_arms(args.device, args.arms), ensure_ascii=False, indent=2))
         return 0
     selection = json.loads((RUN_ROOT / "selection.json").read_text(encoding="utf-8"))
     print(json.dumps(build_report(selection), ensure_ascii=False, indent=2))
