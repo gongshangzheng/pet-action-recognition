@@ -47,7 +47,7 @@ A 为原视频，B 为 GroundingDINO 裁剪，C 为同一检测缓存加像素�
 - [x] 4.3 修掉 `tests/test_cat_crop_experiment.py` 的失效用例（固件缺 `source_index_root`），不新增测试。判据：该文件 `pytest -q` 全绿。已完成：54 passed、8 subtests。
 - [x] 4.4 在数据冻结后，用真实 batch 核验预训练骨干加载、前反向和区间采样。通过资源守卫记录显存与内存峰值，三臂有效 batch 一致。
 - [ ] 4.5 在 pet 上做一次 CPU-only 守卫演练：多个 worker 创建并退出，检查 CPU 非负、elapsed 合理、超限后整组无残留。判据：演练日志与退出码写入 evidence；不新增测试文件。（可与 4.6 并行）
-- [ ] 4.6 让训练入口配置与 design 对齐：打开 `configs/cat_action_v1_base.py` 的 `save_optimizer` 与 `save_param_scheduler`，并把 `run_cat_crop_experiment.py` 的 `INDEX_ROOT` 指向 `gdino-v1-cat`。判据：解析后的配置与索引路径写入 evidence；旧检查点加载后含 `optimizer` 与 `param_scheduler` 字段。（可与 4.5 并行）
+- [x] 4.6 让训练入口配置与 design 对齐：打开 `configs/cat_action_v1_base.py` 的 `save_optimizer` 与 `save_param_scheduler`，并把 `run_cat_crop_experiment.py` 的 `INDEX_ROOT` 指向 `gdino-v1-cat`。判据：解析后的配置显示两个 `save_*` 为真、`INDEX_ROOT` 指向 `gdino-v1-cat`，写入 evidence；新检查点是否真带优化器状态由 4.7 核对。（可与 4.5 并行）
 - [ ] 4.7 用一次 1 epoch 冒烟核对 4.6：检查点加载后含 `optimizer` 与 `param_scheduler`，恢复后学习率等于保存值。判据：字段清单与学习率写入 evidence；不写测试用例。（依赖 4.6）
 - [ ] 4.8 推送 4.5–4.7 的改动，pet 工作树重置到该提交。判据：远端 HEAD 等于提交号且工作树无跟踪改动。（依赖 4.5、4.6、4.7）
 - [ ] 4.9 记录数据划分 seed 与训练 seed（训练 seed 0），估算 207 区间的训练时长与磁盘占用。判据：数值写入 evidence；不足时写成阻塞并停止。（依赖 3.8、4.1、4.3、4.5、4.6、4.7）

@@ -343,3 +343,11 @@
 - **结果**：`python3 -m pytest tests/test_cat_crop_experiment.py -q` → **54 passed、8 subtests passed**（此前 1 failed）。
 - **全仓状态**：`tests/` 为 92 passed、2 failed、8 subtests。两个失败是 `tests/test_resource_guard_process_tree.py`，来源是工作区里未提交的 `resource_guard.sh` 改动（+65/−11），不属于本条，归 4.5 的守卫演练处理。
 - **未新增测试**：按最小测试只修固件，没有加用例。
+
+### 2026-11-06：4.6 训练入口配置对齐
+
+- **改动**（提交 `447ba4d`）：`configs/cat_action_v1_base.py` 的 `save_optimizer`、`save_param_scheduler` 由 `False` 改为 `True`；`scripts/run_cat_crop_experiment.py` 的 `INDEX_ROOT` 由 `gdino-v1-full` 改为 `gdino-v1-cat`。
+- **核验**：pet HEAD `447ba4d`、`plf` 环境解析配置，`INDEX_ROOT` 为 `/home/wyy/pet-action-recognition/datasets/cat_crop_classification/gdino-v1-cat`，`save_optimizer=True`、`save_param_scheduler=True`、`save_best=macro_f1`；该索引 manifest 为 `dataset_id=gdino-v1-cat`、`eligible_rows=207`、`target_class_filter=cat`。
+- **本地测试**：`tests/test_cat_crop_experiment.py` 54 passed、8 subtests。
+- **判据措辞修正**：原条目写“旧检查点加载后含 `optimizer` 与 `param_scheduler` 字段”，这对旧检查点不可能成立；改为核对解析后的 `save_*` 与索引路径，检查点字段是否落地由 4.7 的冒烟验证。
+- **影响面**：`save_best` 仍为 macro_f1，`max_keep_ckpts` 仍为 2，保存频率未改；检查点体积会因含优化器状态而增大，磁盘占用估算归 4.9。
