@@ -63,14 +63,14 @@
 
 #### Scenario: 区间短于一个片段
 
-- **WHEN** 区间长度不足一个片段时长且多于 1 帧
+- **WHEN** 区间长度不足一个片段时长但不短于 1 秒
 - **THEN** 以该区间为中心左右外延到片段时长，用真实相邻帧补齐
 - **AND** 外延不得越过源视频边界或跨入其他区间的标签范围
 
-#### Scenario: 区间只有一帧
+#### Scenario: 区间短于 1 秒
 
-- **WHEN** 区间只包含 1 帧
-- **THEN** 该区间被排除并记为 `single_frame_annotation`
+- **WHEN** 区间时长短于 1 秒
+- **THEN** 该区间被排除并记为 `too_short_annotation`
 - **AND** 排除计数按类别与 split 报告，不参与外延
 
 ### Requirement: 利用率可归因报告
