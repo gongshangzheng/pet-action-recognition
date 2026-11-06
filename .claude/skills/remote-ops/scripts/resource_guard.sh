@@ -193,7 +193,6 @@ preflight() {
 
 tree_pids() {
   local root=$1
-  echo "$root"
   ps -eo pid=,ppid= 2>/dev/null | awk -v root="$root" '
     { parent[$1]=$2 }
     END {
@@ -205,6 +204,15 @@ tree_pids() {
         }
       }
     }'
+}
+
+terminate_tree() {
+  local root=$1 signal=$2 pid
+  local pids
+  pids=$(tree_pids "$root")
+  for pid in $pids; do
+    kill -s "$signal" "$pid" 2>/dev/null || true
+  done
 }
 
 tree_cpu_jiffies() {
@@ -311,12 +319,14 @@ guard_run() {
   if (( verdict == 4 )); then
     log "CAP BREACH ($reason): terminating $child"
     echo "CAP BREACH ($reason)" >> "$log_file"
-    kill -TERM "$child" 2>/dev/null
-    for _ in 1 2 3 4 5 6; do kill -0 "$child" 2>/dev/null || break; sleep 2; done
-    if kill -0 "$child" 2>/dev/null; then
-      log "still alive after TERM, sending KILL"
-      pkill -KILL -P "$child" 2>/dev/null
-      kill -KILL "$child" 2>/dev/null
+    terminate_tree "$child" TERM
+    for _ in 1 2 3 4 5 6; do
+      [[ -z "$(tree_pids "$child")" ]] && break
+      sleep 2
+    done
+    if [[ -n "$(tree_pids "$child")" ]]; then
+      log "process tree still alive after TERM, sending KILL"
+      terminate_tree "$child" KILL
     fi
     wait "$child" 2>/dev/null
     log "ended by guard; samples in $log_file"
@@ -332,6 +342,7 @@ guard_run() {
 case "${1:-}" in
   preflight) shift; preflight "$@" ;;
   snapshot) snapshot ;;
+  tree-pids) shift; [[ $# -eq 1 ]] || die "tree-pids requires a root PID"; tree_pids "$1" ;;
   run) shift; guard_run "$@" ;;
   --help|-h|"") usage; exit 0 ;;
   *) die "unknown subcommand ${1}" ;;

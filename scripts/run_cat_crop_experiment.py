@@ -172,6 +172,12 @@ def arm_config_options(arm: str) -> list[str]:
         f"train_dataloader.dataset.data_prefix.video={arm_video_dir}",
         f"val_dataloader.dataset.data_prefix.video={arm_video_dir}",
         f"test_dataloader.dataset.data_prefix.video={arm_video_dir}",
+        "train_dataloader.num_workers=2",
+        "train_dataloader.persistent_workers=False",
+        "val_dataloader.num_workers=2",
+        "val_dataloader.persistent_workers=False",
+        "test_dataloader.num_workers=2",
+        "test_dataloader.persistent_workers=False",
     ]
 
 
@@ -261,6 +267,12 @@ def train_arm(arm: str, device: str, epochs: int) -> dict[str, Any]:
     common = validate_common_indexes()
     env = environment(device)
     work_dir = result / "work"
+    checkpoint_pointer = work_dir / "last_checkpoint"
+    resume_checkpoint = None
+    if existing.get("status") == "train_failed" and checkpoint_pointer.is_file():
+        checkpoint_path = Path(checkpoint_pointer.read_text(encoding="utf-8").strip())
+        if checkpoint_path.is_file():
+            resume_checkpoint = checkpoint_path.resolve()
     status = {
         "schema": "cat-crop-arm-v1",
         "arm": arm,
@@ -295,6 +307,10 @@ def train_arm(arm: str, device: str, epochs: int) -> dict[str, Any]:
         f"param_scheduler.1.end={epochs}",
         *arm_config_options(arm),
     ]
+    if resume_checkpoint is not None:
+        command.extend(["--resume", str(resume_checkpoint)])
+        status["resume_from"] = str(resume_checkpoint)
+        status["resumed_after_failed_attempt"] = existing.get("started_utc")
     status["train_exit_code"] = run(command, result / "train.log", env)
     if status["train_exit_code"]:
         status["status"] = "train_failed"
