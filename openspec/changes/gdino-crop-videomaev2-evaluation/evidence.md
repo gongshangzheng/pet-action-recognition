@@ -229,3 +229,10 @@
 - **design**：3.1 增加说明“B/C 锚点像素一致性与源视频时间轴漂移随单臂范围取消”，Open Questions 中的可变帧率条目删除，因为时间轴不再被本实验使用。
 - **已完成条目**：2.3 的正文里“逐像素相等留待 2.8”改为“逐像素相等未做，该核验随单臂范围取消”，其余已完成条目未改动、未重编号。
 - **未清理的代码**：`scripts/checks/check_cat_crop_time_mapping.py` 及其两份报告仍在仓库与远程产物中。它现在是范围外工具，删除它属于代码变更，未在本轮执行。
+
+### 2026-11-06：2.6 收窄为两条实际缺口（用户确认）
+
+- **核对既有覆盖**：`tests/test_cat_crop_experiment.py` 已覆盖补边与边界几何（`test_crop_square_pads_without_shifting_target_inward`、`test_edge_boxes_use_a_padded_square_window`、`test_square_crop_bounds_extend_past_frame_edges`）、逐帧渲染的帧数守恒，`tests/test_cat_crop_review_set.py` 已覆盖审阅导出的帧对齐。
+- **缺口**：没有“空框或退化框必须报错”的用例；没有用已知标记做一次坐标往返的用例。
+- **修订**：2.6 原条目“坐标恢复、空裁剪与帧号映射的单元测试”收窄为上述两条，措辞改为可直接判断的句子。编号与并行标注未变，2.7 未动。
+- **未做**：没有删除 2.6。用户确认按收窄后的两条执行。
