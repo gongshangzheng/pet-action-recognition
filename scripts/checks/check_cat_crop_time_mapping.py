@@ -18,6 +18,7 @@ decision.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 from pathlib import Path
@@ -42,10 +43,16 @@ def parse_args() -> argparse.Namespace:
         help="how many videos to check, spread evenly over the metadata list",
     )
     parser.add_argument(
-        "--jitter-ticks",
-        type=int,
-        default=1,
-        help="largest tolerated deviation of a PTS delta from the modal delta, in time-base ticks",
+        "--drift-tolerance-ratio",
+        type=float,
+        default=0.05,
+        help="largest tolerated cumulative drift as a fraction of one frame period",
+    )
+    parser.add_argument(
+        "--drift-tolerance-ms",
+        type=float,
+        default=2.0,
+        help="largest tolerated cumulative drift in milliseconds",
     )
     parser.add_argument(
         "--max-frames",
@@ -74,7 +81,8 @@ def frame_pts(path: Path, max_frames: int = 0) -> dict[str, Any]:
                 break
     finally:
         container.close()
-    nominal = 1.0 / float(rate) if rate else None
+    fps = float(base_rate) if base_rate else (float(rate) if rate else None)
+    nominal = 1.0 / fps if fps else None
     if len(pts) < 2:
         return {
             "frames": len(pts),
@@ -87,6 +95,7 @@ def frame_pts(path: Path, max_frames: int = 0) -> dict[str, Any]:
     delta_ticks = [int(round((b - a))) for a, b in zip(pts, pts[1:])]
     return {
         "frames": len(pts),
+        "fps": fps,
         "nominal_interval_s": nominal,
         "average_rate": str(rate) if rate else None,
         "base_rate": str(base_rate) if base_rate else None,
@@ -96,40 +105,50 @@ def frame_pts(path: Path, max_frames: int = 0) -> dict[str, Any]:
     }
 
 
-def summarize(measurement: dict[str, Any], jitter_ticks: int) -> dict[str, Any]:
+def summarize(
+    measurement: dict[str, Any],
+    tolerance_ratio: float,
+    tolerance_ms: float,
+) -> dict[str, Any]:
+    """Classify spacing by cumulative drift, not by single-delta deviation.
+
+    Sources are muxed on a fixed timescale, so a constant-rate stream still
+    shows deltas that alternate by a few ticks; only cumulative drift reveals
+    dropped or duplicated frames.
+    """
     ticks = measurement["delta_ticks"]
-    if not ticks:
+    fps = measurement["fps"]
+    tick_seconds = measurement.get("tick_seconds")
+    if not ticks or not fps or not tick_seconds:
         return {
             "frames": measurement["frames"],
             "pattern": None,
-            "modal_delta_ticks": None,
-            "max_deviation_ticks": None,
-            "irregular_deltas": 0,
+            "max_drift_ms": None,
+            "tolerance_ms": None,
         }
-    counts: dict[int, int] = {}
-    for value in ticks:
-        counts[value] = counts.get(value, 0) + 1
-    modal = max(counts, key=lambda key: counts[key])
-    deviations = [abs(value - modal) for value in ticks]
-    max_deviation = max(deviations)
-    if max_deviation == 0:
+    period_ticks = (1.0 / fps) / tick_seconds
+    drift_ticks = [
+        abs(index * period_ticks - cumulative)
+        for index, cumulative in enumerate(
+            [0, *itertools.accumulate(ticks)]
+        )
+    ]
+    max_drift_ms = max(drift_ticks) * tick_seconds * 1000.0
+    tolerance = max(tolerance_ms, tolerance_ratio * (1.0 / fps) * 1000.0)
+    if max_drift_ms <= tolerance_ms:
         pattern = "uniform"
-    elif max_deviation <= jitter_ticks:
-        pattern = "quantized_uniform"
+    elif max_drift_ms <= tolerance:
+        pattern = "near_uniform"
     else:
         pattern = "irregular"
     return {
         "frames": measurement["frames"],
         "pattern": pattern,
-        "modal_delta_ticks": modal,
-        "modal_interval_s": (
-            round(modal * measurement["tick_seconds"], 6)
-            if measurement.get("tick_seconds")
-            else None
-        ),
-        "max_deviation_ticks": max_deviation,
-        "irregular_deltas": sum(1 for value in deviations if value > jitter_ticks),
-        "distinct_deltas": len(counts),
+        "fps": fps,
+        "period_ticks": round(period_ticks, 3),
+        "max_drift_ms": round(max_drift_ms, 4),
+        "tolerance_ms": round(tolerance, 4),
+        "distinct_deltas": len(set(ticks)),
         "average_rate": measurement["average_rate"],
         "base_rate": measurement["base_rate"],
         "time_base": measurement["time_base"],
@@ -162,12 +181,20 @@ def main() -> int:
             / f"{stem}.mp4",
         }
         entry: dict[str, Any] = {"video": stem, "source": str(source)}
-        source_summary = summarize(frame_pts(source, args.max_frames), args.jitter_ticks)
+        source_summary = summarize(
+            frame_pts(source, args.max_frames),
+            args.drift_tolerance_ratio,
+            args.drift_tolerance_ms,
+        )
         entry["source"] = source_summary
         if source_summary["pattern"] == "irregular":
             vfr_sources.append(stem)
         for arm, path in crops.items():
-            summary = summarize(frame_pts(path, args.max_frames), args.jitter_ticks)
+            summary = summarize(
+                frame_pts(path, args.max_frames),
+                args.drift_tolerance_ratio,
+                args.drift_tolerance_ms,
+            )
             entry[arm] = summary
             if summary["frames"] != source_summary["frames"]:
                 frame_count_mismatches.append(
@@ -195,7 +222,8 @@ def main() -> int:
         "asset_root": str(asset_root),
         "sampled": len(results),
         "available_metadata": len(metadata_paths),
-        "jitter_tolerance_ticks": args.jitter_ticks,
+        "drift_tolerance_ratio": args.drift_tolerance_ratio,
+        "drift_tolerance_ms": args.drift_tolerance_ms,
         "vfr_source_count": len(vfr_sources),
         "vfr_sources": vfr_sources,
         "frame_count_mismatches": frame_count_mismatches,
