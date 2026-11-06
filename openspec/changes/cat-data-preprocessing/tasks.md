@@ -1,7 +1,7 @@
 ## 1. 口径冻结
 
-- [ ] 1.1 冻结类别表十类（activity、prolonged_stationary、eating、drinking、toileting、grooming、scratching、gnawing、fall、seizure）与排除项（multi_cat_chase、multi_cat_roughplay 归关联层），写入数据卡。判据：用户确认原话与类别表写入 evidence，且与 design 4.5 一致。（可与 1.2 并行）
-- [ ] 1.2 记录基线数字与已知问题：可映射区间 3,893、视频 2,573、已检测 2,144、未检测 429 段 / 807 区间、旧索引 2,710、可用 207；并注明 `eating` 与 `drinking` 存在跨视频标注混淆。判据：每个数字注明来源，已知问题写入数据卡。
+- [x] 1.1 冻结类别表十类（activity、prolonged_stationary、eating、drinking、toileting、grooming、scratching、gnawing、fall、seizure）与排除项（multi_cat_chase、multi_cat_roughplay 归关联层），写入数据卡。判据：用户确认原话与类别表写入 evidence，且与 design 4.5 一致。已完成：数据卡 `data-card.md` 第 1 节。（可与 1.2 并行）
+- [x] 1.2 记录基线数字与已知问题：可映射区间 3,893、视频 2,573、已检测 2,144、未检测 429 段 / 807 区间、旧索引 2,710、可用 207；并注明 `eating` 与 `drinking` 存在跨视频标注混淆。判据：每个数字注明来源，已知问题写入数据卡。已完成：`data-card.md` 第 2、3 节。
 
 ## 2. 补检测
 
