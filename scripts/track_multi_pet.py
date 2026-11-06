@@ -176,7 +176,7 @@ def main() -> int:
     entries = []
     for det_path in args.detections:
         det_path = Path(det_path)
-        payload = track_video(det_path, params)
+        payload = track_video(det_path, params, association=args.association)
         # created_utc 不参与内容指纹：可复现判据比较时剔除
         content = {k: v for k, v in payload.items() if k != "created_utc"}
         out_path = args.out / f"{det_path.stem}.track.json"
