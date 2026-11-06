@@ -120,7 +120,11 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=20261107)
     ap.add_argument("--val-ratio", type=float, default=0.1)
     ap.add_argument("--test-ratio", type=float, default=0.1)
+    ap.add_argument("--threads", type=int, default=4,
+                    help="OpenCV 线程上限（共享机默认 4，避免触发 CPU 守卫）")
     args = ap.parse_args()
+
+    cv2.setNumThreads(args.threads)   # 共享机纪律：不默认吃满所有核
 
     caches = sorted(args.detections_dir.glob("*.json"))
     if not caches:
