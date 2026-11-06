@@ -49,6 +49,3 @@ source: "results/cat_data_preprocessing/slices_v8"
 - 详细来源见 manifest 各条目的 source 字段；单位、样本量与局限见 manifest 的 metrics 条目。
 - 指标与趋势见 metrics.json（series 折线 + tables 指标表）。
 
-<!-- diagnostics（生成器写入，勿手改）：
-  - case duplicate-box: 文件不存在 tmp/multi_pet_review/08_event_20260611_183348_70.jpg
--->

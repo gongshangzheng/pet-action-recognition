@@ -71,6 +71,15 @@
   ],
   "cases": [
     {
+      "id": "duplicate-box",
+      "kind": "image",
+      "src": "assets/2d9063d6648ed5afc5a8664dd57127295ab0b8ec8b53f2fa2d8d5da3eacec7ee.jpg",
+      "source_run": "multi_pet_review",
+      "input": "两条框 IoU=1.00、面积比 1.00",
+      "selection_reason": "同一只猫被报两次的典型样本（抽查 20 条里占 5 条），是改用几何规整的直接依据",
+      "sha256": "2d9063d6648ed5afc5a8664dd57127295ab0b8ec8b53f2fa2d8d5da3eacec7ee"
+    },
+    {
       "id": "real-two-animals",
       "kind": "image",
       "src": "assets/7957fbfa91ce4fd75524f8da882eca00c26b2dc670ffae60c52dba0e650da7b1.jpg",
@@ -89,7 +98,5 @@
       "sha256": "7458b5de5ba44bceb1ecfa9ff02737ea7f454a4db720570f7f8dc80351a40602"
     }
   ],
-  "diagnostics": [
-    "case duplicate-box: 文件不存在 tmp/multi_pet_review/08_event_20260611_183348_70.jpg"
-  ]
+  "diagnostics": []
 }
