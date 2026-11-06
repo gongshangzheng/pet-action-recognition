@@ -312,3 +312,21 @@
 - **类别计数（train）**：activity 55、prolonged_stationary 47、drinking 8、eating 7、grooming 6、abnormal 6、toileting 2。**val**：activity 11、prolonged_stationary 7、eating 5、drinking 4、grooming 4、abnormal 1，无 toileting。toileting 全轮只有 2 个训练样本，类别级指标不可信，报告须逐类给 support。
 - **哈希**：`manifest.json` `14284290c4711aeae21501d687dcf2445ab4ee2e79d82599b4ae930fe38ba6c6`；`availability.json` `6d6aa945829404b750e2399c306d4192e46fbc5517d0ba0c5497c21c859e1cae`；`raw_train` `97e68b09…`、`raw_val` `9ee3b6ad…`、`raw_test` `f87085fd…`；`gdino_train` `47cf983c…`、`gdino_val` `53d08736…`、`gdino_test` `e5af18f6…`；`gdino_motion_train` `b4cdd22e…`、`gdino_motion_val` `99082ff9…`、`gdino_motion_test` `74cb3412…`。
 - **与旧索引并存**：1.4 记录的 214 区间索引 `gdino-v1-full` 未改动，保留为三臂索引的历史记录；本轮训练使用 `gdino-v1-cat`。
+
+### 2026-11-06：4.1 B 臂配置解析核对（远程只读）
+
+- **方法**：在 pet HEAD `7a1db27`、`plf` 环境用 `mmengine.config.Config.fromfile` 解析 `configs/cat_crop_videomaev2_gdino.py`，解析结果写到 `results/cat_crop_classification/gdino-crop-20261103a/gdino/config_resolved_4_1.json`（9,534 字节）。未改配置、未训练。
+- **对照 design 3.5**：
+  - 16 帧、间隔 4、单 clip：`SampleFrames(clip_len=16, frame_interval=4, num_clips=1)` ✓
+  - 224 输入：训练 `Resize(-1,256)` → `RandomResizedCrop` → `Resize(224,224)`；验证 `Resize(-1,256)` → `CenterCrop` ✓
+  - AdamW lr 5e-05、weight decay 0.05 ✓
+  - 20 epoch：`EpochBasedTrainLoop(max_epochs=20, val_interval=1)` ✓
+  - warmup 2：`LinearLR(start_factor=0.1, begin=0, end=2)` 后接 `CosineAnnealingLR(begin=2, end=20, eta_min=1e-06)` ✓
+  - AMP：`optim_wrapper.type = AmpOptimWrapper` ✓（`train_cfg.amp` 未显式设置，由 wrapper 类型决定）
+  - micro-batch 4 ✓
+  - 七类：`cls_head.num_classes=7`，类别表与 design 一致 ✓
+- **两处不一致**：
+  - 梯度累积未设置（`accumulative_counts` 缺失），design 要求累积 4，即有效 batch 16，当前有效 batch 为 4。
+  - `run_cat_crop_experiment.py` 的 `INDEX_ROOT` 仍指向 `datasets/cat_crop_classification/gdino-v1-full`（214 区间、含狗），而本轮训练应使用 3.8 的 `gdino-v1-cat`（207 区间）。
+- **另确认**：`CheckpointHook` 同时为 `save_optimizer=False`、`save_param_scheduler=False`、`save_best=macro_f1`、`max_keep_ckpts=2`，对应 4.6 的修改目标。
+- **计划缺口**：上述两处不一致没有对应任务。梯度累积属于训练运行参数，可并入 4.11；索引指向属于训练前置的代码修正，需要一条明确的归属。等用户确认后再改 tasks。
