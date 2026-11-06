@@ -117,10 +117,16 @@ def main() -> int:
     parser.add_argument("--max-age", type=int, default=DEFAULT_PARAMS["max_age"])
     parser.add_argument("--min-hits", type=int, default=DEFAULT_PARAMS["min_hits"])
     parser.add_argument("--iou-threshold", type=float, default=DEFAULT_PARAMS["iou_threshold"])
+    parser.add_argument("--inertia", type=float, default=DEFAULT_PARAMS["inertia"],
+                        help="方向代价权重；0 = 关闭 OCM（SORT 对照用）")
+    parser.add_argument("--no-use-byte", action="store_true", help="关闭低分二次关联（SORT 对照用）")
     args = parser.parse_args()
 
     params = dict(DEFAULT_PARAMS)
-    params.update(max_age=args.max_age, min_hits=args.min_hits, iou_threshold=args.iou_threshold)
+    params.update(max_age=args.max_age, min_hits=args.min_hits, iou_threshold=args.iou_threshold,
+                  inertia=args.inertia)
+    if args.no_use_byte:
+        params["use_byte"] = False
 
     args.out.mkdir(parents=True, exist_ok=True)
     entries = []
