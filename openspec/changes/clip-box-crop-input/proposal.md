@@ -11,7 +11,13 @@
 
 ## Capabilities
 
-无新增能力：这是输入表示的一次实验改动（`skip_specs: true`）。
+### New Capabilities
+
+无。
+
+### Modified Capabilities
+
+- `cat-dataset-preprocessing`: 多猫区间的处置从“整段排除”改为“交给按轨迹裁剪”，并把判定单位明确为 `(区间, 轨迹)`——每条轨迹独立判断覆盖与连续性，互不牵连。
 
 ## Impact
 
