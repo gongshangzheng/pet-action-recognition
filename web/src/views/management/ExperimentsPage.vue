@@ -639,9 +639,9 @@ watch(() => route.query, (q) => {
 
   img {
     display: block;
-    // 原始像素纪律：不缩放、不平滑，容器滚动看细节
-    image-rendering: pixelated;
-    max-width: none;
+    // 宽度受限：等比缩到容器内，长图不会再撑出横向滚动
+    max-width: 100%;
+    height: auto;
   }
 
   // 视频需要看运动：按容器宽度缩放，不做像素化
@@ -660,7 +660,7 @@ watch(() => route.query, (q) => {
   overflow-wrap: anywhere;
 }
 .case-reason { color: var(--color-text-dim); }
-.case-toggle .case-img-wrap { max-width: 100%; }
+.case-toggle .case-img-wrap { max-width: 720px; margin-inline: auto; }
 
 @media (max-width: 720px) {
   .header-row { flex-direction: column; align-items: stretch; }
