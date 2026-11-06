@@ -85,3 +85,51 @@ def merge_temporal(
 
 def points_of(track: Track) -> list[TrackPoint]:
     return track.boxes
+
+
+# design 4.14：不能稳定存在的轨迹一律放弃（不合并、不补全）
+DEFAULT_MIN_STABLE_ANCHORS = 5
+DEFAULT_MIN_COVERAGE = 0.6
+
+
+def filter_stable(
+    tracks: list[Track],
+    sample_stride: int,
+    min_anchors: int = DEFAULT_MIN_STABLE_ANCHORS,
+    min_coverage: float = DEFAULT_MIN_COVERAGE,
+) -> tuple[list[Track], list[dict]]:
+    """丢弃「不能稳定存在」的轨迹：锚点数太少，或跨度内覆盖率太低（闪烁）。
+
+    min_anchors <= 0 时原样返回（关闭过滤）。每条被丢弃的轨迹都记原因，不静默删。
+    """
+    if min_anchors <= 0:
+        return tracks, []
+
+    kept: list[Track] = []
+    dropped: list[dict] = []
+    for t in tracks:
+        if not t.boxes:
+            dropped.append({"track_id": t.track_id, "reason": "empty"})
+            continue
+        span = (t.last_frame() - t.boxes[0].frame) // max(1, sample_stride) + 1
+        coverage = len(t.boxes) / span if span else 0.0
+        reasons = []
+        if len(t.boxes) < min_anchors:
+            reasons.append("too_few_anchors")
+        if coverage < min_coverage:
+            reasons.append("low_coverage")
+        if reasons:
+            dropped.append(
+                {
+                    "track_id": t.track_id,
+                    "n_anchors": len(t.boxes),
+                    "span_anchors": span,
+                    "coverage": round(coverage, 4),
+                    "first_frame": t.boxes[0].frame,
+                    "last_frame": t.last_frame(),
+                    "reason": "+".join(reasons),
+                }
+            )
+        else:
+            kept.append(t)
+    return kept, dropped

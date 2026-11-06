@@ -12,11 +12,21 @@
       "name": "碎片/个体最大值",
       "unit": "段",
       "baseline": "阈值 ≤2（事先写定）",
-      "result": "A=4 / B=3 / C=3 / D(stride2)=4",
-      "delta": "均未达标",
+      "result": "A=4 / B=3 / C=3 / D(stride2)=4 / **E(稳定过滤)=2**",
+      "delta": "仅 E 达到阈值 ≤2",
       "sample_size": "10 段视频",
       "source": "results/tracking_eval_20261107/metrics_*.json",
-      "limitation": "碎片按时间近邻聚类估计，非逐帧身份 GT；对「轨迹彻底消失」不计数"
+      "limitation": "碎片按时间近邻聚类估计；E 臂达标以丢弃不稳定轨迹为代价（见下一条）"
+    },
+    {
+      "name": "稳定过滤丢弃数",
+      "unit": "条",
+      "baseline": "C 臂 24 条 confirmed 轨迹",
+      "result": "丢弃 3 条（保留 22 条）",
+      "delta": "3 条均不稳定",
+      "sample_size": "10 段视频",
+      "source": "results/tracking_eval_20261107/metrics_stable_v1.json",
+      "limitation": "含 1 条真猫（覆盖率 54%，检测不连续），用户裁定可丢；一致性最小从 0.6286 降到 0.2571"
     },
     {
       "name": "锚点一致性（中位）",
@@ -96,17 +106,17 @@
       "src": "media/703186869af05364cb0b23456e3f9986d1d962d497c23a67afb1b9ece4ec4fd4.mp4",
       "source_run": "tracking-eval-20261107a",
       "input": "id0(cat,79锚点,0-390) / id1(dog,79锚点,0-390) / id2(dog,7锚点,85-115) / id3(dog,25锚点,225-390) / id4(cat,11锚点,325-375)｜一致性 0.8481",
-      "selection_reason": "轨迹数最多的一段（5 条），重点看是否把同一只动物拆成多条",
+      "selection_reason": "轨迹数最多（5 条）",
       "sha256": "703186869af05364cb0b23456e3f9986d1d962d497c23a67afb1b9ece4ec4fd4"
     },
     {
       "id": "核对-20000838103643_charw1g__ev",
       "kind": "video",
-      "src": "media/9bd0686efb010952fa56c5613af3a20c97ddcee84f639265cdc4ca25bd7ca32d.mp4",
+      "src": "media/f57a9521aadbc855585247a74359698eb774f52e1464540dffb7e11c794f2e37.mp4",
       "source_run": "tracking-eval-20261107a",
-      "input": "id0(dog,41锚点,0-210) / id1(dog,3锚点,0-10) / id3(dog,13锚点,50-165) / id4(dog,23锚点,80-210)｜一致性 0.6286",
-      "selection_reason": "狗粮袋场景：真猫 + 袋面印刷金毛误检，重点看误检轨迹是否被当个体",
-      "sha256": "9bd0686efb010952fa56c5613af3a20c97ddcee84f639265cdc4ca25bd7ca32d"
+      "input": "id0(dog,41锚点,0-210) / id4(dog,23锚点,80-210)｜一致性 0.2571",
+      "selection_reason": "狗粮袋场景：稳定过滤丢掉了 3 条不稳定轨迹（含 1 条真猫，用户裁定可丢），只剩 2 条",
+      "sha256": "f57a9521aadbc855585247a74359698eb774f52e1464540dffb7e11c794f2e37"
     },
     {
       "id": "核对-event_20260527_111305",
@@ -123,7 +133,7 @@
       "src": "media/adfa9fc726cdab43fa044cc6116dd4173210c19590ca2303ef385aeb6580d03e.mp4",
       "source_run": "tracking-eval-20261107a",
       "input": "id0(cat,18锚点,0-85) / id1(dog,45锚点,0-220)｜一致性 1.0",
-      "selection_reason": "2 条轨迹，碎片 0（本批最好）",
+      "selection_reason": "2 条轨迹，碎片 0",
       "sha256": "adfa9fc726cdab43fa044cc6116dd4173210c19590ca2303ef385aeb6580d03e"
     },
     {
@@ -132,7 +142,7 @@
       "src": "media/d767d69cbbf39b44b7a3d5d4ab0d4161a243f1211828d030695da2aa51f0329e.mp4",
       "source_run": "tracking-eval-20261107a",
       "input": "id0(cat,34锚点,0-175) / id1(cat,62锚点,0-305)｜一致性 0.9714",
-      "selection_reason": "2 条轨迹，碎片 1",
+      "selection_reason": "2 条轨迹",
       "sha256": "d767d69cbbf39b44b7a3d5d4ab0d4161a243f1211828d030695da2aa51f0329e"
     },
     {
@@ -141,7 +151,7 @@
       "src": "media/f7d0af550574d6eb231e107d437e22837aeb45aa434dba0f20334b0dd9c71313.mp4",
       "source_run": "tracking-eval-20261107a",
       "input": "id0(cat,6锚点,0-25) / id1(cat,43锚点,0-210)｜一致性 1.0",
-      "selection_reason": "人眼确认 2 只猫（一只不动、一只后来离场）；短轨迹是真实离场而非跟丢",
+      "selection_reason": "人眼确认 2 只猫；短轨迹是真实离场（向画面右边缘移动、边距 2px），被稳定过滤正确保留",
       "sha256": "f7d0af550574d6eb231e107d437e22837aeb45aa434dba0f20334b0dd9c71313"
     },
     {
@@ -150,7 +160,7 @@
       "src": "media/44d18f76e2fd5fb1eaf4ab60ad32695ff8e894802407bd57345af676bad88c15.mp4",
       "source_run": "tracking-eval-20261107a",
       "input": "id0(dog,59锚点,25-315)｜一致性 n/a",
-      "selection_reason": "去重后合并为 1 条（原本两条双标注垃圾轨迹）",
+      "selection_reason": "去重后 1 条",
       "sha256": "44d18f76e2fd5fb1eaf4ab60ad32695ff8e894802407bd57345af676bad88c15"
     },
     {
@@ -159,7 +169,7 @@
       "src": "media/fb8d8d12f1c68b8708f2f0b70155597a14564359717359edfd743996617eb876.mp4",
       "source_run": "tracking-eval-20261107a",
       "input": "id0(dog,156锚点,0-775)｜一致性 n/a",
-      "selection_reason": "去重后合并为 1 条（原本 114 个嵌套重复被删除）",
+      "selection_reason": "去重后 1 条",
       "sha256": "fb8d8d12f1c68b8708f2f0b70155597a14564359717359edfd743996617eb876"
     },
     {
@@ -168,7 +178,7 @@
       "src": "media/c2a733e579e3222f763f3c49e01358126d699945582d72f7119b445b20dc74be.mp4",
       "source_run": "tracking-eval-20261107a",
       "input": "id0(cat,108锚点,0-535) / id1(cat,115锚点,5-665) / id3(cat,33锚点,505-665)｜一致性 0.944",
-      "selection_reason": "跨 665 帧的长段，3 条轨迹",
+      "selection_reason": "跨 665 帧长段",
       "sha256": "c2a733e579e3222f763f3c49e01358126d699945582d72f7119b445b20dc74be"
     },
     {
@@ -177,7 +187,7 @@
       "src": "media/93bde4a27c1b86d275c137be3d9fac6fab4319682e3eeaab85e3aa8d4e08f28f.mp4",
       "source_run": "tracking-eval-20261107a",
       "input": "id0(cat,42锚点,0-215) / id1(cat,48锚点,0-235)｜一致性 0.9545",
-      "selection_reason": "夜间；人眼确认真猫 1 只 + 静止杂物 1 个；此前 id2 已由 IoS 去重并回 id0",
+      "selection_reason": "夜间；真猫 1 只 + 静止杂物 1 个；id2 已由 IoS 去重并回 id0",
       "sha256": "93bde4a27c1b86d275c137be3d9fac6fab4319682e3eeaab85e3aa8d4e08f28f"
     },
     {

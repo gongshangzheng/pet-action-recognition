@@ -28,7 +28,12 @@ if str(ROOT) not in sys.path:
 
 from petlib.tracking.anchors import DEDUP_IOS_MIN, load_anchor_sequence  # noqa: E402
 from petlib.tracking.merge import DEFAULT_IOS_MIN as MERGE_IOS_MIN  # noqa: E402
-from petlib.tracking.merge import merge_temporal  # noqa: E402
+from petlib.tracking.merge import (  # noqa: E402
+    DEFAULT_MIN_COVERAGE,
+    DEFAULT_MIN_STABLE_ANCHORS,
+    filter_stable,
+    merge_temporal,
+)
 from petlib.tracking.oc_sort import OCSortTracker  # noqa: E402
 from petlib.tracking.species_split import (  # noqa: E402
     SPECIES_ID_OFFSET,
@@ -99,7 +104,9 @@ def _nearest_gap_anchors(track, all_tracks, sample_stride: int) -> int | None:
 
 def track_video(detection_path: Path, params: dict, association: str = "species_split",
                 apply_dedup: bool = True, merge_gap_anchors: int = 0,
-                merge_ios_min: float = MERGE_IOS_MIN) -> dict:
+                merge_ios_min: float = MERGE_IOS_MIN,
+                min_stable_anchors: int = DEFAULT_MIN_STABLE_ANCHORS,
+                min_coverage: float = DEFAULT_MIN_COVERAGE) -> dict:
     seq = load_anchor_sequence(detection_path, apply_dedup=apply_dedup)
     if association == "species_split":
         tracker = SpeciesSplitTracker(lambda cfg: OCSortTracker(**cfg), params)
@@ -115,6 +122,9 @@ def track_video(detection_path: Path, params: dict, association: str = "species_
     if merge_gap_anchors > 0:
         tracks, merge_log = merge_temporal(tracks, seq.sample_stride,
                                            merge_gap_anchors, merge_ios_min)
+    # design 4.14：不能稳定存在的一律放弃（默认开启）
+    tracks, stability_dropped = filter_stable(tracks, seq.sample_stride,
+                                              min_stable_anchors, min_coverage)
 
     # 物种元数据（design 4.5）：每个错点取与轨迹框 IoU 最大的检测，按物种多数投票
     dets_by_frame = dict(zip(seq.frames, seq.detections, strict=True))
@@ -199,6 +209,8 @@ def track_video(detection_path: Path, params: dict, association: str = "species_
         "dedup": {"ios_min": DEDUP_IOS_MIN, "dropped": len(seq.dedup_log), "log": seq.dedup_log},
         "temporal_merge": {"gap_anchors": merge_gap_anchors, "ios_min": merge_ios_min,
                            "merged": len(merge_log), "log": merge_log},
+        "stability_filter": {"min_anchors": min_stable_anchors, "min_coverage": min_coverage,
+                             "dropped": len(stability_dropped), "log": stability_dropped},
         "tracks": track_rows,
         "anchors": {f: sorted(rows, key=lambda r: r["track_id"]) for f, rows in sorted(anchors_out.items(), key=lambda kv: int(kv[0]))},
     }
@@ -216,6 +228,10 @@ def main() -> int:
     parser.add_argument("--no-use-byte", action="store_true", help="关闭低分二次关联（SORT 对照用）")
     parser.add_argument("--association", choices=("species_split", "single"), default="species_split",
                         help="关联模式；single = 单流 + 物种作元数据（design 4.5 修订）")
+    parser.add_argument("--min-stable-anchors", type=int, default=DEFAULT_MIN_STABLE_ANCHORS,
+                        help="轨迹稳定存在所需的最少锚点数；0 = 关闭过滤（design 4.14）")
+    parser.add_argument("--min-coverage", type=float, default=DEFAULT_MIN_COVERAGE,
+                        help="轨迹跨度内的最低覆盖率；低于此值判为闪烁并丢弃")
     parser.add_argument("--merge-gap", type=int, default=0,
                         help="轨迹级时序合并的间隙上限（锚点数）；0 = 关闭（默认）")
     parser.add_argument("--merge-ios", type=float, default=MERGE_IOS_MIN,
@@ -237,7 +253,9 @@ def main() -> int:
         payload = track_video(det_path, params, association=args.association,
                               apply_dedup=not args.no_dedup,
                               merge_gap_anchors=args.merge_gap,
-                              merge_ios_min=args.merge_ios)
+                              merge_ios_min=args.merge_ios,
+                              min_stable_anchors=args.min_stable_anchors,
+                              min_coverage=args.min_coverage)
         # created_utc 不参与内容指纹：可复现判据比较时剔除
         content = {k: v for k, v in payload.items() if k != "created_utc"}
         out_path = args.out / f"{det_path.stem}.track.json"
