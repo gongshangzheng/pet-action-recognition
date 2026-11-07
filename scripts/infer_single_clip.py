@@ -65,12 +65,9 @@ def main() -> int:
         mean = np.array([0.485, 0.456, 0.406]); std = np.array([0.229, 0.224, 0.225])
         img = (img - mean) / std
         resized.append(img)
-    tensor = (
-        torch.from_numpy(np.stack(resized))
-        .permute(3, 0, 1, 2)     # C T H W
-        .unsqueeze(0)            # B C T H W
-        .unsqueeze(2)            # B C 1 T H W  (N, C, T, H, W) after packing
-    )
+    # Pack frames the way FormatShape('NCTHW') does for one clip:
+    # (N=1, C=3, T=16, H=224, W=224)
+    tensor = torch.from_numpy(np.stack(resized)).permute(3, 0, 1, 2).unsqueeze(0)
     with torch.no_grad():
         scores = model(tensor, mode="predict")[0].pred_score
     top = torch.topk(scores, k=min(5, len(scores)))
