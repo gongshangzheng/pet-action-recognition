@@ -68,8 +68,12 @@ def main() -> int:
     # Pack frames the way FormatShape('NCTHW') does for one clip:
     # (N=1, C=3, T=16, H=224, W=224)
     tensor = torch.from_numpy(np.stack(resized)).permute(3, 0, 1, 2).unsqueeze(0)
+    from mmaction.structures import ActionDataSample
+
+    sample = ActionDataSample()
+    sample.set_metainfo(dict(img_shape=(224, 224), modality="RGB", num_clips=1))
     with torch.no_grad():
-        scores = model(tensor, mode="predict")[0].pred_score
+        scores = model(tensor, [sample], mode="predict")[0].pred_score
     top = torch.topk(scores, k=min(5, len(scores)))
     print("clip:", args.clip.name)
     for score, idx in zip(top.values.tolist(), top.indices.tolist()):
