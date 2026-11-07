@@ -14,8 +14,9 @@ import torch
 import cv2
 import numpy as np
 from mmengine.config import Config
-from mmengine.registry import init_default_scope
-from mmaction.registry import MODELS
+from mmaction.registry import MODELS, TRANSFORMS, register_all_modules
+
+register_all_modules(init_default_scope=False)
 
 
 def parse_args() -> argparse.Namespace:
