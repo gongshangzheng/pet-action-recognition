@@ -65,7 +65,12 @@ def main() -> int:
         mean = np.array([0.485, 0.456, 0.406]); std = np.array([0.229, 0.224, 0.225])
         img = (img - mean) / std
         resized.append(img)
-    tensor = torch.from_numpy(np.stack(resized)).permute(3, 0, 1, 2).unsqueeze(0)
+    tensor = (
+        torch.from_numpy(np.stack(resized))
+        .permute(3, 0, 1, 2)     # C T H W
+        .unsqueeze(0)            # B C T H W
+        .unsqueeze(2)            # B C 1 T H W  (N, C, T, H, W) after packing
+    )
     with torch.no_grad():
         scores = model(tensor, mode="predict")[0].pred_score
     top = torch.topk(scores, k=min(5, len(scores)))
