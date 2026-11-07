@@ -62,7 +62,8 @@ def main() -> int:
         top, left = (hh - 224) // 2, (ww - 224) // 2
         img = img[top:top + 224, left:left + 224]
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-        mean = np.array([0.485, 0.456, 0.406]); std = np.array([0.229, 0.224, 0.225])
+        mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+        std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
         img = (img - mean) / std
         resized.append(img)
     # Single clip, NCTHW: (1, C, T, H, W)
