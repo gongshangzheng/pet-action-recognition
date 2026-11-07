@@ -22,7 +22,7 @@ source: "results/cat_clip_v9/videomaev2_b"
 
 ## 结果与分析
 
-B 臂测试集 top-1 85.75%、macro-F1 56.23%、balanced 54.62%。逐类看：activity 89.2%、eating 90.8%、prolonged_stationary 87.6%、toileting 77.8%、grooming 76.1%、drinking 68.3%、scratching 56.4%；gnawing 只有 4 个测试样本、recall 0，fall 与 seizure 测试样本为 0，这三类不能作为结论。训练 loss 降到 0.06 而验证 macro-F1 在第 8 轮见顶（52.22%），说明过拟合，验证轮次波动 50–52%。A 臂只有 4 轮（top-1 75.95%、macro-F1 41.36%），与本轮 20 轮不可直接比较，只能作为趋势参考。
+B 臂测试集 top-1 85.75%、macro-F1 56.23%、balanced 54.62%。逐类看：activity 89.2%、eating 90.8%、prolonged_stationary 87.6%、toileting 77.8%、grooming 76.1%、drinking 68.3%、scratching 56.4%；gnawing 只有 4 个测试样本、recall 0，fall 与 seizure 测试样本为 0，这三类不能作为结论。训练 loss 降到 0.06 而验证 macro-F1 在第 8 轮见顶（52.22%），说明过拟合，验证轮次波动 50–52%。A 臂只有 4 轮（top-1 75.95%、macro-F1 41.36%），与本轮 20 轮不可直接比较，只能作为趋势参考。 异常类现状：scratching 是唯一可评估的异常类（39 个测试样本，recall 56.4%、漏检 43.6%），17 个错误中 11 个流向 activity、其余散在 drinking/prolonged_stationary；反方向也有 12 个 activity 被误报为 scratching，两头都错。gnawing 全语料只有 10 个标注区间（8 个视频），切片后 17 个片段（train 13 / val 0 / test 4），4 个测试样本全部判错（3 个→activity、1 个→eating），属数据量不足，模型侧无解。fall 与 seizure 的测试样本为 0（训练分别只有 1 和 0 个片段），完全无法评估；seizure 唯一的区间被判多宠物排除，待多宠物审阅后可回收。
 
 ## 结论与下一步
 
@@ -41,7 +41,7 @@ B 臂测试集 top-1 85.75%、macro-F1 56.23%、balanced 54.62%。逐类看：ac
 
 ### 局限与边界
 
-① 端到端只有 72.9%，因为可用率仍停在 85%（多宠物 482 区间未纳入、外延失败 143、未映射 34、短区间 33 等）；② 类别极不均衡：activity 占 51%，gnawing/fall/seizure 的 support 为 4/0/0；③ 过拟合明显，loss 0.06 而验证 macro-F1 仅 52%；④ 多宠物区间需要先解决标签归属，本轮未纳入；⑤ 测试集是片段而非区间，端到端数字是估计，需按区间口径复核。
+① 端到端只有 72.9%，因为可用率仍停在 85%（多宠物 482 区间未纳入、外延失败 143、未映射 34、短区间 33 等）；② 类别极不均衡：activity 占 51%，gnawing/fall/seizure 的 support 为 4/0/0；③ 过拟合明显，loss 0.06 而验证 macro-F1 仅 52%；④ 多宠物区间需要先解决标签归属，本轮未纳入；⑤ 测试集是片段而非区间，端到端数字是估计，需按区间口径复核。；⑥ 异常类中 gnawing（4 个测试样本）、fall（0）、seizure（0）无法评估，scratching 漏检 43.6% 远超目标
 
 ### 来源与核查
 
