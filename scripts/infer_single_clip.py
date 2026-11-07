@@ -70,6 +70,8 @@ def main() -> int:
     tensor = torch.from_numpy(array)
     from mmaction.structures import ActionDataSample
 
+    sample = ActionDataSample()
+    sample.set_metainfo(dict(img_shape=(224, 224), modality="RGB", num_clips=1))
     batch = {"inputs": [tensor[0]], "data_samples": [sample]}
     with torch.no_grad():
         processed = model.data_preprocessor(batch, training=False)
