@@ -73,7 +73,7 @@ def main() -> int:
     with torch.no_grad():
         features = model.backbone(tensor)
         scores = model.cls_head(features)
-    scores = scores[0]
+    scores = torch.softmax(scores[0], dim=-1)
     top = torch.topk(scores, k=min(5, len(scores)))
     print("clip:", args.clip.name)
     for score, idx in zip(top.values.tolist(), top.indices.tolist()):
