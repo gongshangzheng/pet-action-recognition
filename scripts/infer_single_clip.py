@@ -65,9 +65,9 @@ def main() -> int:
         mean = np.array([0.485, 0.456, 0.406]); std = np.array([0.229, 0.224, 0.225])
         img = (img - mean) / std
         resized.append(img)
-    # Pack frames the way FormatShape('NCTHW') does for one clip:
-    # (N=1, C=3, T=16, H=224, W=224)
-    tensor = torch.from_numpy(np.stack(resized)).permute(3, 0, 1, 2).unsqueeze(0)
+    # Single clip, NCTHW: (1, C, T, H, W)
+    array = np.stack(resized).transpose(3, 0, 1, 2)[None]
+    tensor = torch.from_numpy(array)
     from mmaction.structures import ActionDataSample
 
     sample = ActionDataSample()
