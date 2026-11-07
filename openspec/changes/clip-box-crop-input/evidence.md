@@ -21,3 +21,13 @@
 - **导出**：`datasets/cat_clip_v9` 的 train 4,384 / val 1,836 / test 1,130（合计 7,350，与渲染数一致）。
 - **训练启动**：`configs/cat_clipv9_videomaev2_b.py`（16 帧、间隔 3、256→224、十类、累积 4、workers 6），第 1 轮迭代 0.135 秒、`data_time` 0.003 秒（读片段文件比读整帧快两个数量级），mmengine 给出的全 20 轮 ETA 约 **50 分钟**。
 - **两处当时的错误**：① 子配置引用父配置的 `classes` 报 `NameError`（Python 变量不跨配置文件继承），已在子配置重新声明；② 导出脚本把索引目录又拼了一层 `index/index`，已改为优先取同级 split 文件。
+
+### 2026-11-07：裁剪臂训练与冻结测试结果
+
+- **训练**：20 轮完成（rc=0，3,322 秒 ≈ 55 分钟），best 检查点为 `best_macro_f1_epoch_8.pth`（验证 top-1 83.82%、macro-F1 52.22%）。读片段文件后单迭代 0.135 秒、`data_time` 0.003 秒，比读整帧快一个数量级。
+- **冻结测试**（1,130 条片段，只跑一次）：top-1 **85.75%**、macro-F1 **56.23%**、balanced **54.62%**。
+- **逐类 recall**：activity 89.2、eating 90.8、prolonged_stationary 87.6、toileting 77.8、grooming 76.1、drinking 68.3、scratching 56.4；gnawing 4 个样本 recall 0，fall 与 seizure 测试样本为 0。
+- **端到端估计**：可用率 3,339/3,927 = 85.03% × 条件 top-1 85.75% = **72.9%**，仍低于 AGENTS.md 的 75% 中期目标；区间级漏检率（1 − recall）14.25%，逐类最高 scratching 43.6%、drinking 31.7%。
+- **对照的限制**：A 臂（整帧）只有 4 轮且被守卫终止（验证 top-1 75.95%、macro-F1 41.36%），与 20 轮不可直接比较，只能看方向。
+- **过拟合**：训练 loss 降到 0.06，验证 macro-F1 在第 8 轮见顶 52.22%，之后在 50–52% 波动。
+- **报告**：`management/experiments/cat-clip-training/20261107-clipv9-b/`，`status=partial`、`verdict=improved`，完整度 0 项缺失。
