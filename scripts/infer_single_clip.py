@@ -70,10 +70,10 @@ def main() -> int:
     tensor = torch.from_numpy(array)
     from mmaction.structures import ActionDataSample
 
-    sample = ActionDataSample()
-    sample.set_metainfo(dict(img_shape=(224, 224), modality="RGB", num_clips=1))
+    batch = {"inputs": [tensor[0]], "data_samples": [sample]}
     with torch.no_grad():
-        scores = model(tensor, [sample], mode="predict")[0].pred_score
+        processed = model.data_preprocessor(batch, training=False)
+        scores = model(processed["inputs"], processed["data_samples"], mode="predict")[0].pred_score
     top = torch.topk(scores, k=min(5, len(scores)))
     print("clip:", args.clip.name)
     for score, idx in zip(top.values.tolist(), top.indices.tolist()):
