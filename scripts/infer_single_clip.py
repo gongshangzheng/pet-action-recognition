@@ -68,14 +68,11 @@ def main() -> int:
     # Single clip, NCTHW: (1, C, T, H, W)
     array = np.stack(resized).transpose(3, 0, 1, 2)[None]
     tensor = torch.from_numpy(array)
-    from mmaction.structures import ActionDataSample
-
-    sample = ActionDataSample()
-    sample.set_metainfo(dict(img_shape=(224, 224), modality="RGB", num_clips=1))
-    batch = {"inputs": [tensor[0]], "data_samples": [sample]}
+    # 直接走 backbone → cls_head，绕开 dataloader 的 preprocessor 约定
     with torch.no_grad():
-        processed = model.data_preprocessor(batch, training=False)
-        scores = model(processed["inputs"], processed["data_samples"], mode="predict")[0].pred_score
+        features = model.backbone(tensor)
+        scores = model.cls_head(features)
+    scores = scores[0]
     top = torch.topk(scores, k=min(5, len(scores)))
     print("clip:", args.clip.name)
     for score, idx in zip(top.values.tolist(), top.indices.tolist()):
