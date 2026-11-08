@@ -9,7 +9,7 @@ import json
 import os
 import re
 
-from server.utils.file_utils import read_file, scan_directory
+from server.utils.file_utils import read_file
 
 SECTIONS = ["结论摘要", "实验问题与假设", "实验设置与环境", "指标结果", "案例展示", "失败案例与限制", "结论与建议", "产物来源"]
 # 读者导向文章模板（CyberVerse 124a697）：新报告默认正文结构
@@ -238,6 +238,22 @@ def list_experiments(experiments_dir):
             entry_fields["incomplete"] = bool(problems)
             entry_fields["problems"] = problems
             reports.append(entry_fields)
+
+    # 按时间倒序：date 优先；同一天按目录修改时间倒序（slug 首段多为 YYYYMMDD，
+    # 同日内不具区分度）。之前只按 topic/slug 字母序输出，导致跨日期也乱。
+    def sort_key(item):
+        return (item.get("date") or "", item.get("_mtime", 0.0))
+
+    for item in reports:
+        try:
+            item["_mtime"] = os.path.getmtime(
+                os.path.join(experiments_dir, item["topic"], item["slug"]))
+        except OSError:
+            item["_mtime"] = 0.0
+    reports.sort(key=sort_key, reverse=True)
+    for item in reports:
+        item.pop("_mtime", None)
+    invalid.sort(key=lambda i: (i.get("topic", ""), i.get("slug", "")), reverse=True)
     return {"reports": reports, "invalid": invalid}
 
 
