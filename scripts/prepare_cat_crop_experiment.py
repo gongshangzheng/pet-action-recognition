@@ -250,9 +250,10 @@ def detect_video(
             }
             for detection in detections
         ]
-        anchors[frame_index] = classify_frame(
-            serialized, props["width"], props["height"]
-        )
+        anchors[frame_index] = {
+            **classify_frame(serialized, props["width"], props["height"]),
+            "raw_candidates": serialized,
+        }
         sampled_frames += 1
         if sampled_frames % 50 == 0:
             print(
@@ -315,6 +316,7 @@ def detection_fingerprint_for_args(args: argparse.Namespace) -> dict[str, Any]:
         "sample_stride": args.sample_stride,
         "box_threshold": args.threshold,
         "text_threshold": args.text_threshold,
+        **({"raw_candidates_version": 1} if getattr(args, "require_raw_candidates", False) else {}),
     }
 
 
@@ -979,6 +981,7 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--dataset-id", default=DEFAULT_DATASET_ID)
     parser.add_argument("--video", action="append", default=[])
     parser.add_argument("--video-list", type=Path)
+    parser.add_argument("--require-raw-candidates", action="store_true", help="require the versioned raw-candidate cache fingerprint")
     parser.add_argument("--max-videos", type=int)
     parser.add_argument("--sample-stride", type=int, default=10)
     parser.add_argument("--max-gap", type=int, default=20)

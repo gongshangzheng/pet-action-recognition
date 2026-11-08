@@ -183,3 +183,13 @@
 ## tracker 并入
 
 用户已决定不保留独立 tracker change，将其完整工作并入本 change。冻结来源 `683126ca1d6b93859c2ce8184bfb6de194f83ad0`，14 项均未完成，逐项映射见 [task-map.md](task-map.md)；归档不代表实现或最终选型。原始教师检测不等任何跟踪 gate。固定评估候选不等于生产默认或最终胜者，模型训练、生产接入和资源运行仍须各自授权。
+
+## 今晚 base raw 优先准备
+
+用户明确要求 GroundingDINO-base 全视频框检测，并在两项具体方案后回复继续：先保存阈值后去重前 raw 候选并保持原统计，再将 base 下载、单视频技术核验和全视频未验收 raw 提取提前；质量人工验收仍是训练或教师选用前置。原 2.15 和 2.21 分别移动至 0.2 和 0.6，旧入口本次例外复用，正式迁移未完成。0.1 代码与 CPU 视频回归待父审，未勾选。
+
+权重计划来源 `IDEA-Research/grounding-dino-base` revision `12bdfa3120f3e7ec7b434d90674b3396eccf88eb`，safetensors 933400872 字节、SHA-256 `5548f844c928c4b6f411fa8cbcc2bfa8dbbba437cb1d513975519f93c2a9ed21`；实际尚未下载核验。父报告远端只读检查：源目录排序唯一 basename 共 2,737 视频；远端 HEAD `e62084c`、tracked clean，GPU 容量必须在每批重新 preflight，历史只读快照不能代替运行前检查。本轮未 SSH、下载或 GPU 推理；单视频只验技术不验质量。
+
+## 今晚执行起点
+
+用户明确授权以完成全部 2,737 视频 base stride 5 原始候选为当前 goal，不再重复询问已批准的下载、部署、技术核验及分批范围；不跳过共享机资源守卫。lib 更名、统计、跟踪和质量选用后置。本地父复核 55 passed、8 subtests passed；0.1 无前序未完成，已依据真实 CPU 视频 raw 回归和指纹校验勾选。下载及真实 GPU 核验尚未执行。
