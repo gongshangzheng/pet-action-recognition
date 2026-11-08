@@ -131,3 +131,10 @@
 - `aa7f66c11d4bee06defddb59124c319d8bdbbab6` 的补丁等价于已有 `e2c331c`；`a478876bd5e1bed0dbc3cd27acaac1f4ddd95fe6` 仅选择性采纳，旧 skill 规则已由平台规则替代。对应完整源对象通过 annotated tag `archive/backup-pre-rebase-20261108` 和 `archive/openspec-workflow-rules-20261108` 保留。
 - 主目录原 13 项 tracked 修改与未跟踪内容未纳入提交；校验材料在 `results/git-integration/20261108-stage-a-185433-82066/`，stash `4297a3dbcf1606677256cec8296d9423ad0c3a50` 保留。三个媒体已复制到主目录 `results/review/unannotated-context/` 并逐个哈希核对。
 - 用户授权检查后删除三个冗余 linked worktree 和除 main 外的本地分支，不动 remote refs、不 push；两个非祖先分支仅在验证归档 tag 后删除分支名。父会话确认旧媒体及目录的只读句柄不是写入占用，保全副本存在；不终止进程。此处为清理计划，实际结果另记。
+
+### 安全清理的实际结果
+
+- 以非强制 `git worktree remove` 逐一移除 `train-videomaev2`、`yolo-detection`、`yolo-distil` 三个 linked worktree；现只剩主目录 worktree。此前核对 train 的三个媒体副本在主目录且哈希一致，其余 ignored 内容仅为可再生缓存。
+- 七个已是 main 祖先的本地分支以普通 `git branch -d` 删除：`exp/gdino-crop-videomaev2-evaluation`、`feat/integrate-third-party`、`fix/k400-vlm-eval`、`integrate/pet-final`、`train-videomaev2`、`yolo-detection`、`yolo-distil`。七个源提交仍是 main 祖先。
+- `backup-pre-rebase` 和 `exp/sync-openspec-workflow-rules` 不是 main 祖先，普通 `git branch -d` 分别被 Git 以 `not fully merged` 拒绝；两个分支名及对应 archive tag 均保留，因此本地分支不止 main。未强制删除、未修改祖先图，也未修改 remote refs 或 push。
+- 主目录原 13 项 tracked 修改、未跟踪清单与保全记录一致，stash `4297a3dbcf1606677256cec8296d9423ad0c3a50` 保留；三个媒体副本仍在。原工作区并非 clean，未提交内容不纳入本提交。三个 skill 与 `tasks.md` 相对 `ce258d0` 未改变；三个 change 的结构协调和任务状态仍待审定。
