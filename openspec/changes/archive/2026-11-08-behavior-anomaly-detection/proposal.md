@@ -1,3 +1,5 @@
+> **状态：用户已决定废弃并归档（2026-11-08）。** 本方案未完成；原任务状态和历史证据保留，未实施的 delta 不生效，不同步至主规范。下文为历史方案。
+
 # Proposal: behavior-anomaly-detection
 
 > 子 change，总管：`pet-motion-latent-pipeline`。**状态：延后（研究型）**——待 `video-feature-latent` 产出行为簇后启动；用户要求先深入讨论/调研。

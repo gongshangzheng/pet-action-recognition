@@ -50,3 +50,7 @@
 - 三个 skill 与本次 change 制品在同一提交内落地，分支 `exp/sync-openspec-workflow-rules`，提交信息注明规则来源为 CyberVerse 未提交工作区。回退：`git revert` 分支 `exp/sync-openspec-workflow-rules` 上标题为 `docs: sync openspec task ordering and evidence rules` 的提交；提交号不写入本文件，因为记录提交号的修改会再次改变它。
 - 工作区另有前一 change（裁剪实验）的未提交改动，本次未纳入提交，也未修改。
 - 任务 4.2 为用户审阅门禁，保持未勾选；在用户确认前不宣称规则已生效。
+
+## 2026-11-08：废弃归档
+
+用户明确决定废弃并允许归档此 change。未完成任务和既有历史记录原样保留；归档不代表实施完成或验收通过，未实施的 delta 不生效，本次不向主规范同步。
