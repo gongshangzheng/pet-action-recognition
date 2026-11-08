@@ -160,12 +160,15 @@ cat_raw/videos/*.mp4  (2,573 段带标注视频, 2880×1620, 15fps)
 
 - 当前：GroundingDINO-tiny（权重 `1a2412ef…`，689 MB）。
 - 候选：GDINO-base（同接口、更强、更慢）、自训 YOLO（快、闭集两类、需要标注）。
-- 统一接口：`petlib/detection/base.Detector.detect(img_bgr, classes) -> list[Detection]`；模型封装放 `petlib/detection/<模型>.py`。
-- **指纹**：`model_family` + `weights_sha256` + 该检测器自己声明的参数字典（GDINO 有 `box_threshold`/`text_threshold`，YOLO 有 `conf`/`iou`），不写死字段名。
+- 统一接口：`petlib/detection/base.Detector.detect(img_bgr, classes) -> list[Detection]`。
+- **代码按“实现族”分文件，不按模型大小分**：GDINO-tiny 与 GDINO-base 共用 `petlib/detection/grounding_dino.py`，差别只是 `model_dir`（权重目录）与阈值参数；只有换成另一套框架（YOLO）才新增 `petlib/detection/yolo.py`。
+- **指纹**：`family`（gdino / yolo）+ `weights_sha256`（区分 tiny 与 base）+ 该实现自己声明的参数字典（GDINO 有 `box_threshold`/`text_threshold`，YOLO 有 `conf`/`iou`），不写死字段名。产物目录用 `family__weights短哈希__stride` 命名，两个型号自然分开。
 
 ### 7.3 目录怎么组织
 
-按**检测器**分目录，而不是混在一个池子里：
+**代码一份，产物分目录**——两种 GDINO 共用同一份代码，混放的只有结果：
+
+按**产物**分目录（不是按代码分）：
 
 ```text
 assets/
