@@ -58,3 +58,10 @@
 - design 新增第 7 章「检测设计」，分五节：要提供什么功能（单视频检测 + 按区间取框）、用什么模型（tiny/base/自训 YOLO，统一接口与通用指纹）、目录如何组织（按检测器 `family__stride` 分目录、各带 manifest、索引记录所用目录）、检测范围与粒度（2,573 段；现为每 5 帧，逐帧约 5 倍成本/25–30 小时）、与区间如何协作（区间 → 指定检测器目录 → 截取帧范围 → 插值与资格判定）。
 - tasks 新增 1.5 三条：检测目录按检测器分隔、索引记录检测目录与指纹、`boxes_for_interval` 接口下沉到 petlib。
 - **口径澄清**：用户描述“每一帧都检测”与现状不同——现在是每 5 帧一次；是否改逐帧列入待实验第 9 节，由成本与精度权衡后裁定。
+
+### 2026-11-08：1.3.1 单一视频清单
+
+- 脚本：`scripts/build_video_manifest.py`，输入 intervals.csv（权威视频来源）+ `split_manifest.json`（day → split）+ 检测/渲染/跟踪三个目录，输出 `results/cat_pipeline/videos.jsonl`。
+- **关键发现**：源索引 `cat_action_v1` 只覆盖 **2,144** 个视频，而带标注视频是 **2,573**（差 429 段，正是被重叠过滤剔出索引的那批）。所以清单必须从 intervals.csv 生成，索引只能用来标记 `in_index`；此前“清单行数等于带标注视频数”的判据若只读索引，会少 429 行。
+- 结果：2,573 行；`in_index` 2,144、`detected` 2,573、`rendered` 1,981、`tracked` 2,335、`complete` 1,981；split 分布 train 1,539 / val 591 / test 428 / **unassigned 15**（按视频计）。
+- **工作区错误（已修）**：前两条提交（检测设计章、清单脚本）被写到了主仓库的 `exp/gdino-crop-videomaev2-evaluation` 分支，而会话实际工作区是 `~/code/.worktree/pet-action-recognition/train-videomaev2`（分支 `train-videomaev2`）。已在该分支快进合入这两个提交并推送，后续所有编辑都以工作区路径为准。
