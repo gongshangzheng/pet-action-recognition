@@ -178,6 +178,12 @@ const routes = [
         component: () => import('../views/gate/GateReview.vue'),
         meta: { title: '门控核验', module: 'datasets' },
       },
+      {
+        path: 'gate/crop-review',
+        name: 'CropReview',
+        component: () => import('../views/gate/GateReview.vue'),
+        meta: { title: '裁剪人工审阅', module: 'datasets', ownHeading: true },
+      },
       // ===== live 实时视频流 =====
       {
         path: 'live',

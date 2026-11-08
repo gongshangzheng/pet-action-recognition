@@ -1,0 +1,116 @@
+{
+  "series": [],
+  "tables": [
+    {
+      "title": "逐类结果（测试集）",
+      "columns": [
+        "类别",
+        "support",
+        "recall %",
+        "F1 %"
+      ],
+      "rows": [
+        [
+          "activity",
+          "583",
+          "89.2",
+          "89.3"
+        ],
+        [
+          "prolonged_stationary",
+          "249",
+          "87.6",
+          "84.8"
+        ],
+        [
+          "eating",
+          "131",
+          "90.8",
+          "86.5"
+        ],
+        [
+          "drinking",
+          "60",
+          "68.3",
+          "73.2"
+        ],
+        [
+          "grooming",
+          "46",
+          "76.1",
+          "83.3"
+        ],
+        [
+          "scratching",
+          "39",
+          "56.4",
+          "60.3"
+        ],
+        [
+          "toileting",
+          "18",
+          "77.8",
+          "84.8"
+        ],
+        [
+          "gnawing",
+          "4",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "fall",
+          "0",
+          "—",
+          "—"
+        ],
+        [
+          "seizure",
+          "0",
+          "—",
+          "—"
+        ]
+      ]
+    },
+    {
+      "title": "低召回类的错误流向",
+      "columns": [
+        "真实类",
+        "recall %",
+        "precision %",
+        "错误数",
+        "主要误判去向"
+      ],
+      "rows": [
+        [
+          "scratching",
+          "56.4",
+          "64.7",
+          "17",
+          "activity 11、drinking 1、prolonged_stationary 1、其余 4"
+        ],
+        [
+          "drinking",
+          "68.3",
+          "78.8",
+          "19",
+          "activity 9、prolonged_stationary 5、eating 3、其余 2"
+        ],
+        [
+          "grooming",
+          "76.1",
+          "92.1",
+          "11",
+          "scratching / activity 为主"
+        ],
+        [
+          "toileting",
+          "77.8",
+          "93.3",
+          "4",
+          "activity / prolonged_stationary"
+        ]
+      ]
+    }
+  ]
+}

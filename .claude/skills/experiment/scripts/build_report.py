@@ -73,6 +73,7 @@ REQUIRED_ENV_KEYS = ["模型", "数据集", "配置", "运行时间戳", "执行
 STATUS_ENUM = ["complete", "partial", "failed"]
 VERDICT_ENUM = ["improved", "no-gain", "worse", "inconclusive"]
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+MEDIA_EXTS = {".mp4", ".webm", ".mov"}
 SEGMENT_RE = re.compile(r'^[^/\\\x00-\x1f\x7f]+$')
 
 
@@ -236,29 +237,50 @@ def main():
         shutil.rmtree(report_dir)
     os.makedirs(os.path.join(report_dir, "assets"), exist_ok=True)
 
-    # 案例：复制图片 + sha256
+    # 案例：复制图片入 assets/；视频复制入 media_root（不入 git，对齐上游）
+    media_root = os.environ.get("PET_EXPERIMENT_MEDIA_ROOT", "")
+    media_dir = os.path.join(report_dir, "media")
     cases_out = []
     for c in cases_in:
         missing = [f for f in CASE_FIELDS if not str(c.get(f, "")).strip()]
         if missing:
             diagnostics.append(f"case 缺字段 {c.get('id', '?')}: {'、'.join(missing)}")
             continue
-        if c.get("kind") != "image":
-            diagnostics.append(f"case {c['id']}: 暂不支持 kind={c.get('kind')}")
+        kind = c.get("kind")
+        if kind not in ("image", "video"):
+            diagnostics.append(f"case {c['id']}: 暂不支持 kind={kind}")
             continue
         full, exists = resolve_src(c["src"])
         if not exists:
             diagnostics.append(f"case {c['id']}: 文件不存在 {c['src']}")
             continue
         ext = os.path.splitext(full)[1].lower()
-        if ext not in IMAGE_EXTS:
-            diagnostics.append(f"case {c['id']}: 扩展名 {ext} 不在白名单")
+        allowed = IMAGE_EXTS if kind == "image" else MEDIA_EXTS
+        if ext not in allowed:
+            diagnostics.append(f"case {c['id']}: 扩展名 {ext} 不在 kind={kind} 白名单")
             continue
         digest = sha256_of(full)
-        dest = os.path.join(report_dir, "assets", f"{digest}{ext}")
-        shutil.copyfile(full, dest)
+        if kind == "image":
+            dest = os.path.join(report_dir, "assets", f"{digest}{ext}")
+            shutil.copyfile(full, dest)
+            src_out = f"assets/{digest}{ext}"
+        else:
+            # 视频落点：优先环境变量指定的持久目录；未配置时落报告内 media/（不入 git）
+            if media_root:
+                target_dir = media_root
+            else:
+                os.makedirs(media_dir, exist_ok=True)
+                target_dir = media_dir
+            dest = os.path.join(target_dir, f"{digest}{ext}")
+            if os.path.exists(dest):
+                if sha256_of(dest) != digest:
+                    diagnostics.append(f"case {c['id']}: 媒体已存在但摘要不符 {dest}")
+                    continue
+            else:
+                shutil.copyfile(full, dest)
+            src_out = f"media/{digest}{ext}"
         cases_out.append({
-            "id": c["id"], "kind": "image", "src": f"assets/{digest}{ext}",
+            "id": c["id"], "kind": kind, "src": src_out,
             "source_run": c["source_run"], "input": c["input"],
             "selection_reason": c["selection_reason"], "sha256": digest,
         })

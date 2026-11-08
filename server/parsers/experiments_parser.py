@@ -9,7 +9,7 @@ import json
 import os
 import re
 
-from server.utils.file_utils import read_file, scan_directory
+from server.utils.file_utils import read_file
 
 SECTIONS = ["结论摘要", "实验问题与假设", "实验设置与环境", "指标结果", "案例展示", "失败案例与限制", "结论与建议", "产物来源"]
 # 读者导向文章模板（CyberVerse 124a697）：新报告默认正文结构
@@ -22,6 +22,7 @@ REQUIRED_ENV_KEYS = ["模型", "数据集", "配置", "运行时间戳", "执行
 STATUS_ENUM = ("complete", "partial", "failed")
 VERDICT_ENUM = ("improved", "no-gain", "worse", "inconclusive")
 ASSET_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+MEDIA_EXTS = {".mp4", ".webm", ".mov"}
 _SEGMENT_RE = re.compile(r'^[^/\\\x00-\x1f\x7f]+$')
 
 
@@ -88,24 +89,38 @@ def _case_problems(report_dir, cases):
         for f in CASE_FIELDS:
             if not str(c.get(f, "")).strip():
                 problems.append(f"case {cid} 缺字段：{f}")
-        if c.get("kind") != "image":
-            problems.append(f"case {cid}: 暂不支持 kind={c.get('kind')}")
+        kind = c.get("kind")
+        if kind not in ("image", "video"):
+            problems.append(f"case {cid}: 暂不支持 kind={kind}")
             continue
         src = str(c.get("src", ""))
         parts = src.split("/")
-        if len(parts) != 2 or parts[0] != "assets" or not valid_segment(parts[1]):
-            problems.append(f"case {cid}: src 须为 assets/<file>（得到 {src}）")
-            continue
-        if os.path.splitext(parts[1])[1].lower() not in ASSET_EXTS:
-            problems.append(f"case {cid}: 扩展名不在白名单")
-            continue
-        asset = os.path.join(report_dir, *parts)
-        if not os.path.isfile(asset):
-            problems.append(f"case {cid}: 文件不存在 {src}")
-            continue
-        want = str(c.get("sha256", "")).lower()
-        if want and _sha256(asset) != want:
-            problems.append(f"case {cid}: sha256 不匹配")
+        if kind == "image":
+            if len(parts) != 2 or parts[0] != "assets" or not valid_segment(parts[1]):
+                problems.append(f"case {cid}: src 须为 assets/<file>（得到 {src}）")
+                continue
+            if os.path.splitext(parts[1])[1].lower() not in ASSET_EXTS:
+                problems.append(f"case {cid}: 扩展名不在白名单")
+                continue
+            asset = os.path.join(report_dir, *parts)
+            if not os.path.isfile(asset):
+                problems.append(f"case {cid}: 文件不存在 {src}")
+                continue
+            want = str(c.get("sha256", "")).lower()
+            if want and _sha256(asset) != want:
+                problems.append(f"case {cid}: sha256 不匹配")
+        else:
+            # video：文件在持久媒体目录（PET_EXPERIMENT_MEDIA_ROOT）或报告内 media/，
+            # 存在性由 media 路由按清单校验；这里只校验 src 形态与 sha256 命名一致性
+            if len(parts) != 2 or parts[0] != "media" or not valid_segment(parts[1]):
+                problems.append(f"case {cid}: src 须为 media/<file>（得到 {src}）")
+                continue
+            if os.path.splitext(parts[1])[1].lower() not in MEDIA_EXTS:
+                problems.append(f"case {cid}: 视频扩展名不在白名单")
+                continue
+            want = str(c.get("sha256", "")).lower()
+            if want and os.path.splitext(parts[1])[0].lower() != want:
+                problems.append(f"case {cid}: 文件名与 sha256 不一致")
     return problems
 
 
@@ -223,6 +238,22 @@ def list_experiments(experiments_dir):
             entry_fields["incomplete"] = bool(problems)
             entry_fields["problems"] = problems
             reports.append(entry_fields)
+
+    # 按时间倒序：date 优先；同一天按目录修改时间倒序（slug 首段多为 YYYYMMDD，
+    # 同日内不具区分度）。之前只按 topic/slug 字母序输出，导致跨日期也乱。
+    def sort_key(item):
+        return (item.get("date") or "", item.get("_mtime", 0.0))
+
+    for item in reports:
+        try:
+            item["_mtime"] = os.path.getmtime(
+                os.path.join(experiments_dir, item["topic"], item["slug"]))
+        except OSError:
+            item["_mtime"] = 0.0
+    reports.sort(key=sort_key, reverse=True)
+    for item in reports:
+        item.pop("_mtime", None)
+    invalid.sort(key=lambda i: (i.get("topic", ""), i.get("slug", "")), reverse=True)
     return {"reports": reports, "invalid": invalid}
 
 
@@ -264,6 +295,39 @@ def resolve_experiment_asset(experiments_dir, topic, slug, filename):
     path = os.path.join(experiments_dir, topic, slug, "assets", filename)
     real = os.path.realpath(path)
     base = os.path.realpath(os.path.join(experiments_dir, topic, slug, "assets"))
+    if real != base and not real.startswith(base + os.sep):
+        return None
+    return path
+
+
+def resolve_experiment_media(experiments_dir, topic, slug, filename, media_root):
+    """解析报告视频/音频媒体路径：仅放行该报告 manifest 登记过的 media/<name>。
+
+    与 CyberVerse 上游同规则（experiments.go experimentCaseValid + ExperimentMediaPath）：
+    - 文件名必须是 <sha256>.<ext> 形态且在 MEDIA_EXTS 白名单内
+    - manifest 里必须存在 src == media/<filename> 且 sha256 与文件名一致的 case
+    - media_root 为空（未配置）时一律拒绝
+    """
+    if not media_root:
+        return None
+    if not (valid_segment(topic) and valid_segment(slug) and valid_segment(filename)):
+        return None
+    stem, ext = os.path.splitext(filename)
+    if ext.lower() not in MEDIA_EXTS or not re.fullmatch(r"[0-9a-f]{64}", stem):
+        return None
+    manifest = _load_json(os.path.join(experiments_dir, topic, slug, "manifest.json")) or {}
+    registered = any(
+        isinstance(c, dict)
+        and c.get("kind") == "video"
+        and c.get("src") == f"media/{filename}"
+        and str(c.get("sha256", "")).lower() == stem
+        for c in manifest.get("cases", [])
+    )
+    if not registered:
+        return None
+    path = os.path.join(media_root, filename)
+    real = os.path.realpath(path)
+    base = os.path.realpath(media_root)
     if real != base and not real.startswith(base + os.sep):
         return None
     return path

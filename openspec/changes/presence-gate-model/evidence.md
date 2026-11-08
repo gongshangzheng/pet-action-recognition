@@ -145,7 +145,89 @@
 
 # 2026-11-02：视频首轮人工标签冻结（实验启动前）
 
+## 2026-11-02：训练完成，测试等待资源
+
+- `video-pilot-x3d-xs-20261102a` 完成12轮训练，耗时455秒，退出码0；守卫日志 `.run/guard/run-20261102-110852.log`。按验证集balanced accuracy@0.5选择第2轮，冻结阈值0.796302。
+- 冻结阈值下验证集60条：TP56、FN1、FP3、TN0，accuracy93.33%、present recall98.25%、FPR100%。验证集仅3条absent，全部误报；不能凭总体accuracy认定门控有效。训练loss从0.3705降至0.0015，验证表现未同步改善，需后续诊断泛化。
+- 12:27尝试一次性测试，资源预检发现GPU1被其他进程占用15588MiB、CPU load18.34超过16.8，拒绝执行。test未读取，速度未测。等待空闲资源后继续，不抢占。
+- 守卫日志出现负CPU百分比，表明进程树CPU采样存在计算缺陷；不能把负值解释为空闲或据此声称CPU监控完全可靠，后续需修复审计。
+
 - 用户完成400条两秒片段标注：present 341 / absent 59 / uncertain 0；训练235/45，验证57/3，测试49/11。白天258/44，夜视83/15。标签文件为 `results/gate/review/video-pilot-20261101-r1/labels.csv`（SHA-256 `762d77b45e6c49711f7ffa48284521af27208fbe77ad73ece5cb33857c9af3c4`），片段清单 `items.json`（SHA-256 `1b4351aff775c2913a2e5ccb8bdf20d949a9aab8e60001b08baf67f4d4ab7e12`）。
 - 首轮实验采用已确认的X3D-XS、仅RGB、每clip均匀采4帧、160×288 letterbox整幅输入、类别平衡采样；验证集选择balanced accuracy@0.5最优轮次，并按present召回约束选阈值，test只做一次冻结评估。验证集absent仅3条（夜视为0），阈值与FPR只能作首轮参考，不得作为最终验收。
 - pet GPU 0被他人任务占用14.8GB，守卫拒绝使用；GPU 1空闲，CPU load 8.62/16.8、内存111.6GB可用、磁盘68GB可用，容量预检通过。训练使用GPU 1并保持资源守卫。
 - 实施代码commit `2247d99`。训练/冻结与一次性测试分开执行；`labels.csv` 是结果数据产物，经复制落到远程同一 review set 目录，不进入Git。执行命令：先 `bash .claude/skills/remote-ops/scripts/env_check.sh --expect-commit 2247d99 --env plf --checkpoint checkpoints/x3d-xs/x3d-xs_pretrained.pth --json results/gate/runs/video-pilot-x3d-xs-20261102a/env.json`；训练用 `bash .claude/skills/remote-ops/scripts/remote_run.sh --gpu-index 1 --max-cpu-pct 250 --max-rss-mb 16000 --timeout-s 2400 --threads 2 -- /home/wyy/miniconda3/envs/plf/bin/python scripts/train_gate_video.py --review-root results/gate/review/video-pilot-20261101-r1 --labels results/gate/review/video-pilot-20261101-r1/labels.csv --checkpoint checkpoints/x3d-xs/x3d-xs_pretrained.pth --out results/gate/runs/video-pilot-x3d-xs-20261102a --frames 4 --height 160 --width 288 --epochs 12 --batch 8 --lr 0.0003 --workers 1 --device cuda:1`；冻结测试用同一守卫与 `--eval-only`，时长900秒。
+
+## 2026-11-04：视频模型一次性冻结测试完成
+
+- 远端机器 pet 容量预检通过（GPU 0/1 显存空闲，load 1.05），通过 remote_run.sh 守卫（GPU 1, max-cpu 250%, max-rss 16GB, timeout 900s）执行 train_gate_video.py --eval-only，耗时 61 秒，退出码 0。日志落盘于 .run/guard/run-20261104-204015.log。
+- 评测绑定与哈希校验：eval_binding 验证 labels_sha256、items_sha256、预训练权重哈希及 best_checkpoint_sha256 全部严格匹配。
+- 测试集 60 条样本（present 49 / absent 11）在冻结阈值 0.796302 下表现：
+  - 总体：TP 48, FN 1, FP 3, TN 8；Accuracy 93.33%, Present Recall 97.96%, Absent FPR 27.27% (3/11), Precision 94.12%, Balanced Accuracy 85.34%。
+  - 白天（n=48，present 42 / absent 6）：TP 41, FN 1, FP 2, TN 4；Accuracy 93.75%, Recall 97.62%, FPR 33.33% (2/6)。
+  - 夜视（n=12，present 7 / absent 5）：TP 7, FN 0, FP 1, TN 4；Accuracy 91.67%, Recall 100.00%, FPR 20.00% (1/5)。
+- 前向推理测速（GPU 1，batch=8，4 帧输入，纯前向耗时）：
+  - p50: 0.51 ms/clip（约 0.127 ms/frame）；p90: 0.51 ms/clip。
+- 结论与限制：相较于单帧 MobileNetV3-Small（测试集 FPR 52.9%），4 帧 X3D-XS 在保持近 98% 召回的同时将测试集误报率降至 27.27%，前向速度极快。但测试集负样本绝对数量仅 11 条（误报 3 条），统计方差依然较大；验证集因仅 3 条负样本导致其自身 FPR 达 100%，不能认为门控已达到最终部署标准，后续仍需针对负样本扩增验证。
+
+## 2026-11-07：由 multi-pet-sort-tracking 提请——持久低置信小目标（误检）无法用几何后处理消除
+
+**来源**：`multi-pet-sort-tracking` 的 3.7 在尝试"轨迹级疑似误检标记"时，用人眼已确认的 8 条轨迹做了判别力检验，结论是该 change 手上没有任何信号能区分真目标与静态误检。按要求把材料移交本 change 处理。
+
+**实测对象**：`event_20260715_185900`、`event_20260807_033836`、`event_20260618_233630`、`20000838103643_charw1g__event_20260713_081339` 四段，单流 OC-SORT + IoS 去重产物（`results/tracking_eval_20261107/tracks_single_dedup_v1/`）。真值来自用户在 2.4 的人工核对结论。
+
+| 轨迹 | 真值 | 均置信 | 轨迹位移 | 物种一致性 | 面积（px²） |
+|---|---|---|---|---|---|
+| 033836 id0 | 真猫（活动） | 0.533 | 522 px | 0.93 | ~90k |
+| 033836 id1 | **杂物（假）** | 0.444 | 2 px | 1.00 | — |
+| 0618 id0 | 真猫（后离场） | 0.665 | 649 px | 1.00 | ~160k |
+| 0618 id1 | 真猫（静止） | 0.689 | 7 px | 1.00 | ~85k |
+| 0713 id0 | 未定性 | **0.616** | 267 px | **0.93** | — |
+| 0713 id1 | 袋面印刷金毛（假） | 0.502 | 1 px | 0.67 | — |
+| 0713 id3 | **真猫（趴在袋上）** | 0.331 | 5 px | 0.92 | ~8.8k |
+| 0713 id4 | 袋面印刷金毛（假） | 0.536 | 43 px | 0.91 | ~40k |
+
+> **2026-11-07 更正（重要）**：上表最初把 0713 四段全部标为「狗粮包装（假）」。逐轨迹裁图核对后确认 **id3 是趴在狗粮袋上的真猫**（`results/tracking_eval_20261107/charw1g_tracks.png`），真正的误检是袋面印刷金毛（id1/id4）。更正后本条的结论**更强**：真猫 id3 置信 0.331，**低于三条误检的 0.502/0.536/0.616**——真目标的信号比假目标更"像误检"，任何阈值组合都会先杀掉真猫。这条对框级判定的要求也更明确：不能依赖置信度/面积/静止性，必须靠外观语义。
+
+**结论：四个候选信号全部失效。**
+1. **置信度**：假目标 0713 id0 均置信 **0.616 > 真猫 033836 id0 的 0.533**，区间重叠。
+2. **静止性**：假目标 033836 id1 位移 2 px，但真猫 0618 id1（睡觉）位移仅 7 px，无法区分。
+3. **物种一致性**：假 0713 id0 为 0.93，真 033836 id0 同为 0.93，完全相同。
+4. **面积**：误检多为 8–40k px²，但远景真猫同样可低至一两百像素宽（AGENTS.md 已记录该语料远景小目标特性）。
+
+**对本 change 的直接要求（提请事项，未排期）：**
+- 需要**框级（crop 级）外观判定**能力："这块裁剪里是不是活体动物"，而非仅帧级 present/absent。印刷物、包装、海报上的动物图案必须能被判否。
+- **负样本集必须显式覆盖此类非活物负样本**：当前冻结测试集负样本仅 11 条（absent FPR 27.27%，见 2026-11-04 记录），不足以支撑框级判定；若负样本只含"空房间"，模型会把印刷动物当活物放行。
+- 该能力若落地，`multi-pet-sort-tracking` 的下游裁剪可据此排除误检轨迹；在此之前，多宠物跟踪只**记录**置信度/面积/孤立性等原始信号，不输出"误检"结论。
+
+## 2026-11-07：候选方案备案——Grounded-SAM 与 SAM 3（用户要求写入）
+
+由 `multi-pet-sort-tracking` 4.1 的结论延伸：既然 SAM 系本身没有类别语义，那"给概念让它判断"的方案是否可行？本节备案两条候选，均**未安装、未下载权重、未实验**。
+
+### Grounded-SAM / Grounded-SAM-2
+
+| 项 | 事实 |
+|---|---|
+| 仓库 | `IDEA-Research/Grounded-Segment-Anything`（17,791 stars，最后推送 2024-09-05）、`IDEA-Research/Grounded-SAM-2`（3,803 stars，2025-11-11） |
+| 许可证 | **Apache-2.0**（与 `GroundingDINO`、`facebookresearch/sam2` 同为 Apache-2.0，无 GPL 传染） |
+| 工作原理 | GroundingDINO 出「框 + 类别」→ 把框当 prompt 喂 SAM → 出精确掩码 |
+
+**为什么它不解决我们的问题**：语义**全部继承自 GroundingDINO**。狗粮袋面印刷的金毛，DINO 判成 "dog"，SAM 就精确切出印刷图案，输出 `{label: "dog", mask: 印刷狗}`——看起来比现状更有说服力，但依然是误检。它提供的是「类别 + 掩码」，不是「这个类别对不对」。
+
+**结论**：本项目已直接持有 GroundingDINO 与 SAM2，再引入 Grounded-SAM 的增量只有"掩码更准"，而对误检判定无帮助。不作为候选。
+
+### SAM 3（`facebookresearch/sam3`）
+
+| 项 | 事实 |
+|---|---|
+| 规模 | **848M 参数**（detector + tracker 共享 vision encoder）；对照 SAM2-small ≈46M、MobileSAM ≈10M |
+| 关键能力 | **Promptable Concept Segmentation**——给概念/文本，分割该概念的所有实例 |
+| 许可证 | 自定义 **SAM License**（Last Updated 2025-11-19）：非独占、全球、免版税，**允许商用与衍生作品**；限制为军事/ITAR、反向工程、发表需致谢、需遵守贸易管制。**无"非商用"条款** |
+| 权重要求 | **gated**——需在 HF 申请访问（`facebook/sam3`，新版 3.1 在 `facebook/sam3.1`）并 `hf auth login` |
+| 依赖要求 | PyTorch **≥2.7**（README 装 2.10.0+cu128）、CUDA **12.6+**、**flash-attn-3**、**cc_torch**（自定义 CUDA op，需编译） |
+| 现有环境匹配度 | pet 上 `yolo`/`dlc` 为 torch 2.8.0+cu128（版本可行），但 flash-attn-3 与 cc_torch 均需新装与编译 |
+
+**唯一值得单独验证的点**：给概念「a real living dog / cat」时，它是否**不再**检出印刷动物。它的 detector 是概念驱动的，理论上可能比 DINO 更挑。**但这是未知的**——印刷动物照片对任何视觉模型都是强负样本难题，本 change 没有证据支持任一结论。且其纯分割模式与 SAM2 一样无类别语义（我们已实测 SAM2 在印刷金毛上给出 mask 分数 0.977，高于真猫的 0.964）。
+
+**成本与前置**：① 用户需先在 HF 申请权重访问；② 需在 pet 上编译 flash-attn-3 + cc_torch（共享机，且不得动 `plf` 主环境）；③ 848M 模型 × 逐框推理，离线全量成本远高于 SAM2-small。
+
+**结论**：**暂不引入**。若将来要做，正确用途是「概念提示能否拒绝非活体负样本」这个独立实验，不是框细化（4.1 已证明外接框精修收益仅 1–3%）。
