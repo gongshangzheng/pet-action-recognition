@@ -1,3 +1,5 @@
+> **Superseded by `pet-pipeline`。** 用户已批准合并并归档；本 change 原任务及 delta 保留，不将未实施规格同步主 spec。原 11 条全部未完成；没有补勾，也不代表教师小批或全量检测完成。 三份来源共 99 条逐号承接、原 checkbox 和证据边界见 [`pet-pipeline/task-map.md`](../../pet-pipeline/task-map.md)。归档不表示原 change 全部完成。
+
 ## Why
 
 当前检测链路的教师是 GroundingDINO-tiny（约 172M），已实证存在四类系统性失败：把狗粮袋面印刷的金毛判为活狗（且稳定存在、置信 0.54）、同一只猫产出紧框+松框嵌套重复（IoS≈1.0）、物种标签抖动（同一只猫部分锚点被判 dog）、真猫漏检（覆盖率仅 54%）。这些失败被蒸馏进了 YOLO 学生（`gdino-distill-yolo-detector`，一致率 mAP@0.5=0.809 是循环验证）。

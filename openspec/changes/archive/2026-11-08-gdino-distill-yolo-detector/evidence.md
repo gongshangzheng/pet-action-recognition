@@ -1,3 +1,5 @@
+> **Superseded by `pet-pipeline`。** 用户已批准合并并归档；原 11 条中 5 条历史完成、6 条未完成，20/30 轮训练中止，未补勾。三份来源共 99 条映射见 [`pet-pipeline/task-map.md`](../../pet-pipeline/task-map.md)；归档不表示全部完成，未实施 delta 未同步主 spec。
+
 # 实验证据
 
 ### 2026-11-07：2.1 环境预检与授权

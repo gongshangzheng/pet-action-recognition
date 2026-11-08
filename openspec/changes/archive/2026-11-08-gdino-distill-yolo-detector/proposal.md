@@ -1,3 +1,5 @@
+> **Superseded by `pet-pipeline`。** 用户已批准合并并归档；本 change 原任务及 delta 保留，不将未实施规格同步主 spec。原 11 条中 5 条历史完成、6 条未完成；20/30 轮训练中止，未补勾。 三份来源共 99 条逐号承接、原 checkbox 和证据边界见 [`pet-pipeline/task-map.md`](../../pet-pipeline/task-map.md)。归档不表示原 change 全部完成。
+
 ## Why
 
 GroundingDINO 是当前唯一的检测来源，但它慢：实测 stride=2 时 10 段视频（约 1,800 个锚点）耗时 **267 秒**（约 0.15 s/锚点），全量 2,144 段 stride=5 的历史批次耗时 **4 小时 17 分**。这个速度既无法支撑实时推理，也让离线重跑（换阈值、加密锚点、扩类目）成本高到不可接受。
