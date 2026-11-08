@@ -78,3 +78,9 @@
 - 结论：代码按“实现族”分文件——`petlib/detection/grounding_dino.py` 同时服务 tiny 与 base，差异只是 `model_dir` 与阈值参数；换框架（YOLO）才新增 `yolo.py`。
 - 分开的是**产物**：`assets/detections/<family>__<weights短哈希>__<stride>/`，因为两套权重的框不同，混放会让索引无法追溯用了哪份。
 - design 7.2/7.3 与 skill 已按此改写。
+
+### 2026-11-08：产物归入 results，目录名用可读标签
+
+- 用户指出两处：检测产物应在 `results/` 而非 `assets/`；用 sha256 区分 tiny/base 不直观。
+- 修正：产物根改为 `results/cat_pipeline/detections/<可读标签>/`，`datasets/` 只放索引与标注；`assets` 不再作顶层概念（现路径里的 `assets` 只是旧 run 的媒体子目录）。
+- 目录标签 `gdino-tiny-s5` 表达“实现族 + 型号 + 步长”；完整 `weights_sha256` 写在目录内 `manifest.json`，用于拒绝复用与追溯，不再把哈希塞进目录名。

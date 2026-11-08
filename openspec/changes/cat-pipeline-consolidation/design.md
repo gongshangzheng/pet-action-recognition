@@ -166,23 +166,28 @@ cat_raw/videos/*.mp4  (2,573 段带标注视频, 2880×1620, 15fps)
 
 ### 7.3 目录怎么组织
 
-**代码一份，产物分目录**——两种 GDINO 共用同一份代码，混放的只有结果：
+**产物放 `results/`，不放 `assets/`。** 检测结果是可以重跑再生的运行产物，属于 `results/<topic>/<run-or-version>/`；`datasets/` 只放索引与标注这类相对稳定、需要版本号的东西。当前实际路径是 `results/cat_crop_classification/gdino-crop-20261103a/assets/full_run/detections/`，其中 `assets` 只是那个 run 内部的媒体子目录，不应提升为顶层概念。
 
-按**产物**分目录（不是按代码分）：
+规范后的布局：
 
 ```text
-assets/
+results/cat_pipeline/
   detections/
-    gdino-tiny__s5/            # family + 抽样步长，作为缓存键
-      manifest.json            # 指纹、参数、完成数、创建时间
-      <stem>.json              # 单视频逐帧/逐抽样帧结果
-    gdino-base__s5/
-    yolo-v1__f1/               # 未来：逐帧检测
+    gdino-tiny-s5/            # 可读标签：实现族 + 型号 + 抽样步长
+      manifest.json           # 完整指纹（family、weights_sha256、参数）、完成数、创建时间
+      <stem>.json             # 单视频逐锚点结果
+    gdino-base-s5/            # 未来
+    yolo-v1-f1/               # 未来
+  clips/
+    v9-60f-256/               # 片段版本：窗口长度 + 尺寸
+datasets/
+  cat_clip_v9/                # 训练标注与索引（相对稳定，带版本号）
 ```
 
-- 目录名 = 指纹的短哈希或 `family__stride`，`manifest.json` 记录完整指纹。
+- 目录名用**可读标签**（`gdino-tiny-s5`），不用哈希；完整 `weights_sha256` 写在目录内的 `manifest.json`，既好看又能校验。
 - 同一视频可同时存在多份不同检测器的结果，互不覆盖。
-- 索引与片段清单记录**用了哪份检测结果**（目录名 + 指纹哈希），换检测器不会让旧索引默默指向新结果。
+- 索引与片段清单记录**用了哪份检测**（目录标签 + 该目录 manifest 的指纹哈希），换检测器不会让旧索引默默指向新结果。
+- 区分 tiny 与 base 用哪一项：目录标签说“是哪一档”，manifest 的 `weights_sha256` 说“是哪份文件”——后者用于拒绝复用与追溯，前者用于人和索引引用。
 
 ### 7.4 检测哪些视频、检测到多细
 
