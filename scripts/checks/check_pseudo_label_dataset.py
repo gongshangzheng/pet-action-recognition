@@ -20,6 +20,10 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 EVENT_DAY = re.compile(r"event_(\d{8})_")
 
 
