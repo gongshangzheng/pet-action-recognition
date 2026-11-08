@@ -99,6 +99,24 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 - **`scripts/`** 只做参数解析与编排调用；现存的 `prepare_cat_crop_experiment.py` 仍混着检测、渲染、索引三类逻辑，属待重构项（见 change `cat-pipeline-consolidation` 的 1.4）。
 - 判断标准：这段代码能否被两个以上入口复用、能否脱离命令行被测试。能，就进 `petlib`。
 
+## 目标布局（2026-11-08 定，见 change `cat-pipeline-consolidation` 第 2 节）
+
+| 能力 | 目标位置 | 现状 |
+|---|---|---|
+| 检测模型封装 | `petlib/detection/grounding_dino.py` | 已就位 |
+| 检测抽样 / 缓存 / 指纹 | `petlib/detection/{anchors,cache,fingerprint}.py` | **待迁移**，现混在 `scripts/prepare_cat_crop_experiment.py` |
+| 裁剪几何与逐帧轨迹 | `petlib/datasets/cat_crop.py` | 已就位 |
+| 资格判定 / 重叠仲裁 / 切片 | `petlib/datasets/cat_selection.py` | **待迁移**，现在 `scripts/build_cat_dataset_slices.py` |
+| 轨迹 → 逐帧框 | `petlib/datasets/clip_boxes.py` | **待迁移**，现在 `scripts/build_clip_boxes.py` |
+| 片段渲染 | `petlib/render/clips.py` | **待迁移**，现在 `scripts/render_clip_windows.py` |
+| 标注导出 | `petlib/datasets/annotation_export.py` | **待迁移**，现在 `scripts/export_clip_annotations.py` |
+| 单片段推理 | `petlib/inference/recognizer.py` | **待迁移**，现在 `scripts/infer_single_clip.py` |
+| 指标 | `petlib/metrics/cat_interval.py` | **待迁移**，现在 `petlib/datasets/cat_intervals.py` |
+| 跟踪 | `petlib/tracking/` | 已就位 |
+| 旧管线入口 | `scripts/legacy/` | 待归置（`pet_detect_track.py`、`pet_multi_detect.py`、`pet_batch_run.py`） |
+
+迁移验收：同一输入下产物哈希与迁移前一致，否则视为行为改变，必须写明。
+
 ## 代码地图（想改什么 → 改哪里）
 
 | 想改的东西 | 文件 |
