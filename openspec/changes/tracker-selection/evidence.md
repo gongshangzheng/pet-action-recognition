@@ -25,3 +25,11 @@
 只读调研建议 OC-SORT 与无 ReID Hybrid-SORT 作运动对照，Deep OC-SORT 作独立外观对照，未在本域证明胜出；研究依据及来源见 [research.md](research.md)。四份原报告位于 `/Users/zhengxinyu/.pi/agent/sessions/--Users-zhengxinyu-code-pet-action-recognition--/subagent-artifacts/outputs/aa449998-9160-46b9-b1a3-ce16b055318d/` 的 `task-1.md`、`task-2.md`、`task-3.md`、`context.md`。原 design 按 `b993320` 保存为 [history-design.md](history-design.md)，旧论述仅作历史证据。
 
 旧 spec 仅限白天、旧候选及固定样本范围，九项历史任务也未覆盖当前昼夜分层和去重与跟踪联合设计，须用户确认后协调；本轮不修改 spec 或任务正文，不表示可直接开工。未运行实验、检测、训练或远程操作，未安装或下载权重。
+
+## 2026-11-08：任务结构与规格协调修订
+
+用户回复“继续”，确认展示的 14 项串行任务结构、旧九项退出映射及规格协调方向；具体规则、身份 GT、候选和预算仍须依任务逐项裁定。旧九项全未勾，原文及逐号映射见 [task-map](task-map.md)；新 14 项也全未勾。只读研究和本次规划修订均不构成任务完成。原 proposal 逐字保存在 [history-proposal](history-proposal.md)，不是当前执行权威。此前本文件关于“本轮不改任务及 spec”的文字描述当时事实，本节记录后续修订，不改写历史。
+
+当前 delta 保留 `motion-pipeline` 白天猫管线中家具、可选运动校正和批处理的合同，修订跟踪义务并增加猫狗重复框共享合同；未同步主 spec。工作区未跟踪的 `multi-pet-tracking` spec 对 OC-SORT 与外观的既有表述存在待协调问题，其权威与归属未裁定；不因此宣称各规格完全一致。
+
+教师从第 0 帧每 5 帧生成 bbox 原始候选，不依赖本队列或跟踪选择；已有小批核对、权重来源和资源许可边界不变，不能据此授权额外运行。本次仅修订规划，未执行新任务、检测、训练、安装或远程操作。
