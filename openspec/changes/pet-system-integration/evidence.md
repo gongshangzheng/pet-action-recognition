@@ -16,3 +16,12 @@
 存在性检测归 `presence-gate-model`（RGB，视频 X3D-XS），动作分割归 `video-action-segmentation`；总管只协调接口及验收。测试子集条件准确率 85.75% 已达到 ≥75%；区间级漏检 14.25% 未达 ≤10%，事件级定位及匹配规则未定。分类或可用率乘积不能冒充实测端到端。
 
 用户最新要求重新调研离线及在线跟踪算法；OC-SORT 只是现有基线，不是最终选型。`tracker-selection` 保持 active，未归档，原九项未勾；后续由用户决定其处理。此轮仅修改规划，不运行模型、测试或部署。
+
+## 活动 change 责任与任务修订核对
+
+以 HEAD `683126ca1d6b93859c2ce8184bfb6de194f83ad0` 及当时工作区 resource-guard 草稿为基准，`openspec list` 列出 13 个活动 change。逐项责任、pet 与 tracker 原任务和待批准修订、其余处置缺口见 [change-index.md](change-index.md)。这只是核对与审批提案，未改任务状态、实施算法或将未验收工作当完成。
+
+
+## tracker 并入后的协调
+
+用户已决定将 tracker-selection 的全部工作并入 pet-pipeline 的重复框与跟踪组件；14 项未完成依旧未完成，归档不代表选型。上文保留当时记录；现行任务编号与旧号映射见 [pet-pipeline task-map](../pet-pipeline/task-map.md)。原 13 项受管 active 在并入后为 12 项；另有用户未跟踪的 camera-vendor change，CLI 因而列出 13 项。其余台账建议仍待裁定。
