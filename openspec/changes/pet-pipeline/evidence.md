@@ -142,3 +142,9 @@
 ## 名称迁移说明（2026-11-08）
 
 用户批准将主 change `cat-pipeline-consolidation` 改名为 `pet-pipeline`，流水线 skill `cat-pipeline` 改名为 `pet-pipeline`；当前路径分别为 `openspec/changes/pet-pipeline/` 与 `.claude/skills/pet-pipeline/SKILL.md`。上文和已归档 change 中的旧名称保留为历史记录，不表示当前入口仍使用旧名。此次仅迁移名称与当前引用，不改变任务状态或验证既有历史结果。
+
+## GDINO 职责与证据迁移草案（未改 tasks）
+
+用户已批准 GDINO 主责归本 change；两个来源 change 的结构、旧号与状态尚未合并。拟将 `gdino-base-upgrade` 1.1–1.4 映射至教师权重/同帧比较/人工核对/用户决定，3.1–3.3 映射批处理设计、获批检测及 QC，4.1–4.3 映射伪标签、学生训练及评测，5.1 映射报告和替换裁定；与本 change 1.4–1.5 去重。`gdino-distill-yolo-detector` 1.1–1.3 映射历史导出及新共享划分，2.1–2.4 映射预检、历史训练和条件消融，3.1–3.3 映射速度、一致率与人工真值对照，4.1 映射生产裁定。历史 20/30 轮守卫终止、一致率非人工准确率及事件日泄漏均须保留，不自动勾选。教师小批用户决定及 YOLO/动作两路已在 design，勿重复增设闸门；新任务细目与编号待用户确认。
+
+更正上文「检测器可替换性」段对资源守卫测试的归因：两项失败不能证明由工作区 patch 引起，详见 `../resource-guard-shared-gpu/evidence.md`。

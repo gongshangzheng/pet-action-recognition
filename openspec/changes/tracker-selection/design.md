@@ -1,5 +1,7 @@
 # Design: tracker-selection
 
+> 当前协调：[`pet-pipeline`](../pet-pipeline/design.md) 已采用单流 OC-SORT；下述旧算法矩阵与多猫核实不再是当前主管线前置。九项旧任务均未完成，轨迹质量及多宠关联未验收；建议按 superseded 关闭须用户明确批准，现未归档。行为发现研究已废弃，历史记录见 [`video-feature-latent`](../archive/2026-11-08-video-feature-latent/)。
+
 > 继承总管 D6；D1 在 `batch-followcam-extraction`。**总管 D1b/D1c/A4 已物理迁入本文件（ID 不变）**。
 
 ## Decisions
