@@ -21,6 +21,17 @@
 - [ ] 1.3.3 合并检测脚本：现存三个入口 `scripts/prepare_cat_crop_experiment.py --stage detect`、`scripts/pet_detect_track.py`、`scripts/pet_multi_detect.py`。保留前者作为唯一入口，把后两者中仍需的能力（如逐帧轨迹、批量重试）迁入或标注废弃。判据：`grep -rn "pet_detect_track\|pet_multi_detect"` 只出现在归档文档中，检测相关测试全绿。
 - [ ] 1.3.4 清单驱动的状态汇总：按 1.3.1 的清单输出“多少个视频已检测/已渲染/已跟踪/三项齐全”。判据：四个计数写入 evidence，且与 `assets/full_run` 实际文件数一致。
 
+## 1.4 待办：检测逻辑下沉到 petlib
+
+现状：`petlib/detection/` 只有模型封装（`base.Detector`、`grounding_dino.GroundingDinoDetector`），而锚点采样、缓存读写、指纹计算与复用校验、批量重试全都写在 `scripts/prepare_cat_crop_experiment.py`（1,100+ 行，同时承担 CLI、检测、渲染、索引四件事）。
+
+约定（此前未成文，本次补记，并写入 `cat-pipeline` skill）：**petlib 放可导入、可测试、无命令行的能力；scripts 只做参数解析与编排调用**。据此：
+
+- [ ] 1.4.1 抽出 `petlib/detection/anchors.py`：顺序解码 + 每 `sample_stride` 帧抽样 + 逐帧产物结构（帧号、候选框、计数、目标框）。判据：脚本里的对应代码删除，改调用该模块；`tests/` 中相关断言通过。
+- [ ] 1.4.2 抽出 `petlib/detection/cache.py`：缓存 schema、读写、`load_reusable_detection` 的复用校验。判据：同上。
+- [ ] 1.4.3 抽出 `petlib/detection/fingerprint.py`：`model_fingerprint`、`detection_fingerprint_for_args`，并支持按 mtime 缓存哈希结果（模型权重 689 MB，单次 sha256 约 2.8 秒）。判据：同一进程内两次调用只哈希一次，函数有测试。
+- [ ] 1.4.4 脚本瘦身为入口：`prepare_cat_crop_experiment.py` 只保留 argparse 与阶段编排。判据：文件行数明显下降，功能与产物不变（用 1 段视频跑 detect + index 对照哈希）。
+
 ## 2. 资格与筛选
 
 - [x] 2.1 多宠物判定：以锚点（`frame % stride == 0`）为基准，覆盖率 ≥0.5 且连续 ≥3 判为多宠物。证据：`archive/2026-11-07-cat-data-preprocessing/evidence.md`。

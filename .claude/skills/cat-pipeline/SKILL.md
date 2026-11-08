@@ -93,6 +93,12 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 - **裁剪输入的正确接法**：把索引 `video` 指向 `assets/full_run/videos/gdino/<stem>.mp4`（帧数/fps 一致，媒体审计已验），不需要新 transform。
 - 实测吞吐：`num_workers=6` 时 0.47 s/迭代（1,127 迭代/轮 ≈ 11 分钟），20 轮 ≈ 4.4 小时；`num_workers=2` 会掉到 1.0 s/迭代。
 
+## 目录约定：petlib 与 scripts 的分工
+
+- **`petlib/`** 放可导入、可测试、无命令行的能力：检测模型封装（`detection/`）、锚点与缓存（待下沉）、裁剪几何与轨迹（`datasets/cat_crop.py`）、跟踪（`tracking/`）、数据集与指标（`datasets/cat_intervals.py`）、视频写入（`videowriter.py`）。
+- **`scripts/`** 只做参数解析与编排调用；现存的 `prepare_cat_crop_experiment.py` 仍混着检测、渲染、索引三类逻辑，属待重构项（见 change `cat-pipeline-consolidation` 的 1.4）。
+- 判断标准：这段代码能否被两个以上入口复用、能否脱离命令行被测试。能，就进 `petlib`。
+
 ## 代码地图（想改什么 → 改哪里）
 
 | 想改的东西 | 文件 |
