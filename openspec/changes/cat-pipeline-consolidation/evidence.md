@@ -45,3 +45,10 @@
 - 删除原 1.4 的检测下沉四条：与 2.4／2.6 重复，避免两处各写一套。删前未勾选，无证据损失。
 - 章节由 14 节变为 15 节；原 2–14 顺延为 3–15，节内引用同步改号。
 - **未开工**：2.3 要求用户先审定布局，过审前不搬代码。
+
+### 2026-11-08：检测器可替换性（用户提示）
+
+- 需求：当前 GroundingDINO-tiny，后续可能换 GDINO-base 或自训 YOLO，检测层不能绑死。
+- 新增 1.4 组五条：指纹泛化为 `model_family` + 权重哈希 + 检测器自定义参数；缓存记录 detector 身份；预留 `YoloDetector` 接口；切换检测器的重检规则；条件性的检测器对比实验。
+- skill 增补「检测器是可替换的」小节，写明接口位置与“换模型即重检”的约束。
+- **测试现状（与本条无关的既有失败）**：`pytest tests -q` 为 94 passed / 4 failed —— 2 条 `test_multi_pet_tracking` 因夹具缺 `properties` 字段（`anchors.py` 自 `0ee13b0` 起读取该字段），2 条 `test_resource_guard_process_tree` 因工作区未提交的 `resource_guard.sh` 改动。两者都不是本次改动引起。

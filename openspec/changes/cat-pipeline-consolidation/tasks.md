@@ -21,6 +21,16 @@
 - [ ] 1.3.3 合并检测脚本：现存三个入口 `scripts/prepare_cat_crop_experiment.py --stage detect`、`scripts/pet_detect_track.py`、`scripts/pet_multi_detect.py`。保留前者作为唯一入口，把后两者中仍需的能力（如逐帧轨迹、批量重试）迁入或标注废弃。判据：`grep -rn "pet_detect_track\|pet_multi_detect"` 只出现在归档文档中，检测相关测试全绿。
 - [ ] 1.3.4 清单驱动的状态汇总：按 1.3.1 的清单输出“多少个视频已检测/已渲染/已跟踪/三项齐全”。判据：四个计数写入 evidence，且与 `assets/full_run` 实际文件数一致。
 
+### 1.4 待办：检测器可替换（GDINO-tiny → base / 自训 YOLO）
+
+用户提示：现在用 GroundingDINO-tiny，后续可能换成 GDINO-base，也可能换成自己重训的 YOLO。要求检测层不绑死在某一个模型上。
+
+- [ ] 1.4.1 泛化指纹字段：现指纹写死 `classes=["cat","dog"]` 与 GDINO 的 `box_threshold`/`text_threshold`；改为 `model_family`（gdino-tiny / gdino-base / yolo-custom）+ `weights_sha256` + **任意参数字典**（由各检测器自己声明），不预设阈值名称。判据：指纹结构写入 evidence，旧缓存因缺少 `model_family` 被判为不可复用（等权重）。
+- [ ] 1.4.2 缓存 schema 记录检测器身份与参数：`detections/<stem>.json` 增加 `detector` 段（family、weights、params），并在读取时校验。判据：抽样 3 份缓存字段齐全；参数改动后复用被拒。
+- [ ] 1.4.3 YOLO 适配器接口预留：`petlib/detection/base.Detector.detect(img, classes)` 已存在；补一个 `YoloDetector` 空实现或说明文档，明确输入（BGR 图）、输出（`Detection` 列表，含 class/box/confidence）、批处理与阈值参数从 `params` 读。判据：接口与方法签名写入 design，未实现部分标注 TODO。
+- [ ] 1.4.4 切换检测器时的重检策略：给出规则——权重、family 或任一参数变化即触发全量重检；仅 `sample_stride` 变化可复用逐帧候选但需重采样。判据：规则写入 evidence；用一次假参数变更验证缓存被拒。
+- [ ] 1.4.5 检测器对比实验（条件）：若换用 base 或 YOLO，在 30 段含小目标/夜间/多宠物的视频上比对检出率与重复框比例，判据：对照表写入 evidence；不换则不执行。
+
 ## 2. 目录组织与代码归属（先定位置，再继续）
 
 现状：可复用逻辑分布在 `scripts/` 与 `petlib/` 之间，边界靠习惯。约定（本次确定）：**`petlib/` 放可导入、可测试、无命令行的能力；`scripts/` 只做参数解析与编排**。

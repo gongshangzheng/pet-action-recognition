@@ -93,6 +93,13 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 - **裁剪输入的正确接法**：把索引 `video` 指向 `assets/full_run/videos/gdino/<stem>.mp4`（帧数/fps 一致，媒体审计已验），不需要新 transform。
 - 实测吞吐：`num_workers=6` 时 0.47 s/迭代（1,127 迭代/轮 ≈ 11 分钟），20 轮 ≈ 4.4 小时；`num_workers=2` 会掉到 1.0 s/迭代。
 
+## 检测器是可替换的
+
+- 当前是 GroundingDINO-tiny（权重 `1a2412ef…`），后续可能换 GDINO-base 或自训 YOLO。
+- 接口在 `petlib/detection/base.Detector`：`detect(img_bgr, classes) -> list[Detection]`；模型封装在 `petlib/detection/grounding_dino.py`。新增检测器只需实现该接口。
+- **指纹通用化**：指纹应含 `model_family` + `weights_sha256` + 检测器自己声明的参数字典，不要写死 `box_threshold`/`text_threshold` 这类 GDINO 专有字段。
+- **换模型即重检**：权重/family/参数任一变化，`load_reusable_detection()` 会拒绝旧缓存；不要绕过校验复用，否则新旧检测混在一份索引里。
+
 ## 目录约定：petlib 与 scripts 的分工
 
 - **`petlib/`** 放可导入、可测试、无命令行的能力：检测模型封装（`detection/`）、锚点与缓存（待下沉）、裁剪几何与轨迹（`datasets/cat_crop.py`）、跟踪（`tracking/`）、数据集与指标（`datasets/cat_intervals.py`）、视频写入（`videowriter.py`）。
