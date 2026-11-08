@@ -1,8 +1,16 @@
 # Design: tracker-selection
 
-> 当前协调：[`pet-pipeline`](../pet-pipeline/design.md) 已采用单流 OC-SORT；下述旧算法矩阵与多猫核实不再是当前主管线前置。九项旧任务均未完成，轨迹质量及多宠关联未验收；建议按 superseded 关闭须用户明确批准，现未归档。行为发现研究已废弃，历史记录见 [`video-feature-latent`](../archive/2026-11-08-video-feature-latent/)。
+> 当前协调：本 change 保持 active。单流 OC-SORT 是已运行基线而非最终选型；九项任务未完成，轨迹质量和多宠关联未验收。下述旧 argmax、算法矩阵和参数是历史背景与候选，不构成直接运行授权；行为发现研究已搁置。
 
 > 继承总管 D6；D1 在 `batch-followcam-extraction`。**总管 D1b/D1c/A4 已物理迁入本文件（ID 不变）**。
+
+## 当前依赖与候选
+
+[`pet-pipeline`](../pet-pipeline/design.md) 以 GroundingDINO-base 作为离线候选教师，按已定相位从第 0 帧每 5 帧检测猫狗，输出候选框、类别和置信度，不是像素 mask 分割。原始候选与实际空检测独立版本化保存，不需要 track_id，不等待跟踪选型或未定的时序去重。教师小批核对、权重、全量选择和资源授权仍按该计划执行。
+
+跟踪选型在检测之后读取相同检测缓存；外观或中间帧视觉方法可能还需源帧，但不因此重跑检测器。教师阈值若已截断低分框，ByteTrack 类方法可用的信息会受限；具体影响留待研究，不在此新增阈值。去重结果与原始候选独立保存。轨迹推断和依轨迹生成逐帧框、裁剪属于后处理，须先获得跟踪及关联参数批准；无需跟踪器的单帧裁剪不意味着完整动作训练数据已就绪。
+
+运动关联、外观关联、离线全局关联及中间帧视觉跟踪均为调研候选，尚无本域验证，也未选定更强方案。例如 [OC-SORT](https://github.com/noahcao/OC_SORT)、[Deep OC-SORT](https://github.com/GerardMaggiolino/Deep-OC-SORT) 和 [HybridSORT](https://github.com/ymzis69/HybridSORT) 提供不同方向的参考，不代表适用于本数据。具体方案、比较方法和参数待用户选择。
 
 ## Decisions
 
