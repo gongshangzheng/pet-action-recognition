@@ -124,3 +124,10 @@
 - `a478876` 仅选择性保留 `sync-openspec-workflow-rules` 的历史规划，未将其三个 skill 的旧规则引入；源提交本身不是整合祖先。`aa7f66c` 与已入历史的 `e2c331c` 补丁等价，不合旧树。
 - 静态审查发现伪标签导出可能覆盖旧产物、报告媒体生成与服务根路径不一致、部分案例重复且标注矛盾、`cat-pipeline` skill 内容过时；这些是后续处理的已知风险，本次不修复。审查不等于完整安全或隐私验收。
 - 主目录原 13 项 tracked 未提交更改暂以精确路径 stash 保全，另保留未跟踪与 ignored 内容；后续恢复并核对。未运行模型、训练或测试；三个 change 仍未统一，任务结构仍待确认。
+
+### 本地整合父审验收与清理决定（阶段 B 前）
+
+- 父会话独立复核阶段 A：main 的 `99c3a77`、`5b18b1c` 分别合入 `5933a5a`、`ce258d0`，`07131d7` 只保留 `a478876` 的 sync change 历史，`553d601` 追加证据。已有祖先不重复合并；三个 change 的结构协调及任务状态仍待确认，不视为完成。
+- `aa7f66c11d4bee06defddb59124c319d8bdbbab6` 的补丁等价于已有 `e2c331c`；`a478876bd5e1bed0dbc3cd27acaac1f4ddd95fe6` 仅选择性采纳，旧 skill 规则已由平台规则替代。对应完整源对象通过 annotated tag `archive/backup-pre-rebase-20261108` 和 `archive/openspec-workflow-rules-20261108` 保留。
+- 主目录原 13 项 tracked 修改与未跟踪内容未纳入提交；校验材料在 `results/git-integration/20261108-stage-a-185433-82066/`，stash `4297a3dbcf1606677256cec8296d9423ad0c3a50` 保留。三个媒体已复制到主目录 `results/review/unannotated-context/` 并逐个哈希核对。
+- 用户授权检查后删除三个冗余 linked worktree 和除 main 外的本地分支，不动 remote refs、不 push；两个非祖先分支仅在验证归档 tag 后删除分支名。父会话确认旧媒体及目录的只读句柄不是写入占用，保全副本存在；不终止进程。此处为清理计划，实际结果另记。
