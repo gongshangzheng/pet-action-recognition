@@ -193,3 +193,10 @@
 ## 今晚执行起点
 
 用户明确授权以完成全部 2,737 视频 base stride 5 原始候选为当前 goal，不再重复询问已批准的下载、部署、技术核验及分批范围；不跳过共享机资源守卫。lib 更名、统计、跟踪和质量选用后置。本地父复核 55 passed、8 subtests passed；0.1 无前序未完成，已依据真实 CPU 视频 raw 回归和指纹校验勾选。下载及真实 GPU 核验尚未执行。
+
+## Base raw 实际启动证据
+
+- 远端部署 commit `115c524608806d886f739116108c35a8f0dd2fa0`，tracked clean；未跟踪脚本保留。固定 base snapshot 下载成功，933400872 字节，SHA-256 `5548f844c928c4b6f411fa8cbcc2bfa8dbbba437cb1d513975519f93c2a9ed21`；目录 `/home/wyy/models/grounding-dino-base-12bdfa31`。0.2 前序 0.1 已完，按哈希证据勾选。
+- 运行目录 `results/pet_pipeline/base-raw-20261109a`；共享候选根 `/home/wyy/datasets/pet_pipeline/detections/raw/gdino-base-s5-20261109a`；prepare 核验视频清单 2737 行、basename/stem 唯一，运行 metadata 固定路径/阈值/stride/revision。0.3 按清单和 metadata 勾选。
+- 单视频 `0_chi2m65__event_20260410_235950.mp4` 技术 run rc0，226 reported/decoded 帧，46 锚点均等于 range(0,226,5)，76 raw 候选(70 cat/6 dog)相对 legacy74，raw 指纹1且权重身份正确。守卫墙钟25秒(包含加载)，观察CPU149%、RSS3305MiB、GPU10%，非质量验收。0.4 前序全完成，按实际缓存和日志勾选。
+- 全量每批64视频，共43批，首视频可严格缓存复用；按烟测保守每视频25秒估首批约27分钟，长视频分布未知故每批守卫上限10800秒。每批重新preflight，CPU250%/RSS24000MiB/GPU90%/threads2/nice10，模型torch/opencv各1线程，OPENCV_FFMPEG_THREADS=1。任意异常停止，不吞错；已完整原子写缓存可复用，恢复后仍验源及模型指纹。外层setsid nohup且stdin/devnull保持会话独立。0.5 按批计划勾选；0.6/0.7须实际完成及逐项核查后才勾。
