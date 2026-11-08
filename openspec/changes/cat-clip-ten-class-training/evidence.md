@@ -6,3 +6,7 @@
 - 该次运行**读的是整帧**，不是裁剪画面：片段索引只有 `video` 与帧范围，检测框未参与输入。因此它不能回答“裁剪是否有效”。
 - 产物保留在 `results/cat_clip_v8/train20/`，作为整帧臂的部分基线；4 轮结果不足以与 20 轮裁剪臂直接比较，报告须注明。
 - 后续裁剪方案见 change `clip-box-crop-input`。
+
+### 2026-11-08：移交
+
+- 本 change 的已完成结果与未决问题已汇总到 `openspec/changes/cat-pipeline-consolidation`；后续实验从那里推进，本文件保留为过程记录。
