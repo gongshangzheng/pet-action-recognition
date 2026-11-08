@@ -97,7 +97,8 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 
 - 当前是 GroundingDINO-tiny（权重 `1a2412ef…`），后续可能换 GDINO-base 或自训 YOLO。
 - 接口在 `petlib/detection/base.Detector`：`detect(img_bgr, classes) -> list[Detection]`；模型封装在 `petlib/detection/grounding_dino.py`。新增检测器只需实现该接口。
-- **指纹通用化**：指纹应含 `model_family` + `weights_sha256` + 检测器自己声明的参数字典，不要写死 `box_threshold`/`text_threshold` 这类 GDINO 专有字段。
+- **代码共享、产物分开**：GDINO-tiny 与 GDINO-base 共用 `petlib/detection/grounding_dino.py`，差异只在 `model_dir` 与阈值；只有换框架（YOLO）才新增 `yolo.py`。
+- **指纹通用化**：`family`（gdino/yolo）+ `weights_sha256`（区分 tiny/base）+ 该实现声明的参数字典，不写死 `box_threshold`/`text_threshold`。
 - **换模型即重检**：权重/family/参数任一变化，`load_reusable_detection()` 会拒绝旧缓存；不要绕过校验复用，否则新旧检测混在一份索引里。
 
 ## 目录约定：petlib 与 scripts 的分工

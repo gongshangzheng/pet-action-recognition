@@ -16,7 +16,7 @@
 
 ### 1.3 待办：视频清单与脚本合并
 
-- [ ] 1.3.1 建立单一视频清单：把源索引（`cat_action_v1` 的 train/val/test）与现有散落列表（`all_videos.txt` 2,144 行、`tmp/detect_missing_videos.txt` 429 行）合并成一份 `videos.jsonl`，每条记录视频路径、所属 split、区间数、检测状态、渲染状态、跟踪状态。判据：清单行数等于带标注视频数（2,573），三类状态字段齐全，抽样 20 行与磁盘一致。
+- [x] 1.3.1 建立单一视频清单：把源索引（`cat_action_v1` 的 train/val/test）与现有散落列表（`all_videos.txt` 2,144 行、`tmp/detect_missing_videos.txt` 429 行）合并成一份 `videos.jsonl`，每条记录视频路径、所属 split、区间数、检测状态、渲染状态、跟踪状态。判据：清单行数等于带标注视频数（2,573），三类状态字段齐全，抽样 20 行与磁盘一致。已完成：`results/cat_pipeline/videos.jsonl` 2,573 行（in_index 2,144、detected 2,573、rendered 1,981、tracked 2,335）。
 - [ ] 1.3.2 取消“允许索引外视频”的例外：改为从 1.3.1 的清单驱动检测，删除 `selected_videos` 里“显式列表可含索引外视频”的分支与 `--video-list` 参数。判据：检测阶段的输入只剩清单路径，且 2,573 段全部可被选中。
 - [ ] 1.3.3 合并检测脚本：现存三个入口 `scripts/prepare_cat_crop_experiment.py --stage detect`、`scripts/pet_detect_track.py`、`scripts/pet_multi_detect.py`。保留前者作为唯一入口，把后两者中仍需的能力（如逐帧轨迹、批量重试）迁入或标注废弃。判据：`grep -rn "pet_detect_track\|pet_multi_detect"` 只出现在归档文档中，检测相关测试全绿。
 - [ ] 1.3.4 清单驱动的状态汇总：按 1.3.1 的清单输出“多少个视频已检测/已渲染/已跟踪/三项齐全”。判据：四个计数写入 evidence，且与 `assets/full_run` 实际文件数一致。
