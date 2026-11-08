@@ -1,6 +1,6 @@
 # Proposal: video-action-segmentation（动作分割与闭集行为识别）
 
-> 子 change，总管：`pet-motion-latent-pipeline`。
+> 子 change，总管：`pet-system-integration`。
 > **职责（2026-10-30 用户裁定）**：本 change 负责「行为识别与动作分割」组件的**闭集窗口分类 + 时间聚合出段**。slug 保留 `video-action-segmentation` 以维持既有引用，职责以标题为准。
 > **本次修订解除的前置**：`identity-action-tokenizer`（`λ` 序列）与 `video-feature-latent`（行为簇表征）**均已搁置**，本 change MUST NOT 依赖。同时解除三项旧约束：不再需要 `λ`、不再要求纯无监督、不再「只出边界不贴标签」。
 

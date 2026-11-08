@@ -1,6 +1,6 @@
 # Proposal: registry-retrieval
 
-> 子 change，总管：`pet-motion-latent-pipeline`。**状态：延后**——用户已确认方向（2026-09-14），实施待批准。
+> 子 change，总管：`pet-system-integration`。**状态：延后**——用户已确认方向（2026-09-14），实施待批准。
 
 ## Why
 

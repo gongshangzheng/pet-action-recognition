@@ -1,6 +1,6 @@
 # Tasks: registry-retrieval
 
-> 总管：`pet-motion-latent-pipeline` §4B。**延后**：实施需用户批准；建议与 `spot-check-cli` 猫 Re-ID 联调时启动。
+> 总管：`pet-system-integration`（空间状态与物体协调）。**延后**：实施需用户批准；建议与 `spot-check-cli` 猫 Re-ID 联调时启动。
 
 - [ ] 1.1 （待批准）统一登记-检索库：登记照 → **embedding（模型选型待实测）** → **向量库（规模决定，默认 numpy 暴力检索）**；猫与物品共用一套
 - [ ] 1.1b （待批准）**选型实测**（design D9b 候选清单）：embedding 模型（DINOv2/DINOv3/CLIP/SuperAnimal/猫专用 Re-ID）与向量库（numpy/FAISS）对比；判据 = 登记集自测 rank-1/rank-5 + 跨视角稳健性 + 许可 → 结论回写 design D9/D9b

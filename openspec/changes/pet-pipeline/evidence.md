@@ -173,3 +173,8 @@
 新增 `pet-pipeline-data` delta 并移除旧 `skip_specs`；delta 是待审未来合同，未同步主 spec，也不证明实现。来源已按用户批准作为 superseded 归档至 `archive/2026-11-08-gdino-base-upgrade/` 和 `archive/2026-11-08-gdino-distill-yolo-detector/`；前者 11 条未完成，后者 5 完成、6 未完成，归档未补勾且跳过源 delta 同步。源 tasks 原文保留，99 项逐号对应见 [task-map.md](task-map.md)。
 
 任务 4.12 仅要求审核拟纳入的所选多宠样本；未知归属保持 pending，不阻塞单宠窗口。3.13 人工真值方式与预算仍由用户裁定，严格顺序不变。本轮未运行代码、模型或远程；规格仍须父审阅后才能实施。
+
+
+## 系统协调与跟踪选型更新
+
+系统目标、空间状态、观测、端云与联合验收由 [`pet-system-integration`](../pet-system-integration/proposal.md) 协调；共享数据、教师检测、跟踪实现与两路训练仍由本 change 负责。用户新要求调研更强、更适用的跟踪方案：现有 OC-SORT 只是可复现基线，不是最终选型；离线与在线算法实施须等待调研及用户选择。`tracker-selection` 暂不归档；多宠身份质量及人工 GT 未验。原 113 条任务及 delta 本轮未更改，相关目标表述须在后续经用户确认后协调，不能按现有文字预断最终算法。

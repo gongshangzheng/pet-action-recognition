@@ -1,6 +1,6 @@
 # Tasks: 动作分割与闭集行为识别
 
-> 总管：`pet-motion-latent-pipeline`。前置：**无**——`identity-action-tokenizer` 与 `video-feature-latent` 已搁置，本 change 不消费 `λ` 与行为簇。
+> 总管：`pet-system-integration`。前置：**无**——`identity-action-tokenizer` 与 `video-feature-latent` 已搁置，本 change 不消费 `λ` 与行为簇。
 > GPU 任务（训练/推理）一律远程执行，动手前 `nvidia-smi`；产物落 `results/` 下不入库路径。
 > 每项实验须在执行前写清假设、对照、固定条件、数据、指标、通过标准、命令与产物。
 
@@ -52,4 +52,4 @@
 
 - [ ] 7.1 与端云上报对齐段列表字段，确认上报所需的时间戳与有效性问题
 - [ ] 7.2 与抽查/实时报告对齐：报告所需的段字段（标签 + 起止秒）由本环节提供
-- [ ] 7.3 更新本 change 结论与遗留待定项，交总管 `pet-motion-latent-pipeline` 汇总
+- [ ] 7.3 更新本 change 结论与遗留待定项，交总管 `pet-system-integration` 汇总

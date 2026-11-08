@@ -1,6 +1,6 @@
 # Design: 动作分割与闭集行为识别
 
-> 总管：`pet-motion-latent-pipeline`。动机与范围见 [`proposal.md`](./proposal.md)，本文只写怎么做。
+> 总管：`pet-system-integration`。动机与范围见 [`proposal.md`](./proposal.md)，本文只写怎么做。
 > 领域背景（各模型族的输入输出契约、采样器语义）见 [`papers/docs/action-recognition-models.md`](../../../papers/docs/action-recognition-models.md)；组件全景见 [《系统架构》](../../../management/docs/architecture.md)「行为识别与动作分割」一节。
 
 ## Context
