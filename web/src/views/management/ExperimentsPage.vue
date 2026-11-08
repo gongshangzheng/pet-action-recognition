@@ -150,13 +150,18 @@
             </div>
 
             <figure v-else class="case-fig case-toggle">
-              <div class="case-img-wrap">
-                <video v-if="isVideoCase(additionalCases[toggleIndex])" :src="assetUrl(additionalCases[toggleIndex])" controls preload="metadata" playsinline class="case-video" />
-                <img v-else :src="assetUrl(additionalCases[toggleIndex])" :alt="`${additionalCases[toggleIndex].id}：${additionalCases[toggleIndex].selection_reason}`" />
+              <div class="case-img-wrap" @click="cycleCase(1)" title="点击切换到下一个案例">
+                <video v-if="isVideoCase(activeCase)" :src="assetUrl(activeCase)" controls preload="metadata" playsinline class="case-video" />
+                <img v-else :src="assetUrl(activeCase)" :alt="`${activeCase.id}：${activeCase.selection_reason}`" />
+              </div>
+              <div class="case-switch">
+                <n-button size="tiny" secondary @click="cycleCase(-1)">← 上一个</n-button>
+                <span class="case-counter">{{ toggleIndex + 1 }} / {{ additionalCases.length }}</span>
+                <n-button size="tiny" secondary @click="cycleCase(1)">下一个 →</n-button>
               </div>
               <figcaption>
-                <strong>{{ additionalCases[toggleIndex].id }}</strong> · {{ additionalCases[toggleIndex].input }}
-                <span class="case-reason">（{{ additionalCases[toggleIndex].selection_reason }}）</span>
+                <strong>{{ activeCase.id }}</strong> · {{ activeCase.input }}
+                <span class="case-reason">（{{ activeCase.selection_reason }}）</span>
               </figcaption>
             </figure>
           </section>
@@ -306,6 +311,13 @@ const cases = computed(() => (detail.value?.manifest?.cases || []).filter(c => (
 const reportParts = computed(() => splitReportAppendix(detail.value?.content || ''))
 
 const casePickerOptions = computed(() => additionalCases.value.map((c, i) => ({ label: c.id, value: i })))
+const activeCase = computed(() => additionalCases.value[toggleIndex.value] || { id: "", input: "", selection_reason: "" })
+
+function cycleCase(step) {
+  const total = additionalCases.value.length
+  if (!total) return
+  toggleIndex.value = (toggleIndex.value + step + total) % total
+}
 
 const tocItems = computed(() => {
   const markdown = reportParts.value?.narrative || ''
@@ -660,7 +672,12 @@ watch(() => route.query, (q) => {
   overflow-wrap: anywhere;
 }
 .case-reason { color: var(--color-text-dim); }
-.case-toggle .case-img-wrap { max-width: 720px; margin-inline: auto; }
+.case-toggle .case-img-wrap { max-width: 720px; margin-inline: auto; cursor: pointer; }
+.case-switch {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  max-width: 720px; margin: 8px auto 0;
+}
+.case-counter { font-size: 12px; color: var(--color-text-dim); }
 
 @media (max-width: 720px) {
   .header-row { flex-direction: column; align-items: stretch; }

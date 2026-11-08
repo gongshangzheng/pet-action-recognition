@@ -71,6 +71,46 @@
           "—"
         ]
       ]
+    },
+    {
+      "title": "低召回类的错误流向",
+      "columns": [
+        "真实类",
+        "recall %",
+        "precision %",
+        "错误数",
+        "主要误判去向"
+      ],
+      "rows": [
+        [
+          "scratching",
+          "56.4",
+          "64.7",
+          "17",
+          "activity 11、drinking 1、prolonged_stationary 1、其余 4"
+        ],
+        [
+          "drinking",
+          "68.3",
+          "78.8",
+          "19",
+          "activity 9、prolonged_stationary 5、eating 3、其余 2"
+        ],
+        [
+          "grooming",
+          "76.1",
+          "92.1",
+          "11",
+          "scratching / activity 为主"
+        ],
+        [
+          "toileting",
+          "77.8",
+          "93.3",
+          "4",
+          "activity / prolonged_stationary"
+        ]
+      ]
     }
   ]
 }

@@ -57,17 +57,136 @@
       "sample_size": "1,130",
       "source": "1 − 85.75%",
       "limitation": "逐类最高 scratching 43.6%、drinking 31.7%"
+    },
+    {
+      "name": "macro recall（排除 3 个稀有类）",
+      "unit": "%",
+      "baseline": "—",
+      "result": "78.03",
+      "delta": "—",
+      "sample_size": "1,126",
+      "source": "test_metrics.json 重算",
+      "limitation": "按 7 类平均，activity 占比大但权重相同，故低于 top-1"
+    },
+    {
+      "name": "top-1（排除 3 个稀有类）",
+      "unit": "%",
+      "baseline": "85.75",
+      "result": "86.06",
+      "delta": "+0.31",
+      "sample_size": "1,126",
+      "source": "同上",
+      "limitation": "排除样本仅 4 条，影响很小"
     }
   ],
   "cases": [
     {
-      "id": "crop-sample",
-      "kind": "image",
-      "src": "assets/38850ca6e413354bca99a50ed79132021967f78b6d9c56f290abf0614dd35cf0.png",
+      "id": "drinking-01",
+      "kind": "video",
+      "src": "media/d57f30e0e0df8c466b8f195b8e24b61a69ff5abef94ff74af3766f500069ed0b.mp4",
       "source_run": "clipv9-b",
-      "input": "测试集片段 20000000060148…13-72，activity（label 0），第 1 秒画面",
-      "selection_reason": "展示按轨迹裁剪后的片段首帧：256×256、主体居中、无文字叠加；用于核对裁剪是否真的落在动物身上",
-      "sha256": "38850ca6e413354bca99a50ed79132021967f78b6d9c56f290abf0614dd35cf0"
+      "input": "真实 drinking，模型判成 eating（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "d57f30e0e0df8c466b8f195b8e24b61a69ff5abef94ff74af3766f500069ed0b"
+    },
+    {
+      "id": "drinking-02",
+      "kind": "video",
+      "src": "media/d57f30e0e0df8c466b8f195b8e24b61a69ff5abef94ff74af3766f500069ed0b.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 drinking，模型判成 eating（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "d57f30e0e0df8c466b8f195b8e24b61a69ff5abef94ff74af3766f500069ed0b"
+    },
+    {
+      "id": "drinking-03",
+      "kind": "video",
+      "src": "media/cd46e7e16aad36cce105e209bbd456d558dcf9d2f7f566c79ad852e7fe3de08e.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 drinking，模型判成 prolonged/stationary（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "cd46e7e16aad36cce105e209bbd456d558dcf9d2f7f566c79ad852e7fe3de08e"
+    },
+    {
+      "id": "drinking-04",
+      "kind": "video",
+      "src": "media/59d33a31a42ae52621e83f3e2841ef1d7fdb99382f91b0d17836b94e3adadfd8.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 drinking，模型判对（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "59d33a31a42ae52621e83f3e2841ef1d7fdb99382f91b0d17836b94e3adadfd8"
+    },
+    {
+      "id": "drinking-05",
+      "kind": "video",
+      "src": "media/59d33a31a42ae52621e83f3e2841ef1d7fdb99382f91b0d17836b94e3adadfd8.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 drinking，模型判对（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "59d33a31a42ae52621e83f3e2841ef1d7fdb99382f91b0d17836b94e3adadfd8"
+    },
+    {
+      "id": "drinking-06",
+      "kind": "video",
+      "src": "media/59d33a31a42ae52621e83f3e2841ef1d7fdb99382f91b0d17836b94e3adadfd8.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 drinking，模型判对（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "59d33a31a42ae52621e83f3e2841ef1d7fdb99382f91b0d17836b94e3adadfd8"
+    },
+    {
+      "id": "scratching-07",
+      "kind": "video",
+      "src": "media/dccc87fc2c483203e957b9fedf8ae19f940de588239742ef4625bc5826f12303.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判成 activity（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "dccc87fc2c483203e957b9fedf8ae19f940de588239742ef4625bc5826f12303"
+    },
+    {
+      "id": "scratching-08",
+      "kind": "video",
+      "src": "media/dccc87fc2c483203e957b9fedf8ae19f940de588239742ef4625bc5826f12303.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判成 activity（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "dccc87fc2c483203e957b9fedf8ae19f940de588239742ef4625bc5826f12303"
+    },
+    {
+      "id": "scratching-09",
+      "kind": "video",
+      "src": "media/cff0e75a2ed5664556e3e4c03325120b1eacb9f7e44082ee76e519671bed01ba.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判成 grooming（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "cff0e75a2ed5664556e3e4c03325120b1eacb9f7e44082ee76e519671bed01ba"
+    },
+    {
+      "id": "scratching-10",
+      "kind": "video",
+      "src": "media/cff0e75a2ed5664556e3e4c03325120b1eacb9f7e44082ee76e519671bed01ba.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判对（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "cff0e75a2ed5664556e3e4c03325120b1eacb9f7e44082ee76e519671bed01ba"
+    },
+    {
+      "id": "scratching-11",
+      "kind": "video",
+      "src": "media/dccc87fc2c483203e957b9fedf8ae19f940de588239742ef4625bc5826f12303.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判对（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "dccc87fc2c483203e957b9fedf8ae19f940de588239742ef4625bc5826f12303"
+    },
+    {
+      "id": "scratching-12",
+      "kind": "video",
+      "src": "media/dccc87fc2c483203e957b9fedf8ae19f940de588239742ef4625bc5826f12303.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判对（4 秒片段，60 帧）",
+      "selection_reason": "低召回类样例：模型实际看到的 4 秒裁剪片段，可逐帧播放核对动作与判读",
+      "sha256": "dccc87fc2c483203e957b9fedf8ae19f940de588239742ef4625bc5826f12303"
     }
   ],
   "diagnostics": []

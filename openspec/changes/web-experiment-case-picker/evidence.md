@@ -13,3 +13,10 @@
 - **现象**：案例图原按“原始像素、容器滚动”处理（`max-width: none`），1440px 截图放进 960px 正文列后必须横向滚动，视觉上像放不下。
 - **修复**：图片改为 `max-width: 100%; height: auto`（等比缩放到列宽），交替模式的单张图容器上限 720px 并居中；去掉 `image-rendering: pixelated`（缩小后像素化反而更糊）。
 - **构建**：`npx vite build` 通过。
+
+### 2026-11-08：交替模式支持点击切换与视频案例
+
+- 用户反馈：案例应为视频（模型输入就是 4 秒片段），且交替模式要能点画面切换左右案例、案例数量偏少。
+- 前端改动：交替模式新增「← 上一个 / 下一个 →」按钮与 `n / 总数` 计数，点击画面也会切换到下一个；`activeCase` 计算属性替代重复的 `additionalCases[toggleIndex]` 访问。
+- 报告侧：`cat-clip-training/20261107-clipv9-b` 的案例改为 **12 段视频**（scratching/drinking 各 6 段，含判对与判错），由生成器复制到 `media/` 并计算 sha256。
+- 构建：`npx vite build` 通过。
