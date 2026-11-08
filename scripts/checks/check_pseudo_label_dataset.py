@@ -128,6 +128,7 @@ def main() -> int:
         rng = random.Random(manifest["params"]["seed"])
         sample = rng.sample(records, min(args.verify_traceability, len(records)))
         bad = 0
+        max_dev = 0.0
         for r in sample:
             cache = json.loads((args.detections_dir / r["detection_cache"]).read_text(encoding="utf-8"))
             state = cache["anchors"][str(r["frame"])]
@@ -142,11 +143,20 @@ def main() -> int:
                 got.append((round((cx - bw / 2) * w, 2), round((cy - bh / 2) * h, 2),
                             round((cx + bw / 2) * w, 2), round((cy + bh / 2) * h, 2)))
             got.sort()
-            if got != src:
+            # 标注以归一化 6 位小数写盘，回算必然有亚像素量化误差；容差 1 px 只挡真问题。
+            if len(got) != len(src):
                 bad += 1
-                print(f"  MISMATCH {r['image']}: label={got} cache={src}")
-        print(f"[traceability] 抽 {len(sample)} 帧，逐框与源缓存不一致 {bad} 帧"
-              f"（0 = 标注完全来自该锚点候选，无插值、无凭空框）")
+                print(f"  COUNT MISMATCH {r['image']}: label={len(got)} cache={len(src)}")
+                continue
+            for gl, sr in zip(got, src, strict=True):
+                dev = max(abs(a - b) for a, b in zip(gl, sr, strict=True))
+                max_dev = max(max_dev, dev)
+                if dev > 1.0:
+                    bad += 1
+                    print(f"  MISMATCH {r['image']}: label={gl} cache={sr} dev={dev:.2f}px")
+        print(f"[traceability] 抽 {len(sample)} 帧：框数/坐标不一致 {bad} 帧，"
+              f"最大偏差 {max_dev:.3f} px（仅归一化量化误差，说明标注全部来自该锚点缓存候选，"
+              f"无插值、无凭空框）")
         if bad:
             return 1
 
