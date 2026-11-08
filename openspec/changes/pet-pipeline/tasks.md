@@ -57,14 +57,14 @@
 | 以上脚本本体 | 保留在 `scripts/`，只留 argparse 与调用 | 入口不变，行为不变 |
 
 - [ ] 2.1 盘点现状：列出链路相关脚本与 petlib 模块，标注每个文件的职责与“是否含可复用逻辑”。判据：清单写入 evidence，覆盖本 change 涉及的全部文件。
-- [ ] 2.2 把目标布局写进 design 与 `cat-pipeline` skill（含判断标准：能被两个以上入口复用、能脱离命令行被测试）。判据：design 与 skill 两处一致。
+- [ ] 2.2 把目标布局写进 design 与 `pet-pipeline` skill（含判断标准：能被两个以上入口复用、能脱离命令行被测试）。判据：design 与 skill 两处一致。
 - [ ] 2.3 用户审定布局方案。判据：裁定结果写入 evidence；未审定前不搬代码。（依赖 2.2）
 - [ ] 2.4 迁移检测编排到 `petlib/detection/`（anchors、cache、fingerprint，指纹按 mtime 缓存）。判据：脚本调用新模块，1 段视频的检测产物与迁移前哈希一致。（依赖 2.3）
 - [ ] 2.5 迁移筛选与切片规则到 `petlib/datasets/cat_selection.py`。判据：`slices_v8` 重跑结果与现有 `clips.jsonl` 哈希一致。（依赖 2.4）
 - [ ] 2.6 迁移逐帧框与片段渲染到 `petlib/datasets/clip_boxes.py`、`petlib/render/clips.py`。判据：单个片段的框序列与渲染产物哈希一致。（依赖 2.5）
 - [ ] 2.7 迁移标注导出与单片段推理到 `petlib/datasets/annotation_export.py`、`petlib/inference/recognizer.py`。判据：导出的 ann 文件与现有 `datasets/cat_clip_v9/*.jsonl` 逐行一致；推理输出概率一致。（依赖 2.6）
 - [ ] 2.8 旧脚本归入 `scripts/legacy/` 并标注只读。判据：`scripts/` 顶层不再出现这些文件，归档说明写入 evidence。（可与 2.7 并行）
-- [ ] 2.9 更新 `cat-pipeline` skill 的代码地图与目录约定，使其与新布局一致。判据：skill 中每个路径都存在。（依赖 2.7、2.8）
+- [ ] 2.9 更新 `pet-pipeline` skill 的代码地图与目录约定，使其与新布局一致。判据：skill 中每个路径都存在。（依赖 2.7、2.8）
 
 ## 3. 资格与筛选
 
@@ -112,7 +112,7 @@
 ## 9. 工具与文档
 
 - [x] 9.1 单片段推理脚本：`scripts/infer_single_clip.py`，直接走 backbone → cls_head 并输出 softmax 概率。证据：`archive/2026-11-08-clip-box-crop-input/evidence.md`。
-- [x] 9.2 链路 skill：`.claude/skills/cat-pipeline/SKILL.md`，记录五段链路、代码地图、开工前检查表与已知限制。
+- [x] 9.2 链路 skill：`.claude/skills/pet-pipeline/SKILL.md`，记录五段链路、代码地图、开工前检查表与已知限制。
 - [x] 9.3 报告页版式与案例交互：侧栏 + 正文 + 章节目录；交替模式支持点击切换；案例改视频。证据：`archive/2026-11-07-web-experiments-report-layout/`、`web-experiment-case-picker/evidence.md`。
 
 ## 10. 采样间隔对齐（先量化再决定）

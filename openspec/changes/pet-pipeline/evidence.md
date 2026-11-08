@@ -138,3 +138,7 @@
 - 七个已是 main 祖先的本地分支以普通 `git branch -d` 删除：`exp/gdino-crop-videomaev2-evaluation`、`feat/integrate-third-party`、`fix/k400-vlm-eval`、`integrate/pet-final`、`train-videomaev2`、`yolo-detection`、`yolo-distil`。七个源提交仍是 main 祖先。
 - `backup-pre-rebase` 和 `exp/sync-openspec-workflow-rules` 不是 main 祖先，普通 `git branch -d` 分别被 Git 以 `not fully merged` 拒绝；两个分支名及对应 archive tag 均保留，因此本地分支不止 main。未强制删除、未修改祖先图，也未修改 remote refs 或 push。
 - 主目录原 13 项 tracked 修改、未跟踪清单与保全记录一致，stash `4297a3dbcf1606677256cec8296d9423ad0c3a50` 保留；三个媒体副本仍在。原工作区并非 clean，未提交内容不纳入本提交。三个 skill 与 `tasks.md` 相对 `ce258d0` 未改变；三个 change 的结构协调和任务状态仍待审定。
+
+## 名称迁移说明（2026-11-08）
+
+用户批准将主 change `cat-pipeline-consolidation` 改名为 `pet-pipeline`，流水线 skill `cat-pipeline` 改名为 `pet-pipeline`；当前路径分别为 `openspec/changes/pet-pipeline/` 与 `.claude/skills/pet-pipeline/SKILL.md`。上文和已归档 change 中的旧名称保留为历史记录，不表示当前入口仍使用旧名。此次仅迁移名称与当前引用，不改变任务状态或验证既有历史结果。

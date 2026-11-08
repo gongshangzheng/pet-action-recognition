@@ -1,11 +1,11 @@
 ---
-name: cat-pipeline
+name: pet-pipeline
 description: |
   猫/狗行为数据从头到训练的完整链路速查：源视频 → 检测缓存 → 裁剪渲染 → 片段索引 → 训练标注 → mmaction2 训练/评测，含每步的产物路径、命令、已知坑与开工前检查表。
   触发场景：(1) 要训练行为模型 (2) 要改数据预处理/切片/索引 (3) 不清楚某一步的产物在哪 (4) 怀疑输入不是裁剪画面 (5) 训练报错或数据对不上
 ---
 
-# 猫行为数据 → 训练 完整链路
+# 宠物行为数据 → 训练 完整链路
 
 **先读这一条**：连续几天的工作里最容易忘的两件事是——
 1. **训练到底读整帧还是裁剪画面**（当前默认读整帧，裁剪视频虽然存在但没接进索引）；
@@ -104,10 +104,10 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 ## 目录约定：petlib 与 scripts 的分工
 
 - **`petlib/`** 放可导入、可测试、无命令行的能力：检测模型封装（`detection/`）、锚点与缓存（待下沉）、裁剪几何与轨迹（`datasets/cat_crop.py`）、跟踪（`tracking/`）、数据集与指标（`datasets/cat_intervals.py`）、视频写入（`videowriter.py`）。
-- **`scripts/`** 只做参数解析与编排调用；现存的 `prepare_cat_crop_experiment.py` 仍混着检测、渲染、索引三类逻辑，属待重构项（见 change `cat-pipeline-consolidation` 的 1.4）。
+- **`scripts/`** 只做参数解析与编排调用；现存的 `prepare_cat_crop_experiment.py` 仍混着检测、渲染、索引三类逻辑，属待重构项（见 change `pet-pipeline` 的 1.4）。
 - 判断标准：这段代码能否被两个以上入口复用、能否脱离命令行被测试。能，就进 `petlib`。
 
-## 目标布局（2026-11-08 定，见 change `cat-pipeline-consolidation` 第 2 节）
+## 目标布局（2026-11-08 定，见 change `pet-pipeline` 第 2 节）
 
 | 能力 | 目标位置 | 现状 |
 |---|---|---|
