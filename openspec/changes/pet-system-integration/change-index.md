@@ -15,8 +15,8 @@
 | video-action-segmentation 0/29 | 长视频窗口、时间聚合、行为段与分段评测 | 分类模型、存在性和定位 → system/抽查 | 独立；tasks 2、3、5、6；候选及指标待裁定；旧七类资产应核对当前十类模型，不能默认为同一协议 |
 | resource-guard-shared-gpu 2/15 | 共享机护栏预检、限额、终止与证据 | 获批资源及受控进程 → 任务安全运行 | 独立、草稿待审；D6 终止取代 SIGSTOP，未实施；草稿重复与实现漏洞待 luna 后续审查，不借此抢 12 GB 或终止他人进程 |
 | web-experiment-case-picker 3/4 | 实验报告交替案例选择显示及用户目视验收 | 现有页面和案例 → 报告用户 | 保留独立，完成 1.3 后再考虑归档；构建不代替用户检查，不扩实验 UI 功能 |
-| verify-cat-dataset-provenance 0/3 | 源端只读复查和旧路径 provenance 报告 | 云电脑/源端可读连接 → 数据来源证据 | 受阻；tasks 全三条，缺真实连接与附件；不能用本地副本推断源端一致 |
-| verify-company-module-workflows 2/15 | 公司环境模块及串联核验报告 | 公司节点、执行授权、输入/权重 → 系统环境证据 | 受阻；proposal 与 evidence：狭窄前向/短训练/模拟器不能证明完整业务链，仍缺视频、恢复、真实交接及板端等 |
+| [verify-cat-dataset-provenance 0/3](../archive/2026-11-08-verify-cat-dataset-provenance/) | 历史源端只读复查与旧附件计划 | 已停止；`pet-pipeline` 1.8 数据卡披露历史来源及未知 | 未验收；披露不替代源端复查 |
+| [verify-company-module-workflows 2/15](../archive/2026-11-08-verify-company-module-workflows/) | 公司旧验证矩阵 | superseded；现有系统报告、协议及真实设备职责见 evidence | 未验收；旧节点、checkpoint、INT8、通用 harness、队列限额等不宣称承接 |
 | spot-check-cli 0/4 | 摄像头时段抽查报告，是否保留身份登记待裁定 | segmentation 段列表、录像、可选 registry → 报告 | 处置待确认；1.1 隐码、1.4 动作码突变和 ±1.5 s 与解除 latent 前置及待审度量冲突；1.2 与 registry 重叠 |
 | registry-retrieval 0/5 | 猫/物品登记检索候选 | 登记图片、候选区域 → 身份或空间物体识别 | 延后/处置待确认；1.1、1.1b、1.4 身份检索非当前主线前置；1.2 和 background-memory 分割候选重叠；旧方向已定但实施未批准 |
 | background-object-memory 0/18 | 背景物体清单及变化候选 | 检测与候选分割 → 空间关系 | 延后/处置待确认；tasks 2.1、4.1-4.3 与 registry 候选生成交叠；system 3.5 只列候选，旧 SAM 必须论述不是已定前置 |

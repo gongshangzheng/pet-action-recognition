@@ -171,3 +171,7 @@ flowchart LR
 本 change 的 `motion-pipeline` delta 仅约束系统集成及评测协调，不同步现有主 spec；存在性及动作分割具体行为由各自 change 负责，数据和训练由 `pet-pipeline-data` 负责。现有主 spec 的历史空间规则与本 delta 尚需未来同步时逐项协调，本轮不修改主 spec。
 
 跟踪与重复框工作已并入 [`pet-pipeline` 的组件](../pet-pipeline/design.md#3-重复框与跟踪)，原 tracker-selection 的 14 项未完成任务按映射承接；归档不代表选型完成。不能以已有 OC-SORT 产物证明人工 GT、IDSW 或多宠身份质量完成。
+
+### 已停止公司矩阵与现有系统职责
+
+原 `verify-company-module-workflows` 以 superseded 停止，历史证据和未覆盖边界见 `evidence.md` 与 `change-index.md`。仅现有报告、协议、设备职责对接，不将旧矩阵专属范围视为系统全覆盖或已验收。

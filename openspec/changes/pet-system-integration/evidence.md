@@ -25,3 +25,7 @@
 ## tracker 并入后的协调
 
 用户已决定将 tracker-selection 的全部工作并入 pet-pipeline 的重复框与跟踪组件；14 项未完成依旧未完成，归档不代表选型。上文保留当时记录；现行任务编号与旧号映射见 [pet-pipeline task-map](../pet-pipeline/task-map.md)。原 13 项受管 active 在并入后为 12 项；另有用户未跟踪的 camera-vendor change，CLI 因而列出 13 项。其余台账建议仍待裁定。
+
+## 2026-11-08：旧公司验证计划停止与职责对接
+
+用户确认旧矩阵 superseded，保留 2/15 历史状态；见 `openspec/changes/archive/2026-11-08-verify-company-module-workflows/`。现有任务 1.4–1.5 负责证据盘点和报告口径，4.4–4.5 协调分段协议与端侧导出对照，6.2–6.3 定义端云接口、资源精度延迟计划，6.12–6.13 区分实机联合验收与模拟报告；这些职责不是公司旧矩阵逐项实现或验收。公司指定节点复跑、旧模型 checkpoint/恢复、INT8、通用 harness、队列限额等旧专属或未明文覆盖内容此次停止、未验收，不声称系统任务全覆盖。
