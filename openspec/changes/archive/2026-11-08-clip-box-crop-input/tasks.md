@@ -1,0 +1,27 @@
+## 1. 逐帧框数据
+
+- [x] 【移交】1.1 对片段引用的全部视频跑 `scripts/track_pet_targets.py`（单流 OC-SORT，沿用 4.5/4.11/4.14 的规则），产出逐锚点轨迹。判据：轨迹文件覆盖全部视频；已有 314 段复用，新增段落的耗时写入 evidence。（可与 1.2 并行）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】1.4 实现 `(区间, 轨迹)` 独立筛选：对每条轨迹各自判断覆盖、缺口与物种稳定性，通过的轨迹独立切片；`sample_id` 带轨迹 id，并记录 `subject_ambiguous`。判据：抽 3 个多轨迹视频，逐视频给出“哪条轨迹通过/被哪条规则淘汰”，写入 evidence 与中间清单。（依赖 1.1）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】1.5 由轨迹生成片段框序列：对每条通过的轨迹插值到逐帧、缺口沿用端点、5 帧滑动平均。判据：抽样 5 条片段打印框序列与所用轨迹 id；相邻帧位移中位数写入 evidence。（依赖 1.4）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】1.2 统计框覆盖率：有框帧占比、无框帧回落整帧的片段数、框面积占画幅比的中位数与 p90。判据：四个数字写入 evidence。（可与 1.1 并行）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】1.3 把 `boxes` 写入新索引版本 `datasets/cat_clip_v9`（不覆盖 v8），并把导出脚本改为透传 `boxes`。判据：索引行数与 v8 一致，抽样 20 条能读到 60 个框。（依赖 1.5）（后续在 cat-pipeline-consolidation 执行）
+
+## 2. 离线渲染片段
+
+- [x] 【移交】2.1 实现片段渲染：按逐帧框裁方形（补边不拉伸）、缩放 256、H.264 crf 23、无文字叠加，输出 `results/cat_clip_v9/assets/clips/<split>/<video>:<start>-<end>:<track>.mp4`。判据：渲染 20 条片段，逐条核对帧数 60、尺寸 256×256、首中末帧主体在框内。（依赖 1.5）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】2.2 实测渲染速率并外推全量成本：记录 20 条的耗时、单片段体积与 CPU 峰值。判据：三项数字写入 evidence，给出全量时长与磁盘估算。（依赖 2.1）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】2.3 全量渲染片段并在渲染后做媒体审计（帧数、尺寸、fps、哈希、无文字）。判据：审计报告 passed，失败清单非空时逐条写明原因。（依赖 2.2）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】2.4 索引指向片段文件：`video` 改为片段相对路径、`start/end` 固定 1/60，并保留 `source_video`、`boxes`、`track_id` 供追溯。判据：抽样 20 条能从索引回到源视频与轨迹。（依赖 2.3）（后续在 cat-pipeline-consolidation 执行）
+
+## 4. 范围限定
+
+- [x] 4.1 确认本轮数据集只含单宠物片段：`slices_v8` 的 482 个多宠物区间在切片前已排除、贡献 0 条片段，因此 7,554 条片段全部来自单宠物区间。判据：按 `intervals.jsonl` 的 `reason` 统计，多宠物区间的 sample_id 与片段 sample_id 交集为 0。已完成。
+- [x] 【移交】4.2 记录多宠物片段另行处理的边界：标签归属未定（一只在吃、另一只在走），审阅与分配在 `multi-pet-track-cropping` 中准备，本 change 不对其训练负责。判据：说明写入 evidence 与报告。（后续在 cat-pipeline-consolidation 执行）
+
+## 3. 对照训练与结论
+
+- [x] 【移交】3.1 用逐帧裁剪输入跑 20 轮（同一 seed、同一片段清单），保存配置、环境、日志、checkpoint 与权重哈希。判据：状态为完成、best 检查点按 macro-F1 选出、四类产物齐备。（依赖 2.2）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】3.2 与整帧臂对照：top-1、macro-F1、逐类 recall 与 support，注明 A 臂仅 4 轮的部分结果。判据：对照表写入 evidence 与报告。（依赖 3.1）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】3.3 抽检 20 条裁剪片段，记录裁错比例与失败类型（框过大、框偏移、框缺失、跨物种）。判据：抽检结论写入 evidence。（依赖 2.1）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】3.4 【条件】若 B 臂完成且时间允许：跑拉伸版第三臂（逐帧框直接拉伸到 224），量化变形代价。判据：与 B 臂的对照表写入 evidence；若时间不足记录未执行。（依赖 3.1）（后续在 cat-pipeline-consolidation 执行）
+- [x] 【移交】3.5 记录旧渲染视频的处置：`assets/full_run/videos/gdino*` 不再进入训练，仅保留审阅与对照；在 skill 与 change 中写明。判据：说明写入 evidence 与 `.claude/skills/cat-pipeline/SKILL.md`。（依赖 3.2）（后续在 cat-pipeline-consolidation 执行）
