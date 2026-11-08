@@ -73,6 +73,16 @@
 
 **限制（必须随报告声明）：** YOLO(base) 的"一致率"仍是对 base 的模仿度，不是真实准确率；三方可比的前提是闸门已确认 base 在已知失败上更优，否则"更高的模仿度"没有意义。
 
+### 4.6 脚本组织与清理（2026-11-08 用户裁定）
+
+> **方案：** 沿既有分层，不发明新目录。③ 全量执行选 A——复用 `prepare_cat_crop_experiment.py --stage detect`（经 24 小时全量验证的写缓存逻辑不动），外层新增薄批次脚本 `scripts/run_base_detection_batches.py`（分批、预检、BATCH DONE 防重跑）。
+
+**本轮新增仅 3 个脚本**：闸门对照与三方对照落 `scripts/checks/`（一次性裁决工具）；批次外层落 `scripts/`（正式入口）。base 接入只改 `petlib/detection/grounding_dino.py` 约 5 行（model_dir 参数化 + name 区分变体），不新建文件——同架构换 checkpoint 不该复制文件。数据集导出、失效抽样、速度探测全部复用既有脚本零改动。
+
+**petlib 准入标准重申**：只有被多个脚本复用的能力才进 petlib（如 anchors.py 被三方调用）；一次性 CLI 工具的正确位置就是 scripts/。
+
+**废弃清理（同日执行，commit 51a1932）**：删除 5 个零引用一次性脚本（`pet_compare_track_correction` / `pet_seg_contact` / `rtmdet_cross_check` / `report_mammal_comparison` / `cat_action_balanced_proxy`，最后一个已被 `build_cat_dataset_slices` 的正式机制取代）。保留 7 个零代码引用的 CLI 入口（build_video_manifest 等）——CLI 工具零 import 是正常属性，不是废弃信号。`plot_cat_action_comparison` 列为待定（若后续报告不再用其图，归入下轮清理）。
+
 ## Risks / Trade-offs
 
 - [闸门样本太小误判] → 判据数字随样本量声明；G1 印刷物锚点约 43 个，±5 个锚点的波动就可能翻转结论，报告须给出绝对数而非百分比。
