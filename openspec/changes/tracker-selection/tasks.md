@@ -1,7 +1,7 @@
 # Tasks: tracker-selection
 
-> 总管：`pet-motion-latent-pipeline` §4A。**重启（2026-09-17）**：触发条件由「等出现多猫」改为「主动核实 + 用户批准」。
-> 启动前请核对 BoxMOT Re-ID 权重是否就位（BotSort/DeepOcSort 契约测试当前跳过）。
+> 系统统筹：[`pet-system-integration`](../pet-system-integration/design.md)；数据与教师检测：[`pet-pipeline`](../pet-pipeline/design.md)。
+> 以下九项保留历史任务原文，与当前候选、昼夜范围和重复框联合设计尚需协调，须经用户确认并重拟后才能直接开工；权重核对不构成本轮下载或实施授权。
 
 ## 0. 前置闸门：多猫核实（**必须先行**）
 

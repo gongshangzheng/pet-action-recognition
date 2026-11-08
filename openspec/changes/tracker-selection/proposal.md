@@ -2,11 +2,13 @@
 
 > 当前协调：本 change 保持 active。单流 OC-SORT 是已运行的基线，并非最终选定的跟踪器；轨迹质量和多宠关联未验收，九项任务仍未完成。跟踪选型消费教师检测结果，不阻塞原始教师候选生成；具体依赖见 [design](design.md)。行为发现研究已搁置，不是本链路前置。
 
-> 子 change，总管：`pet-motion-latent-pipeline` §4A。**状态：重启（2026-09-17）**——原为「延后等出现多猫」，现改为**主动核实 + 选型**。
+> 系统统筹见 [`pet-system-integration`](../pet-system-integration/design.md)，数据与教师检测见 [`pet-pipeline`](../pet-pipeline/design.md)。
 
-重复框处理与跟踪联合设计属于本 change 的职责，不仅是比较算法名称。原始候选独立保存后，先处理同帧明显重复框，再进行 SORT 等关联；时序歧义可利用初步轨迹复核，细节见 [design](design.md)。这些处理不阻塞原始教师检测。
+重复框处理与跟踪联合设计属于本 change 的职责，不仅是比较算法名称。训练数据准备和在线推理均需处理重复框，重点利用框位置随时间的连续性，防止同一动物被当作两个目标；不确定时保留歧义，保护两只真实动物。原始候选独立保存后先处理同帧明显重复框，关联时结合既有轨迹复核，细节见 [design](design.md)。这些处理不阻塞原始教师检测。
 
-以下保留历史问题与候选，用于理解选型背景；历史参数和实验安排不能直接作为本轮执行授权。多猫核实是关联质量研究的前置，不是原始教师检测的前置。
+当前建议以已有 OC-SORT 对照无 ReID Hybrid-SORT，另以 Deep OC-SORT 评估外观增量；均未在本域证明胜出，详见 [research](research.md)。
+
+以下 Why、What Changes、Capabilities 和 Impact 是历史快照，不是当前实施安排或参数授权。旧 argmax 描述特定 `pet_detect_track.py`，不代表全库或现有 OC-SORT 入口；历史行为发现已搁置，多猫核实不是原始教师检测前置。
 
 ## Why
 
