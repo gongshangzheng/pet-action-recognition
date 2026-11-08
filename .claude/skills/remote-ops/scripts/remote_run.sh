@@ -42,7 +42,9 @@ if (( SKIP_PREFLIGHT == 0 )); then
   echo "### 自动预检（可用 --skip-preflight 关闭）"
   PREFLIGHT_ARGS=()
   [[ -n "$GPU_INDEX_FOR_PREFLIGHT" ]] && PREFLIGHT_ARGS+=(--gpu-index "$GPU_INDEX_FOR_PREFLIGHT")
-  if ! bash "$SCRIPT_DIR/preflight.sh" "${PREFLIGHT_ARGS[@]}"; then
+  if bash "$SCRIPT_DIR/preflight.sh" "${PREFLIGHT_ARGS[@]}"; then
+    :
+  else
     rc=$?
     echo "预检未通过（退出码 $rc）→ 不执行命令。等机器空下来或与占用者协调后再跑。" >&2
     exit "$rc"
