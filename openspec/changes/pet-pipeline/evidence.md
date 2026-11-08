@@ -200,3 +200,11 @@
 - 运行目录 `results/pet_pipeline/base-raw-20261109a`；共享候选根 `/home/wyy/datasets/pet_pipeline/detections/raw/gdino-base-s5-20261109a`；prepare 核验视频清单 2737 行、basename/stem 唯一，运行 metadata 固定路径/阈值/stride/revision。0.3 按清单和 metadata 勾选。
 - 单视频 `0_chi2m65__event_20260410_235950.mp4` 技术 run rc0，226 reported/decoded 帧，46 锚点均等于 range(0,226,5)，76 raw 候选(70 cat/6 dog)相对 legacy74，raw 指纹1且权重身份正确。守卫墙钟25秒(包含加载)，观察CPU149%、RSS3305MiB、GPU10%，非质量验收。0.4 前序全完成，按实际缓存和日志勾选。
 - 全量每批64视频，共43批，首视频可严格缓存复用；按烟测保守每视频25秒估首批约27分钟，长视频分布未知故每批守卫上限10800秒。每批重新preflight，CPU250%/RSS24000MiB/GPU90%/threads2/nice10，模型torch/opencv各1线程，OPENCV_FFMPEG_THREADS=1。任意异常停止，不吞错；已完整原子写缓存可复用，恢复后仍验源及模型指纹。外层setsid nohup且stdin/devnull保持会话独立。0.5 按批计划勾选；0.6/0.7须实际完成及逐项核查后才勾。
+
+## Base raw 全量运行监督（进行中）
+
+- 2026-11-09 00:18 CST 只读核查：远端 `all` PID/SID 2937486 仍运行，模型 PID 2937569 占 GPU 2676 MiB；已有 16 份缓存，正在第 17/64 个视频，43 批尚无完成 status。全量入口日志 `results/pet_pipeline/base-raw-20261109a/all.log`，各批 status 与 guard 日志同目录；候选缓存位于 `/home/wyy/datasets/pet_pipeline/detections/raw/gdino-base-s5-20261109a/detections`。
+- 启动时父会话 SSH 60 秒超时仅为启动连接超时，不是任务失败：已独立核查进程 SID、GPU 和持续日志。不得重复启动。0.1–0.5 已勾且证据见上一节；0.6 和 0.7 仍未完成，质量尚未验收，lib 更名延期。
+- 2026-11-09 01:20 CST 只读监督：253/2737 缓存，前三批 status rc0，第四批仍在运行；外层 PID/SID 2937486，模型 PID 2999025 GPU 2676 MiB，守卫最新 CPU 200% / RSS 3077 MiB。任务 0.6/0.7 尚未完成，不能据此宣布完整或质量通过。
+- 2026-11-09 01:59 CST 第七批 `all-384-64` detect rc5（guard 子命令 rc1），第 53 个视频 `event_20260508_201243.mp4` 报 `moov atom not found` / `Cannot open video`；已有 436 缓存、前六批 rc0。该源 786476 字节，SHA-256 两次均为 `579562546af474bc0365352dae3a0f87b014c3db43e45e72e1267e37e63ac360`，OpenCV 重试不可读，前后视频可读取首帧；未修改源。诊断见 `results/pet_pipeline/base-raw-20261109a/source-open-diagnostic.txt`。
+- 父会话裁定保留不可读源的明确失败 ledger 后继续其他视频：原清单和批次索引不变，排除必须与源路径及哈希一致，仅限首帧实际不可读，其他异常照常停止；须保留原失败批证据。新增只读预检及 runner 过滤计划先经父审，未部署或重启，0.6/0.7 未完成。
