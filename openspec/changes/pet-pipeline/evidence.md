@@ -267,3 +267,15 @@
 - TDD：新增测试先因模块不存在收集时报 `ModuleNotFoundError`；实现后 `python3 -m pytest tests/test_video_statistics.py tests/test_interval_manifest.py tests/test_video_manifest.py -q` 为 **8 passed**。CPU 真实 MJPG 6 帧/5fps、故意不可打开文件及删除后源、历史截断和未匹配审计、CLI 错误退出、版本拒覆盖和清单哈希校验均在项目 `results/tests/video-statistics` 下测试并清理；故意损坏夹具不是实际源事故。
 - 本机既有 1.3 两视频清单 CLI 核验：`python3 -m lib.datasets.video_statistics --inventory-dir results/tests/video-manifest-real-smoke-v1 --output-dir results/tests/video-statistics-real-smoke-v1` rc0；`frames-1-120.mp4` 为 120 帧/15fps = 8 秒，`source.mp4` 为 438 帧/约 14.9996656fps = 29.200651 秒，2 known、0 unknown。仅容器属性，不证明可完整解码，不是全库统计。
 - `openspec validate pet-pipeline --strict`、`git diff --check` 通过；模块导入为本仓库路径。原有 158 个 dirty/untracked 文件哈希未变；父独立复核三套测试 **8 passed** 与 strict 验证，并允许修正历史不可读告警后勾选；补充历史不可读 WARNING 后重跑三套测试 **8 passed**。未远程运行、解码完整视频、训练或关联标注。
+
+## 1.6 帧与时间端点核查（进行中）
+
+计划：只读核对原标注到 CSV 的生产与路径规范化、下游帧消费和检测锚点，再以边界例子区分可证事实、约定和未验证前提；不更改源标注、既有实现或运行元数据。合成视频只能验证本地解码器索引，不证明原标注工具的约定。
+
+### 1.6 核查结果与阻塞
+
+- **可证生产事实，不等于源语义**：`scripts/normalize_company_video_paths.py:122-173` 只改视频路径、比较 JSON 非路径内容；`scripts/recover_cat_dataset.py:279-299` 从原 `timelinelabels.value.ranges` 的 `start/end` 原值写 CSV，仅要求整数且 `1 <= start <= end`，没有做基数换算；其 `:429` 明写 `convention not verified`。`results/tracking_eval_20261107/intervals.csv` 样本含 `1,22`、`340,414` 等，不能以最小值或抽样推断原工具端点。`docs/company_video_paths.md:68-71` 的一起双闭明确是示例假设、要求核模板；历史 `docs/cat_action_training_v1.md:23` 和 `scripts/prepare_cat_action_v1.py:48` 是消费口径，不是生产方确认。
+- **已实现的历史消费语义**：`lib/datasets/cat_intervals.py:17,27-35` 读一起双闭；其 `RestrictFrameRange` 起点减一、总长 `end-(start-1)`；`scripts/prepare_cat_crop_review_set.py:65-72` 用 ffmpeg trim `start_frame=s-1:end_frame=e`；`scripts/render_clip_windows.py:63` seek `start-1`。这些一致说明历史消费约定，但不证明原始 Label Studio 语义。
+- **条件性边界例子**：假设源数字为一起双闭、总帧数 N、FPS 为 f，则 CSV `[1,1]` → 零基 `[0,1)`、仅帧 0、名义时间 `[0,1/f)`；`[N,N]` → `[N-1,N)`、仅末帧、`[(N-1)/f,N/f)`；`[152,156]` → `[151,156)`、5 帧、`[151/f,156/f)`。16 帧步长 3 的首尾样本相差 45 帧间隔，首尾名义帧覆盖 46 帧区间。以上秒数仅相对首帧且以 CFR 固定帧长为前提；`scripts/checks/check_cat_crop_time_mapping.py:66-80` 使用实际 PTS 核 CFR/VFR，标称 FPS 不证明实际 PTS、时间原点或帧尾时刻。
+- **代码差异和风险**：`scripts/prepare_cat_crop_experiment.py:231-253` 从首个 `cap.grab()` 的 frame 0 起每 stride 帧建锚点；历史一起假设下 CSV `[152,156]` 包含零基帧 151–155，stride 5 锚点为 155；`scripts/build_cat_dataset_slices.py:98-100,214-228` 却以 `152 <= f <= 156` 查询，恰巧同得 155，而单帧 `[151,151]` 对应零基锚点 150，现逻辑查 151 而漏掉 150；`[156,156]` 对应零基 155，现逻辑查 156 而漏掉 155。相反 `[150,150]` 对应零基 149，现逻辑会误选 150。`scripts/build_clip_boxes.py:102-112` 也以原 clip start/end 直接比较并插值零基轨迹点；`scripts/track_pet_targets.py:118-141` 将检测帧传入跟踪并原样输出轨迹点，而渲染 seek 是 `start-1`。这是静态可复核的索引不一致疑点，不证明实际视频、框或指标的影响数量；本轮没有修改这些代码。
+- **阻塞与备选**：尚无法区分 A：原标注为一起双闭 `[s,e]→[s-1,e)`；B：零起双闭 `[s,e]→[s,e+1)`；以及端点半开等其他可能。最小所需证据是实际 Label Studio 标注配置 XML、工具版本、一条原始导出及对应视频已知首末帧的标注界面对照；不能让用户凭猜测选择历史事实。若原始来源无法获得，用户可另行决定采用历史消费约定继续，明确标为 assumed，不能冒充源已确认。当前 1.6 不勾，1.7 暂停。未全量审计标注帧、未远程运行或移动原始数据。
