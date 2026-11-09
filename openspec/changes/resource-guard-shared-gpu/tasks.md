@@ -8,8 +8,8 @@
 - [x] 1.2 写本仓版 `remote-ops/SKILL.md`：三道闸、退出码表、GPU 判忙口径（≥500 MiB 显存持有）、`setsid` 纪律、连 pet 不走代理。
 - [x] 1.3 核对当前护栏实现的预检、限额、退出码和日志；判据：逐项对照及差异写入 evidence。
 - [x] 1.4 修正 `remote_run.sh` 捕获预检失败码；判据：通过调用生产 `remote_run.sh` 的回归测试，预检返回 2/3 时入口分别返回原码，且任务 marker 不生成。测试只用隔离目录中的生产 `remote_run.sh` 和 `_remote_common.sh` symlink 与 preflight/ssh stub，stub 不复制生产逻辑且不执行 SSH。
-- [ ] 1.5 核对现有调用入口是否按共享机纪律使用护栏；判据：入口清单及缺口写入 evidence。
-- [ ] 1.6 核对 `remote-server-discipline` 对 remote-ops 的引用与事故记录；判据：核对结果及必要修订写入 evidence。
+- [x] 1.5 核对现有调用入口是否按共享机纪律使用护栏；判据：入口清单及缺口写入 evidence。
+- [x] 1.6 核对 `remote-server-discipline` 对 remote-ops 的引用与事故记录；判据：核对结果及必要修订写入 evidence。
 
 ## 2. 短 CPU 验证
 

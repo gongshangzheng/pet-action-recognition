@@ -1,9 +1,29 @@
 from pathlib import Path
+import shutil
 import subprocess
+import time
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 GUARD = ROOT / ".claude/skills/remote-ops/scripts/resource_guard.sh"
+
+
+def _wait_for_pid_file(pid_file: Path, timeout_s: float = 10.0) -> str:
+    """Wait until the writer has flushed the pid list.
+
+    The guard only sees a root pid; if the test reads the file first it fails
+    before the guard is invoked, which proves nothing about the guard.
+    """
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if pid_file.exists():
+            content = pid_file.read_text().strip()
+            if len(content.split()) == 2:
+                return content
+        time.sleep(0.02)
+    raise AssertionError(f"writer did not write {pid_file} in {timeout_s}s")
 
 
 def test_tree_pids_includes_grandchildren(tmp_path):
@@ -12,7 +32,7 @@ def test_tree_pids_includes_grandchildren(tmp_path):
         ["bash", "-c", "sleep 30 & child=$!; sleep 30 & grandchild=$!; echo \"$child $grandchild\" > \"$1\"; wait", "bash", str(pid_file)]
     )
     try:
-        children = [int(pid) for pid in pid_file.read_text().split()]
+        children = [int(pid) for pid in _wait_for_pid_file(pid_file).split()]
         result = subprocess.run(
             ["bash", str(GUARD), "tree-pids", str(process.pid)],
             check=True,
@@ -28,17 +48,36 @@ def test_tree_pids_includes_grandchildren(tmp_path):
         process.wait(timeout=5)
 
 
-def test_cpu_stat_parser_handles_spaces_in_process_name(tmp_path):
-    stat_file = tmp_path / "stat"
-    stat_file.write_text("123 (worker pool) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16\n")
-    output = subprocess.check_output(
+@pytest.mark.skipif(
+    not Path("/proc/self/stat").exists(),
+    reason="resource_guard parses /proc/<pid>/stat; needs Linux",
+)
+def test_cpu_accounting_survives_spaces_in_process_name(tmp_path):
+    """A comm field containing spaces must not shift the utime/stime field offsets.
+
+    The guard strips everything up to ") " before summing utime+stime. A process
+    named "worker pool" only gets its CPU accounted correctly if that stripping
+    happens; otherwise the tree never breaches the limit and the run is not killed.
+    """
+    burner = tmp_path / "worker pool"
+    shutil.copy("/bin/sh", burner)
+    log_file = tmp_path / "guard.log"
+
+    result = subprocess.run(
         [
-            "bash",
-            "-c",
-            "sed 's/^.*) //' \"$1\" | awk '{print $12+$13}'",
-            "bash",
-            str(stat_file),
+            "bash", str(GUARD), "run",
+            "--max-cpu-pct", "20",
+            "--interval", "1",
+            "--timeout-s", "25",
+            "--log", str(log_file),
+            "--", str(burner), "-c", "while :; do :; done",
         ],
+        capture_output=True,
         text=True,
-    ).strip()
-    assert output == "27"
+        timeout=60,
+    )
+
+    assert result.returncode == 4, (result.returncode, result.stdout, result.stderr)
+    log = log_file.read_text()
+    assert "CAP BREACH" in log
+    assert "cpu" in log.lower()
