@@ -26,13 +26,20 @@ raw 教师检测绝不等待跟踪 gate；第 3 节获批固定候选供数据�
 - [x] 1.7 输出区间时长及各类区间数、视频数和累计原始时长；判据：机器可读统计可追溯到关联文件。
 - [x] 1.8 输出每视频标注时间并集及未标注时间；判据：机器可读统计说明时间端点及计算口径。
 - [x] 1.9 在 `lib/datasets/annotation_overlaps.py` 输出同类与异类区间重叠清单及统计，提供 `python -m lib.datasets.annotation_overlaps`；判据：新目录的 `annotation_overlaps.json` 按零基双端包含列出双方源行、原字段及相交范围，汇总对数、视频数和受影响行，错误显式保留；`tests/test_annotation_overlaps.py` 的真实小文件验证通过，不仲裁标签。
-- [ ] 1.10 发布原始数据卡；判据：数据卡引用清单及上述统计，并区分未标注与负样本；披露已知历史来源与尚未核验的源端和旧附件，不以披露代替源端验证。
-- [ ] 1.11 在 `AGENTS.md` 增加数据卡入口；判据：入口链接指向该数据卡。
-- [ ] 1.12 用户裁定两路线共享 split、事件日隔离与未分配处理；判据：裁定及理由写入 evidence。
-- [ ] 1.13 生成只读版本的共享 split；判据：split 清单记录来源与未分配项。
-- [ ] 1.14 审计共享 split 隔离；判据：跨视频及跨事件日审计结果可追溯，未分配项不静默进入训练。
+- [ ] 1.10 经 Git 部署已提交的统计代码到 pet；判据：本地提交经 `git push pet main` 交付，远端显式 checkout 后 HEAD 与所推提交一致，工作区原有修改未被覆盖，部署记录写入 `results/pet_pipeline/raw-statistics-20261109a/deployment.txt` 及 evidence，不启动服务或统计。
+- [ ] 1.11 在 pet 运行 `lib.datasets.video_manifest` 生成 `~/datasets/pet_pipeline/inventory/raw-statistics-20261109a/videos/`；判据：`videos.jsonl` 与源目录逐路径核对，唯一标识数及文件数一致，`manifest.json` 记录来源和哈希。
+- [ ] 1.12 在 pet 运行 `lib.datasets.interval_manifest` 生成同版本 `inventory/raw-statistics-20261109a/intervals/interval_manifest.json`；判据：关联行与未匹配行之和等于原 CSV 行数，源行逐项可追溯，无标注视频保留。
+- [ ] 1.13 在 pet 运行 `lib.datasets.video_statistics` 生成 `statistics/raw-statistics-20261109a/videos/video_statistics.json`；判据：每个清单视频有属性或明确未知原因，历史源诊断分开记录，逐文件错误、退出码及统计分母留证，不以零时长代替未知。
+- [ ] 1.14 在 pet 运行 `lib.datasets.interval_statistics` 生成同版本 `statistics/raw-statistics-20261109a/intervals/interval_statistics.json`；判据：关联原行及未匹配项核账、逐类统计与输入路径及哈希可核对，无效及未知逐条保留。
+- [ ] 1.15 在 pet 运行 `lib.datasets.annotation_coverage` 生成同版本 `statistics/raw-statistics-20261109a/coverage/annotation_coverage.json`；判据：每视频并集与补集核对报告总帧范围，未知项及汇总分母明确，不将未标注当作负样本。
+- [ ] 1.16 在 pet 运行 `lib.datasets.annotation_overlaps` 生成同版本 `statistics/raw-statistics-20261109a/overlaps/annotation_overlaps.json`；判据：同类与异类重叠对可逐项回查原行及交集，受影响行登记待审，未知与未匹配项及退出码留证，不仲裁标签。
+- [ ] 1.17 发布原始数据卡 `docs/pet-raw-data-card.md`；判据：数据卡引用清单及上述统计，并区分未标注与负样本；披露已知历史来源与尚未核验的源端和旧附件，不以披露代替源端验证。
+- [ ] 1.18 在 `AGENTS.md` 增加数据卡入口；判据：入口链接指向该数据卡。
+- [ ] 1.19 用户裁定两路线共享 split、事件日隔离与未分配处理；判据：裁定及理由写入 evidence。
+- [ ] 1.20 生成只读版本的共享 split；判据：split 清单记录来源与未分配项。
+- [ ] 1.21 审计共享 split 隔离；判据：跨视频及跨事件日审计结果可追溯，未分配项不静默进入训练。
 <!-- 原判据 20 行磁盘核对缺证据，且旧清单仅 2,573 带标注视频，不是完整 2,737 视频。 -->
-- [ ] 1.15 核对旧带标注清单的 20 行与磁盘；判据：抽样清单及核对结果写入 evidence，不将旧清单视作全视频清单。
+- [ ] 1.22 核对旧带标注清单的 20 行与磁盘；判据：抽样清单及核对结果写入 evidence，不将旧清单视作全视频清单。
 
 ## 2. 原始教师检测
 

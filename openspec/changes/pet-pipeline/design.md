@@ -162,9 +162,19 @@ pet_pipeline/
 
 重叠清单属于现有 1.9，数量与连续性判断依赖第 3 节获批规则及结果，动作准入由第 5 节消费，不能在 1.9 提前运行跟踪来判归属。可检查的证据分别是重叠清单的源行与相交范围、数量判定的连续观测与版本、动作数据逐条去向。数量报告的具体实现路径与文件合同尚未确定，须在对应任务实施前补充，不在本次原则修订中预设。
 
+### 正式全量统计与数据卡发布
+
+小文件验证只证明 1.3–1.9 的能力，不产生可发布的全量数据卡。正式执行按 1.10–1.16 严格串行：先经 Git 交付已提交代码并显式 checkout、核对 commit，再依次生成完整清单、标注关联、视频属性、原始区间统计、标注覆盖及重叠清单。各项仅消费前项已核验产物，没有并行任务；共用输入只读，输出目录各自独占，执行日志及核验记录放仓库 `results/pet_pipeline/raw-statistics-20261109a/`。不重启服务，不检测或训练，不搬迁或修复源媒体。远端存在提交分叉、tracked 修改或将被覆盖的 untracked 文件时，先报告并停止，不自动 stash、clean、force 或覆盖。
+
+使用 pet 源目录 `~/pet-final/datasets/cat_raw/videos/` 与 `~/pet-final/datasets/cat_raw/annotations/intervals.csv`，执行前核对存在性及 CSV 原字段；源路径未确认时停止，不猜同名副本。共享新版本路径为 `~/datasets/pet_pipeline/inventory/raw-statistics-20261109a/videos/`、同级 `intervals/`，以及 `~/datasets/pet_pipeline/statistics/raw-statistics-20261109a/` 下的 `videos/`、`intervals/`、`coverage/`、`overlaps/`。各目录职责与对应 lib 模块输出一致，必须不存在才运行；已有版本不覆盖。使用现有 plf Python，不安装或更改共享环境。超过几秒的处理须通过现有资源预检和守卫，以 CPU 有界任务运行，不分配 GPU；具体命令与资源记录在对应运行证据。
+
+视频属性统计沿用容器帧数/FPS 的名义时长，并显式关联既有 `results/pet_pipeline/base-raw-20261109a/audit-classified.json` 的历史源诊断；路径前缀在执行前核对，不猜 basename。属性无效、区间越界、未知和未匹配均保留，CLI 按合同非零；已知数据问题的非零不等于程序失败，也不能报告无错误成功。各步只有在完整扫描及逐项核账通过、错误已明确披露时才可完成；程序异常、输入身份不符、资源终止或未处理项导致无法核账时队列暂停。
+
+数据卡具体落点为 `docs/pet-raw-data-card.md`，复用现有 docs 目录而不新增文档体系。章节依次为语料范围与版本、标注及帧协议、视频与区间统计、覆盖与重叠、源媒体质量、训练准入与限制、来源及未核验项、产物与复现入口。先解释语料和口径，再呈现实际数字，随后说明错误及可用边界，最后提供追溯路径。正文引用上述全量产物及其哈希，不以旧数据卡或测试夹具替代；包含历史来源披露但不表示当前旧源已核验。发布由 1.17 承担，AGENTS 入口由 1.18 单独完成，物种估计仍待 5.2 追加。
+
 ### 原始数据卡来源披露
 
-任务 1.10 承接已停止的 `verify-cat-dataset-provenance` 的历史来源及未知披露：历史源路径、接收快照和副本校验范围见 `openspec/changes/archive/2026-11-08-verify-cat-dataset-provenance/evidence.md`；当前源端数量/权限/一致性及旧路径报告附件的存在与哈希未知。历史路径不是当前可访问性证明；披露不等于源端复查或附件恢复。检测后物种统计追加的当前任务是 5.2。
+任务 1.17 承接已停止的 `verify-cat-dataset-provenance` 的历史来源及未知披露：历史源路径、接收快照和副本校验范围见 `openspec/changes/archive/2026-11-08-verify-cat-dataset-provenance/evidence.md`；当前源端数量/权限/一致性及旧路径报告附件的存在与哈希未知。历史路径不是当前可访问性证明；披露不等于源端复查或附件恢复。检测后物种统计追加的当前任务是 5.2。
 
 ### 今晚 raw 提取中的不可读源
 
@@ -212,4 +222,4 @@ CFR 下相对首帧的名义覆盖时间为 `[s/fps,(e+1)/fps)`，实际 PTS、V
 
 输出汇总同类及异类对数、各自涉及视频数、受影响原标注行清单和全部受影响行数；受影响行标为待审，不裁决标签。无效区间不参与相交计算，未知属性及未匹配行保留来源和原因；对错误逐项 stderr 报告并非零退出，结果明确不完整，不将未发现重叠当成可训练证明。属性未知但帧范围可计算的区间仍可给出标注帧交集，不能据此声称视频范围已验证。新输出目录拒绝覆盖。输入版本与零基双端包含协议须一致。
 
-`tests/test_annotation_overlaps.py` 用 `results/tests/annotation-overlaps/` 内自动清理的小文件核对重复、包含、端点相交、相邻不相交、不同视频不配对、源行追溯及错误显式保留；验证命令为 `python3 -m pytest tests/test_annotation_overlaps.py -q`。实现和验证串行执行，只写该模块、该测试和本 change 的 design、tasks、evidence；不修改其他模块，不开始 1.10。
+`tests/test_annotation_overlaps.py` 用 `results/tests/annotation-overlaps/` 内自动清理的小文件核对重复、包含、端点相交、相邻不相交、不同视频不配对、源行追溯及错误显式保留；验证命令为 `python3 -m pytest tests/test_annotation_overlaps.py -q`。实现和验证串行执行，只写该模块、该测试和本 change 的 design、tasks、evidence；不修改其他模块，不提前生成全量统计。
