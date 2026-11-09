@@ -330,3 +330,13 @@
 新 1.10 的只读部署预检记录于 `results/pet_pipeline/raw-statistics-20261109a/pre-deployment.txt`：pet 在 main，HEAD 为 `70ae78b0c69c46b1cf83ba142d7c61c5f5e85f57`，接收策略为 updateInstead，无 tracked 修改，有 `.run/`、两个 remote 脚本及 `tmp/` 未跟踪内容。逐文件列出 259 个未跟踪路径，与本地目标 tracked 路径无冲突；两个未跟踪脚本 SHA-256 已单独保存。远端提交为本地 HEAD 的祖先，无分叉。所需源视频目录、标注 CSV、共享派生根、plf Python 和历史 audit 文件均存在；容量只读快照显示负载低且磁盘有余量，这不是后续统计的资源授权或守卫验收。已有 uvicorn 进程保留，不重启。
 
 部署规划提交为 `2467e43`。执行 push 时，因命令使用 `GIT_SSH_COMMAND` 清除代理并限制 SSH 连接，安全工具在网络操作前阻止，原文为 `BLOCKED by CC Safety Net`、规则 `git.ssh-env`，说明 `Git SSH environment overrides can execute arbitrary commands during network operations`。未成功 push，未执行远端 checkout 或提交核对，1.10 保持未完成；停止队列，不用其他命令绕过。需用户手动执行不含 SSH 环境覆盖的 `git push pet main`，随后才能继续只读核对和显式 checkout；未开始 1.11。
+
+## 1.10 统计代码 Git 交付核验
+
+用户手动执行 `git push pet main`，回报 `70ae78b..e515369 main -> main`。随后在 pet 显式执行 `git checkout main`，远端 HEAD、main 分支及本地交付目标均为 `e515369d01ac8254ee39ee2bf42b8471ed94f823`；tracked 与暂存差异检查均通过。六个清单和统计模块的远端 SHA-256 与本地文件逐个相同。记录见 `results/pet_pipeline/raw-statistics-20261109a/deployment.txt`。
+
+部署前列出的 259 个未跟踪路径全部仍在，两个未跟踪 remote 脚本哈希不变；没有基线哈希的其他未跟踪文件只确认路径保留，不宣称内容逐文件校验。原有 uvicorn PID 1157884 的启动时间仍为 2026-11-04，没有重启服务。未安装依赖、未修改源媒体、未启动统计或 GPU 任务。
+
+第一次只读 SHA 比较命令误填完整目标 SHA，远端正确报告 `e515369d01ac8254ee39ee2bf42b8471ed94f823` 后比较返回 1，未执行 checkout；已向用户说明并改为从本地 Git 读取真实完整 SHA，再完成上述比较。此失败属于核验命令笔误，不是远端部署失败，未修改实现或任务合同。
+
+勾选前确认 0.1–0.7 和 1.1–1.9 均已完成，无更小编号的未完成项。1.10 的证据只证明统计代码已交付，不代表环境运行或全量统计已完成；下一项为 1.11。

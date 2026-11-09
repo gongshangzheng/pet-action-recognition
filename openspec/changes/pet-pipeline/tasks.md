@@ -26,7 +26,7 @@ raw 教师检测绝不等待跟踪 gate；第 3 节获批固定候选供数据�
 - [x] 1.7 输出区间时长及各类区间数、视频数和累计原始时长；判据：机器可读统计可追溯到关联文件。
 - [x] 1.8 输出每视频标注时间并集及未标注时间；判据：机器可读统计说明时间端点及计算口径。
 - [x] 1.9 在 `lib/datasets/annotation_overlaps.py` 输出同类与异类区间重叠清单及统计，提供 `python -m lib.datasets.annotation_overlaps`；判据：新目录的 `annotation_overlaps.json` 按零基双端包含列出双方源行、原字段及相交范围，汇总对数、视频数和受影响行，错误显式保留；`tests/test_annotation_overlaps.py` 的真实小文件验证通过，不仲裁标签。
-- [ ] 1.10 经 Git 部署已提交的统计代码到 pet；判据：本地提交经 `git push pet main` 交付，远端显式 checkout 后 HEAD 与所推提交一致，工作区原有修改未被覆盖，部署记录写入 `results/pet_pipeline/raw-statistics-20261109a/deployment.txt` 及 evidence，不启动服务或统计。
+- [x] 1.10 经 Git 部署已提交的统计代码到 pet；判据：本地提交经 `git push pet main` 交付，远端显式 checkout 后 HEAD 与所推提交一致，工作区原有修改未被覆盖，部署记录写入 `results/pet_pipeline/raw-statistics-20261109a/deployment.txt` 及 evidence，不启动服务或统计。
 - [ ] 1.11 在 pet 运行 `lib.datasets.video_manifest` 生成 `~/datasets/pet_pipeline/inventory/raw-statistics-20261109a/videos/`；判据：`videos.jsonl` 与源目录逐路径核对，唯一标识数及文件数一致，`manifest.json` 记录来源和哈希。
 - [ ] 1.12 在 pet 运行 `lib.datasets.interval_manifest` 生成同版本 `inventory/raw-statistics-20261109a/intervals/interval_manifest.json`；判据：关联行与未匹配行之和等于原 CSV 行数，源行逐项可追溯，无标注视频保留。
 - [ ] 1.13 在 pet 运行 `lib.datasets.video_statistics` 生成 `statistics/raw-statistics-20261109a/videos/video_statistics.json`；判据：每个清单视频有属性或明确未知原因，历史源诊断分开记录，逐文件错误、退出码及统计分母留证，不以零时长代替未知。
