@@ -243,3 +243,10 @@
 ### 1.2 包更名独立核验
 
 索引中 26 个包文件与旧 HEAD 逐字节比较，仅包名机械替换；19 个脚本和 4 个配置同样逐字节核对。4 个配置的模块 spec 可解析，但未导入需要重依赖的训练模块。`lib.__file__` 指向本仓库，schema/registry 和 7 个注册目标的导入分发经轻量测试核对；活动 Python 运行引用无旧包名。原有 158 个 dirty 文件与快照哈希一致（3 个文档仅作包名替换），未跟踪 transform 原字节保留且不入索引。未验证 BoxMOT 和模型依赖环境，未重跑训练、推理或远程源清单。
+
+## 1.3 完整目录清单能力
+
+- 新增 `lib.datasets.video_manifest` 函数与模块 CLI；输入源目录递归枚举视频路径，按相对路径排序，输出独立版本 `videos.jsonl` 和 `manifest.json`。身份、格式、扩展名及符号链接边界见 design 的 1.3 实现约定。不读取标注或媒体内容，不能据此认定视频可解码或内容不变。
+- TDD：新增测试先运行，因 `lib.datasets.video_manifest` 不存在在收集时报 `ModuleNotFoundError`（RED）；实现后 `python3 -m pytest tests/test_video_manifest.py -q --basetemp=results/tests/video-manifest-pytest` 为 **4 passed**；fixture 修正为自行在 `results/tests/video-manifest` 下创建并清理临时目录后，默认 `python3 -m pytest tests/test_video_manifest.py -q` 再次 **4 passed**。父独立复测时曾未指定 basetemp，pytest 自身使用系统临时目录，该次不增加新验证结论。测试覆盖路径发现、同 stem 不同目录、非视频排除、排序、重复 ID 拒绝、空/不存在源、版本拒覆盖、CLI 及符号链接；小文件仅验证路径，不是解码测试。
+- 真实文件只读路径烟测：`python3 -m lib.datasets.video_manifest --video-root results/review/unannotated-context --output-dir results/tests/video-manifest-real-smoke-v1`，输出 2 条 `frames-1-120.mp4` 和 `source.mp4`，JSONL SHA-256 `199ea7e71b4f05661656aa39fc11a4c78fd8e3864823415b52521ddd7b01ae1e`。源未解码、未修改；未在远端运行全量 inventory。
+- `lib.datasets.video_manifest.__file__` 解析为本仓库路径；`openspec validate pet-pipeline --strict` 与 `git diff --check` 通过。旧有 158 个 dirty/untracked 文件内容哈希前后相同；父审独立复核通过并允许勾选 1.3；其他任务不变，下一项为 1.4。未远程运行或执行模型。
