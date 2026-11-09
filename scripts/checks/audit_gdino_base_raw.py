@@ -97,12 +97,22 @@ def main():
         status = json.loads(path.read_text())
         require(status.get("returncode") == 0 and status.get("start") == start and status.get("count") == count and status.get("phase") in ("detect", "source_failures_only"), f"batch status {path.name}")
         statuses.append({"path": path.name, **status})
-    result = {"success": not errors, "manifest_count": len(videos), "completed": len(rows), "failed": failures, "missing_cache": sorted(expected-actual), "extra_cache": sorted(actual-expected), "writing": writing, "batch_statuses": statuses, "frame_count_warnings": warnings, "videos": rows, "errors": errors, "quality": "unaccepted"}
+    truncated_video = "videos/20000852500091_chi2m65__event_20260324_214408.mp4"
+    truncated_sha = "d0c52b85726cde0851d85d5e57db145402508f13e6fc52c52ab61a67af853f30"
+    confirmed = [w for w in warnings if w == {"video": truncated_video, "reported": 457, "decoded": 16}]
+    require(len(confirmed) == 1 and sha(root / truncated_video) == truncated_sha, "confirmed truncated source fingerprint/frames")
+    require(len(warnings) == len(confirmed), "unresolved frame count mismatches")
+    truncated = [{**w, "status": "source_decode_truncated", "source_sha256": truncated_sha,
+                  "error": "OpenCV HEVC Invalid NAL unit size; consecutive decode stops at frame 16",
+                  "diagnostic": "local results/pet_pipeline/base-raw-20261109a/frame-count-diagnostic.txt"} for w in confirmed]
+    complete = len(rows) - len(truncated)
+    require(complete + len(failures) + len(truncated) == len(videos), "accounting total")
+    result = {"success": not errors, "manifest_count": len(videos), "completed": complete, "cache_count": len(rows), "failed": failures, "truncated": truncated, "missing_cache": sorted(expected-actual), "extra_cache": sorted(actual-expected), "writing": writing, "batch_statuses": statuses, "frame_count_warnings": warnings, "videos": rows, "errors": errors, "quality": "unaccepted"}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if args.output.exists():
         raise FileExistsError(args.output)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
-    print(json.dumps({"success": result["success"], "completed": len(rows), "failures": len(failures), "warnings": len(warnings), "batch_slots": len(statuses), "errors": errors}, ensure_ascii=False))
+    print(json.dumps({"success": result["success"], "completed": complete, "cached": len(rows), "failures": len(failures), "truncated": len(truncated), "warnings": len(warnings), "batch_slots": len(statuses), "errors": errors}, ensure_ascii=False))
     raise SystemExit(0 if not errors else 1)
 
 
