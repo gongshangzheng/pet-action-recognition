@@ -295,3 +295,10 @@
 
 - TDD：先 `python3 -m pytest tests/test_interval_statistics.py -q` 因模块不存在收集失败；初实现后测试暴露期望错误顺序与按视频清单顺序不一致，修正断言后 `python3 -m pytest tests/test_interval_statistics.py tests/test_video_statistics.py tests/test_interval_manifest.py tests/test_video_manifest.py -q` **10 passed**。本机 `results/tests/interval-statistics` 自动清理的文件夹具覆盖零帧单帧、重复/重叠保留、双标签、同标签不同视频、FPS 缺失、越界、无效、未匹配、输入哈希不一致、CLI 非零及拒绝覆盖；手写 1.5 文件是文件契约夹具，不是实际全库媒体测量。
 - `openspec validate pet-pipeline --strict`、`git diff --check` 通过，模块从本仓库导入；原有 158 个 dirty/untracked 文件哈希不变，父独立复核四套测试 **10 passed**，strict 和 diff check 通过，允许勾选 1.7；前序 0、1.1–1.6 均已完成。未远程执行或声称 3,927 条真实区间的全量统计。
+
+## 1.8 每视频标注覆盖能力
+
+按用户零基双闭协议计算所有标签合并区间与报告帧范围补集，仅用现有 1.7/1.5 文件，不重新探测视频；失败显式保留，未匹配项不会被当作全集成功。覆盖是名义帧时间，不证明真实媒体可完整解码，也不代表未标注为负样本。
+
+- TDD：新测试先因模块不存在在收集时报 `ModuleNotFoundError`；实现后 `python3 -m pytest tests/test_annotation_coverage.py tests/test_interval_statistics.py tests/test_video_statistics.py tests/test_interval_manifest.py tests/test_video_manifest.py -q` 为 **12 passed**。项目 `results/tests/annotation-coverage` 内文件夹具自动清理；覆盖单帧、重复/嵌套/相邻、首尾空隙、无标注、全覆盖、无效区间、缺 FPS/帧数、未匹配、哈希不一致及拒覆盖；CLI 返回非零并输出错误，不是全量真实源统计。
+- `openspec validate pet-pipeline --strict`、`git diff --check` 通过，模块从本仓库导入；原有 158 个 dirty/untracked 文件哈希不变，父独立复核五套测试 **12 passed**、strict 与 diff check 通过，允许勾选 1.8；前序 0 及 1.1–1.7 已完成。未远程、未开始 1.9。
