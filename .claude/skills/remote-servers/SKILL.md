@@ -7,7 +7,7 @@ description: |
 
 # 远程服务器使用指南
 
-> **铁律**：训练、测试、推理、speed run、checkpoint 下载等所有 GPU/重算活**都必须在远程服务器（pet / A100）上跑**，不在本地 mac。本地只改代码 + push。详见 [[training]] 和 [[testing]] skill。
+> **铁律**：训练、测试、推理、speed run、checkpoint 下载等所有 GPU/重算活**都必须在远程服务器（pet / A100）上跑**，不在本地 mac。本地只改代码 + push。详见 `training` 和 `testing` skill。
 
 ## 辅助脚本（`.claude/skills/remote-servers/scripts/`）
 
@@ -61,7 +61,10 @@ bash scripts/pet_repin.sh    # dig remote.mghus.top → 逐个 nc 探活 → 改
 ```
 
 ### GPU 共享（pet 是共享机）
-- pet 被多个用户共用（如 `xwy` 跑训练）。跑前先 `nvidia-smi` 看卡空不空。
+- 跑前判忙用 `remote-ops` 的预检，不看裸 `nvidia-smi` 的瞬时利用率：
+  `bash .claude/skills/remote-ops/scripts/preflight.sh --gpu-index N`。判据是有没有进程真占显存（≥500 MiB 即判忙），退出码 2 停下来问用户。
+- 超过几秒的任务包进 `remote_run.sh`（`.claude/skills/remote-ops/scripts/remote_run.sh`），默认自带预检与运行时看门狗。
+- 各训练/评测入口**没有全部自动接护栏**：裸 `python scripts/xxx.py --device cuda:N` 会绕过预检和上限，需调用者在外部用 `remote_run.sh` 包装。
 - 两块卡都可能被占 → speed run 用 `--device cuda:0` 或 `cuda:1`（看哪块空）。
 - 大模型（VideoMAE/Swin ~4-11GB）在卡被占时会 OOM → 等卡空再跑全量。
 
@@ -96,7 +99,7 @@ ssh A100        # wyy:33222，主机 `ps`，≥4× A100-SXM4-80GB；密码 `wyun
 ### 启用清单
 1. 装 conda（同 pet 的 Miniconda3 + TUNA .condarc）。
 2. clone 仓库 + push（`git remote add A100 <url>`）。
-3. 建 conda env `pet`（同 pet 配方，见 [[using-mmaction2]] §1）。
+3. 建 conda env `pet`（同 pet 配方，见 `using-mmaction2` skill §1）。
 4. 下 pretrained checkpoints（`scripts/download_checkpoint.py --all`）。
 5. 数据集软链（如果 NAS 也挂载了；否则本地拷贝或下到本地磁盘）。
 

@@ -107,6 +107,9 @@ ssh 远程 "cd repo && tar -xf /tmp/untracked_backup.tar"   # 恢复（内容相
 | A100 未经 change 批准就开始装环境/clone | 跳过三阶段 | AGENTS.md 三阶段纪律 + 违规披露写进 change |
 | push 反复被脏工作树拒 | 远程直接改过文件 | stash/备份/clean 流程固化为本文档 2a/2b |
 | tar 备份 CJK 文件名失败 | 分词炸引号 | `--null -T -` |
-| ssh heredoc 语法错误 | 三层引号嵌套 | 脚本本地写好 scp |
+| ssh heredoc 语法错误 | 三层引号嵌套 | 脚本先入库再 push，不靠 scp |
 | replace 打印成功但文件未变 | 无验证的习惯 | 写后必 grep/验证实际内容 |
 | plf 装包首次静默失败 | `-q` 吞错误输出 | 远程 pip 安装不用 -q，或 tail 显示错误 |
+| 门控标注把 load 顶到 103、frp 隧道两次断 | 无预检、无上限 | 三道闸（`remote-ops`） |
+
+> **归因更正（2026-11-09）**：`pet-pipeline` 的 evidence 曾把两条 `test_resource_guard_process_tree` 失败归因于工作区未提交的 `resource_guard.sh` 改动。复核结论是：一条是测试在调用护栏前读文件的竞态，另一条是 fixture 字段位置写错，两者都测不到生产护栏，与那份 patch 无关。以本条为准。

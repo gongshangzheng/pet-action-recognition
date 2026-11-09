@@ -51,7 +51,7 @@
 - 需求：当前 GroundingDINO-tiny，后续可能换 GDINO-base 或自训 YOLO，检测层不能绑死。
 - 新增 1.4 组五条：指纹泛化为 `model_family` + 权重哈希 + 检测器自定义参数；缓存记录 detector 身份；预留 `YoloDetector` 接口；切换检测器的重检规则；条件性的检测器对比实验。
 - skill 增补「检测器是可替换的」小节，写明接口位置与“换模型即重检”的约束。
-- **测试现状（与本条无关的既有失败）**：`pytest tests -q` 为 94 passed / 4 failed —— 2 条 `test_multi_pet_tracking` 因夹具缺 `properties` 字段（`anchors.py` 自 `0ee13b0` 起读取该字段），2 条 `test_resource_guard_process_tree` 因工作区未提交的 `resource_guard.sh` 改动。两者都不是本次改动引起。
+- **测试现状（与本条无关的既有失败）**：`pytest tests -q` 为 94 passed / 4 failed —— 2 条 `test_multi_pet_tracking` 因夹具缺 `properties` 字段（`anchors.py` 自 `0ee13b0` 起读取该字段），2 条 `test_resource_guard_process_tree` 失败（2026-11-09 更正：一条是测试在调用护栏前读文件的竞态、一条是 fixture 字段位置写错，与未提交的 `resource_guard.sh` 改动无关；见 `resource-guard-shared-gpu/evidence.md`）。两者都不是本次改动引起。
 
 ### 2026-11-08：补写检测设计章节
 
@@ -340,3 +340,9 @@
 第一次只读 SHA 比较命令误填完整目标 SHA，远端正确报告 `e515369d01ac8254ee39ee2bf42b8471ed94f823` 后比较返回 1，未执行 checkout；已向用户说明并改为从本地 Git 读取真实完整 SHA，再完成上述比较。此失败属于核验命令笔误，不是远端部署失败，未修改实现或任务合同。
 
 勾选前确认 0.1–0.7 和 1.1–1.9 均已完成，无更小编号的未完成项。1.10 的证据只证明统计代码已交付，不代表环境运行或全量统计已完成；下一项为 1.11。
+
+## 1.11 完整视频路径清单
+
+在 pet 以 `lib.datasets.video_manifest` 生成 `~/datasets/pet_pipeline/inventory/raw-statistics-20261109a/videos/`。运行前确认源目录存在、输出目录不存在、远端与本地 HEAD 均为 `0d61179fb5dae5572e79b073e869c1ee780dd589`，清单模块哈希与 1.10 交付版本一致。资源预检通过，使用 `remote_run.sh` 守卫执行，CPU 上限 200%、RSS 2000 MiB、线程 2、超时 600 秒，退出码 0；未使用 GPU 进行处理。运行日志见 `results/pet_pipeline/raw-statistics-20261109a/video-manifest-run.txt`。
+
+独立以 `find` 枚举符合扩展名及常规文件条件的源路径并逐项比对：源文件 2737、清单 2737、唯一 ID 2737，源目录独有和清单独有路径均为 0；`manifest.json` 记录源根、数量及 JSONL SHA-256 `262ff653593452a42ad18b19478b5d631aa8ef6227545d8afed9e511e888b1fd`，复算一致。核验记录见 `results/pet_pipeline/raw-statistics-20261109a/video-manifest-verification.txt`。该路径快照未解码视频或验证内容哈希，不能证明媒体可读或完整。勾选前 0.1–0.7、1.1–1.10 均已完成；未执行 1.12。

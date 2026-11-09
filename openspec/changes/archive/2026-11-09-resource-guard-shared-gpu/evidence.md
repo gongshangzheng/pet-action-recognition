@@ -84,3 +84,93 @@
 ### 未处理
 
 `--allow-busy-gpu`（preflight/guard 均接受）与 `remote_run.sh --skip-preflight` 仍是脚本级 bypass 能力，本轮只在纪律文档层面禁止使用，未删除参数；如需强制，得另立任务改脚本（`resource_guard.sh` 还有用户未提交 patch，不在本任务范围）。
+
+## 2026-11-09：2.1 进程树测试去竞态并改跑生产护栏
+
+- 代码：`tests/test_resource_guard_process_tree.py`（commit `0d61179`）。
+  - `tree-pids` 测试先等待 writer 写入两个 pid 再调用生产 `resource_guard.sh tree-pids`，消除「调用 guard 前读文件」的竞态。
+  - 删除伪造 `/proc/<pid>/stat` fixture 与独立 `sed`/`awk` 断言（原 fixture 字段位置错位，输出 23 期望 27）。改为 Linux 上真实进程验证：把 `/bin/sh` 复制成 `worker pool`（comm 含空格），交给生产 `resource_guard.sh run --max-cpu-pct 20 --interval 1` 跑，断言返回 4 且日志含 `CAP BREACH` 与 cpu 原因。解析若错位就不会判超限，该断言会真的失败。
+- 本机（macOS，无 `/proc`）：`1 passed, 1 skipped`，证据 `results/tests/resource-guard-task-2-1/`。
+- pet（Linux，经生产 `remote_run.sh` 守卫执行）：`2 passed in 13.18s`，即两条测试都真正跑过生产护栏。
+- 说明：外层守卫采样显示 `cpu=0%`，因为内层测试自己又起了一个守卫把 burner `setsid` 到新会话/进程组，外层按 ppid 树看不到它。这是嵌套守卫的采样盲区（committed 版按 ppid 树、本地未提交 patch 改为按进程组），不是本次测试失败。
+
+## 2026-11-09：2.2 短 CPU 真实进程预检拒绝
+
+判据：拒绝原因、退出码、子任务未启动。真实远端资源、真实进程，未用 stub，未跑 GPU。
+
+- 用例 A（磁盘阈值）：`preflight.sh --min-free-disk-gb 999999` → **返回 0 且 PREFLIGHT OK，没有 disk 行**。核查发现 `resource_guard.sh` 的 disk 判定写作 `disk_gb=$(df -Pk ... | awk 'NR==2{int($4/1048576)}')`，awk 只求值不打印，`disk_gb` 恒为空，`[[ -n "$disk_gb" ]]` 直接跳过比较 → **磁盘超限闸门是死的**。该用例不能作为拒绝证据。
+- 用例 B（load 阈值，有效）：`preflight.sh --max-load-per-core 0.001`（24 核 → 限制 0.02，真实 load 0.57/0.48）→ `CPU pressure: load 0.57 > 0.02`，退出码 **3**。
+- 子任务未启动：同一预检以 `&&` 串接 `ssh pet 'touch tmp/preflight-refused-marker'`，链返回 3，远端 marker 不存在。remote_run 内部「预检非零即不启动任务」的传递另由 1.4 的生产入口回归测试覆盖。
+- 证据：`results/tests/resource-guard-2-2/refusal.txt`。发现（a）在 pet 上直接跑 `preflight.sh` 不可用，它自己再 `ssh pet`，远端没有该别名，返回 1——该脚本只能本地发起，文档已如此写，但脚本自身没有防呆。
+
+## 2026-11-09：2.3 短 CPU 真实进程超限退出及日志
+
+- 命令（本地发起，走生产 `remote_run.sh`，自动预检通过）：`--max-cpu-pct 20 --interval 1 --timeout-s 30 --log tmp/guard/cpu-breach.log -- bash -c 'while :; do :; done'`
+- 结果：`remote_run.sh` 退出码 **4**；守卫采样 `cpu=101%`，日志含 `CAP BREACH (cpu 101% > 20%): terminating 144822`，头部记录 `# command:` 与 `# caps: gpu0<=90% cpu<=20% rss<=24000MB timeout=30s threads=8`。
+- 证据：`results/tests/resource-guard-2-3/run.txt`。日志落在远端 `tmp/guard/`（未写入系统 `/tmp`）。
+
+## 2026-11-09：2.4 超限时受控进程树停止
+
+- 命令：`remote_run.sh --max-cpu-pct 60 --interval 1 --timeout-s 30` 跑 `bash -c 'echo $$ > tmp/guard/parent.pid; for i in 1 2 3 4; do (while :; do :; done) & echo $! >> tmp/guard/children.pid; done; wait'`
+- 结果：退出码 **4**，采样 `cpu=406%` 触发 `CAP BREACH`；父进程 145536 与子进程 145540/145541/145543/145545 全部 `gone`；排除自匹配后远端无残留 busy loop。
+- 证据：`results/tests/resource-guard-2-4/run.txt`。第一次残留计数为 3 是 `ps`/`grep`/`ssh` 自匹配，已按项目纪律改用 `grep -v` 排除后复核为 `none`。
+- 边界：committed 版按 ppid 树终止即可覆盖同组子进程；本地未提交 patch 改为按进程组，本轮未验证该 patch 版本。
+
+## 2026-11-09：3.1 远程纪律事故记录核对
+
+- `.claude/skills/remote-server-discipline/SKILL.md` §8 六条事故逐条核对：2026-10-27/28 门控标注 load 103、frp 隧道中断一条在 §5 与 `remote-ops` SKILL 开头两处一致；其余（A100 未经批准装环境、脏工作树反复拒 push、tar CJK 文件名、heredoc 引号、replace 未验证、plf `-q` 静默失败）无法从当前仓库复核发生过程，按历史记录保留。
+- 修订 1：`ssh heredoc 语法错误` 的修正列原写「脚本本地写好 scp」，与 1.6 修好的 §6 及项目 `AGENTS.md`（脚本先入库再 push，`/tmp` 不放脚本）冲突，改为「脚本先入库再 push，不靠 scp」。
+- 修订 2：§8 补一行记录门控标注事故，使事故表覆盖本 skill §5 引用的那一起。
+- 修订 3（跨文档归因更正）：`openspec/changes/pet-pipeline/evidence.md` 原把两条 `test_resource_guard_process_tree` 失败归因于工作区未提交的 `resource_guard.sh` 改动；2026-11-08 的复核表明是测试竞态与 fixture 字段错误，与 patch 无关。已在该行就地更正并指向本 change 的 evidence，未改写其他内容。
+
+## 2026-11-09：3.2 remote-servers 文档与护栏调用约定核对
+
+- `.claude/skills/remote-servers/SKILL.md`「GPU 共享」原写「跑前先 `nvidia-smi` 看卡空不空」，与 `remote-ops` 的判忙口径（看进程实际持有的显存，≥500 MiB 即忙，不看瞬时利用率）和退出码 2 处置冲突。已改为指向 `preflight.sh --gpu-index N`，并写清超过几秒的任务用 `remote_run.sh`。
+- 同一节新增一句：各训练/评测入口**没有全部自动接护栏**，裸 `python scripts/xxx.py --device cuda:N` 会绕过预检与上限，需调用者在外部用 `remote_run.sh` 包装。这与 1.5 的入口审计结论一致，不声称所有入口已自动接入。
+- 校验文档时把三处指向 skill 的 `[[training]]`/`[[testing]]`/`[[using-mmaction2]]` wiki 链接改成反引号 skill 名，避免被当成缺失文档。
+
+## 2026-11-09：磁盘闸门修复（2.2 缺陷的处置）
+
+用户授权改一行 `resource_guard.sh` 并复跑证据。实际改动两处，都只碰 disk 判定，不碰用户未提交的进程组 patch：
+
+- `resource_guard.sh`：`awk 'NR==2{int($4/1048576)}'` → `awk 'NR==2{print int($4/1048576)}'`；检查对象 `$HERE/../../../..` → `${REMOTE_ROOT:-$PWD}`，使对象是 checkout 而不是按调用方式漂移的上级目录。
+- `preflight.sh`：远端执行前 `cd '$REMOTE_ROOT'`，与 `remote_run.sh` 一致，否则从 `$HOME` 起算磁盘落在另一个文件系统。
+- 修复后复跑：`--min-free-disk-gb 999999` → `disk pressure: 10381 GB free < 999999 GB`，退出码 **3**；默认阈值仍 `PREFLIGHT OK`，退出码 0。证据 `results/tests/resource-guard-disk-gate/disk-gate.txt`。
+- 提交 `67f5ef1` 只含 disk 这两处；`resource_guard.sh` 用户未提交的进程组/setsid patch 仍在工作区，未纳入该提交（用 `git hash-object` + `update-index` 只提交修复后的 blob，未动工作区文件）。
+- **残留事实**：checkout 所在 `/home` 是 `/dev/sda1`，可用 10.4 TB，默认 5 GB 阈值实际永远不会触发；磁盘闸门现在只是「能工作」，不是「能防住」。
+
+## 2026-11-09：3.3 真实 GPU 与共享机验证的授权、范围与预算
+
+用户当日确认最小范围，写入本 evidence 作为授权记录：
+
+- 范围：① 一次只读的 GPU 预检（`preflight.sh` 读 `nvidia-smi` 状态，不申请显存）；② 一段秒级 CPU 任务经 `remote_run.sh` 作共享机验证。不做 12 GB 占用演练，不做显存占用、不跑训练/推理/模型。
+- 资源预算：pet 上合计约 1–2 分钟、单核量级 CPU、无 GPU 显存占用；每次执行前先跑预检，预检不过就停。
+- 未授权范围：任何占显存的 GPU 任务、并行压测、以其他用户身份的操作。
+
+## 2026-11-09：3.4 GPU 预检验证（只读，不占显存）
+
+- `preflight.sh --gpu-index 0 --json results/tests/resource-guard-3-4/gpu0.json`：`GPU 0 free: util 0%, mem 0%, held 0 MiB`，`PREFLIGHT OK`，退出码 **0**。
+- `--gpu-index 1`：`GPU 1 free: util 0%, mem 0%, held 0 MiB`，退出码 **0**。
+- 证据：`results/tests/resource-guard-3-4/gpu-preflight.txt` 和两个 json。
+- 边界：验证的是「读到真实 GPU 状态并给出放行判定」这条路径，**没有**验证「有进程占显存时判忙返回 2」——那条需要真的占显存，按 3.3 授权未做。
+
+## 2026-11-09：3.5 共享机上的守卫验证（正常完成路径）
+
+- 命令：`remote_run.sh --max-cpu-pct 120 --max-rss-mb 2000 --timeout-s 30 --interval 2 --log tmp/guard/shared-ok.log -- /home/wyy/miniconda3/envs/plf/bin/python -c 'print(sum(range(20_000_000)))'`
+- 结果：自动预检通过 → 退出码 **0**，输出 `199999990000000`，守卫记录 `command finished rc=0 in 2s`；日志头部含命令与 `caps: gpu0<=90% cpu<=120% rss<=2000MB timeout=30s threads=8`。
+- 证据：`results/tests/resource-guard-3-5/run.txt`（含远端日志头尾）。
+- 边界：这条补的是「限额内正常跑完也要留日志」这一半，与 2.3/2.4 的终止路径互补；它**不证明** GPU 行为、不证明其他用户完全不受影响，也不构成 12 GB 或并行压测结论。
+
+## 2026-11-09：3.6 阈值与验收结论（用户确认）
+
+用户当日指示「按最小范围跑，然后归档」，即接受以下结论后归档：
+
+- 阈值保持默认、本次不改：预检 GPU util 50%、显存 80%、load 0.7/core、可用内存 8000 MiB、磁盘 5 GB；运行时 GPU 90%、CPU 350%、RSS 24000 MiB、超时 3600 s、采样 5 s、线程 8、nice 10。
+- 验收口径：短 CPU 真实进程的拒绝（rc 3）、超限终止（rc 4）、进程树停止、日志齐备；GPU 只验证只读预检路径；共享机验证覆盖限额内正常完成。
+- 剩余风险（一并归档）：
+  1. 磁盘阈值在 10.4 TB 空闲的 checkout 上永不触发，磁盘闸门目前只是可用。
+  2. 忙卡判定的拒绝路径（rc 2）未经真机验证，需要占显存才能验。
+  3. nested 守卫盲区：外层按 ppid 树采样时看不到内层 `setsid` 出去的子进程（提交版即如此）；本地未提交 patch 改成按进程组，未纳入本轮验证。
+  4. `--skip-preflight` 与 `--allow-busy-gpu` 仍属脚本级 bypass 能力，本轮只在纪律文档里禁止使用。
+  5. 入口接线缺口（1.5）：`scripts/remote/` 下四个封装引用不存在的 `scripts/remote/resource_guard.sh`，门控脚本裸跑会绕过护栏；未修复。
+  6. 用户未提交的 `resource_guard.sh` 进程组 patch 不在本轮验证范围内。
