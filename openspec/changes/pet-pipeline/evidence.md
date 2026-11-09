@@ -257,3 +257,13 @@
 
 - TDD：`python3 -m pytest tests/test_interval_manifest.py -q` 先因模块不存在在收集时报 `ModuleNotFoundError`；实现后 `python3 -m pytest tests/test_interval_manifest.py tests/test_video_manifest.py -q` 为 **6 passed**。临时 CSV 和源目录放 `results/tests/interval-manifest` 并自动清理；测试覆盖明确前缀、同名不同子目录、多区间与原字段、无关联视频、三种未匹配原因、输入哈希校验和版本拒覆盖，以及模块 CLI。
 - `openspec validate pet-pipeline --strict`、`git diff --check` 通过；导入路径指向本仓库。原有 158 个 dirty/untracked 文件哈希未改变；父独立复核两套测试 **6 passed**，strict 与 diff check 通过，并允许勾选 1.4；前序 0、1.1–1.3 已完成。此为能力验收，不是远程 3,927 条全量关联验收。未连接远端、未运行模型或真实全量关联。
+
+## 1.5 源视频标称时长统计
+
+用户确认用报告帧数/FPS 而非全视频解码；打不开或无效属性保留未知原因。已有 `results/pet_pipeline/base-raw-20261109a/audit-classified.json` 的 `failed` 和 `truncated` 记录含 `videos/` 相对路径，其中截断示例报告 457 帧、解码 16 帧；本轮只作为可选历史诊断输入，显式前缀映射且不重新计算源媒体哈希，不把历史记录等同当前源质量核验。
+
+用户补充：打不开或属性无效必须对用户明确报错，CLI 在扫描结束后以非零状态退出并向 stderr 报完整路径与原因；已知截断另行 WARNING 显示报告与解码帧数。历史 14 项打不开及 1 项截断仍是既有真实证据，不因理论预期而抹除；测试用故意损坏文件不是新增真实事故。
+
+- TDD：新增测试先因模块不存在收集时报 `ModuleNotFoundError`；实现后 `python3 -m pytest tests/test_video_statistics.py tests/test_interval_manifest.py tests/test_video_manifest.py -q` 为 **8 passed**。CPU 真实 MJPG 6 帧/5fps、故意不可打开文件及删除后源、历史截断和未匹配审计、CLI 错误退出、版本拒覆盖和清单哈希校验均在项目 `results/tests/video-statistics` 下测试并清理；故意损坏夹具不是实际源事故。
+- 本机既有 1.3 两视频清单 CLI 核验：`python3 -m lib.datasets.video_statistics --inventory-dir results/tests/video-manifest-real-smoke-v1 --output-dir results/tests/video-statistics-real-smoke-v1` rc0；`frames-1-120.mp4` 为 120 帧/15fps = 8 秒，`source.mp4` 为 438 帧/约 14.9996656fps = 29.200651 秒，2 known、0 unknown。仅容器属性，不证明可完整解码，不是全库统计。
+- `openspec validate pet-pipeline --strict`、`git diff --check` 通过；模块导入为本仓库路径。原有 158 个 dirty/untracked 文件哈希未变；父独立复核三套测试 **8 passed** 与 strict 验证，并允许修正历史不可读告警后勾选；补充历史不可读 WARNING 后重跑三套测试 **8 passed**。未远程运行、解码完整视频、训练或关联标注。

@@ -159,3 +159,11 @@ pet_pipeline/
 ### 1.4 人工区间关联实现约定
 
 `python -m lib.datasets.interval_manifest --inventory-dir <1.3版本目录> --annotations <CSV> --video-prefix <CSV路径前缀> --output-dir <新版本目录>` 以显式 POSIX 相对路径前缀转换 CSV 的 `video` 为 inventory 的相对路径；例如 `videos/a.mp4` 和前缀 `videos` 对应 `a.mp4`，无前缀时显式传 `.`。逐路径组件精确匹配，不猜 basename、不自动去前缀；绝对路径、空路径或含 `.`/`..` 组件的 CSV 路径标为 `invalid_video_path`，不符前缀标为 `outside_video_prefix`，映射后不在 inventory 标为 `video_not_in_inventory`。不检测媒体、转换标签或解释帧边界。CSV 原值保留字符串，记录起始物理行号；每条区间恰好归入对应视频或 unmatched 列表。单个 `interval_manifest.json` 包含按 inventory 顺序排列的每视频 `video_id`、`intervals`（无关联为空数组）、`unmatched` 及输入文件路径、哈希、前缀和格式版本；空关联不代表负样本。输入 inventory 校验 metadata 的格式版本、计数与 JSONL 哈希及身份唯一性；新输出目录拒绝覆盖。此能力不证明真实全量数据已完成关联。
+
+### 1.5 源视频标称时长统计实现约定
+
+用户确认采用容器报告的帧数除 FPS 的标称时长，不逐帧解码。`python -m lib.datasets.video_statistics --inventory-dir <1.3版本目录> --output-dir <新版本目录> [--quality-audit <audit-classified.json> --audit-video-prefix <前缀>]` 校验清单 metadata 的版本、行数、哈希及路径身份，再按记录相对源根定位视频；OpenCV 延迟导入，仅查询打开状态和帧数/FPS。打开失败、非有限或非正 FPS/帧数均为 unknown 并说明原因，不能记零时长；known 视频计算总和、均值、中位数、最小和最大值，unknown 另计，不进入时长分母。结果 `video_statistics.json` 保留逐视频属性、状态及失败原因、汇总与输入哈希，新输出目录拒覆盖。
+
+可选质量审计必须同时显式指定视频路径前缀，按路径组件精确匹配清单，不猜 basename；只关联现有审计 `failed` 和 `truncated` 原始记录，未匹配条目也保留。标识为历史源诊断而非当前内容重新校验，不覆盖当前属性测量状态或标称时长；例如报告 457 帧但解码到 16 帧的截断，只记诊断，不能把 16 帧算完整时长。审计文件哈希记录，但不重新计算源媒体哈希；标称时长和容器可打开均不证明媒体完整可解码。本任务不做可用率或标注统计。
+
+打开失败及属性无效在逐视频 unknown 记录之外，CLI 必须向 stderr 逐条报告源文件完整路径和原因并返回非零；允许扫描完全部清单再统一退出，以保留完整核账。历史截断诊断与打开失败区分为 WARNING，显示报告帧数与解码帧数；历史首帧不可读诊断也单独 WARNING 并展示原错误，明确未重新检查，不改变当前状态。不自动修复或替换解码器。
