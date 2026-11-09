@@ -312,3 +312,13 @@
 数量与连续性按实际使用范围判断，依赖去重、位置随时间的连续性和关联反馈，不以框数或 track 数直接证明单宠或多宠。先后出现与同时共存分开记录；多宠即使只有一个动作标签也不能默认分配，首轮不回收。视频其他时段多宠不连带排除合格单宠区间；短区间扩展后的整个窗口重新检查。动作待审不自动排除检测、伪标签或跟踪评估用途，这些用途仍有独立的质量和隔离要求。具体合同与场景见 `specs/pet-pipeline-data/spec.md`，流程及未决参数见 design。
 
 阈值、窗口、跟踪器及数量报告的具体文件合同尚未确定；本次不声称已能可靠自动判定单宠，也未完成真实案例的动作归属核验。`tasks.md` 内容与 HEAD 一致，仍为 55/130，第一项未完成任务为 1.9；旧号到新号为恒等映射，没有增删、重排、并行标注或勾选变更。`openspec validate pet-pipeline --strict` 和 `git diff --check` 通过；仅文档修订，未运行处理、跟踪、训练或实现测试。
+
+## 1.9 标注重叠清单能力
+
+用户确认模块、输入输出及小文件验证方案后，先补充 design 的具体落点和既有任务判据，再实现 `lib/datasets/annotation_overlaps.py` 与模块 CLI。没有增删、重排任务或改变并行标注。输出按同一视频内的无序原行对列出闭区间交集、双方原字段及源行，按原标签字符串相等与否统计同类／异类；受影响整行登记 pending，不仲裁标签。仅消费 1.7 文件并记录其路径和 SHA-256，不重新校验整条上游文件链或媒体内容。
+
+- 首次运行 `python3 -m pytest tests/test_annotation_overlaps.py -q`，因新模块不存在出现 `ModuleNotFoundError: No module named 'lib.datasets.annotation_overlaps'`；实现后该测试通过。随后补充实际 CLI 对无效区间、未知属性和未匹配行的报告验证。夹具是 `results/tests/annotation-overlaps/` 内自动清理的真实 JSON 小文件，不是实测视频属性，也未 mock 外部服务。
+- 六套测试命令 `python3 -m pytest tests/test_annotation_overlaps.py tests/test_annotation_coverage.py tests/test_interval_statistics.py tests/test_video_statistics.py tests/test_interval_manifest.py tests/test_video_manifest.py -q` 为 **14 passed**，保存于 `results/tests/annotation-overlaps-evidence/pytest.txt`。重叠对精确核对覆盖重复、包含、单帧端点相交、相邻不相交与不同视频不配对；同时核对源字段、去重后的受影响行、输入未修改、拒绝覆盖与协议不符拒绝。错误 CLI 非零且结果不完整，属性未知但帧范围有效的标注仍保留帧交集。
+- `openspec validate pet-pipeline --strict`、`git diff --check`、两个新 Python 文件编译检查通过。主动 LSP 探测未确认全部 clean；辅助规则报告未经 try/except 的文件读取和数字解析，此处有意传播不合法输入异常，不增加吞错 fallback，不宣称静态检查全绿。
+
+勾选前核对 0.1–0.7 及 1.1–1.8 全部已完成，没有编号更小的未完成项；本条验收范围为小文件上的重叠清单能力，不代表 3,927 条真实标注的正式全量结果。未远程运行、未运行跟踪、未修改源标注、未开始 1.10。

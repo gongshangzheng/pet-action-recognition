@@ -205,3 +205,11 @@ CFR 下相对首帧的名义覆盖时间为 `[s/fps,(e+1)/fps)`，实际 PTS、V
 `python -m lib.datasets.annotation_coverage --interval-statistics <1.7文件> --video-statistics <1.5文件> --output-dir <新版本目录>` 校验 1.7 对 1.5 和 1.4 的文件哈希、共同 inventory 及元数据哈希、源根和视频集合；输出 `annotation_coverage.json`，保留输入路径/哈希、零基双闭源区间及零基半开输出范围口径。将所有类别区间 `[s,e]` 转 `[s,e+1)`，合并重叠、重复及相邻范围，再相对报告总帧数 `[0,N)` 求补集；帧数/FPS 仅为容器名义时间，不证明可完整解码。无关联视频是未标注而非负样本；未匹配项独立保留，影响全局完整性但不使其他视频失效。
 
 同一视频存在 invalid 区间或报告总帧数不可用（含非整数）时，其完整并集、补集及时间均为 null 并列明原因；FPS 不可用而帧数和区间有效时，保留帧范围与计数、秒数为 null。对未知视频和源区间逐项 stderr 报错、非零退出，仍保存完整 ledger。汇总仅对帧及秒均可确定的视频计数求和，明示分母，无法求值时不以零替代；新版本目录拒覆盖。不开展同类/异类重叠统计。
+
+### 1.9 标注重叠清单
+
+`lib/datasets/annotation_overlaps.py` 提供 `python -m lib.datasets.annotation_overlaps --interval-statistics <1.7文件> --output-dir <新版本目录>`，仅消费原始区间统计，不探测媒体或运行跟踪。输出 `annotation_overlaps.json` 记录输入路径和 SHA-256、零基双端包含口径，以及同一视频内每对原标注行的交集。每对只计一次；双方保留源行、原字段和标签，交集保留包含端点与帧数，类别按原标签字符串相等与否分为同类或异类。不求额外的时长分布，也不将逐对帧数累加冒充时间并集。
+
+输出汇总同类及异类对数、各自涉及视频数、受影响原标注行清单和全部受影响行数；受影响行标为待审，不裁决标签。无效区间不参与相交计算，未知属性及未匹配行保留来源和原因；对错误逐项 stderr 报告并非零退出，结果明确不完整，不将未发现重叠当成可训练证明。属性未知但帧范围可计算的区间仍可给出标注帧交集，不能据此声称视频范围已验证。新输出目录拒绝覆盖。输入版本与零基双端包含协议须一致。
+
+`tests/test_annotation_overlaps.py` 用 `results/tests/annotation-overlaps/` 内自动清理的小文件核对重复、包含、端点相交、相邻不相交、不同视频不配对、源行追溯及错误显式保留；验证命令为 `python3 -m pytest tests/test_annotation_overlaps.py -q`。实现和验证串行执行，只写该模块、该测试和本 change 的 design、tasks、evidence；不修改其他模块，不开始 1.10。
