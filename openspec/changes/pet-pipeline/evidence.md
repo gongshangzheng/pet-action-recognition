@@ -328,3 +328,5 @@
 原 1.10 数据卡需要前述统计的真实全量产物，但已完成 1.3–1.9 只提供能力与小文件验收，正式运行尚缺。用户批准新增 Git 部署与六项全量产物任务，按 1.10–1.16 严格串行，原 1.10–1.15 顺延到 1.17–1.22。旧号到新号、来源快照与提交的解释见 `task-map.md`；已完成条目原文和状态保留，插入前后完成数均为 56，总数从 130 到 137，未增加并行标注。数据卡落点批准为 `docs/pet-raw-data-card.md`，共享版本目录及单项判据已先写入 design/tasks，未创建数据卡或运行后续统计。
 
 新 1.10 的只读部署预检记录于 `results/pet_pipeline/raw-statistics-20261109a/pre-deployment.txt`：pet 在 main，HEAD 为 `70ae78b0c69c46b1cf83ba142d7c61c5f5e85f57`，接收策略为 updateInstead，无 tracked 修改，有 `.run/`、两个 remote 脚本及 `tmp/` 未跟踪内容。逐文件列出 259 个未跟踪路径，与本地目标 tracked 路径无冲突；两个未跟踪脚本 SHA-256 已单独保存。远端提交为本地 HEAD 的祖先，无分叉。所需源视频目录、标注 CSV、共享派生根、plf Python 和历史 audit 文件均存在；容量只读快照显示负载低且磁盘有余量，这不是后续统计的资源授权或守卫验收。已有 uvicorn 进程保留，不重启。
+
+部署规划提交为 `2467e43`。执行 push 时，因命令使用 `GIT_SSH_COMMAND` 清除代理并限制 SSH 连接，安全工具在网络操作前阻止，原文为 `BLOCKED by CC Safety Net`、规则 `git.ssh-env`，说明 `Git SSH environment overrides can execute arbitrary commands during network operations`。未成功 push，未执行远端 checkout 或提交核对，1.10 保持未完成；停止队列，不用其他命令绕过。需用户手动执行不含 SSH 环境覆盖的 `git push pet main`，随后才能继续只读核对和显式 checkout；未开始 1.11。
