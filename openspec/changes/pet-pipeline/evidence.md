@@ -302,3 +302,13 @@
 
 - TDD：新测试先因模块不存在在收集时报 `ModuleNotFoundError`；实现后 `python3 -m pytest tests/test_annotation_coverage.py tests/test_interval_statistics.py tests/test_video_statistics.py tests/test_interval_manifest.py tests/test_video_manifest.py -q` 为 **12 passed**。项目 `results/tests/annotation-coverage` 内文件夹具自动清理；覆盖单帧、重复/嵌套/相邻、首尾空隙、无标注、全覆盖、无效区间、缺 FPS/帧数、未匹配、哈希不一致及拒覆盖；CLI 返回非零并输出错误，不是全量真实源统计。
 - `openspec validate pet-pipeline --strict`、`git diff --check` 通过，模块从本仓库导入；原有 158 个 dirty/untracked 文件哈希不变，父独立复核五套测试 **12 passed**、strict 与 diff check 通过，允许勾选 1.8；前序 0 及 1.1–1.7 已完成。未远程、未开始 1.9。
+
+## 2026-11-09 重叠与多宠区间的训练原则
+
+用户在讨论中明确“先标出重叠区间”“暂时都无法用于训练”“后期再专门审核”，随后确认按区间判断单宠候选、多宠或不确定，并授权“更新 change，明确原则”。本次只修订既有 proposal、design 和数据规格，记录该裁定，不修改原标注、实现、历史产物或执行任务。
+
+首轮动作训练限于无重叠标注且目标归属明确、通过获批单宠检查的区间。同类与异类重叠的整条受影响标注区间均待审，不按类别优先级仲裁，不自动切取剩余部分。历史任务 2.28 的优先级仲裁及其勾选只保留为当时事实，不适用于新数据版本；本次没有重写或撤销历史证据。
+
+数量与连续性按实际使用范围判断，依赖去重、位置随时间的连续性和关联反馈，不以框数或 track 数直接证明单宠或多宠。先后出现与同时共存分开记录；多宠即使只有一个动作标签也不能默认分配，首轮不回收。视频其他时段多宠不连带排除合格单宠区间；短区间扩展后的整个窗口重新检查。动作待审不自动排除检测、伪标签或跟踪评估用途，这些用途仍有独立的质量和隔离要求。具体合同与场景见 `specs/pet-pipeline-data/spec.md`，流程及未决参数见 design。
+
+阈值、窗口、跟踪器及数量报告的具体文件合同尚未确定；本次不声称已能可靠自动判定单宠，也未完成真实案例的动作归属核验。`tasks.md` 内容与 HEAD 一致，仍为 55/130，第一项未完成任务为 1.9；旧号到新号为恒等映射，没有增删、重排、并行标注或勾选变更。`openspec validate pet-pipeline --strict` 和 `git diff --check` 通过；仅文档修订，未运行处理、跟踪、训练或实现测试。
