@@ -288,3 +288,10 @@
 - CFR 名义时间相对首帧为 `[s/fps,(e+1)/fps)`：15fps 时 `[0,14]` 为 `[0,1)` 秒，持续 1 秒。16 个采样、间隔 3 的首尾采样时刻差 `45/fps`，名义首尾帧覆盖跨度 `46/fps`。真实 PTS、VFR 和非零时间原点仍需单独核验；未进行全量标注审计。
 
 - 父独立审阅确认用户选定口径、边界样例和新旧消费差异，允许勾选 1.6；该处理约定不构成对原生产方历史语义的证明，前序 0、1.1–1.5 已完成。本轮未实施 1.7 或修改源标注、代码及历史产物。
+
+## 1.7 原始区间统计能力
+
+依据 1.4 关联文件和 1.5 标称属性，按用户确认零基双闭、每 CSV 原行统计，不将原始累计时长等同覆盖并集；不重读媒体、不默认 FPS 或标记未标注为负样本。缺属性、越界、未匹配保留并对 CLI 显式报错；具体字段及边界见 design。
+
+- TDD：先 `python3 -m pytest tests/test_interval_statistics.py -q` 因模块不存在收集失败；初实现后测试暴露期望错误顺序与按视频清单顺序不一致，修正断言后 `python3 -m pytest tests/test_interval_statistics.py tests/test_video_statistics.py tests/test_interval_manifest.py tests/test_video_manifest.py -q` **10 passed**。本机 `results/tests/interval-statistics` 自动清理的文件夹具覆盖零帧单帧、重复/重叠保留、双标签、同标签不同视频、FPS 缺失、越界、无效、未匹配、输入哈希不一致、CLI 非零及拒绝覆盖；手写 1.5 文件是文件契约夹具，不是实际全库媒体测量。
+- `openspec validate pet-pipeline --strict`、`git diff --check` 通过，模块从本仓库导入；原有 158 个 dirty/untracked 文件哈希不变，父独立复核四套测试 **10 passed**，strict 和 diff check 通过，允许勾选 1.7；前序 0、1.1–1.6 均已完成。未远程执行或声称 3,927 条真实区间的全量统计。
