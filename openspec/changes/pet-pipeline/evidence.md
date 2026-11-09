@@ -250,3 +250,10 @@
 - TDD：新增测试先运行，因 `lib.datasets.video_manifest` 不存在在收集时报 `ModuleNotFoundError`（RED）；实现后 `python3 -m pytest tests/test_video_manifest.py -q --basetemp=results/tests/video-manifest-pytest` 为 **4 passed**；fixture 修正为自行在 `results/tests/video-manifest` 下创建并清理临时目录后，默认 `python3 -m pytest tests/test_video_manifest.py -q` 再次 **4 passed**。父独立复测时曾未指定 basetemp，pytest 自身使用系统临时目录，该次不增加新验证结论。测试覆盖路径发现、同 stem 不同目录、非视频排除、排序、重复 ID 拒绝、空/不存在源、版本拒覆盖、CLI 及符号链接；小文件仅验证路径，不是解码测试。
 - 真实文件只读路径烟测：`python3 -m lib.datasets.video_manifest --video-root results/review/unannotated-context --output-dir results/tests/video-manifest-real-smoke-v1`，输出 2 条 `frames-1-120.mp4` 和 `source.mp4`，JSONL SHA-256 `199ea7e71b4f05661656aa39fc11a4c78fd8e3864823415b52521ddd7b01ae1e`。源未解码、未修改；未在远端运行全量 inventory。
 - `lib.datasets.video_manifest.__file__` 解析为本仓库路径；`openspec validate pet-pipeline --strict` 与 `git diff --check` 通过。旧有 158 个 dirty/untracked 文件内容哈希前后相同；父审独立复核通过并允许勾选 1.3；其他任务不变，下一项为 1.4。未远程运行或执行模型。
+
+## 1.4 人工区间关联能力
+
+仓库只读证据：`scripts/recover_cat_dataset.py` 的 `interval_fields` 定义 CSV 字段，`results/tracking_eval_20261107/intervals.csv` 样本的 video 如 `videos/event_20260701_172214.mp4`；1.3 扫描 `videos` 本身时标识无该前缀。设计以调用者明确提供前缀映射，不通过 basename 猜配；本轮只实现能力及小输入核验，不认定真实全量关联完成。
+
+- TDD：`python3 -m pytest tests/test_interval_manifest.py -q` 先因模块不存在在收集时报 `ModuleNotFoundError`；实现后 `python3 -m pytest tests/test_interval_manifest.py tests/test_video_manifest.py -q` 为 **6 passed**。临时 CSV 和源目录放 `results/tests/interval-manifest` 并自动清理；测试覆盖明确前缀、同名不同子目录、多区间与原字段、无关联视频、三种未匹配原因、输入哈希校验和版本拒覆盖，以及模块 CLI。
+- `openspec validate pet-pipeline --strict`、`git diff --check` 通过；导入路径指向本仓库。原有 158 个 dirty/untracked 文件哈希未改变；父独立复核两套测试 **6 passed**，strict 与 diff check 通过，并允许勾选 1.4；前序 0、1.1–1.3 已完成。此为能力验收，不是远程 3,927 条全量关联验收。未连接远端、未运行模型或真实全量关联。

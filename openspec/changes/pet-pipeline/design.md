@@ -155,3 +155,7 @@ pet_pipeline/
 ### 1.3 完整目录清单实现约定
 
 `python -m lib.datasets.video_manifest --video-root <源视频目录> --output-dir <新版本目录>` 递归枚举源目录中的 `.mp4/.avi/.mov/.mkv/.webm`（扩展名忽略大小写），不跟随目录符号链接，也不纳入符号链接文件；不读取标注、不解码或检查视频可读性。`videos.jsonl` 按相对源根目录的 POSIX 路径排序，每行 `video_id` 和 `path` 均为该相对路径，重复标识报错；同 stem 的不同相对路径不同。`manifest.json` 记录绝对源根、格式版本、行数及 JSONL 的 SHA-256。空目录或非目录报错；输出目录必须不存在，版本一经创建不覆盖。枚举是文件路径快照，不保证媒体有效或文件内容未变化；标注关联和时长统计属于后续任务。
+
+### 1.4 人工区间关联实现约定
+
+`python -m lib.datasets.interval_manifest --inventory-dir <1.3版本目录> --annotations <CSV> --video-prefix <CSV路径前缀> --output-dir <新版本目录>` 以显式 POSIX 相对路径前缀转换 CSV 的 `video` 为 inventory 的相对路径；例如 `videos/a.mp4` 和前缀 `videos` 对应 `a.mp4`，无前缀时显式传 `.`。逐路径组件精确匹配，不猜 basename、不自动去前缀；绝对路径、空路径或含 `.`/`..` 组件的 CSV 路径标为 `invalid_video_path`，不符前缀标为 `outside_video_prefix`，映射后不在 inventory 标为 `video_not_in_inventory`。不检测媒体、转换标签或解释帧边界。CSV 原值保留字符串，记录起始物理行号；每条区间恰好归入对应视频或 unmatched 列表。单个 `interval_manifest.json` 包含按 inventory 顺序排列的每视频 `video_id`、`intervals`（无关联为空数组）、`unmatched` 及输入文件路径、哈希、前缀和格式版本；空关联不代表负样本。输入 inventory 校验 metadata 的格式版本、计数与 JSONL 哈希及身份唯一性；新输出目录拒绝覆盖。此能力不证明真实全量数据已完成关联。
