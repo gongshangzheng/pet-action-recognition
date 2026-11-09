@@ -8,7 +8,7 @@ data_root = "datasets/cat_raw"
 index_root = "datasets/cat_interval_baseline"
 result_root = "results/training/cat_interval_baseline"
 
-custom_imports = dict(imports=["petlib.datasets.cat_intervals"], allow_failed_imports=False)
+custom_imports = dict(imports=["lib.datasets.cat_intervals"], allow_failed_imports=False)
 model = dict(
     backbone=dict(pretrained=None, init_cfg=dict(
         type="Pretrained",

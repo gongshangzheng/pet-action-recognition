@@ -13,7 +13,7 @@ from mmengine.config import Config
 from mmaction.registry import DATASETS
 from mmaction.utils import register_all_modules
 
-import petlib.datasets.cat_intervals  # noqa: F401 - registry side effect
+import lib.datasets.cat_intervals  # noqa: F401 - registry side effect
 
 
 ROOT = Path(__file__).resolve().parents[2]

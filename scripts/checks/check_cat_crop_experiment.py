@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.datasets.cat_crop import interval_status  # noqa: E402
+from lib.datasets.cat_crop import interval_status  # noqa: E402
 
 
 ARMS = ("raw", "gdino", "gdino_motion")

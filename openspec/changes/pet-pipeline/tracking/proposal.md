@@ -21,6 +21,6 @@
 
 ## Impact
 
-预计影响 `petlib/tracking/`、跟踪调用入口和已有裁剪能力的对接。GroundingDINO 教师原始检测、学生训练及数据集构建仍由 [`pet-pipeline`](../pet-pipeline/design.md) 管理；系统统筹见 [`pet-system-integration`](../pet-system-integration/design.md)。现有跟踪规格的归属和一致性仍待协调，详见 design；本 delta 尚未同步主 spec。
+预计影响 `lib/tracking/`、跟踪调用入口和已有裁剪能力的对接。GroundingDINO 教师原始检测、学生训练及数据集构建仍由 [`pet-pipeline`](../pet-pipeline/design.md) 管理；系统统筹见 [`pet-system-integration`](../pet-system-integration/design.md)。现有跟踪规格的归属和一致性仍待协调，详见 design；本 delta 尚未同步主 spec。
 
 本 change 不要求全算法 benchmark、全量人工标注、新训练或付费，也不授权检测、权重下载或远程运行。旧 proposal 全文按提交 `5900669674ef318d8adc88b5ba5fa0a0eae5dabb` 原样保存在 [history-proposal](history-proposal.md)，仅为历史而非执行权威。

@@ -38,7 +38,7 @@ flowchart TD
 
 ## 2. 教师检测
 
-GroundingDINO-base 是离线教师候选，不预设比 tiny 更准。先在小批有代表性材料上人工核对，再由用户决定下一步；仅有教师一致性不等于真实准确率。tiny 和 base 共享 `petlib/detection/grounding_dino.py`，通过配置和权重区分，不复制模型代码。每帧检测接口接收 BGR 图像和猫狗类别，动作标签不是检测提示词。
+GroundingDINO-base 是离线教师候选，不预设比 tiny 更准。先在小批有代表性材料上人工核对，再由用户决定下一步；仅有教师一致性不等于真实准确率。tiny 和 base 共享 `lib/detection/grounding_dino.py`，通过配置和权重区分，不复制模型代码。每帧检测接口接收 BGR 图像和猫狗类别，动作标签不是检测提示词。
 
 默认全视频从源视频第 0 帧开始每 5 帧检测一次，15 fps 对应 3 Hz；其他 fps 为 fps/5。也提供按区间选帧能力：选帧由调用层负责，区间模式仍筛选同一全视频相位的帧，而非在区间起点重置。检测器本身只负责单帧检测。全视频结果更易供不同区间复用，但不能因此把区间外观测计入区间内覆盖率。
 
@@ -48,7 +48,7 @@ GroundingDINO-base 是离线教师候选，不预设比 tiny 更准。先在小�
 
 原始候选不覆盖，另存去重结果与轨迹，并记录处理前后框、来源和理由。教师候选用于学生伪标签及动作数据准备时，以及在线 YOLO 推理时，都需要重复框处理，防止一只动物被当作两个目标；动作模型训练循环不因此重新检测。先处理同帧明显重复框，再与关联反馈，重点结合既有轨迹和过去观测的位置连续性复核当前疑似重复；证据充分才合成一个目标，不确定时保留歧义以保护两只真实动物。因果部分只使用当前及过去，离线未来帧复核单独标识。已有 IoS 处理仅为基线，不能只凭一次 IoS 高删除真动物，具体阈值、窗口和融合方式待商定。上方流程图的去重候选和轨迹表示复核后的结果，不排除复核前生成初步轨迹；详见本节与[来源研究](tracking/research.md)。处理候选可供 YOLO 数据复用，但不阻塞 raw 教师检测。低置信度、小面积或少运动本身不证明是假目标，印刷图案也可能产生持续假轨迹。
 
-跟踪能力独立放在 `petlib/tracking`；已有单流 OC-SORT 是运行过的基线，不是最终选型，也不声称优于 SORT。跟踪选型读取教师缓存，轨迹推断及依轨迹生成逐帧框和裁剪须等待获批的固定候选和关联参数，而非最终胜出选型；详见本节与[来源研究](tracking/research.md)。单流关联、物种作为轨迹元数据，`track_id` 仅在对应视频和跟踪批次有效。现有轨迹级时序合并默认关闭，曾将猫砂盆与真猫错误合并，不可直接启用；具体证据见附录 B。不同 ID 须先有可接受的关联证据，不能靠插值证明它们是同一目标；同 ID 的短缺口可插值，具体可接受缺口、端点延伸及关联规则仍须确认。实测检测框与估计框必须区分。
+跟踪能力独立放在 `lib/tracking`；已有单流 OC-SORT 是运行过的基线，不是最终选型，也不声称优于 SORT。跟踪选型读取教师缓存，轨迹推断及依轨迹生成逐帧框和裁剪须等待获批的固定候选和关联参数，而非最终胜出选型；详见本节与[来源研究](tracking/research.md)。单流关联、物种作为轨迹元数据，`track_id` 仅在对应视频和跟踪批次有效。现有轨迹级时序合并默认关闭，曾将猫砂盆与真猫错误合并，不可直接启用；具体证据见附录 B。不同 ID 须先有可接受的关联证据，不能靠插值证明它们是同一目标；同 ID 的短缺口可插值，具体可接受缺口、端点延伸及关联规则仍须确认。实测检测框与估计框必须区分。
 
 ### 组件边界、候选与评估顺序
 
@@ -104,31 +104,31 @@ pet_pipeline/
 
 ## 附录 A：代码职责与迁移
 
-正式清单、统计和处理入口及可复用能力放在 `petlib`，可用 `python -m` 调用；`scripts` 主要留临时探针及检查、迁移工具。原则后续固化到 `AGENTS.md`，`repo-structure` 精简为导航，不复制巨型目录树。通用代码 `cat_selection` → `pet_selection`、`cat_crop` → `pet_crop`；重命名前检查调用方和已有行为。
+正式清单、统计和处理入口及可复用能力放在 `lib`，可用 `python -m` 调用；`scripts` 主要留临时探针及检查、迁移工具。原则后续固化到 `AGENTS.md`，`repo-structure` 精简为导航，不复制巨型目录树。通用代码 `cat_selection` → `pet_selection`、`cat_crop` → `pet_crop`；重命名前检查调用方和已有行为。
 
 | 能力 | 现位置 | 拟目标 | 状态与边界 |
 |---|---|---|---|
-| 全视频清单与正式入口 | `scripts/build_video_manifest.py` | `petlib`（具体模块待定，支持 `python -m`） | 现仅从标注出发；扩展全部视频，旧结果保留 |
-| 原始与物种统计、正式入口 | 分散于现有处理脚本 | `petlib`（具体模块待定） | 目标能力，物种统计依赖检测结果，不是 GT |
-| 单帧检测接口与结果结构 | `petlib/detection/base.py`、`petlib/schemas.py` | 原位置 | 已有接口，复用 |
-| GDINO 模型加载与单帧推理 | `petlib/detection/grounding_dino.py` | 原位置 | tiny/base 共用；base 效果尚未验证 |
-| 抽帧检测与正式入口 | `scripts/prepare_cat_crop_experiment.py::detect_video` | 候选 `petlib/detection/anchors.py` | 待迁移；区间选帧由调用层负责 |
-| 检测缓存与复用校验 | 同脚本 `load_reusable_detection` 等 | 候选 `petlib/detection/cache.py` | 待迁移；保留原始候选和空检测 |
-| 模型与推理指纹 | 同脚本 `model_fingerprint`、`detection_fingerprint_for_args` | 候选 `petlib/detection/fingerprint.py` | 待迁移；来源不匹配不能复用 |
-| 去重与跟踪、正式入口 | `petlib/tracking/`、`scripts/track_pet_targets.py` | `petlib/tracking/`，正式入口具体模块待定 | 已有 OC-SORT；时序重复判断待商定 |
-| 区间资格与窗口选择 | `scripts/build_cat_dataset_slices.py` | `petlib/datasets/pet_selection.py` | 待迁移并通用化；按区间和轨迹判断 |
-| 轨迹生成逐帧框 | `scripts/build_clip_boxes.py` | 候选 `petlib/datasets/clip_boxes.py` | 待迁移；观测与估计分开 |
-| 片段裁剪与编码、正式入口 | `scripts/render_clip_windows.py` | 候选 `petlib/render/clips.py` | 待迁移；拒绝静默整帧回退 |
-| 整视频审阅渲染 | `scripts/prepare_cat_crop_experiment.py` 渲染逻辑 | 候选 `petlib/render/frames.py` | 仅审阅/对照；是否迁移待定，非训练前置 |
-| 通用裁剪几何 | `petlib/datasets/cat_crop.py` | `petlib/datasets/pet_crop.py` | 待更名，先核对调用方和行为 |
-| 视频编码基础能力 | `petlib/videowriter.py` | 原位置 | 已有，复用前核对 |
-| 标注导出、正式入口 | `scripts/export_clip_annotations.py` | 候选 `petlib/datasets/annotation_export.py` | 待迁移；保留来源和媒体审计 |
-| 数据集读取 | `petlib/datasets/cat_intervals.py` | 原位置 | 已有；核对调用方及帧号规则 |
-| 区间指标 | `petlib/datasets/cat_intervals.py::CatIntervalMetric` | 候选 `petlib/metrics/cat_interval.py` | 是否拆分待定，不作为当前前置 |
-| 单片段推理 | `scripts/infer_single_clip.py` | 候选 `petlib/inference/recognizer.py` | 是否迁移待定；先核对预处理 |
+| 全视频清单与正式入口 | `scripts/build_video_manifest.py` | `lib.datasets.video_manifest`（支持 `python -m`） | 现仅从标注出发；扩展全部视频，旧结果保留 |
+| 原始与物种统计、正式入口 | 分散于现有处理脚本 | `lib`（具体模块待定） | 目标能力，物种统计依赖检测结果，不是 GT |
+| 单帧检测接口与结果结构 | `lib/detection/base.py`、`lib/schemas.py` | 原位置 | 已有接口，复用 |
+| GDINO 模型加载与单帧推理 | `lib/detection/grounding_dino.py` | 原位置 | tiny/base 共用；base 效果尚未验证 |
+| 抽帧检测与正式入口 | `scripts/prepare_cat_crop_experiment.py::detect_video` | 候选 `lib/detection/anchors.py` | 待迁移；区间选帧由调用层负责 |
+| 检测缓存与复用校验 | 同脚本 `load_reusable_detection` 等 | 候选 `lib/detection/cache.py` | 待迁移；保留原始候选和空检测 |
+| 模型与推理指纹 | 同脚本 `model_fingerprint`、`detection_fingerprint_for_args` | 候选 `lib/detection/fingerprint.py` | 待迁移；来源不匹配不能复用 |
+| 去重与跟踪、正式入口 | `lib/tracking/`、`scripts/track_pet_targets.py` | `lib/tracking/`，正式入口具体模块待定 | 已有 OC-SORT；时序重复判断待商定 |
+| 区间资格与窗口选择 | `scripts/build_cat_dataset_slices.py` | `lib/datasets/pet_selection.py` | 待迁移并通用化；按区间和轨迹判断 |
+| 轨迹生成逐帧框 | `scripts/build_clip_boxes.py` | 候选 `lib/datasets/clip_boxes.py` | 待迁移；观测与估计分开 |
+| 片段裁剪与编码、正式入口 | `scripts/render_clip_windows.py` | 候选 `lib/render/clips.py` | 待迁移；拒绝静默整帧回退 |
+| 整视频审阅渲染 | `scripts/prepare_cat_crop_experiment.py` 渲染逻辑 | 候选 `lib/render/frames.py` | 仅审阅/对照；是否迁移待定，非训练前置 |
+| 通用裁剪几何 | `lib/datasets/cat_crop.py` | `lib/datasets/pet_crop.py` | 待更名，先核对调用方和行为 |
+| 视频编码基础能力 | `lib/videowriter.py` | 原位置 | 已有，复用前核对 |
+| 标注导出、正式入口 | `scripts/export_clip_annotations.py` | 候选 `lib/datasets/annotation_export.py` | 待迁移；保留来源和媒体审计 |
+| 数据集读取 | `lib/datasets/cat_intervals.py` | 原位置 | 已有；核对调用方及帧号规则 |
+| 区间指标 | `lib/datasets/cat_intervals.py::CatIntervalMetric` | 候选 `lib/metrics/cat_interval.py` | 是否拆分待定，不作为当前前置 |
+| 单片段推理 | `scripts/infer_single_clip.py` | 候选 `lib/inference/recognizer.py` | 是否迁移待定；先核对预处理 |
 | 旧检测与批处理入口 | `scripts/pet_detect_track.py`、`pet_multi_detect.py`、`pet_batch_run.py` | 具体处置待定 | 先核对调用方；不预先移动或删除 |
 
-表中目标是职责方向而非已实施路径；正式 CLI 与能力均放 `petlib`，不把 scripts 薄封装当最终正式入口。迁移先保持行为，比较同一小输入的有效内容；带生成时间的 JSON 不能仅用整文件哈希判定行为一致。需要纠正的行为单独记录，不与搬迁静默混合；保留旧产物用于回退。
+表中目标是职责方向而非已实施路径；正式 CLI 与能力均放 `lib`，不把 scripts 薄封装当最终正式入口。迁移先保持行为，比较同一小输入的有效内容；带生成时间的 JSON 不能仅用整文件哈希判定行为一致。需要纠正的行为单独记录，不与搬迁静默混合；保留旧产物用于回退。
 
 ## 附录 B：现状、验证及风险
 
@@ -146,7 +146,7 @@ pet_pipeline/
 
 ### 原始数据卡来源披露
 
-任务 1.8 承接已停止的 `verify-cat-dataset-provenance` 的历史来源及未知披露：历史源路径、接收快照和副本校验范围见 `openspec/changes/archive/2026-11-08-verify-cat-dataset-provenance/evidence.md`；当前源端数量/权限/一致性及旧路径报告附件的存在与哈希未知。历史路径不是当前可访问性证明；披露不等于源端复查或附件恢复。检测后物种统计追加的当前任务是 5.2。
+任务 1.10 承接已停止的 `verify-cat-dataset-provenance` 的历史来源及未知披露：历史源路径、接收快照和副本校验范围见 `openspec/changes/archive/2026-11-08-verify-cat-dataset-provenance/evidence.md`；当前源端数量/权限/一致性及旧路径报告附件的存在与哈希未知。历史路径不是当前可访问性证明；披露不等于源端复查或附件恢复。检测后物种统计追加的当前任务是 5.2。
 
 ### 今晚 raw 提取中的不可读源
 

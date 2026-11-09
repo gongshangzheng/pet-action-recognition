@@ -1,6 +1,6 @@
 """注册表工厂：create(kind, name, **cfg)。
 
-实现模块在 create() 时才 import（懒加载）——保证 petlib 基础层零重依赖。
+实现模块在 create() 时才 import（懒加载）——保证 lib 基础层零重依赖。
 新增实现 = 在对应包下写模块 + @register 装饰器（或手动注册）。
 """
 from __future__ import annotations
@@ -11,17 +11,17 @@ _REGISTRIES: dict[str, dict[str, type]] = {"detector": {}, "tracker": {}, "keypo
 
 _MODULE_MAP = {
     "detector": {
-        "grounding_dino": "petlib.detection.grounding_dino",
+        "grounding_dino": "lib.detection.grounding_dino",
     },
     "tracker": {
-        "byte_track": "petlib.tracking.byte_track",
-        "oc_sort": "petlib.tracking.oc_sort",
-        "bot_sort": "petlib.tracking.bot_sort",
-        "deep_sort": "petlib.tracking.deep_sort",
+        "byte_track": "lib.tracking.byte_track",
+        "oc_sort": "lib.tracking.oc_sort",
+        "bot_sort": "lib.tracking.bot_sort",
+        "deep_sort": "lib.tracking.deep_sort",
     },
     "keypoints": {
-        "superanimal": "petlib.keypoints.superanimal",
-        "vitpose_ap10k": "petlib.keypoints.vitpose_ap10k",
+        "superanimal": "lib.keypoints.superanimal",
+        "vitpose_ap10k": "lib.keypoints.vitpose_ap10k",
     },
 }
 

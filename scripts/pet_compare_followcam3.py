@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from petlib.videowriter import H264VideoWriter  # noqa: E402
+from lib.videowriter import H264VideoWriter  # noqa: E402
 
 PANEL = 480        # 右侧单路跟随视角尺寸（正方形）
 GAP = 8            # 面板间距

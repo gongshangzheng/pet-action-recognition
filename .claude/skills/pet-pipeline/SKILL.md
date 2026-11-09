@@ -28,7 +28,7 @@ cat_raw/videos/*.mp4  (原始事件视频 2880×1620, 15fps)
    │
    ├─ ②b 跟踪  scripts/track_pet_targets.py  (OC-SORT，单流，物种作元数据)
    │        → <out>/<stem>.track.json  逐锚点轨迹（含输入指纹与参数）
-   │        规则见 petlib/tracking/：IoS≥0.8 去嵌套重复、生命周期标定、放弃不稳定轨迹
+   │        规则见 lib/tracking/：IoS≥0.8 去嵌套重复、生命周期标定、放弃不稳定轨迹
    │
    ├─ ③切片  scripts/build_cat_dataset_slices.py
    │        → results/cat_data_preprocessing/slices_v8/clips.jsonl    (7,554 条片段)
@@ -96,31 +96,31 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 ## 检测器是可替换的
 
 - 当前是 GroundingDINO-tiny（权重 `1a2412ef…`），后续可能换 GDINO-base 或自训 YOLO。
-- 接口在 `petlib/detection/base.Detector`：`detect(img_bgr, classes) -> list[Detection]`；模型封装在 `petlib/detection/grounding_dino.py`。新增检测器只需实现该接口。
-- **代码共享、产物分开**：GDINO-tiny 与 GDINO-base 共用 `petlib/detection/grounding_dino.py`，差异只在 `model_dir` 与阈值；只有换框架（YOLO）才新增 `yolo.py`。
+- 接口在 `lib/detection/base.Detector`：`detect(img_bgr, classes) -> list[Detection]`；模型封装在 `lib/detection/grounding_dino.py`。新增检测器只需实现该接口。
+- **代码共享、产物分开**：GDINO-tiny 与 GDINO-base 共用 `lib/detection/grounding_dino.py`，差异只在 `model_dir` 与阈值；只有换框架（YOLO）才新增 `yolo.py`。
 - **指纹通用化**：`family`（gdino/yolo）+ `weights_sha256`（区分 tiny/base）+ 该实现声明的参数字典，不写死 `box_threshold`/`text_threshold`。
 - **换模型即重检**：权重/family/参数任一变化，`load_reusable_detection()` 会拒绝旧缓存；不要绕过校验复用，否则新旧检测混在一份索引里。
 
-## 目录约定：petlib 与 scripts 的分工
+## 目录约定：lib 与 scripts 的分工
 
-- **`petlib/`** 放可导入、可测试、无命令行的能力：检测模型封装（`detection/`）、锚点与缓存（待下沉）、裁剪几何与轨迹（`datasets/cat_crop.py`）、跟踪（`tracking/`）、数据集与指标（`datasets/cat_intervals.py`）、视频写入（`videowriter.py`）。
+- **`lib/`** 放可导入、可测试的能力及正式 `python -m` 入口：检测模型封装（`detection/`）、锚点与缓存（待下沉）、裁剪几何与轨迹（`datasets/cat_crop.py`）、跟踪（`tracking/`）、数据集与指标（`datasets/cat_intervals.py`）、视频写入（`videowriter.py`）。
 - **`scripts/`** 只做参数解析与编排调用；现存的 `prepare_cat_crop_experiment.py` 仍混着检测、渲染、索引三类逻辑，属待重构项（见 change `pet-pipeline` 的 1.4）。
-- 判断标准：这段代码能否被两个以上入口复用、能否脱离命令行被测试。能，就进 `petlib`。
+- 判断标准：这段代码能否被两个以上入口复用、能否脱离命令行被测试。能，就进 `lib`。
 
 ## 目标布局（2026-11-08 定，见 change `pet-pipeline` 第 2 节）
 
 | 能力 | 目标位置 | 现状 |
 |---|---|---|
-| 检测模型封装 | `petlib/detection/grounding_dino.py` | 已就位 |
-| 检测抽样 / 缓存 / 指纹 | `petlib/detection/{anchors,cache,fingerprint}.py` | **待迁移**，现混在 `scripts/prepare_cat_crop_experiment.py` |
-| 裁剪几何与逐帧轨迹 | `petlib/datasets/cat_crop.py` | 已就位 |
-| 资格判定 / 重叠仲裁 / 切片 | `petlib/datasets/cat_selection.py` | **待迁移**，现在 `scripts/build_cat_dataset_slices.py` |
-| 轨迹 → 逐帧框 | `petlib/datasets/clip_boxes.py` | **待迁移**，现在 `scripts/build_clip_boxes.py` |
-| 片段渲染 | `petlib/render/clips.py` | **待迁移**，现在 `scripts/render_clip_windows.py` |
-| 标注导出 | `petlib/datasets/annotation_export.py` | **待迁移**，现在 `scripts/export_clip_annotations.py` |
-| 单片段推理 | `petlib/inference/recognizer.py` | **待迁移**，现在 `scripts/infer_single_clip.py` |
-| 指标 | `petlib/metrics/cat_interval.py` | **待迁移**，现在 `petlib/datasets/cat_intervals.py` |
-| 跟踪 | `petlib/tracking/` | 已就位 |
+| 检测模型封装 | `lib/detection/grounding_dino.py` | 已就位 |
+| 检测抽样 / 缓存 / 指纹 | `lib/detection/{anchors,cache,fingerprint}.py` | **待迁移**，现混在 `scripts/prepare_cat_crop_experiment.py` |
+| 裁剪几何与逐帧轨迹 | `lib/datasets/cat_crop.py` | 已就位 |
+| 资格判定 / 重叠仲裁 / 切片 | `lib/datasets/cat_selection.py` | **待迁移**，现在 `scripts/build_cat_dataset_slices.py` |
+| 轨迹 → 逐帧框 | `lib/datasets/clip_boxes.py` | **待迁移**，现在 `scripts/build_clip_boxes.py` |
+| 片段渲染 | `lib/render/clips.py` | **待迁移**，现在 `scripts/render_clip_windows.py` |
+| 标注导出 | `lib/datasets/annotation_export.py` | **待迁移**，现在 `scripts/export_clip_annotations.py` |
+| 单片段推理 | `lib/inference/recognizer.py` | **待迁移**，现在 `scripts/infer_single_clip.py` |
+| 指标 | `lib/metrics/cat_interval.py` | **待迁移**，现在 `lib/datasets/cat_intervals.py` |
+| 跟踪 | `lib/tracking/` | 已就位 |
 | 旧管线入口 | `scripts/legacy/` | 待归置（`pet_detect_track.py`、`pet_multi_detect.py`、`pet_batch_run.py`） |
 
 迁移验收：同一输入下产物哈希与迁移前一致，否则视为行为改变，必须写明。
@@ -130,12 +130,12 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 | 想改的东西 | 文件 |
 |---|---|
 | 检测/渲染阶段、`--stage`、路径与指纹 | `scripts/prepare_cat_crop_experiment.py` |
-| 方形裁剪、补边、逐帧轨迹与显示平滑 | `petlib/datasets/cat_crop.py`（`crop_square` 378、`build_frame_track` 133、`classify_frame`） |
-| 跟踪算法、IoS 去重、生命周期、轨迹合并 | `petlib/tracking/`（`anchors.py` 的 `dedup_nested`、`oc_sort.py`、`merge.py`）、入口 `scripts/track_pet_targets.py` |
+| 方形裁剪、补边、逐帧轨迹与显示平滑 | `lib/datasets/cat_crop.py`（`crop_square` 378、`build_frame_track` 133、`classify_frame`） |
+| 跟踪算法、IoS 去重、生命周期、轨迹合并 | `lib/tracking/`（`anchors.py` 的 `dedup_nested`、`oc_sort.py`、`merge.py`）、入口 `scripts/track_pet_targets.py` |
 | 切片、损失归因、多宠物判定、activity 上限 | `scripts/build_cat_dataset_slices.py` |
 | 训练标注导出、帧数 clamp | `scripts/export_clip_annotations.py` |
-| 数据集读取、区间限制、评测指标 | `petlib/datasets/cat_intervals.py`（`IntervalVideoDataset`、`RestrictFrameRange`、`CatIntervalMetric`） |
-| 逐帧裁剪 transform（未接入） | `petlib/datasets/cat_crop_transforms.py`（`SampledBoxCrop`/`BoxSquareCrop`） |
+| 数据集读取、区间限制、评测指标 | `lib/datasets/cat_intervals.py`（`IntervalVideoDataset`、`RestrictFrameRange`、`CatIntervalMetric`） |
+| 逐帧裁剪 transform（未接入） | `lib/datasets/cat_crop_transforms.py`（`SampledBoxCrop`/`BoxSquareCrop`） |
 | 训练配置（十类、累加、权重） | `configs/cat_clip_videomaev2_b.py` 与 `configs/cat_action_videomaev2_b_v1.py` |
 | 训练入口 / 产物解析 / checkpoint | `scripts/run_cat_crop_experiment.py`、`models/mmaction2/tools/train.py` |
 | 远程启动与守卫 | `scripts/remote/run_missing_detection.sh`、`scripts/remote/run_clip_training.sh`、`.claude/skills/remote-ops/` |
@@ -152,7 +152,7 @@ python3 models/mmaction2/tools/train.py configs/cat_clip_videomaev2_b.py \
 2. 索引是哪个版本？权威版本 `slices_v8` + `datasets/cat_clip_v8`；不要引用 v3/v7。
 3. `num_classes` 与 `classes` 列表长度、`class_weight` 长度三者一致（基类残留七类是踩过的坑）。
 4. `accumulative_counts` 属于 `optim_wrapper`，不属于 `train_cfg`。
-5. 训练命令必须带 `PYTHONPATH=<repo>`，否则 `petlib` 导入失败。
+5. 训练命令必须带 `PYTHONPATH=<repo>`，否则 `lib` 导入失败。
 6. 守卫上限：CPU 900%、RSS 24 GB、GPU 92%；时长按 20 轮 + 验证估。
 6b. 裁剪是否真的生效？看索引里是否有 `boxes`、pipeline 里是否有裁剪 transform；两者缺一个就是整帧训练。
 7. 跑完核对：`best_macro_f1_epoch_*.pth` 存在、checkpoint 含 `optimizer` 与 `param_schedulers`（基类默认 `save_optimizer=False`，改过才有效）。

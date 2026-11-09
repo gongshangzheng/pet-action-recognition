@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from petlib.schemas import KeypointSequence
+from lib.schemas import KeypointSequence
 
 
 class KeypointExtractor(ABC):

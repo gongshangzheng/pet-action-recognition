@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.datasets.cat_crop import interval_status  # noqa: E402
+from lib.datasets.cat_crop import interval_status  # noqa: E402
 
 SCHEMA = "cat-crop-camera-summary-v2"
 ELIGIBILITY_FIELDS = ("valid", "reason", "target_class", "camera_box")

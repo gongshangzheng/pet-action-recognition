@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.datasets.cat_crop import (  # noqa: E402
+from lib.datasets.cat_crop import (  # noqa: E402
     build_frame_track,
     classify_frame,
     crop_square,
@@ -29,14 +29,14 @@ from petlib.datasets.cat_crop import (  # noqa: E402
     letterbox_square,
     motion_correct_box,
 )
-from petlib.followcam import (  # noqa: E402
+from lib.followcam import (  # noqa: E402
     DEFAULT_OFFSET_ALPHA,
     DEFAULT_OFFSET_ALPHA_SIZE,
     DEFAULT_OFFSET_MAX_VELOCITY,
     DEFAULT_OFFSET_MAX_VELOCITY_SIZE,
     MotionOffsetSmoother,
 )
-from petlib.videowriter import H264VideoWriter  # noqa: E402
+from lib.videowriter import H264VideoWriter  # noqa: E402
 
 
 CLASSES = [
@@ -179,7 +179,7 @@ def build_detector(args: argparse.Namespace):
             f"GroundingDINO model directory is incomplete: {model_dir}"
         )
     import torch
-    from petlib.detection.grounding_dino import GroundingDinoDetector
+    from lib.detection.grounding_dino import GroundingDinoDetector
 
     torch.set_num_threads(args.torch_threads)
     torch.set_num_interop_threads(1)

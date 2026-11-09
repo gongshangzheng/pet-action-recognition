@@ -23,7 +23,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from petlib.videowriter import H264VideoWriter  # noqa: E402
+from lib.videowriter import H264VideoWriter  # noqa: E402
 
 DEFAULT_CONFIG = os.path.expanduser(
     "~/models/ap10k/td-hm_hrnet-w32_8xb64-210e_ap10k-256x256.py")

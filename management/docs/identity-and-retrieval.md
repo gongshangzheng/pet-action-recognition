@@ -115,7 +115,7 @@ SORT  = 有多个候选人时 → 判断谁是谁（贴 id）      ← 我们跳
 插值  = 已确定是同一个目标、中间没框 → 补出来      ← 我们用的
 ```
 
-**现状**：`petlib/tracking/` 有 5 个空壳适配器（包装 BoxMOT 库），**管线从未 import**；管线的"关联"就是一行 `argmax(置信度)`。多猫能力挂在 `tracker-selection` change 上（⏸️ 延后，触发条件 = **多猫数据出现**）。
+**现状**：`lib/tracking/` 有 5 个空壳适配器（包装 BoxMOT 库），**管线从未 import**；管线的"关联"就是一行 `argmax(置信度)`。多猫能力挂在 `tracker-selection` change 上（⏸️ 延后，触发条件 = **多猫数据出现**）。
 
 ### §1.3 关键否决与裁定
 
@@ -193,7 +193,7 @@ Re-ID 本质就是对比学习的**检索实现**：
 - 代码：`scripts/register_cats.py`（计划中）
 - 索引文件：向量索引位置待定（应在 `data/` 或 pet 远程）；**向量库选型待实测**（见 `registry-retrieval` design D9b）
 - 关联字段：spot-check-cli 的"登记身份"列
-- schema：`petlib/registry.py`（统一登记-检索抽象，详 §5）
+- schema：`lib/registry.py`（统一登记-检索抽象，详 §5）
 
 ## §4 RAG 式物体实例标识
 
@@ -250,9 +250,9 @@ OWLv2 图像引导作对照（"拿这个碗的照片当查询"），GDINO 文本
 
 | 资产 | 位置 | 说明 |
 |---|---|---|
-| 登记照库 | 待定（petlib/registry 配置） | 猫 + 物体的"身份照" |
+| 登记照库 | 待定（lib/registry 配置） | 猫 + 物体的"身份照" |
 | 向量索引 | 待定 | 嵌入向量索引文件（向量库选型待实测）|
-| Schema | `petlib/registry.py` | 统一抽象定义 |
+| Schema | `lib/registry.py` | 统一抽象定义 |
 | 测试数据 | `datasets/cats/` 视频帧 | 验证登记-检索链路 |
 
 与 [《仓库资产盘点》《仓库资产盘点》§1](../wiki/repo-inventory) 交叉引用。

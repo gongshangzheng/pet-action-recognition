@@ -8,8 +8,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from petlib.detection.base import Detector
-from petlib.schemas import Detection
+from lib.detection.base import Detector
+from lib.schemas import Detection
 
 
 class GroundingDinoDetector(Detector):

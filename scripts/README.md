@@ -4,7 +4,7 @@
 `scripts/run_test.py`，它属于模型评测，不属于项目自动化测试。
 
 猫动作数据与实验入口为 `prepare_cat_action_v1.py`、`run_cat_action_v1.py`、
-`run_cat_action_batch.py`；数据读取与指标扩展在 `petlib/datasets/cat_intervals.py`。
+`run_cat_action_batch.py`；数据读取与指标扩展在 `lib/datasets/cat_intervals.py`。
 实验协议、成绩及局限见 [训练说明](../docs/cat_action_training_v1.md)。
 
 ## 自动化测试

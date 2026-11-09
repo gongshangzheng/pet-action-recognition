@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.videowriter import find_ffmpeg
+from lib.videowriter import find_ffmpeg
 
 
 ARMS = ("raw", "gdino", "gdino_motion")

@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "scripts/checks"))
 
-from petlib.datasets.cat_crop import (  # noqa: E402
+from lib.datasets.cat_crop import (  # noqa: E402
     build_frame_track,
     classify_frame,
     crop_bounds,
@@ -29,7 +29,7 @@ from petlib.datasets.cat_crop import (  # noqa: E402
     letterbox_square,
     motion_correct_box,
 )
-from petlib.followcam import (  # noqa: E402
+from lib.followcam import (  # noqa: E402
     DEFAULT_MOVING_AVERAGE_WINDOW,
     MotionOffsetSmoother,
     centered_moving_average,
@@ -40,7 +40,7 @@ import check_cat_crop_experiment as crop_check  # noqa: E402
 import prepare_cat_crop_experiment as prepare  # noqa: E402
 import run_cat_crop_experiment as runner  # noqa: E402
 import select_cat_crop_quality_sample as quality  # noqa: E402
-from petlib import videowriter  # noqa: E402
+from lib import videowriter  # noqa: E402
 
 
 def detection(label: str, box: list[float], score: float) -> dict:

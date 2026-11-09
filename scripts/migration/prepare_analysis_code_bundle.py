@@ -11,7 +11,7 @@ import tarfile
 
 ROOT_FILES = ("AGENTS.md", "README.md", ".gitignore")
 SOURCE_DIRS = (
-    "scripts", "configs", "server", "petlib", "evaluation", "models",
+    "scripts", "configs", "server", "lib", "evaluation", "models",
     "openspec", "docs", "templates", "tests",
 )
 SKIP_DIRS = {

@@ -25,7 +25,7 @@ from mmengine.runner.checkpoint import _load_checkpoint, load_checkpoint
 from mmaction.registry import DATASETS, MODELS
 from mmaction.utils import register_all_modules
 
-import petlib.datasets.cat_intervals  # noqa: F401 - registry side effect
+import lib.datasets.cat_intervals  # noqa: F401 - registry side effect
 
 CONFIGS = {
     "videomaev2_b": "cat_action_videomaev2_b_v1.py",

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from boxmot import ByteTrack
 
-from petlib.tracking.boxmot_base import BoxMotAdapter
+from lib.tracking.boxmot_base import BoxMotAdapter
 
 
 class ByteTrackTracker(BoxMotAdapter):

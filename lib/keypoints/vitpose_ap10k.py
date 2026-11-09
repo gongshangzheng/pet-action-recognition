@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from petlib.keypoints.base import KeypointExtractor
+from lib.keypoints.base import KeypointExtractor
 
 
 class VitPoseAp10kExtractor(KeypointExtractor):

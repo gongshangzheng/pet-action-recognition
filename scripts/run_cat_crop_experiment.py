@@ -671,7 +671,7 @@ def preflight(device: str) -> dict[str, Any]:
     import torch
     from mmaction.utils import register_all_modules
 
-    import petlib.datasets.cat_intervals  # noqa: F401
+    import lib.datasets.cat_intervals  # noqa: F401
 
     register_all_modules(init_default_scope=True)
     runtime_device = "cuda:0" if torch.cuda.is_available() else "cpu"

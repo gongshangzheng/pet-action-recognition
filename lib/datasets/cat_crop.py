@@ -8,7 +8,7 @@ from typing import Any, Iterable
 import cv2
 import numpy as np
 
-from petlib.followcam import (
+from lib.followcam import (
     DEFAULT_MOVING_AVERAGE_WINDOW,
     centered_moving_average,
 )

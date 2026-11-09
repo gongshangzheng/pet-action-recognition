@@ -32,7 +32,7 @@
 
 ## Impact
 
-- 新增 `petlib/background/`（清单存储 + 触发状态机）与关键帧分割 CLI（SAM 权重在 pet）。
+- 新增 `lib/background/`（清单存储 + 触发状态机）与关键帧分割 CLI（SAM 权重在 pet）。
 - 消费方：`batch-followcam-extraction`（已归档）的空间状态层、`registry-retrieval`（物品实例识别共用登记-检索）。
 - 产物 per-camera 清单文件（gitignore），不动原视频与既有轨迹 JSON。
 - 四项实验测定项（阈值/选型/过滤/合并）在实施时定值，本 change 只定契约与机制。

@@ -21,8 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.schemas import Detection  # noqa: E402
-from petlib.tracking.anchors import dedup_nested  # noqa: E402
+from lib.schemas import Detection  # noqa: E402
+from lib.tracking.anchors import dedup_nested  # noqa: E402
 from scripts.track_pet_targets import DEFAULT_PARAMS, track_video  # noqa: E402
 
 STRIDE = 5

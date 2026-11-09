@@ -8,8 +8,8 @@ track id 合并规则：cat 流保留原 id；dog 流 id 偏移 +SPECIES_ID_OFFS
 """
 from __future__ import annotations
 
-from petlib.schemas import Detection, Track
-from petlib.tracking.base import Tracker
+from lib.schemas import Detection, Track
+from lib.tracking.base import Tracker
 
 SPECIES_ID_OFFSET = 10_000
 TRACKED_SPECIES = ("cat", "dog")

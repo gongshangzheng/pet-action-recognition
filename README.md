@@ -20,7 +20,7 @@ pet-action-recognition/
 ├── web/                         # Vue 3 前端（:3000）
 ├── configs/                     # mmaction2 训练配置
 ├── models/mmaction2/            # vendored mmaction2（只读）
-├── petlib/                      # 管线可替换模块
+├── lib/                      # 管线可替换模块
 ├── datasets/                    # 数据集（cats v1 等）
 ├── scripts/                     # 训练/测试/推理/批处理脚本
 ├── checkpoints/                 # 本地空目录（权重在远程 pet 服务器）

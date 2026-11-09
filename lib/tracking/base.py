@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from petlib.schemas import Detection, Track
+from lib.schemas import Detection, Track
 
 
 class Tracker(ABC):

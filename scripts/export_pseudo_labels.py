@@ -37,8 +37,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.schemas import Detection  # noqa: E402
-from petlib.tracking.anchors import DEDUP_IOS_MIN, dedup_nested  # noqa: E402
+from lib.schemas import Detection  # noqa: E402
+from lib.tracking.anchors import DEDUP_IOS_MIN, dedup_nested  # noqa: E402
 
 CLASSES = ["cat", "dog"]
 CLASS_ID = {name: i for i, name in enumerate(CLASSES)}

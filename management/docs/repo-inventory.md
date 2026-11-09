@@ -69,7 +69,7 @@ id: 1
 |---|---|---|
 | Server 后端 | 7 个 FastAPI 路由 | `server/main.py` → `server/routers/{papers,management,evaluation,training,speedrun,datasets,live}.py` |
 | Scripts | 26 个 Python + Shell | `scripts/`（按用途分组） |
-| petlib | 4 个模块 | `petlib/{registry,schemas,videowriter,contract_tests}.py` |
+| lib | 4 个模块 | `lib/{registry,schemas,videowriter,contract_tests}.py` |
 | Web 前端 | 28 个 .vue 页面 + 8 个 API 封装 | `web/src/{views,api}/` |
 | Configs | 14 个（含 hooks/aim_modules 子目录） | `configs/` |
 | Vendored | `models/mmaction2/` | vendored 快照，只读 |

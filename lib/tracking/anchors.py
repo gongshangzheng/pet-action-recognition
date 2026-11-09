@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from petlib.schemas import Detection
+from lib.schemas import Detection
 
 DETECTION_CACHE_SCHEMA = "cat-crop-detection-v2"
 

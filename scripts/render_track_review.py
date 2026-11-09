@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.videowriter import H264VideoWriter  # noqa: E402
+from lib.videowriter import H264VideoWriter  # noqa: E402
 
 PALETTE = [
     (0, 215, 255), (255, 140, 0), (0, 255, 0), (255, 0, 200),

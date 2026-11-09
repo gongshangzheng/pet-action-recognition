@@ -1,7 +1,7 @@
-"""契约冒烟测试：petlib 所有注册实现必须通过统一接口 + schema 校验。
+"""契约冒烟测试：lib 所有注册实现必须通过统一接口 + schema 校验。
 
 运行（repo 根）：
-    PYTHONPATH=. ~/miniconda3/envs/plf/bin/python -m pytest petlib/contract_tests.py -v
+    PYTHONPATH=. ~/miniconda3/envs/plf/bin/python -m pytest lib/contract_tests.py -v
 
 GPU/重依赖缺失的实现自动 skip（不阻塞 CI）。
 """
@@ -10,8 +10,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from petlib.registry import available, create
-from petlib.schemas import Detection, KeypointSequence, Track, TrackPoint
+from lib.registry import available, create
+from lib.schemas import Detection, KeypointSequence, Track, TrackPoint
 
 
 # ---------- fixtures ----------
@@ -118,6 +118,6 @@ def test_detector_grounding_dino_smoke(synthetic_frame):
 # ---------- keypoints（重依赖缺失则 skip）----------
 
 def test_keypoints_registry():
-    from petlib.registry import available
+    from lib.registry import available
     names = available("keypoints")
     assert "vitpose_ap10k" in names  # mmpose 缺失时会缺席

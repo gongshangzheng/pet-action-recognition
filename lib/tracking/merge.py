@@ -9,7 +9,7 @@
 """
 from __future__ import annotations
 
-from petlib.schemas import Track, TrackPoint
+from lib.schemas import Track, TrackPoint
 
 DEFAULT_GAP_ANCHORS = 0      # 0 = 关闭
 DEFAULT_IOS_MIN = 0.8

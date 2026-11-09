@@ -26,16 +26,16 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from petlib.tracking.anchors import DEDUP_IOS_MIN, load_anchor_sequence  # noqa: E402
-from petlib.tracking.merge import DEFAULT_IOS_MIN as MERGE_IOS_MIN  # noqa: E402
-from petlib.tracking.merge import (  # noqa: E402
+from lib.tracking.anchors import DEDUP_IOS_MIN, load_anchor_sequence  # noqa: E402
+from lib.tracking.merge import DEFAULT_IOS_MIN as MERGE_IOS_MIN  # noqa: E402
+from lib.tracking.merge import (  # noqa: E402
     DEFAULT_MIN_COVERAGE,
     DEFAULT_MIN_STABLE_ANCHORS,
     filter_stable,
     merge_temporal,
 )
-from petlib.tracking.oc_sort import OCSortTracker  # noqa: E402
-from petlib.tracking.species_split import (  # noqa: E402
+from lib.tracking.oc_sort import OCSortTracker  # noqa: E402
+from lib.tracking.species_split import (  # noqa: E402
     SPECIES_ID_OFFSET,
     SpeciesSplitTracker,
 )

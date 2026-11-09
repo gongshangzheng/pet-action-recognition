@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from petlib.schemas import Detection, Track, TrackPoint
-from petlib.tracking.base import Tracker
+from lib.schemas import Detection, Track, TrackPoint
+from lib.tracking.base import Tracker
 
 
 class BoxMotAdapter(Tracker):

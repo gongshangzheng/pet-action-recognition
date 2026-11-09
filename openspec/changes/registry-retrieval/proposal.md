@@ -21,5 +21,5 @@
 
 ## Impact
 
-- 预计新增 `petlib/identity/` 抽象 + 登记 CLI；特征库 gitignore
+- 预计新增 `lib/identity/` 抽象 + 登记 CLI；特征库 gitignore
 - 前置：图像 embedding 依赖落地后可复用（模型选型见 design D9b）

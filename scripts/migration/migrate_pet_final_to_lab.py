@@ -29,7 +29,7 @@ TARGET = "/home/wyy/pet-final"
 STAGING = "/home/wyy/.pet-final-transfer"
 TOP_DIRS = (
     ".claude", ".github", "configs", "data", "docs", "evaluation", "management",
-    "models", "openspec", "tests", "papers", "petlib", "scripts", "server", "templates", "web",
+    "models", "openspec", "tests", "papers", "lib", "scripts", "server", "templates", "web",
 )
 RESULT_SUBDIRS = ("deployment", "model_comparison", "research", "datasets", "local-service", "live")
 ROOT_FILES = (".gitattributes", ".gitignore", "AGENTS.md", "README.md", "start_services.sh",

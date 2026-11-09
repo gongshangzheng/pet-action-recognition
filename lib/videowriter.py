@@ -4,7 +4,7 @@ ffmpeg 二进制解析顺序：系统 ffmpeg → imageio_ffmpeg 自带静态二�
 两者都不可用时回退 OpenCV mp4v（QuickTime 不认，需自行转码）。
 
 用法：
-    from petlib.videowriter import H264VideoWriter
+    from lib.videowriter import H264VideoWriter
     vw = H264VideoWriter("out.mp4", fps=15, size=(640, 640))
     vw.write(frame_bgr)  # 逐帧
     vw.release()

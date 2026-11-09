@@ -346,3 +346,7 @@ macOS 上 nohup 进程需要 `</dev/null` 重定向 stdin。
 
 ### 训练/测试必须在远程服务器
 **绝不在本地跑训练、测试、推理**（本地无 GPU）。所有 GPU 活必须在 pet（RTX 4090）或 A100 上执行。
+
+## Reusable pipeline code
+
+Reusable capabilities and formal `python -m` entry points belong in `lib/`; scripts remain appropriate for probes, checks, and migration tools.

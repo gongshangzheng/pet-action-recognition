@@ -23,7 +23,7 @@ data_root = "datasets/cat_raw"
 index_root = "datasets/cat_action_v1"
 
 custom_imports = dict(
-    imports=["petlib.datasets.cat_intervals"], allow_failed_imports=False
+    imports=["lib.datasets.cat_intervals"], allow_failed_imports=False
 )
 
 train_dataloader = dict(

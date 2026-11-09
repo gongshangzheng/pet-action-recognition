@@ -24,7 +24,7 @@ index_root = "datasets/cat_action_v1"
 result_root = "results/training/cat_action_v1/tsn_r50"
 
 custom_imports = dict(
-    imports=["petlib.datasets.cat_intervals"], allow_failed_imports=False
+    imports=["lib.datasets.cat_intervals"], allow_failed_imports=False
 )
 
 model = dict(

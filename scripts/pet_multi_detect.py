@@ -27,7 +27,7 @@ import numpy as np
 import torch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from petlib.videowriter import H264VideoWriter  # noqa: E402
+from lib.videowriter import H264VideoWriter  # noqa: E402
 
 # 验收通过的五类清单（v1）；bowl/camera 因文本检测效果差已撤下（2026-09-14 用户裁定），
 # 静态小物体走 D9 路线：SAM 一次分割 + 固定机位缓存 + 定期重分割 + 登记照检索。

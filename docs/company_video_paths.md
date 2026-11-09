@@ -121,7 +121,7 @@ GroundingDINO 输出检测位置，不提供动作真值，也不自动建立跨
 
 核对现有实现：`scripts/pet_detect_track.py` 在每个抽样帧只保留置信度最高
 的猫框，再对坐标进行插值和平滑；这条路径没有调用 BoxMOT，不能保证多猫时
-一直跟随同一个体。`petlib/tracking/boxmot_base.py` 已提供逐 track_id 的
+一直跟随同一个体。`lib/tracking/boxmot_base.py` 已提供逐 track_id 的
 历史维护接口，但其存在不代表主裁剪管线已完成多猫接入或验收。
 `scripts/make_followcam.py` 读取单条 smooth_track 渲染跟随视频，
 当前还会在有 state 时画文字；训练素材应选择无人工框/标签叠字的画面。

@@ -5,7 +5,7 @@
 
 ## 1. 清单与存储
 
-- [ ] 1.1 `petlib/background/`：常驻清单数据结构（`object_id/mask_rle/bbox/embedding/first_seen/last_moved/semantic_label`）+ per-camera JSON/NPZ 读写，路径 gitignore。
+- [ ] 1.1 `lib/background/`：常驻清单数据结构（`object_id/mask_rle/bbox/embedding/first_seen/last_moved/semantic_label`）+ per-camera JSON/NPZ 读写，路径 gitignore。
 - [ ] 1.2 契约测试：清单写入/读取往返一致、并发写入加锁、旧版本文件缺字段时的兼容读取。
 - [ ] 1.3 全局坐标 ⇄ 裁剪帧坐标换算（相机不动时零重分割）：单元测试覆盖窗口偏移与画幅缩放。
 

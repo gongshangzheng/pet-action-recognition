@@ -34,7 +34,7 @@ SORT 等关联器生成初步轨迹；关联时利用已有轨迹复核当前疑
 
 ## 现有代码与证据缺口
 
-`scripts/track_pet_targets.py` 的缓存入口目前实例化 OC-SORT，默认按物种分流，也提供单流；它按锚点调用 `update`，不传源帧。`petlib/tracking/boxmot_base.py` 支持向底层传帧，但仅有 adapter 不证明外观或相机补偿链路已可用；`petlib/tracking/deep_sort.py` 实际封装 DeepOcSort。现有 IoS 去重见 `petlib/tracking/anchors.py`。历史缓存的教师阈值已截断部分低分框，不能由二次关联恢复。本域尚无充分身份 GT 对照，已有案例或轨迹平滑不能证明多宠关联达标。
+`scripts/track_pet_targets.py` 的缓存入口目前实例化 OC-SORT，默认按物种分流，也提供单流；它按锚点调用 `update`，不传源帧。`lib/tracking/boxmot_base.py` 支持向底层传帧，但仅有 adapter 不证明外观或相机补偿链路已可用；`lib/tracking/deep_sort.py` 实际封装 DeepOcSort。现有 IoS 去重见 `lib/tracking/anchors.py`。历史缓存的教师阈值已截断部分低分框，不能由二次关联恢复。本域尚无充分身份 GT 对照，已有案例或轨迹平滑不能证明多宠关联达标。
 
 ## 待用户决定与历史锚点
 

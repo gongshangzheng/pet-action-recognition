@@ -128,7 +128,7 @@ clips.csv 包含 clip_id、source_id、start_sec、end_sec、sample_timestamps�
 
 ### 代码与产物落点
 
-正式素材准备入口建议为 scripts/prepare_gate_local_samples.py，审核入库入口建议为 scripts/merge_gate_local_reviews.py，均须先提交后执行。共享生成与准入逻辑建议归 petlib/gate/，自动化测试归 tests/，复用现有审核入口的方式在入口实现前审定；本次不增加新页面或 API 的强制要求。
+正式素材准备入口建议为 scripts/prepare_gate_local_samples.py，审核入库入口建议为 scripts/merge_gate_local_reviews.py，均须先提交后执行。共享生成与准入逻辑建议归 lib/gate/，自动化测试归 tests/，复用现有审核入口的方式在入口实现前审定；本次不增加新页面或 API 的强制要求。
 
 候选素材建议置于 results/gate/local/<batch>/candidates/，人工记录置于同批 reviews/，审核数据集置于 results/gate/dataset_v2/。每个训练／评测臂使用独立 results/gate/runs/<run_id>/，不修改既有 checkpoint、轨迹和评测产物。
 
@@ -176,11 +176,11 @@ clips.csv 包含 clip_id、source_id、start_sec、end_sec、sample_timestamps�
 
 已有前端 web/src/views/gate/GateReview.vue、API web/src/api/gateReview.js、后端 server/routers/gate_review.py；训练 scripts/train_gate.py，教师标注 scripts/label_gate_native.py，核验集准备 scripts/prepare_gate_review_set.py，测速 scripts/bench_gate_latency.py。已有运动实验位于 scripts/checks/motion_vs_labels.py 与 motion_stats_windowed.py。
 
-新增可复用门控模型逻辑建议放 petlib/gate/，共享变化检测建议放 petlib/motion/（Terra核查后再定接口）；正式准备和训练入口留 scripts/，预检/测速核验归 scripts/checks/，测试归 tests/，产物归 results/gate/。不修改只读 models/mmaction2/，不在系统/tmp写可复用脚本。
+新增可复用门控模型逻辑建议放 lib/gate/，共享变化检测建议放 lib/motion/（Terra核查后再定接口）；正式准备和训练入口留 scripts/，预检/测速核验归 scripts/checks/，测试归 tests/，产物归 results/gate/。不修改只读 models/mmaction2/，不在系统/tmp写可复用脚本。
 
 ## Terra变化检测核查
 
-GroundingDINO 在 scripts/pet_detect_track.py 按 sample_stride 固定抽样执行；可选 motion-correct 中的 MOG2 只修正插值框，不触发GDINO。petlib/detection/grounding_dino.py 只有单帧检测接口。scripts/checks/motion_vs_labels.py 和 motion_stats_windowed.py 是离线运动实验，不是线上门控。
+GroundingDINO 在 scripts/pet_detect_track.py 按 sample_stride 固定抽样执行；可选 motion-correct 中的 MOG2 只修正插值框，不触发GDINO。lib/detection/grounding_dino.py 只有单帧检测接口。scripts/checks/motion_vs_labels.py 和 motion_stats_windowed.py 是离线运动实验，不是线上门控。
 
 建议复用帧差/前景计算原语与标准输出，独立保留门控调度、背景重分割触发和轨迹修正策略。MOG2状态需按视频源隔离、连续预热；现有窗口实验的跨视频状态，以及轨迹修正的抽样帧不更新/预热问题，在共享化前审计。像素变化层保留，但低变化不等于无宠物，仍须周期模型确认。此项只读结论不等于已完成代码重构。
 
