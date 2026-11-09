@@ -41,7 +41,7 @@ GUARD_ARGS=(preflight --gpu-mem-pct "$GPU_MEM_PCT" --gpu-util "$GPU_UTIL"
 echo "### 容量预检（${REMOTE}）"
 RC=255
 for attempt in 1 2 3; do
-  ssh "${SSH_OPTS[@]}" "$REMOTE" "bash -s -- ${GUARD_ARGS[*]}" < "$SCRIPT_DIR/resource_guard.sh"
+  ssh "${SSH_OPTS[@]}" "$REMOTE" "cd '$REMOTE_ROOT' && bash -s -- ${GUARD_ARGS[*]}" < "$SCRIPT_DIR/resource_guard.sh"
   RC=$?
   [[ "$RC" != 255 ]] && break
   echo "  ssh 连接失败（第 $attempt 次），5s 后重试..."

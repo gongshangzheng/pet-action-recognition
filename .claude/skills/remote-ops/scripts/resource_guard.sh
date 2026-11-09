@@ -185,7 +185,7 @@ preflight() {
   fi
 
   local disk_gb
-  disk_gb=$(df -Pk "$HERE/../../../.." | awk 'NR==2{int($4/1048576)}' )
+  disk_gb=$(df -Pk "${REMOTE_ROOT:-$PWD}" | awk 'NR==2{print int($4/1048576)}')
   if [[ -n "$disk_gb" ]] && (( disk_gb < min_free_disk )); then
     log "  disk pressure: ${disk_gb} GB free < ${min_free_disk} GB"
     rc=3
