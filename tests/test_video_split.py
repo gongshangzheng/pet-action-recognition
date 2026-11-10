@@ -57,5 +57,7 @@ def test_tampered_inventory_is_rejected(workspace):
     build_video_manifest(source, inventory)
     (inventory / 'videos.jsonl').write_text('{}\n')
     output = workspace / 'output'
-    assert run_split(inventory, output).returncode != 0
+    result = run_split(inventory, output)
+    assert result.returncode != 0
+    assert 'inventory metadata mismatch' in result.stderr
     assert not output.exists()
