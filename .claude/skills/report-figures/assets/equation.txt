@@ -1,0 +1,1 @@
+\mathcal{L}=\sum_{i=1}^{N}\lVert x_i-\hat{x}_i\rVert_2^2

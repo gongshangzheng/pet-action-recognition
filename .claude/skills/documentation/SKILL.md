@@ -3,6 +3,7 @@ name: documentation
 description: |
   文档写作指南与文档变更流程。用于撰写 Wiki 文档、技术文档、设计文档、会议纪要、报告等 Markdown 内容。
   触发场景：(1) 创建/修改 Wiki 文档，(2) 在文档中画 Mermaid 图表，(3) 写技术方案/设计文档，(4) 规范文档结构和风格，(5) 新增/废弃/重构文档时的 OpenSpec 双层流程（总 Change + 单篇 Change）
+  图的**产出方式**（Mermaid 渲染成 PNG/SVG、手写矢量图、公式矢量化、排版坑位）不在本 skill，见 `report-figures`。
 ---
 
 # 文档写作指南
@@ -153,7 +154,7 @@ id: 1
 
 ### 2.4 图片与图题
 
-**存放**：`management/docs/_assets/<slug>/`（下划线前缀表明该目录非文档；文档列表只扫 `*.md`，图片不会被当成文档）。`<slug>` 与所属文档 slug 对齐。
+**存放**：`management/docs/_assets/<slug>/`（下划线前缀表明该目录非文档；文档列表只扫 `*.md`，图片不会被当成文档）。`<slug>` 与所属文档 slug 对齐。图片怎么产出（渲染、手写矢量、导出尺寸）见 `report-figures` skill；图的源码与图片同目录一起入库。
 
 **引用**（必须用绝对 URL）：
 
@@ -190,7 +191,7 @@ $$
 
 ### 2.6 文档顺序工具（`order`）
 
-`./scripts/docs_order.py` 是随本 skill 提供的 `order` 维护工具，**只用 Python 标准库**，仅写文档时手工调用（服务运行不依赖它）：
+`.claude/skills/documentation/scripts/docs_order.py` 是随本 skill 提供的 `order` 维护工具，**只用 Python 标准库**，仅写文档时手工调用（服务运行不依赖它）：
 
 ```bash
 # 只读：列出当前阅读顺序、整数空位与重复值
@@ -219,6 +220,8 @@ python3 .claude/skills/documentation/scripts/docs_order.py renumber management/d
 >
 
 Mermaid 是文档中表达流程、时序、架构的首选方式。完整速查见 `.claude/skills/documentation/references/mermaid-cheatsheet.md`。
+
+> 图要**落成图片文件**（贴进报告、PPT、验收材料）时，用 `report-figures` skill 渲染：主题配置、2 倍超采样、甘特图泳道列与今天标记的处理都在那里。本 skill 只管「文档里怎么写」。
 
 常用场景：
 
@@ -418,7 +421,7 @@ bash scripts/md_to_docx.sh --ref-doc /path/to/custom.docx file.md
 
 创建新 wiki 文档时，可参考：
 
-```markdown
+````markdown
 ---
 title: 文档标题
 author: 作者
@@ -458,7 +461,7 @@ flowchart TD
 
 - [[slug-a]]
 - [[slug-b|显示文本]]
-```
+````
 
 ## 参考文件
 

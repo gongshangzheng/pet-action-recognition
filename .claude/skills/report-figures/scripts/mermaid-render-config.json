@@ -1,0 +1,34 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "'PingFang SC', -apple-system, 'Helvetica Neue', sans-serif",
+    "fontSize": "15px",
+    "titleColor": "#1e2b40",
+    "sectionBkgColor": "#f6f8fc",
+    "altSectionBkgColor": "#ffffff",
+    "sectionBkgColor2": "#edf2fa",
+    "taskBkgColor": "#7d95d6",
+    "taskBorderColor": "#546ea8",
+    "taskTextColor": "#ffffff",
+    "taskTextOutsideColor": "#2b3444",
+    "taskTextDarkColor": "#ffffff",
+    "critBkgColor": "#e8a648",
+    "critBorderColor": "#c8873a",
+    "activeTaskBkgColor": "#546ea8",
+    "activeTaskBorderColor": "#3c5189",
+    "gridColor": "#e6ebf3",
+    "doneTaskBkgColor": "#c2cee6",
+    "doneTaskBorderColor": "#93a5cb"
+  },
+  "themeCSS": ".grid .tick line{stroke:#dbe3ef!important;opacity:1!important;} .grid .tick text{fill:#8b97ab!important;font-size:13px!important;} .grid .domain{display:none!important;} .today{display:none!important;} .section{opacity:1!important;} .section0{fill:#f6f8fc!important;} .section1{fill:#ffffff!important;} .sectionTitle{fill:#6b7a92!important;font-weight:600!important;font-size:14px!important;} .titleText{font-weight:700!important;font-size:22px!important;letter-spacing:0.5px!important;} .task0,.task1,.task2,.task3{fill:#7d95d6!important;stroke:#546ea8!important;stroke-width:1.5!important;rx:3!important;} .crit0,.crit1,.crit2,.crit3{fill:#e8a648!important;stroke:#c8873a!important;} .critText0,.critText1,.critText2,.critText3{fill:#4a3308!important;font-weight:600!important;} .taskText0,.taskText1,.taskText2,.taskText3{font-size:13px!important;} .taskTextOutside0,.taskTextOutside1,.taskTextOutside2,.taskTextOutside3{fill:#2b3444!important;font-size:13.5px!important;} .milestone{fill:#3f5b9e!important;stroke:#2f467c!important;} .milestoneText{fill:#243b6b!important;font-size:13.5px!important;font-weight:600!important;}",
+  "gantt": {
+    "leftPadding": 240,
+    "gridLineStartPadding": 240,
+    "topPadding": 60,
+    "barHeight": 24,
+    "barGap": 6,
+    "sectionFontSize": 14,
+    "fontSize": 13,
+    "numberSectionStyles": 4
+  }
+}
