@@ -57,7 +57,7 @@
 
 - [x] 10.1 更新 `management/experiments/README.md`：slug 约定改为 `<YYYYMMDD>-<主题短名>`，新增「一主题一篇」「运行谱系」「数字纪律」三条。
 - [x] 10.2 同步 experiment skill §5.4 与 `references/report-template.md` 的落点与命名说明。
-- [x] 10.3 全仓 `rg` 检查指向已删目录/旧 slug 的引用，逐个改指或确认可忽略（archive 不改）。
+- [x] 10.3 全仓 `rg` 检查指向已删目录/旧 slug 的引用，逐个改指或确认可忽略（archive 与历史 change 的过程记录不改）。
 - [x] 10.4 跑 `check_experiment_reports.py` 与 `pytest tests/test_experiments_api.py`，两者全绿。
 - [ ] 10.5 在前端 `/management/experiments` 逐篇打开 8 篇，确认章节、附录折叠、案例图与视频正常。（本机未起服务，待用户复核）
 - [x] 10.6 在 evidence 写「数字核对清单」：每篇正文的关键数字 → 出处。

@@ -55,3 +55,25 @@
 - `python3 -m pytest tests/test_experiments_api.py -q`：8 passed。
 - 兼容性：`server/parsers/experiments_parser.py` 与前端报告页未改动；新 slug 不满足旧 `<YYYYMMDD>-<runid>` 形态，但解析器只按两级目录扫描，不受影响。
 - 未做：本地页面逐篇目视（本机未起前后端）。前端读取的是同一份解析结果，风险是布局而非数据，留给用户复核。
+
+### 2026-11-12：并入 main 的最新报告改动
+
+- main 在合并后又落了两个提交（`5f1c67df` 标题规则补「必须用书面语」、`c56124c2` 三级标题改书面语 + 训练集补三段视频）。已把改动并入本分支：三级标题改为「目标口径与达标状态 / 模型主要依据运动量 / grooming：头部信号被裁掉 / scratching：与直立扒抓绑定 / 训练集标签的构型错配 / activity 的错误汇聚 / toileting：样本量不足 / drinking：夜视与运动量影响 / 不可评估的范围」，并把三段训练片段视频登记为案例。
+- 标题规则同步：八篇报告标题统一为「对象 + 对照或范围」，≤24 汉字、不含成绩与数字。
+
+### 2026-11-12：顺手修掉的两处基础设施问题
+
+- `management/experiments/t/` 是 `tests/test_experiments_api.py` 的对拍夹具残留，曾被 `git add -A` 误提交。已删除目录、在 `.gitignore` 忽略该路径，并给测试加 autouse 夹具（用后即删）；`pytest tests/test_experiments_api.py` 8 passed。
+- 图表生成脚本从 `tmp/` 移入 `scripts/checks/render_report_bar_chart.py`：报告案例图不再依赖 matplotlib，也不留一次性探针。
+
+### 2026-11-12：最终校验
+
+- `python3 scripts/checks/check_experiment_reports.py`：8 篇、8 篇完整、0 项 incomplete。
+- `python3 -m pytest tests/test_experiments_api.py -q`：8 passed。
+- `python3 -m pytest tests -q`：123 passed / 2 failed，失败均为 `tests/test_multi_pet_tracking.py` 的既有夹具缺 `properties` 字段问题（见 `resource-guard-shared-gpu/evidence.md` 与本 change 之前记录），与本次改动无关。
+- `python3 scripts/checks/check_doc_refs.py`：43 条解析成功，0 悬空。
+
+### 2026-11-12：未合并回主干（等待用户裁定）
+
+- main 的工作区里出现了并发进行中的新报告 `cat-clip-training/20261112-videomaev2b-base-crops/`（未提交，90 分钟内写入）。它与本 change 的「一主题一篇」直接冲突：合并后 `cat-clip-training` 会同时存在两篇。
+- 因此暂不合并。待用户裁定：① 把那篇当作该主题的新一轮，并入 `cat-clip-training/20261112-ten-class-clips`；或② 让它作为独立主题另起（需说明它与「十类片段分类」的区别）。

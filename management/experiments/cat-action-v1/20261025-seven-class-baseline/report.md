@@ -156,5 +156,5 @@ TSM-R50 测试集逐类（442 条）。
 - 基线产物：`results/training/cat_action_v1/{tsm_r50,tsn_r50}/`（`best_val_metrics.json`、`test_metrics.json`、`train.log`、`selection.json`）
 - 参考批次：`results/training/cat_action_v1/model_zoo_{ranking,summary,preflight}.json` 与四个模型目录
 - 链路验证：`results/training/cat_interval_smoke/`（`run_status.json`、`verification.json` 为 `verified`）
-- 案例图：两张对照图由本报告附录表中的数字生成（环境无绘图库，脚本为一次性探针），文件名即 sha256；它们不是原始截图，只用于读表
+- 案例图：两张对照图由本报告附录表中的数字生成（本地无绘图库，用 `scripts/checks/render_report_bar_chart.py` 渲染成 SVG），文件名即 sha256；它们不是原始截图，只用于读表
 - 指标与趋势见 metrics.json
