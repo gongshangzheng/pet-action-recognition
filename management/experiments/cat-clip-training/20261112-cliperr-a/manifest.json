@@ -397,6 +397,33 @@
       "input": "训练片段 5 条（前两行 scratching、后三行 activity），每行 6 帧",
       "selection_reason": "正文第三节：证明训练集里 activity 区间内部也出现「直立扒门」这一 scratching 构型",
       "sha256": "091d6fd35f38905daae9ea43e7992ba3b950971bb884d52fcd80f1ef9abc0b5a"
+    },
+    {
+      "id": "vid-train-label-scratching",
+      "kind": "video",
+      "src": "media/683acf3ac60e5a0c825fef5c263209b41102dd36455593cb9f25c83fcc2d5a44.mp4",
+      "source_run": "clipv9-b",
+      "input": "训练片段（标签 scratching，同一条录制 10–69 帧）",
+      "selection_reason": "正文第三节：训练集里 scratching 的原型画面——狗直立扒门框，来自 charw1g 单一来源的 159/236 条",
+      "sha256": "683acf3ac60e5a0c825fef5c263209b41102dd36455593cb9f25c83fcc2d5a44"
+    },
+    {
+      "id": "vid-train-label-activity-walk",
+      "kind": "video",
+      "src": "media/2c2152274a7448b8e110f437322628f329ac1127424c6712d85501db877a3cb8.mp4",
+      "source_run": "clipv9-b",
+      "input": "训练片段（标签 activity，同一条录制 426–485 帧）",
+      "selection_reason": "正文第三节：与上一条同录制，这一段是扒完走开，标签 activity 是对的",
+      "sha256": "2c2152274a7448b8e110f437322628f329ac1127424c6712d85501db877a3cb8"
+    },
+    {
+      "id": "vid-train-label-activity-paw",
+      "kind": "video",
+      "src": "media/a8dcbf8f73dddf601bb87445cfa6645400abcf4162b0b2599386951aa4263de9.mp4",
+      "source_run": "clipv9-b",
+      "input": "训练片段（标签 activity，另一条录制 138–197 帧）",
+      "selection_reason": "正文第三节：关键证据——activity 区间末段同样出现直立扒门，训练集已把同一构型放在两个类别下",
+      "sha256": "a8dcbf8f73dddf601bb87445cfa6645400abcf4162b0b2599386951aa4263de9"
     }
   ],
   "diagnostics": []

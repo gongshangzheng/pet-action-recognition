@@ -57,7 +57,7 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 ## 结果与分析
 
-### 75% 指的是哪个数
+### 目标口径与达标状态
 
 项目的中期目标是「闭集准确率 ≥75%、漏检率 ≤10%」。这两个数不在同一行指标上，本报告涉及四个口径，先划清各自的含义与归属：
 
@@ -78,9 +78,9 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 三类是满分级：`activity` 89.2%、`eating` 90.8%、`prolonged_stationary` 87.5%。四类明显偏低：`grooming` 76.1%、`toileting` 77.8%、`drinking` 68.3%、`scratching` 56.4%。`gnawing` 4 条全错，`fall`/`seizure` 测试集没有样本。
 
-全测试集共 161 个错误，其中 62 个（38.5%）流向了 `activity`。这个数字很容易被读成「模型拿 activity 当垃圾桶」，但它只说明**错误怎么分布**，不说明**预测怎么分布**：模型一共只把 582 条判成 `activity`，而 `activity` 的真实条数是 583——它并没有系统性多报。这两个事实必须一起看，否则会得出错误的修复方向。「activity 的吸附效应」一节专门展开。
+全测试集共 161 个错误，其中 62 个（38.5%）流向了 `activity`。这个数字很容易被读成「模型拿 activity 当垃圾桶」，但它只说明**错误怎么分布**，不说明**预测怎么分布**：模型一共只把 582 条判成 `activity`，而 `activity` 的真实条数是 583——它并没有系统性多报。这两个事实必须一起看，否则会得出错误的修复方向。「activity 的错误汇聚」一节专门展开。
 
-### 模型按运动量分流
+### 模型主要依据运动量
 
 ![按真实类别与按预测类别的运动量分布（条带为 10–90 百分位，竖线为中位数）](assets/0446e8402514bfec1bbdda7d5d78199e44f142f344859a822eec2417eac10b73.png)
 
@@ -134,7 +134,7 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 这一节给后面所有讨论设了一个上限：既然模型主要在按运动量分流，那么凡是「自身运动量区间与别的类重叠」的类别，都会按重叠面积成比例地丢分。`scratching`（中位 17.4、10–90 百分位 8.9–29.7）与 `activity`（中位 19.1、8.3–35.0）几乎完全重叠，就是最坏的情况。
 
-### grooming：信号在框外
+### grooming：头部信号被裁掉
 
 `grooming` 的 precision 92.1%（35/38）、recall 76.1%（35/46）。**precision 高不奇怪**：模型只在视觉签名明确时才报这一类——38 次预测里有 35 次对，另外 3 次分别来自 `prolonged_stationary`（2）和 `scratching`（1）。
 
@@ -152,7 +152,7 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 结论：`grooming` 的问题更像**裁剪与视角**，而不是类别权重。可回收的部分在三处：裁剪保留头部与前肢（不要只框躯干）、视角筛选、以及「舔毛常常发生在静态姿态里」这个先验（它塌进静止类的那 6 条，本身就是最容易被误当成 `prolonged_stationary` 的样本）。
 
-### scratching：学的是扒竖直面
+### scratching：与直立扒抓绑定
 
 `scratching` 是全表唯一 precision（64.7%）与 recall（56.4%）都低的类：39 条里判对 22 条，17 条漏报（其中 14 条流向 `activity`），另有 12 条误报。只看这两个数很难判断该改什么，所以把测试集的抓挠片段按三个方向取样摆在一起：漏判 7 条（标 scratching、判成 activity）、判对 7 条、误报 6 条（标 activity、判成 scratching）。每段取第 30 帧，标注模型判断、置信度、亮度与运动量：
 
@@ -217,11 +217,19 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 所以这个来源上叠加了两层问题：一层是「扒门」到底算不算 `scratching` 的标注口径，一层是「狗 + 门/家具」这个组合对该模型有过度触发。
 
-### 训练集里的标签就已经混了
+### 训练集标签的构型错配
 
 这个「构型 = 类别」的绑定不是凭空学来的，训练集本身就长这样：
 
 ![训练片段：前两行标 scratching（同一条录制的两个区间），第三行同一条录制的另一段标 activity；第四行标 activity 的片段里后段同样出现狗直立扒门；第五行标 activity 的是猫在笼里伏着](assets/091d6fd35f38905daae9ea43e7992ba3b950971bb884d52fcd80f1ef9abc0b5a.jpg)
+
+三段完整片段（各 4 秒，都是**训练数据**，未经任何挑选改动）：
+
+![训练标签 scratching（同一条录制 10–69）：狗直立、前爪抵住门框反复扒](media/683acf3ac60e5a0c825fef5c263209b41102dd36455593cb9f25c83fcc2d5a44.mp4)
+
+![训练标签 activity（同一条录制 426–485）：扒完走开并转身，这一段确实是活动](media/2c2152274a7448b8e110f437322628f329ac1127424c6712d85501db877a3cb8.mp4)
+
+![训练标签 activity（另一条录制 138–197）：前段猫在窝里、中段狗走过、末段狗直立扒玻璃门——同一构型被包在 activity 里](media/a8dcbf8f73dddf601bb87445cfa6645400abcf4162b0b2599386951aa4263de9.mp4)
 
 - 训练集 `scratching` 共 **236** 条片段，其中 **159 条（67%）来自 `charw1g` 这一个来源**，画面就是「狗直立、前爪扒门/墙」；同来源另有 **65 条 activity** 片段。
 - 同一条录制 `event_20260321_185615` 里，前段（区间 1–244）标 `scratching`，后段（456–485）标 `activity`——前段是持续扒门、后段是扒完走开，这一条是分得开的。
@@ -239,7 +247,7 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 一个来源同时**帮了 recall、伤了 precision**：该来源 11 条 `scratching` 里判对 9 条（82%），却把 10 条 `activity` 里的 8 条判成 `scratching`。剩下的 28 条抓挠片段 recall 只有 46.4%，印证了「猫的自挠难」是跨来源的普遍现象，而「抓挠 precision 低」主要是一个来源的局部问题。全局指标把这两件事混成了一个数字。
 
-### activity 的吸附效应
+### activity 的错误汇聚
 
 把 62/161（38.5%）的错误流向 `activity` 摆在前面，很容易得出「模型拿 activity 兜底」的判断。但完整看两侧，结论要改一改：
 
@@ -253,7 +261,7 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 这条 `activity` → `eating` 的错误（该类错误 20 条，第三大）说明了另一条细线：**低头姿态**。模型对「头压向地面」的响应很强，进食、饮水、嗅闻、扒砂都会被拉到一起。这也是 `eating` ↔ `drinking` 互串的来源（drinking→eating 3、eating→drinking 6）。
 
-### toileting：样本量太小
+### toileting：样本量不足
 
 `toileting` 的 precision 93.3%（14/15），recall 77.8%（14/18）。4 个错误：3 个流向 `activity`、1 个流向 `prolonged_stationary`。
 
@@ -265,7 +273,7 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 但我只核对了两条样本，**不能**据此断言「容器语境决定判别」。真正能说的是样本量：训练集只有 40 个如厕标注区间，测试 18 条片段，77.8% 的 95% 区间是 54.8%–91.0%。这个宽度不允许下「toileting 已经不错」或「toileting 还差得远」中的任何一个结论。要判断，先补样本。
 
-### drinking：越动越错
+### drinking：夜视与运动量影响
 
 19 个错误：`activity` 9、`prolonged_stationary` 7、`eating` 3；precision 78.8%。它有三个特征值得单独说：
 
@@ -281,7 +289,7 @@ source: "results/cat_clip_v9_analysis/analysis"
 
 两条片段的可见信息量差不多：都看不清碗里是水还是粮。判对的那条靠的是「低伏 + 头贴近固定位置」的体态动力学。一旦体态偏「吃」（头更俯、咀嚼动作），就会翻成 `eating`，这也解释了 `eating`↔`drinking` 的互串。据此，`drinking` 的改进方向更像「分割出头部与碗/水面的相对运动」，而不是继续加类别权重。
 
-### 不能下的结论
+### 不可评估的范围
 
 - **`gnawing` / `fall` / `seizure`**：`gnawing` 测试 4 条全错，且四条全是红外极暗画面（中位亮度 48）；`fall` 与 `seizure` 测试样本为 0。三类都不能评估，也无法用「稀有类 recall 低」来论证类别不平衡的影响。
 - **置信度不能当预警用**：判错样本的置信度中位数 0.919，67.7% 的错误置信度超过 0.8；判对的是 0.990。模型在错误上很「自信」，本报告没有做阈值实验，只能说「错误不是靠低置信度标出来的」，不能说「加拒识没用」。
