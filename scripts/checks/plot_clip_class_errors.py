@@ -42,6 +42,9 @@ HIGHLIGHT = (200, 92, 60)
 ACCENT = (34, 130, 118)
 SOFT = (232, 236, 240)
 BACKGROUND = (255, 255, 255)
+# 端到端诊断量 = 可用率 85.03% × 条件准确率 85.75%（AGENTS.md 口径，片段级只能估计）。
+# 放在图里的目的是把「条件准确率」和「端到端」两个数并排，避免把 85.75% 读成端到端成绩。
+END_TO_END_ESTIMATE_PERCENT = 72.9
 
 
 def parse_args() -> argparse.Namespace:
@@ -107,60 +110,103 @@ def wrap_label(label: str) -> list[str]:
     return [head, tail] if tail else [label]
 
 
-def figure_class_overview(rows: list[dict[str, Any]], out: Path, explicit_font: str) -> None:
+def figure_class_overview(rows: list[dict[str, Any]], summary: dict[str, Any],
+                          out: Path, explicit_font: str) -> None:
+    """同一张图里放两个口径：整体准确率（达标判定用）与逐类准确率（类内召回）。"""
     title_font = load_font(30, explicit_font)
-    label_font = load_font(20, explicit_font)
-    body_font = load_font(18, explicit_font)
-    small_font = load_font(16, explicit_font)
+    label_font = load_font(19, explicit_font)
+    body_font = load_font(17, explicit_font)
+    small_font = load_font(15, explicit_font)
 
     ordered = sorted([r for r in rows if r["support"] > 0], key=lambda r: -r["support"])
-    width, height = 1360, 200 + len(ordered) * 52
+    sink = summary.get("activitySink", {})
+    overall = [
+        ("条件 top-1 准确率", summary["top1Percent"], "达标判定用这个数"),
+        ("端到端准确率（估计）", END_TO_END_ESTIMATE_PERCENT, "可用率 × 条件准确率"),
+        ("macro-F1", summary["macroF1Percent"], "十类等权，不可评估类计 0"),
+        ("balanced accuracy", summary["balancedAccPercent"], "十类等权召回"),
+        ("对照：永远判 activity", sink.get("alwaysActivityBaselinePercent", 0.0), "单类捷径基线"),
+    ]
+
+    axis_x0, axis_w = 500, 660
+    width = 1400
+    top_rows, class_row_h, overall_row_h = len(overall), 50, 40
+    class_top = 184 + overall_row_h * top_rows + 92
+    height = class_top + class_row_h * len(ordered) + 110
     image, draw = canvas(width, height)
+
+    def axis_x(value: float) -> float:
+        return axis_x0 + axis_w * max(0.0, min(100.0, value)) / 100
+
     draw_title(
         draw,
-        "类别分布与逐类召回（测试集 1,130 条片段）",
-        "左：每类样本数占测试集比例；右：该类被判对的比例，竖线为 95% Wilson 区间",
+        "两个口径要分开看：整体准确率 vs 逐类准确率",
+        "上：整体口径，竖线 75% 是项目的闭集准确率目标（达标判定用条件 top-1，测试集口径）",
         title_font,
         body_font,
     )
+    draw.text((48, 104), "下：逐类准确率（该类样本被判对的比例，等价于该类召回率）；它的补数就是该类漏检率。"
+                         "逐类没有独立的验收线，只作诊断。", font=body_font, fill=MUTED)
 
-    left_x, left_w = 250, 280
-    right_x, right_w = 760, 480
-    top = 150
-    row_h = 52
-    max_support = max(r["support"] for r in ordered)
+    # ---- 整体口径 ----
+    draw.text((48, 150), "整体口径（同一批 1,130 条片段）", font=label_font, fill=INK)
+    overall_top = 184
+    for tick in (0, 25, 50, 75, 100):
+        x = axis_x(tick)
+        draw.line([(x, overall_top - 8), (x, overall_top + overall_row_h * top_rows - 10)], fill=GRID, width=1)
+        draw.text((x - 10, overall_top + overall_row_h * top_rows - 4), str(tick), font=small_font, fill=MUTED)
+    target_x = axis_x(75)
+    draw.line([(target_x, overall_top - 14), (target_x, overall_top + overall_row_h * top_rows - 10)],
+              fill=(214, 168, 96), width=2)
+    draw.text((target_x + 6, overall_top - 32), "75% 目标", font=small_font, fill=(176, 128, 56))
 
-    draw.text((left_x, top - 34), "样本数（括号内为占比）", font=small_font, fill=MUTED)
-    draw.text((right_x, top - 34), "召回率 %", font=small_font, fill=MUTED)
+    for index, (name, value, hint) in enumerate(overall):
+        y = overall_top + index * overall_row_h
+        draw.text((48, y + 4), name, font=small_font if len(name) > 12 else label_font, fill=INK)
+        color = ACCENT if value >= 75 else (HIGHLIGHT if value < 70 else (198, 150, 86))
+        draw.rectangle([axis_x0, y + 8, axis_x(value), y + 26], fill=color)
+        draw.text((axis_x(value) + 10, y + 4), f"{value:.2f}", font=small_font, fill=INK)
+        draw.text((axis_x(value) + 68, y + 6), hint, font=small_font, fill=MUTED)
+
+    # ---- 逐类口径 ----
+    draw.text((48, class_top - 56), "逐类准确率（实心）与 precision（空心），按支持度排序", font=label_font, fill=INK)
+    draw.text((250, class_top - 28), "支持度", font=small_font, fill=MUTED)
+    draw.text((axis_x0, class_top - 28), "准确率 / precision %", font=small_font, fill=MUTED)
 
     for tick in (0, 25, 50, 75, 100):
-        x = right_x + right_w * tick / 100
-        draw.line([(x, top - 6), (x, top + row_h * len(ordered) - 12)], fill=GRID, width=1)
-        draw.text((x - 10, top + row_h * len(ordered) - 4), f"{tick}", font=small_font, fill=MUTED)
-    # 75% 是项目的闭集准确率目标，作为参考线而不是验收线（本图是片段级）。
-    target_x = right_x + right_w * 0.75
-    draw.line([(target_x, top - 10), (target_x, top + row_h * len(ordered) - 12)], fill=(214, 168, 96), width=2)
-    draw.text((target_x + 6, top - 30), "75% 目标", font=small_font, fill=(176, 128, 56))
+        x = axis_x(tick)
+        draw.line([(x, class_top - 8), (x, class_top + class_row_h * len(ordered) - 10)], fill=GRID, width=1)
+        draw.text((x - 10, class_top + class_row_h * len(ordered) - 4), str(tick), font=small_font, fill=MUTED)
+    draw.line([(target_x, class_top - 10), (target_x, class_top + class_row_h * len(ordered) - 10)],
+              fill=(214, 168, 96), width=1)
+    draw.text((target_x + 6, class_top + class_row_h * len(ordered) - 22), "75% 参照", font=small_font,
+              fill=(176, 128, 56))
 
+    max_support = max(r["support"] for r in ordered)
     for index, row in enumerate(ordered):
-        y = top + index * row_h
-        draw.text((48, y + 8), row["label"], font=small_font if len(row["label"]) > 18 else label_font, fill=INK)
-        bar_w = left_w * row["support"] / max_support
-        low = row["recallCi95"][0]
-        high = row["recallCi95"][1]
-        bar_x0 = right_x + right_w * low / 100
-        bar_x1 = right_x + right_w * high / 100
-        color = HIGHLIGHT if row["recallPercent"] < 80 else BAR
-        draw.rectangle([left_x, y + 8, left_x + max(2, bar_w), y + 32], fill=SOFT)
-        draw.rectangle([bar_x0, y + 17, bar_x1, y + 23], fill=color)
-        draw.line([(right_x + right_w * row["recallPercent"] / 100, y + 10),
-                   (right_x + right_w * row["recallPercent"] / 100, y + 30)], fill=color, width=4)
-        draw.text((left_x + bar_w + 10, y + 8), f"{row['support']}  ({row['supportSharePercent']:.1f}%)",
+        y = class_top + index * class_row_h
+        draw.text((48, y + 6), row["label"], font=small_font if len(row["label"]) > 18 else label_font, fill=INK)
+        support_w = 110 * row["support"] / max_support
+        draw.rectangle([250, y + 10, 250 + max(2, support_w), y + 30], fill=SOFT)
+        draw.text((370, y + 6), f"{row['support']} ({row['supportSharePercent']:.1f}%)",
                   font=small_font, fill=MUTED)
-        draw.text((right_x + right_w + 12, y + 8), f"{row['recallPercent']:.1f}", font=small_font, fill=INK)
 
-    note = "注：gnawing（4 条）、fall / seizure（0 条）样本不足，区间宽度本身说明它们不能作为结论。"
-    draw.text((48, height - 46), note, font=small_font, fill=MUTED)
+        recall = row["recallPercent"]
+        color = HIGHLIGHT if recall < 70 else (198, 150, 86) if recall < 80 else BAR
+        draw.rectangle([axis_x0, y + 10, axis_x(recall), y + 30], fill=color)
+        low, high = row["recallCi95"]
+        draw.line([(axis_x(low), y + 20), (axis_x(high), y + 20)], fill=INK, width=2)
+        draw.line([(axis_x(low), y + 14), (axis_x(low), y + 26)], fill=INK, width=2)
+        draw.line([(axis_x(high), y + 14), (axis_x(high), y + 26)], fill=INK, width=2)
+        # precision：空心方块标在同一刻度上，避免只看到召回而误判「报得准不准」
+        px = axis_x(row["precisionPercent"])
+        draw.rectangle([px - 6, y + 14, px + 6, y + 26], outline=ACCENT, width=2)
+        draw.text((axis_x0 + axis_w + 12, y + 6),
+                  f"{recall:.1f} / {row['precisionPercent']:.1f}", font=small_font, fill=INK)
+
+    note = ("注：gnawing（4 条）、fall / seizure（0 条）样本不足，区间宽度本身说明它们不能作为结论；"
+            "端到端与 macro/balanced 两类口径的分母不同，不能与 top-1 直接比较。")
+    draw.text((48, height - 52), note, font=small_font, fill=MUTED)
     image.save(out)
 
 
@@ -345,7 +391,7 @@ def main() -> None:
     matrix = metrics["confusion_matrix"] if metrics else summary.get("confusionMatrix")
 
     args.out.mkdir(parents=True, exist_ok=True)
-    figure_class_overview(rows, args.out / "fig-class-overview.png", args.font)
+    figure_class_overview(rows, summary, args.out / "fig-class-overview.png", args.font)
     if matrix:
         figure_confusion(matrix, classes, args.out / "fig-confusion.png", args.font)
     figure_motion_surface(clips, args.out / "fig-motion-surface.png", args.font)
