@@ -42,6 +42,8 @@ HIGHLIGHT = (200, 92, 60)
 ACCENT = (34, 130, 118)
 SOFT = (232, 236, 240)
 BACKGROUND = (255, 255, 255)
+# 报告里做区间对照的那条样本（正文第一节）
+INTERVAL_SAMPLE_ID = "event_20260802_053844:1-235:activity"
 # 端到端诊断量 = 可用率 85.03% × 条件准确率 85.75%（AGENTS.md 口径，片段级只能估计）。
 # 放在图里的目的是把「条件准确率」和「端到端」两个数并排，避免把 85.75% 读成端到端成绩。
 END_TO_END_ESTIMATE_PERCENT = 72.9
@@ -207,6 +209,133 @@ def figure_class_overview(rows: list[dict[str, Any]], summary: dict[str, Any],
     note = ("注：gnawing（4 条）、fall / seizure（0 条）样本不足，区间宽度本身说明它们不能作为结论；"
             "端到端与 macro/balanced 两类口径的分母不同，不能与 top-1 直接比较。")
     draw.text((48, height - 52), note, font=small_font, fill=MUTED)
+    image.save(out)
+
+
+def figure_interval_evidence(analysis: Path, sample_id: str, out: Path, explicit_font: str) -> None:
+    """左：一个区间内部的运动量曲线与三个片段的落点；右：313 个多窗口区间的漂移分布。"""
+    title_font = load_font(30, explicit_font)
+    body_font = load_font(17, explicit_font)
+    label_font = load_font(18, explicit_font)
+    small_font = load_font(15, explicit_font)
+
+    profile = json.loads((analysis / "interval_profile.json").read_text())
+    spread = json.loads((analysis / "interval_spread.json").read_text())
+    clips = json.loads((analysis / "clip_visual_stats.json").read_text())
+    cls_label = "prolonged_stationary"
+    windows = [c for c in clips if c.get("sample_id") == sample_id and not c.get("missing")]
+
+    def window_span(clip: dict[str, Any]) -> tuple[int, int, str, float]:
+        """从片段文件名 `...__<start>-<end>__t0.mp4` 取窗口帧号。"""
+        name = clip.get("clip", "")
+        token = [part for part in name.split("__") if "-" in part and part.split("-")[-1].isdigit()]
+        if not token:
+            return 0, 0, clip.get("predicted", ""), clip.get("confidence", 0.0)
+        start_frame, end_frame = token[0].split("-")[:2]
+        return int(start_frame), int(end_frame), clip.get("predicted", ""), clip.get("confidence", 0.0)
+
+    windows = sorted(windows, key=lambda c: window_span(c)[0])
+    width, height = 1400, 840
+    image, draw = canvas(width, height)
+    draw_title(
+        draw,
+        "一个 15.7 秒的区间里，行为换过两次档",
+        "左：区间内逐帧运动量（0.5 秒一桶）与三个片段的落点；右：313 个多窗口区间的窗口间运动量极差",
+        title_font,
+        body_font,
+    )
+
+    # ---- 左：区间运动量曲线 ----
+    x0, y0, plot_w, plot_h = 110, 520, 700, 320
+    max_motion = max(8.0, max(b["mean"] for b in profile["buckets"]) * 1.25)
+    seconds = profile["seconds"]
+    fps = 15.0
+
+    def sx(t: float) -> float:
+        return x0 + plot_w * t / seconds
+
+    def sy(value: float) -> float:
+        return y0 - plot_h * min(1.0, value / max_motion)
+
+    draw.text((x0, 132), "区间 event_20260802_053844（标注 activity，帧 1–235）", font=label_font, fill=INK)
+    # 两段：走动段与站定段（切点取曲线从 >4 落到 <3 的位置，读图即可核对）
+    draw.rectangle([sx(0), sy(max_motion), sx(4.3), y0], fill=(238, 243, 248))
+    draw.rectangle([sx(4.3), sy(max_motion), sx(14.5), y0], fill=(252, 245, 238))
+    draw.text((sx(0.2), sy(max_motion) + 10), "走动 → activity", font=small_font, fill=(60, 96, 140))
+    draw.text((sx(5.0), sy(max_motion) + 10), "站定约 10 秒 → 应是 prolonged_stationary", font=small_font, fill=(150, 96, 48))
+    draw.text((sx(14.55), sy(max_motion) + 10), "再起步", font=small_font, fill=(60, 96, 140))
+
+    for tick in range(0, int(seconds) + 1, 3):
+        draw.line([(sx(tick), y0), (sx(tick), y0 + 5)], fill=MUTED, width=1)
+        draw.text((sx(tick) - 10, y0 + 10), f"{tick}s", font=small_font, fill=MUTED)
+    draw.line([(x0, y0), (x0 + plot_w, y0)], fill=MUTED, width=1)
+    for tick in (0, 2, 4, 6, 8):
+        if tick > max_motion:
+            continue
+        draw.line([(x0 - 6, sy(tick)), (x0, sy(tick))], fill=MUTED, width=1)
+        draw.text((x0 - 34, sy(tick) - 9), f"{tick}", font=small_font, fill=MUTED)
+    draw.text((x0 - 74, sy(max_motion) - 6), "运动量", font=small_font, fill=MUTED)
+
+    points = [(sx(b["from"] + 0.25), sy(b["mean"])) for b in profile["buckets"]]
+    for left, right in zip(points, points[1:], strict=False):
+        draw.line([left, right], fill=BAR, width=3)
+    for point in points:
+        draw.ellipse([point[0] - 3, point[1] - 3, point[0] + 3, point[1] + 3], fill=BAR)
+
+    # 三个片段窗口：画成括号，颜色区分是否判错
+    for index, clip in enumerate(windows):
+        start_frame, end_frame, predicted, confidence = window_span(clip)
+        top = y0 + 34 + index * 22
+        left_s = sx((start_frame - 1) / fps)
+        right_s = sx((end_frame - 1) / fps)
+        color = HIGHLIGHT if predicted != cls_label else ACCENT
+        draw.line([(left_s, top), (right_s, top)], fill=color, width=6)
+        draw.line([(left_s, top - 5), (left_s, top + 5)], fill=color, width=2)
+        draw.line([(right_s, top - 5), (right_s, top + 5)], fill=color, width=2)
+        draw.text((right_s + 8, top - 8), f"{start_frame}–{end_frame}", font=small_font, fill=color)
+
+    detail = " / ".join(
+        f"{window_span(c)[0]}–{window_span(c)[1]} 帧 → {c.get('predicted')}（{c.get('confidence', 0):.2f}）"
+        for c in windows
+    )
+    draw.text((x0, y0 + 34 + len(windows) * 22 + 14),
+              "三个窗口全部落在站定段：" + detail, font=body_font, fill=INK)
+    draw.text((x0, y0 + 34 + len(windows) * 22 + 40),
+              "同一个区间贡献了 3 条「错判」，其实是区间内标签漂移。", font=body_font, fill=INK)
+
+    # ---- 右：极差分布 ----
+    rx, ry, rw, rh = 900, 520, 420, 320
+    ratios = sorted(r["spreadRatio"] for r in spread["rows"] if r.get("spreadRatio"))
+    cap = 12.0
+    bins = 24
+    counts = [0] * bins
+    for value in ratios:
+        counts[min(bins - 1, int(value / cap * bins))] += 1
+    peak = max(counts) or 1
+    draw.text((rx, 132), "窗口间运动量极差（313 个多窗口区间）", font=label_font, fill=INK)
+    for index, count in enumerate(counts):
+        bar_h = rh * count / peak
+        left = rx + rw * index / bins
+        draw.rectangle([left + 1, ry - bar_h, left + rw / bins - 2, ry], fill=BAR)
+    draw.line([(rx, ry), (rx + rw, ry)], fill=MUTED, width=1)
+    for tick in (0, 3, 6, 9, 12):
+        x = rx + rw * min(1.0, tick / cap)
+        draw.line([(x, ry), (x, ry + 5)], fill=MUTED, width=1)
+        draw.text((x - 12, ry + 10), f"{tick}×", font=small_font, fill=MUTED)
+    for value, label in ((3, "≥3×：69 个"), (5, "≥5×：29 个")):
+        x = rx + rw * value / cap
+        draw.line([(x, ry - rh), (x, ry)], fill=(214, 168, 96), width=2)
+        draw.text((x + 4, ry - rh + 2), label, font=small_font, fill=(150, 104, 40))
+
+    summary_lines = [
+        f"中位极差 {spread['medianSpreadRatio']}×，最大 {ratios[-1]:.1f}×；示例区间 6.1×",
+        f"{spread['crossingIntervals']}/{spread['multiWindowIntervals']} 个区间同时出现「活动档」与「静止档」窗口",
+        "极差越大，越可能是一个标签盖住了多段行为；",
+        "窗口只覆盖区间的一部分，所以这是漂移规模的下限。",
+    ]
+    for index, line in enumerate(summary_lines):
+        draw.text((rx - 60, ry + 46 + index * 24), line, font=small_font, fill=INK if index < 2 else MUTED)
+
     image.save(out)
 
 
@@ -396,6 +525,8 @@ def main() -> None:
         figure_confusion(matrix, classes, args.out / "fig-confusion.png", args.font)
     figure_motion_surface(clips, args.out / "fig-motion-surface.png", args.font)
     figure_error_by_motion(summary, args.out / "fig-error-by-motion.png", args.font)
+    if (args.analysis / "interval_profile.json").is_file():
+        figure_interval_evidence(args.analysis, INTERVAL_SAMPLE_ID, args.out / "fig-interval-drift.png", args.font)
     print(f"图输出到 {args.out}（混淆矩阵：{'用 confusion_matrix' if matrix else '缺失，未画'}）")
 
 

@@ -48,6 +48,8 @@ SAMPLE_STEP = 6
 SAMPLE_COUNT = 10
 # 16×16 像素的块用来区分「局部爪子动作」与「整体身体移动」。
 GRID = 16
+# 对照图里每个格子的边长：与训练片段一致，避免放大失真。
+TILE_SIZE = 256
 # 红外/夜视片段在 HSV 里几乎没有饱和度；阈值取 30 是经验值，见 report 的校准说明。
 IR_SAT_THRESHOLD = 30.0
 
@@ -68,12 +70,34 @@ def parse_args() -> argparse.Namespace:
     p_cases.add_argument("--per-pair", type=int, default=3, help="每个混淆对保留几个候选")
     p_cases.add_argument("--min-conf", type=float, default=0.0, help="只保留置信度不低于该值的错误")
 
+    p_profile = sub.add_parser("profile", help="per-window motion profile of a rendered interval video")
+    p_profile.add_argument("--video", type=Path, required=True, help="区间整段渲染出的 mp4")
+    p_profile.add_argument("--out", type=Path, required=True, help="输出 json 路径")
+    p_profile.add_argument("--bucket", type=float, default=0.5, help="汇总桶宽（秒）")
+
+    p_class = sub.add_parser("class-cases", help="pick one class's correct/wrong clips with their diagnostic numbers")
+    p_class.add_argument("--analysis", type=Path, required=True, help="stats 输出目录（含 clip_visual_stats.json）")
+    p_class.add_argument("--metrics", type=Path, required=True)
+    p_class.add_argument("--label", required=True)
+    p_class.add_argument("--correct", type=int, default=6)
+    p_class.add_argument("--wrong", type=int, default=6)
+    p_class.add_argument("--out", type=Path, required=True)
+
+    p_sheet = sub.add_parser("sheet", help="contact sheet: one representative frame per case, with its numbers")
+    p_sheet.add_argument("--cases", type=Path, required=True)
+    p_sheet.add_argument("--clips-dir", type=Path, required=True)
+    p_sheet.add_argument("--out", type=Path, required=True)
+    p_sheet.add_argument("--columns", type=int, default=4)
+    p_sheet.add_argument("--frame", type=int, default=30, help="每段取第几帧（1 起）")
+    p_sheet.add_argument("--font", default="", help="中文字体路径，默认按候选列表探测")
+
     p_media = sub.add_parser("media", help="render selected cases to strips / mp4")
     p_media.add_argument("--analysis", type=Path, required=True)
     p_media.add_argument("--clips-dir", type=Path, required=True)
     p_media.add_argument("--assets-out", type=Path, required=True)
     p_media.add_argument("--media-out", type=Path, required=True)
     p_media.add_argument("--select", type=str, default="", help="逗号分隔的 case id，默认渲染全部")
+    p_media.add_argument("--cases", type=Path, default=None, help="案例清单，默认 <analysis>/cases.json")
     p_media.add_argument("--fps", type=float, default=15.0)
     return parser.parse_args()
 
@@ -305,6 +329,7 @@ def clip_visual_stats(data: dict[str, Any], clips_dir: Path) -> list[dict[str, A
         clip = clips_dir / Path(pred["video"]).name
         record: dict[str, Any] = {
             "sample_id": pred["sample_id"],
+            "clip": Path(pred["video"]).name,
             "label": classes[pred["label"]],
             "predicted": classes[pred["predicted"]],
             "correct": pred["label"] == pred["predicted"],
@@ -447,6 +472,185 @@ def motion_tertile_error_rate(stats: list[dict[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def summarize_interval_spread(stats: list[dict[str, Any]]) -> dict[str, Any]:
+    """同一标注区间切出多个窗口时，窗口间运动量差多少。
+
+    一个区间只有一个标签，但区间可能横跨多种行为（例如先走动再长时间站定）。
+    这里用「窗口间运动量极差倍数」和「是否同时跨过活动档/静止档」作为漂移的代理指标。
+    """
+    usable = [c for c in stats if not c.get("missing")]
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for clip in usable:
+        groups.setdefault(clip["sample_id"], []).append(clip)
+    multi = {key: items for key, items in groups.items() if len(items) >= 2}
+    rows: list[dict[str, Any]] = []
+    for key, items in multi.items():
+        motions = [item["motionMean"] for item in items]
+        low, high = min(motions), max(motions)
+        rows.append({
+            "sampleId": key,
+            "label": items[0]["label"],
+            "clips": len(items),
+            "minMotion": round(low, 3),
+            "maxMotion": round(high, 3),
+            "spreadRatio": round(high / low, 2) if low > 0 else None,
+            "crossesActivityStationary": bool(high >= 15 and low <= 5),
+        })
+    total = len(groups)
+    ratios = [r["spreadRatio"] for r in rows if r["spreadRatio"]]
+    by_label: dict[str, Any] = {}
+    for row in rows:
+        bucket = by_label.setdefault(row["label"], {"intervals": 0, "crossing": 0})
+        bucket["intervals"] += 1
+        bucket["crossing"] += 1 if row["crossesActivityStationary"] else 0
+    return {
+        "intervals": total,
+        "multiWindowIntervals": len(rows),
+        "singleWindowIntervals": total - len(rows),
+        "medianSpreadRatio": round(statistics.median(ratios), 2) if ratios else None,
+        "spreadRatioAtLeast3": sum(1 for r in ratios if r >= 3),
+        "spreadRatioAtLeast5": sum(1 for r in ratios if r >= 5),
+        "spreadRatioAtLeast10": sum(1 for r in ratios if r >= 10),
+        "crossingIntervals": sum(1 for r in rows if r["crossesActivityStationary"]),
+        "crossingByLabel": by_label,
+        "rows": sorted(rows, key=lambda r: -(r["spreadRatio"] or 0)),
+    }
+
+
+def class_cases(data: dict[str, Any], visual: list[dict[str, Any]], label: str,
+                want_correct: int, want_wrong: int) -> list[dict[str, Any]]:
+    """按类别取若干判对/判错的片段，附带判断依据所需的描述量。
+
+    判错侧取置信度最高的几条（模型最"确信地错"的那些）；判对侧按亮度分位铺开，
+    避免只挑到同一类光照条件下的样本。两侧都按源视频去重。
+    """
+    classes: list[str] = data["classes"]
+    if label not in classes:
+        raise SystemExit(f"没有类别 {label}")
+    index = classes.index(label)
+    by_id = {item["sample_id"] + "@" + item["clip"]: item for item in visual if not item.get("missing")}
+
+    def source_of(sample: str) -> str:
+        return sample.rsplit(":", 2)[0]
+
+    def build(pred: dict[str, Any]) -> dict[str, Any] | None:
+        key = pred["sample_id"] + "@" + Path(pred["video"]).name
+        meta = by_id.get(key)
+        if meta is None:
+            return None
+        return {
+            "sampleId": pred["sample_id"],
+            "clip": Path(pred["video"]).name,
+            "source": source_of(pred["sample_id"]),
+            "true": classes[pred["label"]],
+            "predicted": classes[pred["predicted"]],
+            "correct": pred["label"] == pred["predicted"],
+            "confidence": round(max(pred["scores"]), 4),
+            "motionMean": meta.get("motionMean"),
+            "localMotionP95": meta.get("localMotionP95"),
+            "lumaMean": meta.get("lumaMean"),
+            "isInfraredLike": meta.get("isInfraredLike"),
+        }
+
+    rows = [build(p) for p in data["predictions"] if p["label"] == index]
+    rows = [r for r in rows if r]
+    wrong = sorted([r for r in rows if not r["correct"]], key=lambda r: -r["confidence"])
+    correct = sorted([r for r in rows if r["correct"]], key=lambda r: -(r["lumaMean"] or 0))
+
+    def take_by_source(items: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:
+        """按来源轮转取样：同一来源只出一条，先把来源铺开，再放宽。
+
+        否则判对侧会被单一来源（同一家庭的狗扒门）占满，读者会以为那是全类的典型画面。
+        """
+        buckets: dict[str, list[dict[str, Any]]] = {}
+        for item in items:
+            buckets.setdefault(item["source"], []).append(item)
+        for bucket in buckets.values():
+            bucket.sort(key=lambda item: -(item["lumaMean"] or 0))
+        order = sorted(buckets.values(), key=lambda bucket: -len(bucket))
+        picked: list[dict[str, Any]] = []
+        used_clips: set[str] = set()
+        round_index = 0
+        while len(picked) < count and any(len(bucket) > round_index for bucket in order):
+            for bucket in order:
+                if len(picked) >= count:
+                    break
+                if len(bucket) <= round_index:
+                    continue
+                item = bucket[round_index]
+                if item["clip"] in used_clips:
+                    continue
+                used_clips.add(item["clip"])
+                picked.append(item)
+            round_index += 1
+        return picked[:count]
+
+    def take_wrong(items: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:
+        """判错侧：先按置信度取「最确信地错」，再补不同去向的，避免全是同一去向。"""
+        picked: list[dict[str, Any]] = []
+        used_sources: set[str] = set()
+        used_clips: set[str] = set()
+        primary = [item for item in items if item["predicted"] == "activity"]
+        others = [item for item in items if item["predicted"] != "activity"]
+        plan = primary[: max(0, count - 2)] + others[:2]
+        for item in plan + items:
+            if len(picked) >= count:
+                break
+            if item["clip"] in used_clips:
+                continue
+            if item["source"] in used_sources and len(picked) < count - 1:
+                continue
+            used_sources.add(item["source"])
+            used_clips.add(item["clip"])
+            picked.append(item)
+        return picked[:count]
+
+    chosen = take_wrong(wrong, want_wrong) + take_by_source(correct, want_correct)
+    for position, item in enumerate(chosen, start=1):
+        verdict = "correct" if item["correct"] else "wrong"
+        item["id"] = f"{label}-{verdict}-{position:02d}"
+        item["pair"] = f"{label}->{item['predicted']}"
+    return chosen
+
+
+def motion_profile(video: Path, bucket: float) -> dict[str, Any]:
+    """逐帧帧差 → 按时间桶汇总，用于看一个区间内部行为是否换过档。"""
+    capture = cv2.VideoCapture(str(video))
+    if not capture.isOpened():
+        raise SystemExit(f"打不开区间视频：{video}")
+    fps = float(capture.get(cv2.CAP_PROP_FPS) or 15.0)
+    series: list[dict[str, float]] = []
+    previous = None
+    index = 0
+    try:
+        while True:
+            ok, frame = capture.read()
+            if not ok:
+                break
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            if previous is not None:
+                series.append({"t": round(index / fps, 3), "motion": round(float(np.abs(gray - previous).mean()), 3)})
+            previous = gray
+            index += 1
+    finally:
+        capture.release()
+    if not series:
+        raise SystemExit(f"区间视频没有可用帧：{video}")
+    buckets: list[dict[str, Any]] = []
+    size = max(1, int(round(bucket * fps)))
+    for start in range(0, len(series), size):
+        chunk = series[start:start + size]
+        buckets.append({
+            "from": round(chunk[0]["t"], 2),
+            "to": round(chunk[-1]["t"] + 1 / fps, 2),
+            "mean": round(float(np.mean([c["motion"] for c in chunk])), 3),
+            "max": round(float(np.max([c["motion"] for c in chunk])), 3),
+        })
+    return {"video": str(video), "fps": round(fps, 3), "frames": index + 1,
+            "seconds": round((index + 1) / fps, 2), "bucketSeconds": bucket,
+            "perFrame": series, "buckets": buckets}
+
+
 def pick_cases(data: dict[str, Any], case_flows: dict[str, Any], per_pair: int, min_conf: float) -> list[dict[str, Any]]:
     classes: list[str] = data["classes"]
     preds = data["predictions"]
@@ -517,6 +721,77 @@ def pick_cases(data: dict[str, Any], case_flows: dict[str, Any], per_pair: int, 
     return candidates
 
 
+def contact_sheet(cases: list[dict[str, Any]], clips_dir: Path, out: Path,
+                  columns: int, frame_index: int, font_path: str = "") -> dict[str, Any]:
+    """每段取一帧拼成一张对照图，图上写清它是判对还是判错、置信度与光照。
+
+    cv2 的 putText 只支持 ASCII，标签用 PIL 画（中文类名与结论要能读）。
+    """
+    from PIL import Image, ImageDraw, ImageFont  # 延迟导入：只有这个子命令需要
+
+    font_candidates = [
+        font_path, "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        "/System/Library/Fonts/Supplemental/Songti.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    ]
+    font = None
+    for candidate in font_candidates:
+        if not candidate:
+            continue
+        try:
+            font = ImageFont.truetype(candidate, 15)
+            break
+        except OSError:
+            continue
+    if font is None:
+        raise SystemExit("找不到中文字体，请用 --font 指定（对照图标签需要中文）")
+
+    tiles: list[Image.Image] = []
+    missing = 0
+    caption_h = 46
+    for case in cases:
+        capture = cv2.VideoCapture(str(clips_dir / case["clip"]))
+        if not capture.isOpened():
+            missing += 1
+            capture.release()
+            continue
+        ok, frame = False, None
+        for _ in range(frame_index):
+            ok, frame = capture.read()
+            if not ok:
+                break
+        capture.release()
+        if not ok or frame is None:
+            missing += 1
+            continue
+        rgb = cv2.cvtColor(cv2.resize(frame, (TILE_SIZE, TILE_SIZE), interpolation=cv2.INTER_AREA),
+                           cv2.COLOR_BGR2RGB)
+        tile = Image.new("RGB", (TILE_SIZE, TILE_SIZE + caption_h), (18, 18, 20))
+        tile.paste(Image.fromarray(rgb), (0, 0))
+        draw = ImageDraw.Draw(tile)
+        number = case["id"].rsplit("-", 1)[-1]
+        verdict = "判对" if case["correct"] else "判错"
+        draw.text((6, TILE_SIZE + 3),
+                  f"#{number} {verdict} → {case['predicted']}  {case['confidence']:.2f}",
+                  font=font, fill=(255, 255, 255))
+        detail = f"亮度 {case.get('lumaMean', 0):.0f}{'（红外）' if case.get('isInfraredLike') else ''}  运动 {case.get('motionMean', 0):.1f}"
+        draw.text((6, TILE_SIZE + 23), detail, font=font, fill=(168, 186, 206))
+        tiles.append(tile)
+
+    if not tiles:
+        raise SystemExit("没有可用的片段帧，无法生成对照图")
+    rows = math.ceil(len(tiles) / columns)
+    tile_w, tile_h = tiles[0].size
+    sheet = Image.new("RGB", (columns * tile_w + 8, rows * tile_h + 8), (24, 24, 26))
+    for position, tile in enumerate(tiles):
+        row, col = divmod(position, columns)
+        sheet.paste(tile, (col * tile_w + 4, row * tile_h + 4))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(out, quality=90)
+    return {"tiles": len(tiles), "missing": missing, "out": str(out)}
+
+
 def render_strip(clip: Path, out: Path, frames_to_take: int = 6) -> None:
     cap = cv2.VideoCapture(str(clip))
     if not cap.isOpened():
@@ -581,6 +856,8 @@ def main() -> None:
         (args.out / "per_class.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2))
         (args.out / "error_flows.json").write_text(json.dumps(flows, ensure_ascii=False, indent=2))
         (args.out / "clip_visual_stats.json").write_text(json.dumps(visual, ensure_ascii=False, indent=2))
+        spread = summarize_interval_spread(visual)
+        (args.out / "interval_spread.json").write_text(json.dumps(spread, ensure_ascii=False, indent=2))
         breakdown = source_breakdown(data)
         (args.out / "source_breakdown.json").write_text(json.dumps(breakdown, ensure_ascii=False, indent=2))
         summary = {
@@ -598,6 +875,7 @@ def main() -> None:
                 statistics.mean([r["recallPercent"] for r in rows if r["support"] and r["support"] >= 10]), 2
             ),
             "activitySink": flows["activitySink"],
+            "intervalSpread": {k: v for k, v in spread.items() if k not in ("rows", "crossingByLabel")},
             "sources": breakdown["sources"],
             "visualSummary": visual_summary,
         }
@@ -608,6 +886,20 @@ def main() -> None:
             "macroRecall": summary["macroRecallPercent"],
             "sink": summary["activitySink"],
         }, ensure_ascii=False, indent=2))
+    elif args.command == "class-cases":
+        data = load_metrics(args.metrics)
+        visual = load_json(args.analysis / "clip_visual_stats.json", "逐片段描述量")
+        chosen = class_cases(data, visual, args.label, args.correct, args.wrong)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(chosen, ensure_ascii=False, indent=2))
+        print(f"写入 {args.out}：{len(chosen)} 条（判错 {sum(1 for c in chosen if not c['correct'])}，"
+              f"判对 {sum(1 for c in chosen if c['correct'])}）")
+    elif args.command == "profile":
+        profile = motion_profile(args.video, args.bucket)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(profile, ensure_ascii=False, indent=2))
+        print(json.dumps({"out": str(args.out), "seconds": profile["seconds"],
+                          "buckets": len(profile["buckets"])}, ensure_ascii=False))
     elif args.command == "cases":
         data = load_metrics(args.metrics)
         flows = error_flows(data)
@@ -616,8 +908,12 @@ def main() -> None:
         args.out.write_text(json.dumps(cases, ensure_ascii=False, indent=2))
         pairs = sorted({c["pair"] for c in cases})
         print(f"写入 {args.out}：{len(cases)} 个候选，覆盖 {len(pairs)} 个混淆对")
+    elif args.command == "sheet":
+        cases = load_json(args.cases, "案例清单")
+        result = contact_sheet(cases, args.clips_dir, args.out, args.columns, args.frame, args.font)
+        print(json.dumps(result, ensure_ascii=False))
     elif args.command == "media":
-        cases = load_json(args.analysis / "cases.json", "案例清单")
+        cases = load_json(args.cases or (args.analysis / "cases.json"), "案例清单")
         selected = {token.strip() for token in args.select.split(",") if token.strip()}
         if selected:
             cases = [c for c in cases if c["id"] in selected]
