@@ -85,11 +85,13 @@ def main() -> int:
             continue
         registered = {str(c.get("src", "")) for c in manifest.get("cases", []) if isinstance(c, dict)}
         refs = {f"{kind}/{name}" for kind, name in MEDIA_REF.findall(report_path.read_text(encoding="utf-8"))}
-        # 只查「正文引用了但没登记」这一向：未登记的媒体不会被路由放行，页面会 404。
-        # 反向（登记了但正文没嵌入）是正常情况——案例由报告页的案例区渲染。
+        # 两向都要一致：报告页不再有单独的案例区，正文嵌入是媒体唯一的展示位置。
+        # 未登记的媒体不会被路由放行（404）；登记了却没嵌进正文，则读者看不到。
         for missing in sorted(refs - registered):
             row["problems"].append(f"正文引用未登记为案例：{missing}")
-        if refs - registered:
+        for unembedded in sorted(registered - refs):
+            row["problems"].append(f"案例未在正文嵌入：{unembedded}")
+        if refs != registered:
             row["incomplete"] = True
 
     failed = [r for r in rows if r["incomplete"]]

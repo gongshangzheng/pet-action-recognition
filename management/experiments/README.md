@@ -80,7 +80,7 @@ frontmatter 必填：`title`、`date`、`run_id`、`status`、`verdict`、`summa
 
 - `evidence`（六项，缺任一 → incomplete）：实验类型 / baseline 数值来源 / 可辨识性 / 样本量 / 失败边界 / 结论上界
 - `metrics`：每条含 `name`、`unit`、`baseline`、`result`、`delta`、`sample_size`、`source`、`limitation`（不可比较时写明原因）
-- `cases`：每条含 `id`、`kind`（`image` / `video`）、`src`（图片 `assets/<sha256>.<ext>`；视频 `media/<sha256>.<mp4|webm|mov>`）、`source_run`、`input`、`selection_reason`、`sha256`。**案例必须由作者显式选择**，生成器不自动把扫描到的文件当作代表性案例。正文里嵌入的 `assets/` 与 `media/` 文件**必须在 cases 中登记**，否则 media 路由不放行、页面 404（`check_experiment_reports.py` 会报错）；登记了但正文没嵌入是允许的——案例区自己会渲染。视频保存于持久媒体目录（不入 Git）：服务器环境变量 `PET_EXPERIMENT_MEDIA_ROOT` 指定已有目录，生成器读取同一变量；未配置时视频落报告目录内 `media/`（同样不入 Git），服务器只放行该报告清单登记过的文件
+- `cases`：每条含 `id`、`kind`（`image` / `video`）、`src`（图片 `assets/<sha256>.<ext>`；视频 `media/<sha256>.<mp4|webm|mov>`）、`source_run`、`input`、`selection_reason`、`sha256`。**案例必须由作者显式选择**，生成器不自动把扫描到的文件当作代表性案例。正文里嵌入的 `assets/` 与 `media/` 文件**必须在 cases 中登记**，否则 media 路由不放行、页面 404；反过来，登记进 cases 的每一个案例也**必须嵌进正文**（报告页没有单独的案例区，正文是媒体唯一的展示位置）。两个方向都由 `check_experiment_reports.py` 校验。视频保存于持久媒体目录（不入 Git）：服务器环境变量 `PET_EXPERIMENT_MEDIA_ROOT` 指定已有目录，生成器读取同一变量；未配置时视频落报告目录内 `media/`（同样不入 Git），服务器只放行该报告清单登记过的文件
 - `diagnostics`（生成器写入）：缺失项清单，报告 incomplete 的原因
 
 ## incomplete 语义

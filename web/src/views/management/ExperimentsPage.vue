@@ -121,50 +121,6 @@
             </section>
           </details>
 
-          <!-- 案例对比：正文已引用的不重复铺满；这里只补未引用的 -->
-          <section v-if="additionalCases.length" class="cases-section">
-            <h2>案例对比</h2>
-            <div class="cases-toolbar">
-              <n-radio-group v-model:value="compareMode" size="small" name="compare-mode">
-                <n-radio-button value="side" label="并排" />
-                <n-radio-button value="toggle" label="交替" />
-              </n-radio-group>
-              <n-select
-                v-if="compareMode === 'toggle' && additionalCases.length > 1"
-                v-model:value="toggleIndex" size="small" class="case-pick"
-                :options="casePickerOptions" aria-label="选择案例"
-              />
-            </div>
-
-            <div v-if="compareMode === 'side'" class="cases-grid">
-              <figure v-for="c in additionalCases" :key="c.id" class="case-fig">
-                <div class="case-img-wrap">
-                  <video v-if="isVideoCase(c)" :src="assetUrl(c)" controls preload="metadata" playsinline class="case-video" />
-                  <img v-else :src="assetUrl(c)" :alt="`${c.id}：${c.selection_reason}`" loading="lazy" />
-                </div>
-                <figcaption>
-                  <strong>{{ c.id }}</strong> · {{ c.input }}
-                  <span class="case-reason">（{{ c.selection_reason }}）</span>
-                </figcaption>
-              </figure>
-            </div>
-
-            <figure v-else class="case-fig case-toggle">
-              <div class="case-img-wrap" @click="cycleCase(1)" title="点击切换到下一个案例">
-                <video v-if="isVideoCase(activeCase)" :src="assetUrl(activeCase)" controls preload="metadata" playsinline class="case-video" />
-                <img v-else :src="assetUrl(activeCase)" :alt="`${activeCase.id}：${activeCase.selection_reason}`" />
-              </div>
-              <div class="case-switch">
-                <n-button size="tiny" secondary @click="cycleCase(-1)">← 上一个</n-button>
-                <span class="case-counter">{{ toggleIndex + 1 }} / {{ additionalCases.length }}</span>
-                <n-button size="tiny" secondary @click="cycleCase(1)">下一个 →</n-button>
-              </div>
-              <figcaption>
-                <strong>{{ activeCase.id }}</strong> · {{ activeCase.input }}
-                <span class="case-reason">（{{ activeCase.selection_reason }}）</span>
-              </figcaption>
-            </figure>
-          </section>
         </div>
       
         </div>
@@ -199,7 +155,7 @@ import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NIcon, NSpin, NSelect, NTag, NCheckbox, NDataTable,
-  NAlert, NRadioGroup, NRadioButton, NButton,
+  NAlert, NButton,
 } from 'naive-ui'
 import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import VChart from 'vue-echarts'
@@ -211,7 +167,7 @@ import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
 import { getExperiments, getExperimentDetail, getExperimentAssetUrl, getExperimentMediaUrl } from '../../api/experiments'
 import { vClickable } from '../../directives/clickable'
-import { splitReportAppendix, narrativeEmbedsAsset, buildReportFileAliases } from './experimentReportContent'
+import { splitReportAppendix, buildReportFileAliases } from './experimentReportContent'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
@@ -309,7 +265,6 @@ const metricTables = computed(() => (detail.value?.metrics?.tables || []).filter
 const hasSeries = computed(() => (detail.value?.metrics?.series || []).some(s => (s.points || []).length))
 const manifestMetrics = computed(() => detail.value?.manifest?.metrics || [])
 const evidenceEntries = computed(() => Object.entries(detail.value?.manifest?.evidence || {}).filter(([, v]) => v))
-const cases = computed(() => (detail.value?.manifest?.cases || []).filter(c => (c.kind === 'image' || c.kind === 'video') && c.src))
 const reportParts = computed(() => splitReportAppendix(detail.value?.content || ''))
 
 // 正文媒体上下文：把 `assets/<文件名>` / `media/<文件名>` 映射到当前报告的只读路由。
@@ -325,15 +280,6 @@ const reportMedia = computed(() => {
     fileAliases: reportFileAliases.value,
   }
 })
-
-const casePickerOptions = computed(() => additionalCases.value.map((c, i) => ({ label: c.id, value: i })))
-const activeCase = computed(() => additionalCases.value[toggleIndex.value] || { id: "", input: "", selection_reason: "" })
-
-function cycleCase(step) {
-  const total = additionalCases.value.length
-  if (!total) return
-  toggleIndex.value = (toggleIndex.value + step + total) % total
-}
 
 // 目录收二级与三级标题：报告正文把「结果与分析」拆成多个三级小节，只收二级会跳不动。
 const tocItems = computed(() => {
@@ -411,23 +357,6 @@ function observeSections() {
   nodes.forEach(node => sectionObserver.observe(node))
 }
 const hasStructuredMetrics = computed(() => !!(manifestMetrics.value.length || hasSeries.value || metricTables.value.length || evidenceEntries.value.length))
-// 正文已引用的案例图不重复铺满，只补未引用的
-const additionalCases = computed(() => cases.value.filter(c =>
-  !narrativeEmbedsAsset(reportParts.value.narrative, c.src, reportFileAliases.value)))
-const compareMode = ref('side')
-const toggleIndex = ref(0)
-
-function assetUrl(c) {
-  const parts = String(c.src || '').split('/')
-  const file = parts[parts.length - 1]
-  if (parts[0] === 'media' || c.kind === 'video') return getExperimentMediaUrl(topic.value, slug.value, file)
-  return getExperimentAssetUrl(topic.value, slug.value, file)
-}
-
-function isVideoCase(c) {
-  return c?.kind === 'video'
-}
-
 const chartOption = computed(() => {
   const series = detail.value?.metrics?.series || []
   return {
@@ -693,61 +622,6 @@ watch(() => route.query, (q) => {
   h3 { font-size: 13px; margin: 0 0 6px; color: var(--color-text-secondary); }
 }
 
-.cases-section {
-  margin-top: 20px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border-light);
-  h2 { font-size: 15px; margin: 0 0 10px; }
-}
-
-.metric-table { margin-bottom: 12px; }
-.trend-chart { height: 260px; }
-
-.cases-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-.case-pick { width: 176px; }
-
-.cases-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.case-fig { margin: 0; }
-.case-img-wrap {
-  overflow: auto;
-  border: 1px solid var(--color-border-light);
-  border-radius: 8px;
-  background: var(--color-elevated);
-
-  img {
-    display: block;
-    // 宽度受限：等比缩到容器内，长图不会再撑出横向滚动
-    max-width: 100%;
-    height: auto;
-  }
-
-  // 视频需要看运动：按容器宽度缩放，不做像素化
-  video.case-video {
-    display: block;
-    width: 100%;
-    max-width: 720px;
-    background: #000;
-  }
-}
-
-.case-fig figcaption {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  overflow-wrap: anywhere;
-}
-.case-reason { color: var(--color-text-dim); }
-.case-toggle .case-img-wrap { max-width: 720px; margin-inline: auto; cursor: pointer; }
-.case-switch {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  max-width: 720px; margin: 8px auto 0;
-}
-.case-counter { font-size: 12px; color: var(--color-text-dim); }
 
 @media (max-width: 720px) {
   .header-row { flex-direction: column; align-items: stretch; }

@@ -201,7 +201,7 @@ python3 .agents/skills/experiment/scripts/build_report.py --help   # 作者清�
 - **正文是面向读者的文章，不是指标清单**：依次使用「背景与目标」「当前问题」「实验设计」「结果与分析」「结论与下一步」，最后提供「附录：配置与完整数据」。先介绍背景和术语，再提出问题；正文只保留能帮助判断的数值、图表和媒体并就近说明含义与限制。完整指标、精确配置、版本、权重、哈希、命令与原始来源放入附录（网页默认折叠）。不得把原始 metrics.md 直接拼进正文，也不得自动铺满指标卡片。核查数据齐全不等于文章清楚，两项均须审阅；
 - **incomplete 由脚本与后端按同一规则推导**（frontmatter 必填 + 文章章节齐全 + evidence/案例齐全 + sha256 匹配），不由作者自评；缺什么就在 diagnostics 里写什么；
 - 案例 `src` 指向 run 产物或仓库内图片，生成器复制进 `assets/` 并计算 sha256；报告 `source` 指向 run 产物路径（如 `evaluation/results/*.json`），不复制大产物；
-- 报告页在前端 `/management/experiments` 审阅（正文文章 + 折叠附录 + 结构化指标/趋势/案例 A/B）；
+- 报告页在前端 `/management/experiments` 审阅（正文文章 + 折叠附录 + 结构化指标/趋势）；媒体一律嵌在正文对应位置，页面不设单独的案例区；
 - 生成或合并后用 `python3 scripts/checks/check_experiment_reports.py` 校验：逐篇按后端同一规则判完整度，并核对正文里嵌入的 `assets/`、`media/` 是否都已在 cases 登记（未登记不会被 media 路由放行）。
 
 与 evidence 的关系：evidence 是过程记录（即时追加），报告是面向读者的结论交付（事后整理）——两者都要，不互相替代。

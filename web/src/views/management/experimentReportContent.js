@@ -2,7 +2,7 @@
 //
 // 正文是面向读者的文章（背景与目标 → … → 结论与下一步），「附录：配置与完整数据」在网页默认折叠。
 // 本模块按 H2 标题把正文拆成 narrative + appendix，供 ExperimentsPage 分别渲染；
-// 另提供「案例图是否已在正文中被引用」的判断，避免结构化案例区重复铺满同一张图。
+// 另提供「案例图是否已在正文中被引用」的判断，供迁移期核对旧报告的媒体登记。
 export const REPORT_APPENDIX_HEADING = '附录：配置与完整数据'
 
 // 正文媒体引用：`![说明](assets/<文件名>)`（图片）与 `![说明](media/<文件名>)`（视频）。
@@ -102,7 +102,7 @@ export function splitReportAppendix(markdown) {
 }
 
 // 简单判断正文里是否以 ![]() 引用过该 src（完整 markdown 解析依赖重，此处够用）。
-// aliases（buildReportFileAliases 的结果）让「正文写可读名、清单记 sha256 名」也能算已引用，避免案例区重复铺满。
+// aliases（buildReportFileAliases 的结果）让「正文写可读名、清单记 sha256 名」也能算已引用。
 export function narrativeEmbedsAsset(narrative, src, aliases) {
   const target = String(src || '').trim()
   if (!target) return false
