@@ -1,0 +1,163 @@
+{
+  "evidence": {
+    "实验类型": "媒体数据质量核查",
+    "baseline 数值来源": "不适用；核查对象为样本容器属性、PyAV 帧时间戳和历史检测缓存记录",
+    "可辨识性": "同一文件分别记录容器报告、PyAV 解码与历史 OpenCV 记录；三者在帧数和时间间隔上有明确差异，不将平均 FPS 当逐帧时间",
+    "样本量": "1 个视频、1 次顺序解码；仅属案例核查，不代表语料分布",
+    "失败边界": "未读取摄像头原始录像或标注平台上传文件；未验证逐帧对应及标注工具时间轴",
+    "结论上界": "只能说明当前文件存在时间戳与解码差异，不能判定源头损坏时点或影响其他视频的范围"
+  },
+  "metrics": [
+    {
+      "name": "PyAV 顺序解码帧数",
+      "unit": "帧",
+      "baseline": "容器报告 627",
+      "result": "622",
+      "delta": "-5",
+      "sample_size": "1 视频",
+      "source": "results/pet_pipeline/annotation-overflow-review/sample-891/pts-details.txt",
+      "limitation": "历史 OpenCV 记录为 627，逐帧是否对应未验证"
+    },
+    {
+      "name": "最大相邻帧时间间隔",
+      "unit": "秒",
+      "baseline": "约 0.067（15 FPS 名义值）",
+      "result": "12.534",
+      "delta": "约 +12.47",
+      "sample_size": "1 视频",
+      "source": "同上",
+      "limitation": "不代表真实缺失的画面数量"
+    },
+    {
+      "name": "容器平均帧率",
+      "unit": "FPS",
+      "baseline": "—",
+      "result": "约 11.626",
+      "delta": "—",
+      "sample_size": "1 视频",
+      "source": "metadata 与 pts-check.txt",
+      "limitation": "平均值不能说明帧间隔恒定"
+    },
+    {
+      "name": "已扫描视频数",
+      "unit": "个",
+      "baseline": "—",
+      "result": "2737",
+      "delta": "—",
+      "sample_size": "全量目录",
+      "source": "results/pet_pipeline/timeline-inventory-20261111a/summary.json",
+      "limitation": "分母为资产目录当前文件数，不代表语料全部历史版本"
+    },
+    {
+      "name": "时间戳连续的视频",
+      "unit": "个",
+      "baseline": "—",
+      "result": "2718",
+      "delta": "—",
+      "sample_size": "全量目录",
+      "source": "同上",
+      "limitation": "仅按包时间戳判定，阈值 0.2 秒以下的变化不计数"
+    },
+    {
+      "name": "检出时间戳跳跃的视频",
+      "unit": "个",
+      "baseline": "—",
+      "result": "18",
+      "delta": "—",
+      "sample_size": "全量目录",
+      "source": "同上",
+      "limitation": "其中 12 个跳跃小于 0.51 秒，可能只是丢帧，不必然为时钟异常"
+    },
+    {
+      "name": "跳跃时间合计",
+      "unit": "秒",
+      "baseline": "—",
+      "result": "142.813",
+      "delta": "—",
+      "sample_size": "18 个视频",
+      "source": "同上",
+      "limitation": "包级数值低于帧级，不能直接当作缺失画面时长"
+    },
+    {
+      "name": "无法读取的视频",
+      "unit": "个",
+      "baseline": "—",
+      "result": "1",
+      "delta": "—",
+      "sample_size": "全量目录",
+      "source": "同上",
+      "limitation": "解码失败原因未进一步定位，记为未知"
+    },
+    {
+      "name": "缺少标注区间的视频",
+      "unit": "个",
+      "baseline": "—",
+      "result": "164",
+      "delta": "—",
+      "sample_size": "全量目录",
+      "source": "同上",
+      "limitation": "这些视频在训练集里的实际去向未核，不等于完全未使用"
+    },
+    {
+      "name": "平均帧率中位数",
+      "unit": "FPS",
+      "baseline": "标称 15",
+      "result": "15.000",
+      "delta": "≈0",
+      "sample_size": "2736 个可读视频",
+      "source": "results/pet_pipeline/frame-rate-diagnosis-20261111c/frame-rate-diagnosis.json",
+      "limitation": "平均值不代表逐帧间隔恒定；抖动系数中位 0.7%"
+    },
+    {
+      "name": "逐帧步长抖动系数（中位）",
+      "unit": "比值",
+      "baseline": "理想 0",
+      "result": "0.0069",
+      "delta": "—",
+      "sample_size": "2736 个可读视频",
+      "source": "同上",
+      "limitation": "抖动来自时间戳写入，成因未核实"
+    },
+    {
+      "name": "平均帧率明显低于 15 的视频",
+      "unit": "个",
+      "baseline": "—",
+      "result": "41",
+      "delta": "—",
+      "sample_size": "2736 个可读视频",
+      "source": "同上",
+      "limitation": "低帧率来自缺帧；缺帧处无画面对齐"
+    },
+    {
+      "name": "10 FPS 视频",
+      "unit": "个",
+      "baseline": "—",
+      "result": "5",
+      "delta": "—",
+      "sample_size": "2736 个可读视频",
+      "source": "同上",
+      "limitation": "步长恒为 0.1 秒，属真实不同帧率；成因未核实"
+    }
+  ],
+  "cases": [
+    {
+      "id": "source-video",
+      "kind": "video",
+      "src": "media/cca5e80d53bf33885b09a4845425805e214164a9ca699fb978d0efa3622cfc10.mp4",
+      "source_run": "sample-891",
+      "input": "20000838103643_charw1g__event_20260321_190215.mp4",
+      "selection_reason": "用户指定并已核对与 pet 源文件哈希一致，用于直接观察时间戳异常",
+      "sha256": "cca5e80d53bf33885b09a4845425805e214164a9ca699fb978d0efa3622cfc10"
+    },
+    {
+      "id": "timeline-review",
+      "kind": "video",
+      "src": "media/5dd0fdf76dbeb5d68f5546bd20f3ea39ed94fbddac7599dffec16de0117b02e8.mp4",
+      "source_run": "sample-891-timeline-v4",
+      "input": "20000838103643_charw1g__event_20260321_190215.mp4 按真实时间轴渲染的审阅视频",
+      "selection_reason": "按真实时间轴渲染：H.264 1280×720（浏览器可播放），缺口为黑画面，检测相位与标注假设均标注未验证",
+      "sha256": "5dd0fdf76dbeb5d68f5546bd20f3ea39ed94fbddac7599dffec16de0117b02e8"
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,139 @@
+{
+  "evidence": {
+    "实验类型": "性能（延迟/吞吐）与感知质量（对教师一致率、失效抽样）两轮",
+    "baseline 数值来源": "第一轮：无学生基线，参照为教师约 150 ms/锚点与「学生完全复现教师」的 mAP=1.0；第二轮基线为第一轮学生的 test mAP50 0.809",
+    "可辨识性": "速度用同批 200 帧端到端测（含预处理与 NMS），与预训练探针 5.3 ms 对上，说明测量稳定；一致率用循环验证，不等价于准确率（这一点写进正文与 metric limitation）",
+    "样本量": "第一轮 20,584 帧 / test 2,040 帧；第二轮 21,288 帧 / test 2,128 帧、2,042 实例；失效抽样每层 6 帧；延迟 200 帧",
+    "失败边界": "缺人工框 GT，学生是否更准判不了；两轮分别存在 97 / 101 个事件日跨 split 泄漏；第一轮训练只到 20/30 轮，第二轮 AMP 自检被跳过；dog 类 mAP50 仅 0.789；教师侧延迟为归档值非同批测量",
+    "结论上界": "能说明学生把推理成本降低约 27–28 倍、在两套口径下对教师伪标签的复现程度为 mAP50 0.809 与 0.871；不能说明真实准确率、跨家庭泛化或可替代教师"
+  },
+  "metrics": [
+    {
+      "name": "学生端到端延迟 p50 @1280（第一轮）",
+      "unit": "ms/帧",
+      "baseline": "教师约 150 ms/锚点",
+      "result": "5.3",
+      "delta": "约 28 倍加速",
+      "sample_size": "200 帧（4 段视频各 50 帧）",
+      "source": "results/pseudo_labels/speed.json",
+      "limitation": "RTX 4090 D、batch 1；未计视频解码；开发板未测"
+    },
+    {
+      "name": "学生端到端延迟 p50 @1280（第二轮）",
+      "unit": "ms/帧",
+      "baseline": "教师约 150 ms/锚点（归档值）",
+      "result": "5.47",
+      "delta": "约 27 倍加速",
+      "sample_size": "200 帧（4 段 2880×1620 视频）",
+      "source": "results/pet_pipeline/student-train-20261112a/latency.json",
+      "limitation": "教师侧非同一批帧同时刻测量，倍数为量级参考"
+    },
+    {
+      "name": "测试集 mAP@0.5（第一轮 Tiny 教师）",
+      "unit": "mAP",
+      "baseline": "1.0（学生完全复现教师）",
+      "result": "0.809",
+      "delta": "—",
+      "sample_size": "2,040 张 / 1,909 实例",
+      "source": "results/pseudo_labels/selfcheck.json",
+      "limitation": "循环验证：标签即教师输出；97 天事件日跨 split 泄漏使数字偏高"
+    },
+    {
+      "name": "测试集 mAP@0.5（第二轮 Base 教师）",
+      "unit": "mAP",
+      "baseline": "0.809（第一轮，口径不同）",
+      "result": "0.871",
+      "delta": "+0.062（不可直接相减）",
+      "sample_size": "2,128 帧 / 2,042 实例",
+      "source": "results/pet_pipeline/student-train-20261112a/test-eval.log",
+      "limitation": "教师更强 + 划分换成共享索引 + 导出规则定稿三项同时改变；仍有 101 天泄漏"
+    },
+    {
+      "name": "测试集 mAP@0.5:0.95（第二轮）",
+      "unit": "mAP",
+      "baseline": "0.748（第一轮）",
+      "result": "0.818",
+      "delta": "+0.070（不可直接相减）",
+      "sample_size": "2,128 帧 / 2,042 实例",
+      "source": "同上",
+      "limitation": "同上"
+    },
+    {
+      "name": "测试集 cat / dog mAP@0.5（第二轮）",
+      "unit": "mAP",
+      "baseline": "未分物种",
+      "result": "0.953 / 0.789",
+      "delta": "—",
+      "sample_size": "猫 1,678 / 狗 364 实例",
+      "source": "同上",
+      "limitation": "历史报告未分物种，缺可比基线；狗实例仅占 18%"
+    },
+    {
+      "name": "训练完成度",
+      "unit": "轮",
+      "baseline": "计划 30 轮（第一轮）",
+      "result": "第一轮 20 轮中止；第二轮 20/20 完成",
+      "delta": "—",
+      "sample_size": "第一轮 16,640 帧 / 第二轮 17,040 帧",
+      "source": "results/pseudo_labels/、results/pet_pipeline/student-train-20261112a/train.log",
+      "limitation": "第一轮被内存守卫以 rss 25354MB > 24000MB 终止；第二轮 AMP 自检因无外网跳过"
+    }
+  ],
+  "cases": [
+    {
+      "id": "r1-print-multi-detect",
+      "kind": "image",
+      "src": "assets/b84b20ea9c496063cae0b591177a8e256a533172fb8ab613d22618871bebb3d3.jpg",
+      "source_run": "yolo11s_1280_ep20",
+      "input": "charw1g 夜间段，教师 1 框 / 学生 3 框",
+      "selection_reason": "失败边界：学生不是教师子集，多出的框是近处运动模糊区域，方向需人工 GT 才能判定",
+      "sha256": "b84b20ea9c496063cae0b591177a8e256a533172fb8ab613d22618871bebb3d3"
+    },
+    {
+      "id": "r1-ir-consistent",
+      "kind": "image",
+      "src": "assets/e37f18f191fa9379acefc4a2a5e65bb1bfc1bc2a8cdde3648adbe13eaa1b3879.jpg",
+      "source_run": "yolo11s_1280_ep20",
+      "input": "红外夜视帧 luma≈56，教师 1 框 / 学生 1 框",
+      "selection_reason": "夜视是本域历史最弱环节（零样本漏检约 89%），此例学生与教师一致，说明域内微调确实覆盖了夜视",
+      "sha256": "e37f18f191fa9379acefc4a2a5e65bb1bfc1bc2a8cdde3648adbe13eaa1b3879"
+    },
+    {
+      "id": "r1-small-miss",
+      "kind": "image",
+      "src": "assets/3beb62d59922dd21745c60d3935eb709612eb48532acee76bbf3e9971402b529.jpg",
+      "source_run": "yolo11s_1280_ep20",
+      "input": "夜间红外，教师 2 框 / 学生 1 框",
+      "selection_reason": "唯一漏检样本：教师另一框落在床铺被褥上，疑似教师自身假阳性——少检一个可能是改善，同样需要人工 GT 判定",
+      "sha256": "3beb62d59922dd21745c60d3935eb709612eb48532acee76bbf3e9971402b529"
+    },
+    {
+      "id": "r2-train-curves",
+      "kind": "image",
+      "src": "assets/51d7150492fa87a88cd2f7505ec9ba58d04853568cf912821e763415bf4c5e99.png",
+      "source_run": "student-train-20261112a",
+      "input": "20 轮训练曲线（loss 与验证 mAP）",
+      "selection_reason": "过程偏差的证据：最佳轮次就是第 20 轮，配合 AMP 自检跳过一起读",
+      "sha256": "51d7150492fa87a88cd2f7505ec9ba58d04853568cf912821e763415bf4c5e99"
+    },
+    {
+      "id": "r2-pr-curve",
+      "kind": "image",
+      "src": "assets/41bf1dd2cc73fbfe47b811f9a1e0978e6ceb41850b4aac266823123258b7dcc0.png",
+      "source_run": "student-train-20261112a",
+      "input": "验证集 cat / dog 的 Precision-Recall 曲线",
+      "selection_reason": "分类别短板：狗的曲线明显落在猫的内侧，对应 mAP50 0.789",
+      "sha256": "41bf1dd2cc73fbfe47b811f9a1e0978e6ceb41850b4aac266823123258b7dcc0"
+    },
+    {
+      "id": "r2-val-pred",
+      "kind": "image",
+      "src": "assets/f01b8f8ad452bea04350bebdb130b331645dd37fd45108d7592d3196afb1a7b8.jpg",
+      "source_run": "student-train-20261112a",
+      "input": "同一验证批次的学生预测叠加图",
+      "selection_reason": "与伪标签叠加图对照，检查预测框是否继承了教师的框形与错误",
+      "sha256": "f01b8f8ad452bea04350bebdb130b331645dd37fd45108d7592d3196afb1a7b8"
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="350" viewBox="0 0 860 350" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif">
+<rect width="860" height="350" fill="#ffffff"/>
+<text x="190" y="30" font-size="17" fill="#111">七类逐类召回（测试集 442 条）：TSM-R50 与 VideoMAEv2-B</text>
+<rect x="190" y="42" width="12" height="12" fill="#2f6fb5"/>
+<text x="208" y="53" font-size="13" fill="#333">TSM-R50</text>
+<rect x="323" y="42" width="12" height="12" fill="#d98a2b"/>
+<text x="341" y="53" font-size="13" fill="#333">VideoMAEv2-B</text>
+<text x="178" y="84" font-size="13" fill="#333" text-anchor="end">activity</text>
+<rect x="190" y="68" width="520.3" height="11" fill="#2f6fb5"/>
+<text x="716.3" y="78" font-size="11" fill="#555">86.7</text>
+<rect x="190" y="82" width="546.1" height="11" fill="#d98a2b"/>
+<text x="742.1" y="92" font-size="11" fill="#555">91.0</text>
+<text x="178" y="118" font-size="13" fill="#333" text-anchor="end">eating</text>
+<rect x="190" y="102" width="506.6" height="11" fill="#2f6fb5"/>
+<text x="702.6" y="112" font-size="11" fill="#555">84.4</text>
+<rect x="190" y="116" width="520.0" height="11" fill="#d98a2b"/>
+<text x="716.0" y="126" font-size="11" fill="#555">86.7</text>
+<text x="178" y="152" font-size="13" fill="#333" text-anchor="end">drinking</text>
+<rect x="190" y="136" width="369.2" height="11" fill="#2f6fb5"/>
+<text x="565.2" y="146" font-size="11" fill="#555">61.5</text>
+<rect x="190" y="150" width="369.2" height="11" fill="#d98a2b"/>
+<text x="565.2" y="160" font-size="11" fill="#555">61.5</text>
+<text x="178" y="186" font-size="13" fill="#333" text-anchor="end">prolonged_stationary</text>
+<rect x="190" y="170" width="491.6" height="11" fill="#2f6fb5"/>
+<text x="687.6" y="180" font-size="11" fill="#555">81.9</text>
+<rect x="190" y="184" width="466.7" height="11" fill="#d98a2b"/>
+<text x="662.7" y="194" font-size="11" fill="#555">77.8</text>
+<text x="178" y="220" font-size="13" fill="#333" text-anchor="end">grooming</text>
+<rect x="190" y="204" width="33.4" height="11" fill="#2f6fb5"/>
+<text x="229.4" y="214" font-size="11" fill="#555">5.6</text>
+<rect x="190" y="218" width="233.3" height="11" fill="#d98a2b"/>
+<text x="429.3" y="228" font-size="11" fill="#555">38.9</text>
+<text x="178" y="254" font-size="13" fill="#333" text-anchor="end">toileting</text>
+<rect x="190" y="238" width="600.0" height="11" fill="#2f6fb5"/>
+<text x="796.0" y="248" font-size="11" fill="#555">100.0</text>
+<rect x="190" y="252" width="257.2" height="11" fill="#d98a2b"/>
+<text x="453.2" y="262" font-size="11" fill="#555">42.9</text>
+<text x="178" y="288" font-size="13" fill="#333" text-anchor="end">abnormal</text>
+<rect x="190" y="272" width="233.3" height="11" fill="#2f6fb5"/>
+<text x="429.3" y="282" font-size="11" fill="#555">38.9</text>
+<rect x="190" y="286" width="266.6" height="11" fill="#d98a2b"/>
+<text x="462.6" y="296" font-size="11" fill="#555">44.4</text>
+<line x1="790" y1="60" x2="790" y2="318" stroke="#d0d0d0"/>
+<text x="790" y="336" font-size="11" fill="#777" text-anchor="end">单位：%</text>
+</svg>

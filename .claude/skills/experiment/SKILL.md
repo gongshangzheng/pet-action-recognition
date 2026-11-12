@@ -195,12 +195,14 @@ python3 .agents/skills/experiment/scripts/build_report.py --help   # 作者清�
 
 约定（详见 `management/experiments/README.md`；写作骨架与叙述字段见 `references/report-template.md`）：
 
-- 落点 `management/experiments/<topic>/<YYYYMMDD>-<runid>/`：`report.md`（frontmatter：title/date/run_id/status/verdict/summary/source + 正文）、`metrics.json`（series + tables）、`manifest.json`（evidence 六项 + metrics + cases）、`assets/`（案例图，作者显式选择，不自动扫）；
+- 落点 `management/experiments/<topic>/<YYYYMMDD>-<主题短名>/`：`report.md`（frontmatter：title/date/run_id/status/verdict/summary/source + 正文）、`metrics.json`（series + tables）、`manifest.json`（evidence 六项 + metrics + cases）、`assets/`（案例图，作者显式选择，不自动扫）；
+- **一主题一篇**：同一主题再做一轮就更新同一篇，不新增第二篇；版本信息只进附录「运行谱系」表（日期 / run id / 做了什么 / 执行状态 / 产物），正文按子问题组织。合并多篇时正文数字必须能在引用的产物或来源文档里找到原值，跨轮不可比的单列说明。标题写「对象 + 对照或范围」、≤24 汉字，不塞成绩与结论；
 - `status`（执行状态：complete/partial/failed）与 `verdict`（结论方向：improved/no-gain/worse/inconclusive）独立填写；
 - **正文是面向读者的文章，不是指标清单**：依次使用「背景与目标」「当前问题」「实验设计」「结果与分析」「结论与下一步」，最后提供「附录：配置与完整数据」。先介绍背景和术语，再提出问题；正文只保留能帮助判断的数值、图表和媒体并就近说明含义与限制。完整指标、精确配置、版本、权重、哈希、命令与原始来源放入附录（网页默认折叠）。不得把原始 metrics.md 直接拼进正文，也不得自动铺满指标卡片。核查数据齐全不等于文章清楚，两项均须审阅；
 - **incomplete 由脚本与后端按同一规则推导**（frontmatter 必填 + 文章章节齐全 + evidence/案例齐全 + sha256 匹配），不由作者自评；缺什么就在 diagnostics 里写什么；
 - 案例 `src` 指向 run 产物或仓库内图片，生成器复制进 `assets/` 并计算 sha256；报告 `source` 指向 run 产物路径（如 `evaluation/results/*.json`），不复制大产物；
-- 报告页在前端 `/management/experiments` 审阅（正文文章 + 折叠附录 + 结构化指标/趋势/案例 A/B）。
+- 报告页在前端 `/management/experiments` 审阅（正文文章 + 折叠附录 + 结构化指标/趋势/案例 A/B）；
+- 生成或合并后用 `python3 scripts/checks/check_experiment_reports.py` 校验：逐篇按后端同一规则判完整度，并核对正文里嵌入的 `assets/`、`media/` 是否都已在 cases 登记（未登记不会被 media 路由放行）。
 
 与 evidence 的关系：evidence 是过程记录（即时追加），报告是面向读者的结论交付（事后整理）——两者都要，不互相替代。
 
@@ -222,6 +224,8 @@ python3 .agents/skills/experiment/scripts/build_report.py --help   # 作者清�
 | 做完实验只写「完成」 | 必须有数据 + 对比 + 结论 + 上界；报告 status/verdict 如实填 |
 | 报告只报成功案例 | 案例由作者按选样规则显式选择，失败边界单列（§2） |
 | 把原始 metrics.md 拼进正文 / 自动铺满指标卡片 | 正文按报告问题组织关键数值并就近解释，完整数据进折叠附录（§5.4） |
+| 每跑一轮就新增一篇报告，主题下一堆版本目录 | 一主题一篇，版本进附录「运行谱系」，正文按子问题组织（§5.4） |
+| 正文嵌入的图/视频没登记进 cases | 登记后再嵌入，或删掉引用；`scripts/checks/check_experiment_reports.py` 会拦 |
 | 从运行编号或目录名猜造报告内容 | 缺背景/设计/解释时保留草稿提示，不从目录名推断 |
 | 过程记录等最后补 | 跑完一次立刻追加 |
 | 无效但无害的改动留在仓库 | 无收益即 revert，evidence 记根因 |

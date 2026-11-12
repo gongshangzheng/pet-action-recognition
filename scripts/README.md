@@ -5,7 +5,7 @@
 
 猫动作数据与实验入口为 `prepare_cat_action_v1.py`、`run_cat_action_v1.py`、
 `run_cat_action_batch.py`；数据读取与指标扩展在 `lib/datasets/cat_intervals.py`。
-实验协议、成绩及局限见 [训练说明](../docs/cat_action_training_v1.md)。
+实验协议、成绩及局限见 [七类区间基线报告](../management/experiments/cat-action-v1/20261025-seven-class-baseline/report.md)；`docs/cat_action_training_v1.md` 现为指向该报告的跳转页与哈希清单。
 
 ## 自动化测试
 

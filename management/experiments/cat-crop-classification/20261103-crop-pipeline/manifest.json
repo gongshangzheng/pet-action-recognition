@@ -1,0 +1,150 @@
+{
+  "evidence": {
+    "实验类型": "感知质量（画面与构图）与正确性（媒体审计、资格判定），附一次小样本分类训练",
+    "baseline 数值来源": "批处理三率（34 段，2026-09-15）；20 段小批首轮单猫规则 1/20 可用；三臂索引 214 区间；B 臂参照为同索引整帧 A 臂仅 4 轮的失败训练（不可比）",
+    "可辨识性": "媒体审计能区分帧数、FPS、尺寸、哈希与轨迹长度不一致；匿名 B/C 三路图区分切边、跳猫、抖动、文字污染与误裁；资格判定区分「多宠物 / 无可靠检测 / 可用」三类，且三分类计数与 2,710 对账",
+    "样本量": "批处理 34 段；小批 20 个唯一训练区间 / 12,174 帧；全量 2,144 段预处理、207 个猫训练区间、测试 44 区间；片段级 2,335 视频 / 7,350 片段",
+    "失败边界": "严格可用 1/20；整段有效帧 48.01%；多宠物 1,551 与无可靠检测 945 吃掉 93% 区间，其中八成帧是漏检而非真无猫；Q001 灰帧、Q012 过紧、Q016 水印放大、Q020 误裁；测试 44 样本且 support ≤21；best 检查点不可续训",
+    "结论上界": "能说明媒体链路可用、资格判定是瓶颈、B 臂在 44 区间上条件 top-1 70.45%；不能说明裁剪相对整帧的提升，也不能把 70.45% 当类别能力或产品水平"
+  },
+  "metrics": [
+    {
+      "name": "批处理成功段数",
+      "unit": "段",
+      "baseline": "—",
+      "result": "34/34",
+      "delta": "—",
+      "sample_size": "34 段白天视频",
+      "source": "results/batch/batch_report.md",
+      "limitation": "总素材仅 14.7 分钟，属管线验证规模"
+    },
+    {
+      "name": "批处理检出率 / 插值率 / 校正触发率",
+      "unit": "比率",
+      "baseline": "—",
+      "result": "0.939 / 0.905 / 0.334",
+      "delta": "—",
+      "sample_size": "34 段",
+      "source": "results/batch/batch_report.md",
+      "limitation": "插值率 0.905 是每 10 帧抽样的结构性数值，非异常"
+    },
+    {
+      "name": "小批媒体审计通过",
+      "unit": "输出",
+      "baseline": "20 段待验证",
+      "result": "40/40",
+      "delta": "—",
+      "sample_size": "20 个唯一源视频 / 12,174 帧",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20/crop_audit.json",
+      "limitation": "只证明结构、时间轴与哈希一致，不证明目标正确或构图可用"
+    },
+    {
+      "name": "预选区间严格可用",
+      "unit": "段",
+      "baseline": "20",
+      "result": "1/20",
+      "delta": "-19",
+      "sample_size": "20 个冻结训练区间",
+      "source": "同上",
+      "limitation": "严格规则偏向保守；不区分真实无猫与漏检"
+    },
+    {
+      "name": "整段源视频有效帧占比（单宠物规则）",
+      "unit": "%",
+      "baseline": "27.07（首轮单猫规则）",
+      "result": "48.01",
+      "delta": "+20.94",
+      "sample_size": "12,174 帧",
+      "source": "同上",
+      "limitation": "统计整段视频，不是人工区间内比例，也不是模型漏检率"
+    },
+    {
+      "name": "全量可用区间（猫专用索引）",
+      "unit": "段",
+      "baseline": "0",
+      "result": "207（train 131 / val 32 / test 44）",
+      "delta": "—",
+      "sample_size": "2,710 原始区间",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/full_run/index/manifest.json",
+      "limitation": "2,710 = 207 可用 + 7 狗剔除 + 1,551 多宠物 + 945 无可靠检测"
+    },
+    {
+      "name": "B 臂测试条件 top-1",
+      "unit": "%",
+      "baseline": "—",
+      "result": "70.45",
+      "delta": "—",
+      "sample_size": "44 区间（test split 442 的 9.95%）",
+      "source": "results/cat_crop_classification/gdino-crop-20261103a/gdino/test_metrics.json",
+      "limitation": "44 样本、单 seed、类别 support ≤21；不可作为类别能力或产品水平"
+    },
+    {
+      "name": "B 臂含预处理区间成功率",
+      "unit": "%",
+      "baseline": "—",
+      "result": "7.01（31/442）",
+      "delta": "—",
+      "sample_size": "test split 442 原始区间",
+      "source": "同上",
+      "limitation": "分母是全部原始区间，失败全部计入错误；与条件 top-1 是两种口径"
+    },
+    {
+      "name": "片段级渲染成功数",
+      "unit": "条",
+      "baseline": "7,350（逐帧框生成数）",
+      "result": "7,342",
+      "delta": "-8",
+      "sample_size": "2,335 个片段视频",
+      "source": "results/cat_clip_v9/render",
+      "limitation": "8 条失败因源视频实际帧数不足（decode_stop@32..58）"
+    }
+  ],
+  "cases": [
+    {
+      "id": "q003-visual-style-detector-ambiguous",
+      "kind": "image",
+      "src": "assets/b3b0768f922eaec45d017267d046fdd597ce2535040efcea570bf11d01254321.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q003，grooming，训练集区间 34–380 的起点/中点/终点三帧",
+      "selection_reason": "三帧都能看到猫、B/C 画面稳定，但严格规则仍判狗在场或目标不明——说明视觉可用不等于身份有效",
+      "sha256": "b3b0768f922eaec45d017267d046fdd597ce2535040efcea570bf11d01254321"
+    },
+    {
+      "id": "q006-only-selected-eligible-with-watermark",
+      "kind": "image",
+      "src": "assets/933f3df4c4a0099c4d2e69ce5d727aee41b8fbb951195e5c60d1140dc1ca6f9b.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q006，activity，区间 1–60",
+      "selection_reason": "20 个预选区间中唯一严格可用样本，同时暴露源水印被放大成显著文字的问题",
+      "sha256": "933f3df4c4a0099c4d2e69ce5d727aee41b8fbb951195e5c60d1140dc1ca6f9b"
+    },
+    {
+      "id": "q012-tight-body-cut",
+      "kind": "image",
+      "src": "assets/944b15509b61ce53f48eb946a20227d10ebdf77aef32e7f873229a130c5c160a.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q012，grooming，区间 57–237",
+      "selection_reason": "失败案例：身体被切边、构图过紧，且区间还被无可靠猫检测规则排除",
+      "sha256": "944b15509b61ce53f48eb946a20227d10ebdf77aef32e7f873229a130c5c160a"
+    },
+    {
+      "id": "q016-target-and-watermark",
+      "kind": "image",
+      "src": "assets/04e6e70e00f2cae5254165ea43cca594f64dc5da547f8f496afdb611663f7ac1.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q016，eating，区间 72–720",
+      "selection_reason": "猫与食盆都裁进来了，但水印被放大、末帧出现灰帧，区间共 9 个无效帧",
+      "sha256": "04e6e70e00f2cae5254165ea43cca594f64dc5da547f8f496afdb611663f7ac1"
+    },
+    {
+      "id": "q020-wrong-foreground-target",
+      "kind": "image",
+      "src": "assets/68a9d80177f192693aee0187e0ceaceed2c182afe2c7f2a1af6479d80564f76f.jpg",
+      "source_run": "gdino-crop-20261103a",
+      "input": "Q020，abnormal，区间 156–362",
+      "selection_reason": "失败案例：裁剪主要框住笼子，前景的大猫没被稳定扣住，是多宠物歧义的典型形态",
+      "sha256": "68a9d80177f192693aee0187e0ceaceed2c182afe2c7f2a1af6479d80564f76f"
+    }
+  ],
+  "diagnostics": []
+}
