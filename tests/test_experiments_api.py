@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import os
+import shutil
 import sys
 
 import pytest
@@ -17,6 +18,13 @@ _SPEC.loader.exec_module(build_report)
 from server.main import app  # noqa: E402
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _clean_fixture_topic():
+    """对拍夹具写在 management/experiments/t/ 下，用后即删，避免残留被当成真实报告。"""
+    yield
+    shutil.rmtree("management/experiments/t", ignore_errors=True)
 
 
 def _run_builder(tmp_path, slug, manifest, extra=()):
@@ -82,7 +90,6 @@ def test_complete_report_roundtrip(tmp_path):
 
 
 def test_broken_case_marks_incomplete(tmp_path):
-    import shutil
     shutil.rmtree("management/experiments/t", ignore_errors=True)
     manifest = {
         "report": {"summary": "s", "question": "q", "limitations": "l", "conclusion": "c"},
@@ -154,7 +161,6 @@ def test_narrative_template_roundtrip(tmp_path):
 
 
 def test_legacy_template_still_valid(tmp_path):
-    import shutil
     shutil.rmtree("management/experiments/t", ignore_errors=True)
     # 旧八章清单（question/limitations）：生成器旧字段别名 → 新模板；再手工改写为旧八章验证 legacy 识别
     manifest = _narrative_manifest(tmp_path)
@@ -209,7 +215,6 @@ c
 
 
 def test_unmatched_template_marked_incomplete(tmp_path):
-    import shutil
     shutil.rmtree("management/experiments/t", ignore_errors=True)
     _run_builder(tmp_path, "20261102-noskeleton", _narrative_manifest(tmp_path))
     report_path = "management/experiments/t/20261102-noskeleton/report.md"
