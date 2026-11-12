@@ -88,3 +88,6 @@ data/papers.db
 # live 模块演示资源（未跟踪；live/ 路径下 demos/ 不入库）
 /live/
 management/experiments/*/media/
+
+# 实验报告 API 对拍测试的临时夹具（tests/test_experiments_api.py 运行期创建，勿入库）
+/management/experiments/t/

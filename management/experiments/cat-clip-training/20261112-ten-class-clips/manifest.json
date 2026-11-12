@@ -255,6 +255,33 @@
       "input": "drinking 判成 eating（置信度 0.990）：夜间红外，猫低头贴地，水碗只露出一角",
       "selection_reason": "drinking 的短板形态：夜视加低头体态，容器信息缺失时只能靠体态猜",
       "sha256": "9bf077df4c02be6cd75d49c5411ec646dec056b15974ca4a06e8bde9ba5ce0cf"
+    },
+    {
+      "id": "vid-train-scratching",
+      "kind": "video",
+      "src": "media/683acf3ac60e5a0c825fef5c263209b41102dd36455593cb9f25c83fcc2d5a44.mp4",
+      "source_run": "cliperr-20261112a",
+      "input": "训练标签 scratching（同一条录制 10–69）：狗直立、前爪抵住门框反复扒",
+      "selection_reason": "训练集证据的第一段：这个构型在训练数据里被标成 scratching，模型学到的正是它",
+      "sha256": "683acf3ac60e5a0c825fef5c263209b41102dd36455593cb9f25c83fcc2d5a44"
+    },
+    {
+      "id": "vid-train-activity-same-take",
+      "kind": "video",
+      "src": "media/2c2152274a7448b8e110f437322628f329ac1127424c6712d85501db877a3cb8.mp4",
+      "source_run": "cliperr-20261112a",
+      "input": "训练标签 activity（同一条录制 426–485）：扒完走开并转身",
+      "selection_reason": "同一录制后半段标 activity 且确实不同动作，说明这条录制本身分得开，问题不在录制粒度",
+      "sha256": "2c2152274a7448b8e110f437322628f329ac1127424c6712d85501db877a3cb8"
+    },
+    {
+      "id": "vid-train-activity-pawing-inside",
+      "kind": "video",
+      "src": "media/a8dcbf8f73dddf601bb87445cfa6645400abcf4162b0b2599386951aa4263de9.mp4",
+      "source_run": "cliperr-20261112a",
+      "input": "训练标签 activity（另一条录制 138–197）：末段同样出现狗直立扒玻璃门",
+      "selection_reason": "同构型被包在 activity 区间里——「构型=类别」错配的直接证据",
+      "sha256": "a8dcbf8f73dddf601bb87445cfa6645400abcf4162b0b2599386951aa4263de9"
     }
   ],
   "diagnostics": []
