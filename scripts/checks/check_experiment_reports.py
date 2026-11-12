@@ -27,6 +27,8 @@ from server.parsers.experiments_parser import (  # noqa: E402
     report_problems,
 )
 
+MEDIA_REF = __import__("re").compile(r"\((assets|media)/([0-9A-Za-z._-]+)\)")
+
 EXPERIMENTS_DIR = ROOT / "management/experiments"
 
 
@@ -66,6 +68,29 @@ def main() -> int:
             "incomplete": True,
             "problems": missing["missing"],
         })
+
+    # 正文里引用的 assets/ 与 media/ 必须在 manifest cases 中登记：
+    # 未登记的媒体不会被 media 路由放行，页面会 404。
+    for row in rows:
+        report_dir = root / row["topic"] / row["slug"]
+        report_path = report_dir / "report.md"
+        manifest_path = report_dir / "manifest.json"
+        if not report_path.is_file() or not manifest_path.is_file():
+            continue
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            row["problems"].append(f"manifest.json 读取失败：{exc}")
+            row["incomplete"] = True
+            continue
+        registered = {str(c.get("src", "")) for c in manifest.get("cases", []) if isinstance(c, dict)}
+        refs = {f"{kind}/{name}" for kind, name in MEDIA_REF.findall(report_path.read_text(encoding="utf-8"))}
+        # 只查「正文引用了但没登记」这一向：未登记的媒体不会被路由放行，页面会 404。
+        # 反向（登记了但正文没嵌入）是正常情况——案例由报告页的案例区渲染。
+        for missing in sorted(refs - registered):
+            row["problems"].append(f"正文引用未登记为案例：{missing}")
+        if refs - registered:
+            row["incomplete"] = True
 
     failed = [r for r in rows if r["incomplete"]]
 
