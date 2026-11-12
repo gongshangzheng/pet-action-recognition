@@ -89,8 +89,20 @@ def wilson(successes: int, total: int, z: float = 1.96) -> tuple[float, float]:
     return max(0.0, (centre - margin) * 100), min(100.0, (centre + margin) * 100)
 
 
+def load_json(path: Path, what: str) -> Any:
+    """读取 JSON 并在坏输入时给出可定位的失败，而不是抛裸 OSError/JSONDecodeError。"""
+    try:
+        return json.loads(path.read_text())
+    except OSError as error:
+        raise SystemExit(f"读不到{what}：{path}（{error}）") from error
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"{what}不是合法 JSON：{path}（{error.msg}）") from error
+
+
 def load_metrics(path: Path) -> dict[str, Any]:
-    data = json.loads(path.read_text())
+    data = load_json(path, "测试指标文件")
+    if not isinstance(data, dict):
+        raise SystemExit(f"{path} 顶层不是对象，不是预期的 test_metrics.json")
     for key in ("classes", "per_class", "confusion_matrix", "predictions"):
         if key not in data:
             raise SystemExit(f"{path} 缺少字段 {key}，不是预期的 test_metrics.json")
@@ -102,6 +114,13 @@ def per_class_table(data: dict[str, Any]) -> list[dict[str, Any]]:
     preds = data["predictions"]
     matrix = data["confusion_matrix"]
     total = len(preds)
+    # 片段不是独立样本：同一标注区间会切出多个 60 帧窗口，且都会进同一个 split。
+    # 先按类别收集「区间键」，后面报 support 时同时给区间数。
+    intervals_by_label: dict[int, set[str]] = {}
+    for prediction in preds:
+        parts = prediction["sample_id"].rsplit(":", 2)
+        interval_key = f"{parts[-2]}@{parts[0]}" if len(parts) == 3 else prediction["sample_id"]
+        intervals_by_label.setdefault(prediction["label"], set()).add(interval_key)
     rows: list[dict[str, Any]] = []
     for index, name in enumerate(classes):
         support = sum(1 for p in preds if p["label"] == index)
@@ -121,6 +140,7 @@ def per_class_table(data: dict[str, Any]) -> list[dict[str, Any]]:
             "tp": tp,
             "fp": predicted - tp,
             "fn": errors,
+            "distinctIntervals": len(intervals_by_label.get(index, ())),
             "precisionPercent": round(precision, 2),
             "precisionCi95": [round(precision_ci[0], 2), round(precision_ci[1], 2)],
             "recallPercent": round(recall, 2),
@@ -567,6 +587,7 @@ def main() -> None:
             "sourceMetrics": str(args.metrics),
             "classes": data["classes"],
             "samples": data.get("samples"),
+            "distinctIntervals": len({p["sample_id"] for p in data["predictions"]}),
             "top1Percent": round(data.get("top1_acc_percent", 0.0), 2),
             "macroF1Percent": round(data.get("macro_f1_percent", 0.0), 2),
             "balancedAccPercent": round(data.get("balanced_acc_percent", 0.0), 2),
@@ -596,7 +617,7 @@ def main() -> None:
         pairs = sorted({c["pair"] for c in cases})
         print(f"写入 {args.out}：{len(cases)} 个候选，覆盖 {len(pairs)} 个混淆对")
     elif args.command == "media":
-        cases = json.loads((args.analysis / "cases.json").read_text())
+        cases = load_json(args.analysis / "cases.json", "案例清单")
         selected = {token.strip() for token in args.select.split(",") if token.strip()}
         if selected:
             cases = [c for c in cases if c["id"] in selected]
