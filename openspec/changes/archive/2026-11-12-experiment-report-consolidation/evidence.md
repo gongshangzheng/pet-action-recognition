@@ -83,3 +83,14 @@
 - 用户确认收尾。8 篇主题报告已合并进 main（`cbaf3308`），worktree 与分支已删，main 工作区 6 处残留已清。
 - delta spec `experiment-report-catalog` 已同步到主 spec（`openspec/specs/experiment-report-catalog/spec.md`），四条要求：一主题一篇、合并报告交代各轮谱系、历史记录吸收后保留可达路径、完整度可判定。
 - **两项未完成，按用户裁定移交**：`10.5` 前端逐篇目视（数据层已由校验脚本覆盖，剩排版与播放）；`10.8` 与 `work/pet-pipeline` 对齐（该分支仍带 6 个旧报告目录与自己的 base-crops 报告，合回 main 前须按一主题一篇并入）。
+
+### 2026-11-12：用户指出归档过早，重新打开
+
+- **用户判断**：报告页还留着「案例对比」区，媒体被汇总到正文之外，这不是「合并进主内容」，因此 change 不应归档。
+- **处理**：把 change 从 `archive/` 移回 `openspec/changes/`，新增第 11 节任务，按「媒体只在正文展示」重做。
+- **改动**：
+  - 前端 `ExperimentsPage.vue` 删除整段案例区（模板、`additionalCases`、`compareMode`、`toggleIndex`、`casePickerOptions`、`activeCase`、`cycleCase`、`assetUrl`、`isVideoCase` 与 `.case-*` 样式），`npx vite build` 通过；`manifest.cases` 保留为媒体登记与完整度判据（media 路由只放行登记过的文件），不再是展示入口。
+  - 八个主题报告把案例媒体按语义嵌进正文对应段落；`cat-clip-training/20261112-videomaev2b-base-crops`（并发会话产出）补了它唯一的逐类 F1 图。注意该文件在 `work/pet-pipeline` 分支上有自己的版本，合并时以本主线版本为准。
+  - `check_experiment_reports.py` 改为双向一致：正文引用必须登记，登记必须嵌入正文。
+  - 约定与规格同步：README、experiment skill §5.4、`experiment-report-catalog` 新增「媒体只在正文展示」要求与两条场景。
+- **回归**：`pytest tests/test_experiments_api.py` 8 passed；`npx vite build` 通过；9 篇报告 0 incomplete。

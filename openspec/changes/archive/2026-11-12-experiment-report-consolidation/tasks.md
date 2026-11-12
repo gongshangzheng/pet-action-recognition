@@ -63,3 +63,11 @@
 - [x] 10.6 在 evidence 写「数字核对清单」：每篇正文的关键数字 → 出处。
 - [x] 10.7 与 main 的并发改动对齐后合并回主干（`cbaf3308`），删除 `work/experiments-reports` 分支与 worktree，并清掉 main 工作区 6 处残留（`t/`、`20261112-yolo11s-base-s5/`、旧的 `teacher-detection/20261111-gdino-base-vs-tiny/`、`video-data-issues/` 根级散件与 3 个只剩 `assets/` 的空目录）。证据：`git log --oneline -1 main`、`git worktree list`。
 - [ ] 10.8 【移交】与 `work/pet-pipeline` 对齐（前置：主线推进前完成）：该分支仍有 6 个被合并掉的旧报告目录（cliperr-a、clipv9-b、yolo11s-base-s5、teacher-detection 旧名、tracking v1/v2 等）与它自己的 `cat-clip-training/20261112-videomaev2b-base-crops`。该分支合回 main 时这些路径会再次产生 modify/delete 冲突，需要按「一主题一篇」把 base-crops 并入 `20261112-ten-class-clips`，其余保留删除。
+
+## 11. 媒体只在正文展示（2026-11-12 用户裁定：案例区不能独立成块）
+
+- [x] 11.1 移除报告页的「案例对比」区：删除模板区块、`additionalCases`/`compareMode`/`toggleIndex`/`assetUrl`/`isVideoCase` 等状态与样式，页面只保留正文与折叠附录。验证：`npx vite build` 通过。
+- [x] 11.2 八个主题报告把 cases 里的媒体按语义位置嵌入正文（案例图不再只在末尾汇总）；同期把并发会话的 `20261112-videomaev2b-base-crops` 也补齐。
+- [x] 11.3 校验脚本改为双向一致：正文引用必须登记（否则 404），登记必须嵌入正文（否则读者看不到）。判据：9 篇全绿。
+- [x] 11.4 同步约定与规格：`management/experiments/README.md`、experiment skill §5.4、`experiment-report-catalog` 新增「媒体只在正文展示」要求（含两条场景）。
+- [x] 11.5 回归：`pytest tests/test_experiments_api.py` 8 passed；`scripts/checks/check_experiment_reports.py` 9 篇 0 incomplete。

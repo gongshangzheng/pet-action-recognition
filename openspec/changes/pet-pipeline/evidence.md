@@ -346,3 +346,95 @@
 在 pet 以 `lib.datasets.video_manifest` 生成 `~/datasets/pet_pipeline/inventory/raw-statistics-20261109a/videos/`。运行前确认源目录存在、输出目录不存在、远端与本地 HEAD 均为 `0d61179fb5dae5572e79b073e869c1ee780dd589`，清单模块哈希与 1.10 交付版本一致。资源预检通过，使用 `remote_run.sh` 守卫执行，CPU 上限 200%、RSS 2000 MiB、线程 2、超时 600 秒，退出码 0；未使用 GPU 进行处理。运行日志见 `results/pet_pipeline/raw-statistics-20261109a/video-manifest-run.txt`。
 
 独立以 `find` 枚举符合扩展名及常规文件条件的源路径并逐项比对：源文件 2737、清单 2737、唯一 ID 2737，源目录独有和清单独有路径均为 0；`manifest.json` 记录源根、数量及 JSONL SHA-256 `262ff653593452a42ad18b19478b5d631aa8ef6227545d8afed9e511e888b1fd`，复算一致。核验记录见 `results/pet_pipeline/raw-statistics-20261109a/video-manifest-verification.txt`。该路径快照未解码视频或验证内容哈希，不能证明媒体可读或完整。勾选前 0.1–0.7、1.1–1.10 均已完成；未执行 1.12。
+
+## 1.12 全量人工区间关联
+
+使用 pet 已部署的 `lib.datasets.interval_manifest`，以 1.11 视频清单和 `~/pet-final/datasets/cat_raw/annotations/intervals.csv` 为输入，明确指定 CSV 视频路径前缀 `videos`，输出 `~/datasets/pet_pipeline/inventory/raw-statistics-20261109a/intervals/interval_manifest.json`。运行前确认目标目录不存在、模块 SHA-256 与本地一致，远端 HEAD 为本地 HEAD 的祖先；自动资源预检通过后以 `remote_run.sh` 执行，CPU 上限 200%、RSS 2000 MiB、线程 2、超时 600 秒，退出码 0。日志见 `results/pet_pipeline/raw-statistics-20261109a/interval-manifest-run.txt`。
+
+逐原始 CSV 行号核对字段和关联路径，3927 条源行全部关联，未匹配 0，视频清单 2737 条全部保留：2573 个有标注，164 个无标注。输入 CSV SHA-256 为 `80da23af3c6a6db4bac739fc2c1dc8714b8b5dc063b55abe7c9762932eeb04ff`，关联结果 SHA-256 为 `59e9b1888b286458cfa397bebc73ee20ff096723a663d86f0b8aca5444bead15`；输入清单和 metadata 哈希均一致。逐项核账记录见 `results/pet_pipeline/raw-statistics-20261109a/interval-manifest-verification.txt`。无标注不代表负样本；本项未检查视频可解码性，也未审定标注内容或端点历史语义。勾选前 0.1–0.7、1.1–1.11 均已完成；未执行 1.13。
+
+## 1.13 全量视频标称属性统计
+
+pet 上运行 `lib.datasets.video_statistics`，使用 1.11 的清单、既有 `base-raw-20261109a/audit-classified.json` 及明确前缀 `videos`，输出 `~/datasets/pet_pipeline/statistics/raw-statistics-20261109a/videos/video_statistics.json`。执行前目标目录不存在，远端与本地 HEAD 一致，模块哈希一致；容量预检通过，`remote_run.sh` 设 CPU 200%、RSS 4000 MiB、线程 2、超时 1800 秒。日志 `results/pet_pipeline/raw-statistics-20261109a/video-statistics-run.txt` 记录 FFmpeg `moov atom not found` 和逐文件错误：`event_20260508_201243.mp4` 为 `open_failed`。统计扫描完成后程序按未知属性合同返回 1，守卫记录 `command finished rc=1`，remote_run 将命令失败映射为 5；不是全成功，也不是资源守卫终止。
+
+核账结果：2737 个清单视频均有记录，2736 个报告属性已知、1 个未知；未知时长为 null，不以零替代。名义时长仅对 2736 个已知项汇总，总计 70685.26227928976 秒，中位数 17.665690104166664 秒；结果是容器报告帧数除 FPS，不证明完整解码。15 条历史诊断全部匹配，未匹配 0：14 条历史首帧不可读和 1 条中途截断；它们不是当前完整解码检查，且未重新计算源媒体哈希。已知属性不意味着首帧可读。输出 SHA-256 `6c22f85c79905e1c1d12e6be03ea0838d39bdbab057f54f6aea34f314b515ee1`，清单及历史审计输入哈希均核对，逐视频结果和汇总分母核验见 `results/pet_pipeline/raw-statistics-20261109a/video-statistics-verification.txt`。勾选前 0.1–0.7、1.1–1.12 均已完成；未执行 1.14。
+
+## 1.14 全量原始区间统计
+
+pet 上以 1.12 区间关联文件、1.13 视频属性文件运行 `lib.datasets.interval_statistics`，输出 `~/datasets/pet_pipeline/statistics/raw-statistics-20261109a/intervals/interval_statistics.json`。运行前目标目录不存在，本地与远端 HEAD、模块哈希一致；通过自动资源预检后使用 `remote_run.sh`，CPU 上限 200%、RSS 2000 MiB、线程 2、超时 600 秒。扫描及产物生成后程序因无效区间按合同返回 1，guard 记录命令 rc=1，remote_run 映射为 5；不是守卫终止，也不表示数据全部有效。逐文件错误和运行记录见 `results/pet_pipeline/raw-statistics-20261109a/interval-statistics-run.txt`。
+
+按零基双端包含处理协议逐行核账：3927 条关联源行全部保留、未匹配 0；2488 条时长已知，1439 条标记 `end_out_of_bounds`，涉及 1365 个视频，时长为 null，不裁剪也不计零。输出含 12 个原始标签的区间数、视频数、已知/未知分母及已知时长分布；各行源字段、输入哈希、分类数及已知时长总和已核对，记录见 `results/pet_pipeline/raw-statistics-20261109a/interval-statistics-verification.txt`。结果 SHA-256 `91188d46328a7db0fe9883151b54fdc96496b700c95d88c0e7000c594e553275`。越界相对容器报告帧数与选定协议判定，不证明实际解码长度或越界根因；原始区间累计时长包含重叠，不是覆盖并集。勾选前 0.1–0.7、1.1–1.13 均已完成；未执行 1.15。
+
+## 共享划分的部分用户裁定
+
+用户确定两路线共用 train/val/test 目标比例 80%/10%/10%，同一源视频截出的全部区间和片段必须归入同一 split；检测路线的同源画面亦使用同一划分。实际分组比例和统计单位须记录，不能把目标比例视为已生成结果。是否隔离同一天不同源视频，以及日期无法确认等未分配项如何处理仍待用户裁定；不能把文件名日期当成已证实的真实日期或设备身份。历史动作分类基线使用不同划分，比较时须披露。仅更新 design 和数据 delta，未更改任务结构，1.19 的其余裁定未完成，不勾选。
+
+## 1.15 全量标注覆盖统计
+
+pet 的 `lib.datasets.annotation_coverage` 消费已核验的区间和视频属性文件，输出 `~/datasets/pet_pipeline/statistics/raw-statistics-20261109a/coverage/annotation_coverage.json`。执行前输出目录不存在、远端与本地 HEAD 及模块哈希一致；自动预检通过，守卫限制 CPU 200%、RSS 2000 MiB、线程 2、600 秒。因数据错误程序返回非零，remote_run 返回 5；逐项错误和 guard 原始退出码见 `results/pet_pipeline/raw-statistics-20261109a/coverage-run.txt`。
+
+2737 视频中 1371 视频覆盖可完整计算，1366 未知；错误含 1439 条区间越界、1 个视频缺帧数及 FPS，未匹配标注 0。仅以 1371 个可计算视频为分母，报告帧数 485491、标注并集 247916 帧、未标注 237575 帧；不代表全集覆盖率，未标注不等于负样本。逐视频并集和补集、汇总及输入哈希的核对见 `results/pet_pipeline/raw-statistics-20261109a/coverage-verification.txt`，产物 SHA-256 `33cf6a0c1632e2280e159c641df57ac99a9d91a5d3cf02b493211c41bd3f7b48`。依据容器名义帧范围，不代表视频均可完整解码。勾选前 0.1–0.7、1.1–1.14 均完成；未执行 1.16。
+
+## 1.16 全量标注重叠清单
+
+pet 上用 `lib.datasets.annotation_overlaps` 读取 1.14 统计，生成 `~/datasets/pet_pipeline/statistics/raw-statistics-20261109a/overlaps/annotation_overlaps.json`。运行前新目录不存在，远端与本地 HEAD 及模块哈希一致；自动预检通过，守卫设置 CPU 200%、RSS 2000 MiB、线程 2、600 秒。扫描生成产物后因已保留的错误，程序返回非零，remote_run 返回 5；逐项错误及 guard 原始退出码见 `results/pet_pipeline/raw-statistics-20261109a/overlaps-run.txt`。
+
+独立遍历有效区间配对核对双方原行、标签、闭区间交集及待审去重集合：同类 0 对，异类 36 对，涉及 27 视频、65 条受影响区间，均 pending。1439 条越界区间按合同排除配对并留在 errors，未匹配 0，因此结果 `complete=false`，不能推断全体标注仅有这些重叠或都可训练。产物 SHA-256 `86ba6b0ad35b3e259bbb208df2f5c6e15fe4c43b8b3203168c8370d2fc3616b0`，独立核对见 `results/pet_pipeline/raw-statistics-20261109a/overlaps-verification.txt`。勾选前 0.1–0.7、1.1–1.15 均已完成；未执行 1.17。
+
+## 1.17 原始数据卡
+
+发布 `docs/pet-raw-data-card.md`，引用 pet 全量清单、关联、视频属性、区间、覆盖和重叠统计路径及其 SHA-256，逐类数字来自 1.14 产物；记录未知分母、1439 越界区间、历史媒体诊断和不完整重叠范围。来源披露引用已归档来源核验证据，明确当前源端和旧附件未核验，不将历史副本核验冒充当前源端核验。数据卡不将未标注视为负样本，不将标称属性视为完整解码。核对产物哈希、相对证据链接和 `openspec validate pet-pipeline --strict`；勾选前 0.1–0.7、1.1–1.16 均完成，未执行 1.18。
+
+## 1.18 数据卡入口
+
+根目录 `AGENTS.md` 新增指向 `docs/pet-raw-data-card.md` 的入口，目标文件存在；勾选前 0.1–0.7、1.1–1.17 均完成。1.19 当时的事件日隔离与未分配项仍待用户裁定。
+
+## 1.19 共享划分用户裁定
+
+用户确定两路线共同采用 train/val/test 目标比例 80%/10%/10%，同一源视频生成的所有区间、片段和检测画面必须处于同一个 split。同一天的不同源视频可分入不同 split，不强制事件日隔离；仍按任务 1.21 审计并披露同日跨集合情况。用户进一步明确，日期、摄像头或家庭来源不明不妨碍分配；以完整清单源视频路径作为分组身份。不同路径是否含重复视频尚未核验，不能声称跨路径重复已隔离。比例的具体分母、种子和实际结果在划分生成时明确记录，不以目标比例冒充已生成的结果。design、数据 delta 和数据卡同步记录决定；前序 0.1–0.7、1.1–1.18 已完成。
+
+## 1.20 实施约定
+
+用户确认以索引记录划分，不复制或移动视频，并批准固定种子 0、以全部源视频为分母、80/10/10 的方案。design 记录正式模块、输入校验、索引格式、新版本目录、分配取整、Git 交付及逐项验证；不改变任务结构或提前执行 1.21。
+
+远端测试先于实现得到 1 failed、1 passed，失败因模块缺失；第二条初版仅断言非零，无法构成有效 RED，后补断言具体输入错误。生产模块及测试经 Git 提交并交付 pet，远端 HEAD 与本地 `302a842ed9aa868228edc3400aff2a16ad902627` 一致，pytest 在守卫下 6 passed，记录 `results/pet_pipeline/raw-statistics-20261109a/video-split-test.txt`。误在本机尝试 pytest 时系统 Python 无 pytest，未安装依赖、未执行测试。
+
+预检通过后在 pet 守卫下生成 `~/datasets/pet_pipeline/splits/raw-statistics-20261109a/split.json`，退出码 0，训练 2189、验证 273、测试 275、未分配 0。索引逐路径覆盖 2737 个视频，输入清单哈希和种子核对一致，索引 SHA-256 `c920c88498d4d75576e9c28f108637891987051e881c9253e0bab758439062f6`；日志及独立核对见 `results/pet_pipeline/raw-statistics-20261109a/video-split-{run,verification}.txt`。第一次独立核验错误地使用 floor(90% N) 作为验证终点，而设计是 floor(80% N)+floor(10% N)，因此断言失败；修正核验公式后逐项通过，未改索引。版本拒绝覆盖，不声称操作系统强制只读。前序 0.1–0.7、1.1–1.19 均已完成；1.21 为独立审计。
+
+## 1.21 共享划分隔离审计
+
+独立读取 split 与 1.12 全量区间关联：2737 个源视频各仅有一个 split，同视频跨集合违例 0；3927 条标注均可按源路径继承划分，其中 train 3152、val 386、test 389，未匹配标注和未分配视频均为 0。统计只是分配，不表示区间符合训练资格；实际派生片段尚未生成，不能声称已审计未来产物。
+
+以文件名 `event_YYYYMMDD_` 提取的日期有 124 个，102 个日期的视频跨集合，0 个视频无法按此规则提取日期；这符合用户允许同日不同源视频跨 split 的决定，但文件名日期不证明真实拍摄日期、设备或家庭。逐日跨集合视频清单见 `results/pet_pipeline/raw-statistics-20261109a/video-split-isolation-audit.txt`，索引 SHA-256 为 `c920c88498d4d75576e9c28f108637891987051e881c9253e0bab758439062f6`。跨不同路径的重复内容尚未核验。前序 0.1–0.7、1.1–1.20 均已完成。
+
+## 1.22 旧带标注清单抽样
+
+pet 旧 `results/cat_pipeline/videos.jsonl` 共 2573 行，SHA-256 `cb74de9fa89569d20fbc399536ab3ac32b091afc3dcd0f0622dc6b814bd7bdb9`。以 `random.Random(0).sample` 从行号中抽取 20 条，逐项核对 `~/pet-final/datasets/cat_raw/` 下源路径，20 条均为存在的常规文件。行号、路径及结果见 `results/pet_pipeline/raw-statistics-20261109a/old-manifest-sample.txt`。这只验证存在性，不证明视频可解码，也不验证历史检测、渲染、跟踪或旧 split 状态；旧清单只覆盖带标注视频，不是全视频清单。前序 0.1–0.7、1.1–1.21 均已完成。
+
+## 教师选帧任务拆分
+
+用户同意将旧 2.9 拆为共享帧选择与正式教师检测入口，后者验证真实小视频的选帧调用，不提前实现缓存。旧 2.10 及之后第 2 节任务顺延，原已勾选状态和原文保持；旧号映射见 `task-map.md`。设计为新 2.9 确定 `lib/detection/anchors.py` 和 `tests/test_detection_frame_selection.py`，仅处理零基帧号，不运行媒体或模型。拆分前后完成数均为 69。
+
+## 2.9 共享帧选择
+
+`lib/detection/anchors.py::select_frame_indices` 在全视频和零基双端包含区间上选择相同的 `0,5,10,...` 相位；空视频及区间无锚点返回空范围，越界及无效区间抛错。本任务不读取视频或调用检测模型。测试先部署 pet 执行，因模块不存在收集失败（红灯；不是行为断言失败），记录 `results/pet_pipeline/raw-statistics-20261109a/detection-frame-selection-red.txt`；实现经 Git 推送后远端 HEAD 与本地 `4d913ccc77defc309e8e95e52f4b5e89653ea031` 一致，资源预检与守卫下测试 2 passed，涵盖全视频、未对齐和单帧区间、无锚点、空视频及非法边界，记录 `results/pet_pipeline/raw-statistics-20261109a/detection-frame-selection-green.txt`。本机 ruff 两文件通过；LSP 两文件中一文件 clean、另一文件未确认，不能称全部 LSP clean。前序 0.1–0.7、1.1–1.22、2.1–2.8 均已完成。
+
+## 2.10 正式教师检测入口
+
+用户确认 `lib/detection/teacher.py` 的单视频、模型目录、设备和阈值输入，stdout 按实际检测帧输出 JSON 候选，不实现缓存。`detect_video` 顺序读取实际帧，调用 2.9 的全局相位选择，向已有检测器传 BGR 画面和 cat/dog 类别，空检测仍输出空数组；流式结果不等于缓存版本或质量验收。已知中途截断可能被读取器当作 EOF，入口不声称扫描结束即证明源视频完整。
+
+真实 MJPG 小视频及记录调用的昂贵模型替身测试先因模块不存在收集报错；实现后在 pet 资源守卫下运行 `tests/test_teacher_detection.py tests/test_detection_frame_selection.py` 为 3 passed，确认 0、5、10 帧实际送到替身、空结果保留。另用已存在的 GroundingDINO-base 权重、cuda:0、两个阈值 0.3 对 55 帧源视频做单视频实际推理；预检通过、guard 命令 rc0，输出 11 条检测记录、帧为 0–50 每 5 帧，候选数为 2、2、2、2、2、2、2、2、2、1、2。未做人工质量核验，也未证明媒体完整解码；真实推理日志和替身测试分别见 `results/pet_pipeline/raw-statistics-20261109a/teacher-detection-real.txt` 与 `teacher-detection-green.txt`，RED 见同目录 `teacher-detection-red.txt`。入口经 Git 提交及推送，远端 checkout HEAD 与本地 `d2c45b9d689b2391ce9ba44785cb757a0dcacfce` 一致；本机 ruff 与编译检查通过，主动 LSP 未确认 clean，不宣称全绿。推理结束后 GPU compute 列表为空。前序 0.1–0.7、1.1–1.22、2.1–2.9 均已完成。
+
+## 2.11 指纹方案
+
+用户确认先实现通用指纹与复用校验，再由下一任务保存原始候选。设计记录文件哈希、检测器类型、显式参数与实际帧覆盖，拒绝旧格式和不匹配；本项不迁移旧缓存、不预先实现写入。
+
+`lib/detection/fingerprint.py` 计算源、权重、配置哈希并记录模型族及显式参数；`lib/detection/cache.py` 对比身份并检查请求帧确有记录，空数组与缺帧区分。远端真实小文件测试验证视频、权重、配置、参数变化拒绝复用，缺帧和旧格式拒绝；测试先因模块不存在在收集时失败，再实现后与选帧、教师入口测试合计 5 passed。日志 `results/pet_pipeline/raw-statistics-20261109a/detection-cache-{red,green}.txt`；远端 HEAD 与本地 `7498775e0f77f6a5a3d70ddb829e26f32b51409e` 一致，本机 ruff 通过。初次 push 因代理连接失败，清除代理变量后成功；后续 SSH 短暂超时，恢复后正常完成预检和验证。未读取或改写真实旧缓存。前序 0.1–0.7、1.1–1.22、2.1–2.10 已完成。
+
+## 2.12 单视频原始候选保存
+
+用户确认每个源视频一个文件、检测版本独立目录。`lib/detection/cache.py::write_video_cache` 写入源视频 ID、指纹及逐帧原始候选，实际空检测为空数组，缺帧不写入；以视频 ID 的 SHA-256 命名，排他创建并拒绝覆盖。调用方提供已存在的版本目录；本项不生成目录级版本清单、不读取真实旧缓存，也未将文件输出接入正式教师 CLI。小文件验证同名视频区分、框及空帧、缺帧拒绝复用和不覆盖；pet 测试先因写入接口不存在收集失败，随后与身份及教师入口测试共 4 passed。证据见 `results/pet_pipeline/raw-statistics-20261109a/detection-cache-write-{red,green}.txt`；本机 ruff 通过，主动 LSP 一文件 clean、一文件未确认。远端 HEAD 显式 checkout 与本地 `59111d7b77b1d9c0508849b35924b733ea86aea5` 一致。前序 0.1–0.7、1.1–1.22、2.1–2.11 均已完成。
+
+## 数据产物目录整理要求
+
+用户要求在 change 中明确：`results/` 里按新规范应属于数据目录的可复用产物须迁入正确位置；Tiny 历史检测数据应与 Base 按模型和版本分开管理。用户决定不保留 Tiny 旧路径，现行引用更新至新位置。已在 proposal/design 记录分类、盘点、核验与历史证据边界；具体数据清单及目标路径仍待盘点和审阅。本次只修改规划，不移动、删除或改写服务器产物，不增删或重排 tasks。
