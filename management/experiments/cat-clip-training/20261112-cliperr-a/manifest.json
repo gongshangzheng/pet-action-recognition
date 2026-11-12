@@ -1,0 +1,286 @@
+{
+  "evidence": {
+    "实验类型": "感知质量（逐类错误分析与归因，不训练）",
+    "baseline 数值来源": "clipv9-b 测试产物 results/cat_clip_v9/videomaev2_b/test_metrics.json：top-1 85.75%、macro-F1 56.23%、balanced 54.62%（1,130 条片段）",
+    "可辨识性": "描述量（运动量、局部运动、亮度、饱和度）从画面独立计算，不参与训练；留一来源敏感性给出该类指标对单一来源的依赖幅度（去掉 charw1g：top-1 85.75→86.70、scratching recall 56.4→46.4）",
+    "样本量": "测试 1,130 条片段；scratching 39、toileting 18、gnawing 4、fall/seizure 0；人眼复核 15 条（9 视频 + 6 关键帧图）",
+    "失败边界": "gnawing/fall/seizure 不可评估；charw1g 的 activity/scratching 标注口径未裁定；species 字段不可靠；片段级口径不换算区间级；未做阈值与修复实验",
+    "结论上界": "只说明错误在哪几条边界上集中、各自与什么量共变、以及哪些成因属于输入表示/标注口径而非模型容量；不证明任何修复方案有效"
+  },
+  "metrics": [
+    {
+      "name": "测试 top-1（片段级）",
+      "unit": "%",
+      "baseline": "85.75",
+      "result": "85.75",
+      "delta": "0",
+      "sample_size": "1,130",
+      "source": "test_metrics.json",
+      "limitation": "片段级条件准确率，不含可用率，不等于端到端"
+    },
+    {
+      "name": "macro recall（7 个 support≥10 的类）",
+      "unit": "%",
+      "baseline": "—",
+      "result": "78.03",
+      "delta": "—",
+      "sample_size": "1,130",
+      "source": "per_class.json 重算",
+      "limitation": "按 7 类等权平均；含 support=4 的 gnawing 时为 68.27"
+    },
+    {
+      "name": "balanced accuracy（10 类，零样本类计 0）",
+      "unit": "%",
+      "baseline": "—",
+      "result": "54.62",
+      "delta": "—",
+      "sample_size": "1,130",
+      "source": "test_metrics.json",
+      "limitation": "被三个不可评估类拉低，不能单独当模型质量读"
+    },
+    {
+      "name": "scratching recall",
+      "unit": "%",
+      "baseline": "—",
+      "result": "56.4",
+      "delta": "—",
+      "sample_size": "39",
+      "source": "per_class.json",
+      "limitation": "95% Wilson 区间 41.0–70.7；去掉单一来源后为 46.4（28 条）"
+    },
+    {
+      "name": "scratching precision",
+      "unit": "%",
+      "baseline": "—",
+      "result": "64.7",
+      "delta": "—",
+      "sample_size": "34 次预测",
+      "source": "per_class.json",
+      "limitation": "12 次误报里 9 次来自同一来源，precision 对来源构成极敏感"
+    },
+    {
+      "name": "grooming precision / recall",
+      "unit": "%",
+      "baseline": "—",
+      "result": "92.1 / 76.1",
+      "delta": "—",
+      "sample_size": "46",
+      "source": "per_class.json",
+      "limitation": "漏报两半的置信度差很大（0.651 vs 0.922），不能用同一个原因解释"
+    },
+    {
+      "name": "toileting recall",
+      "unit": "%",
+      "baseline": "—",
+      "result": "77.8",
+      "delta": "—",
+      "sample_size": "18",
+      "source": "per_class.json",
+      "limitation": "95% Wilson 区间 54.8–91.0，区间宽度本身说明不足以判定好坏"
+    },
+    {
+      "name": "drinking recall",
+      "unit": "%",
+      "baseline": "—",
+      "result": "68.3",
+      "delta": "—",
+      "sample_size": "60",
+      "source": "per_class.json",
+      "limitation": "红外片段占 53.3%，错误随运动量单调上升（10/40/45）"
+    },
+    {
+      "name": "错误流向 activity 的比例",
+      "unit": "%",
+      "baseline": "51.59（永远判 activity 的 top-1）",
+      "result": "38.5",
+      "delta": "—",
+      "sample_size": "161 个错误",
+      "source": "error_flows.json",
+      "limitation": "是错误分布不是预测分布；activity 只被预测 582 次（support 583）"
+    },
+    {
+      "name": "留一来源：去掉 charw1g 后的 top-1",
+      "unit": "%",
+      "baseline": "85.75",
+      "result": "86.70",
+      "delta": "+0.95",
+      "sample_size": "1,105",
+      "source": "source_breakdown.json",
+      "limitation": "该来源 25 条片段，scratching 占比 44%（全表 3.5%），不是随机子集"
+    }
+  ],
+  "cases": [
+    {
+      "id": "fig-class-overview",
+      "kind": "image",
+      "src": "assets/577b4584ba43fae4b4f7a4f147ae9f63a790c51cf862e840a8ffd8f7f53d3c75.png",
+      "source_run": "clipv9-b",
+      "input": "1,130 条测试预测的逐类 support 与 recall",
+      "selection_reason": "正文第一节：先给分布与逐类成绩的全貌，含 95% Wilson 区间",
+      "sha256": "577b4584ba43fae4b4f7a4f147ae9f63a790c51cf862e840a8ffd8f7f53d3c75"
+    },
+    {
+      "id": "fig-confusion",
+      "kind": "image",
+      "src": "assets/bc30c3cc9c4a9434f4c6015f433800d0731b8dad4e612f41f19fe6b741d9f013.png",
+      "source_run": "clipv9-b",
+      "input": "10×10 混淆矩阵（仅列有预测的类）",
+      "selection_reason": "正文第一节：错误流向的原始矩阵，后文所有归因的骨架",
+      "sha256": "bc30c3cc9c4a9434f4c6015f433800d0731b8dad4e612f41f19fe6b741d9f013"
+    },
+    {
+      "id": "fig-motion-surface",
+      "kind": "image",
+      "src": "assets/0446e8402514bfec1bbdda7d5d78199e44f142f344859a822eec2417eac10b73.png",
+      "source_run": "clipv9-b",
+      "input": "逐片段运动量与真实/预测类别",
+      "selection_reason": "正文第一节核心证据：模型的分流依据是运动量",
+      "sha256": "0446e8402514bfec1bbdda7d5d78199e44f142f344859a822eec2417eac10b73"
+    },
+    {
+      "id": "fig-error-by-motion",
+      "kind": "image",
+      "src": "assets/28a773c9874e112bba9052d34f16af7ebb382eb139132adb1b94c5311418b1ad.png",
+      "source_run": "clipv9-b",
+      "input": "类内运动量三分位错误率",
+      "selection_reason": "正文第一节：证明 scratching 与其余类方向相反",
+      "sha256": "28a773c9874e112bba9052d34f16af7ebb382eb139132adb1b94c5311418b1ad"
+    },
+    {
+      "id": "vid-activity-to-prolonged",
+      "kind": "video",
+      "src": "media/38c554472331f29d990660685b98839f2fa4e5fbdb6585f7ed3846247214e1d5.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 activity，模型判 prolonged_stationary（0.986）",
+      "selection_reason": "正文第一节：标注为活动但 4 秒内几乎不动，指向标注粒度错配",
+      "sha256": "38c554472331f29d990660685b98839f2fa4e5fbdb6585f7ed3846247214e1d5"
+    },
+    {
+      "id": "vid-prolonged-to-activity",
+      "kind": "video",
+      "src": "media/c51ea84020c6e51fb23dc793d2dc80d9c4b8f9d9fadd5163fadff5296fcf3e7b.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 prolonged_stationary，模型判 activity（0.992）",
+      "selection_reason": "正文第一节：反方向的粒度错配，猫在片段里起身走动",
+      "sha256": "c51ea84020c6e51fb23dc793d2dc80d9c4b8f9d9fadd5163fadff5296fcf3e7b"
+    },
+    {
+      "id": "img-grooming-correct",
+      "kind": "image",
+      "src": "assets/88a6809b169273e87c046981ff987f2d3e106c643e34d46330d3673f2d4f39be.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 grooming，模型判对（0.980）",
+      "selection_reason": "正文第二节：签名明确时的舔毛画面，作为精确率高的参照",
+      "sha256": "88a6809b169273e87c046981ff987f2d3e106c643e34d46330d3673f2d4f39be"
+    },
+    {
+      "id": "vid-grooming-to-prolonged",
+      "kind": "video",
+      "src": "media/acc14b35e1a2a020eb0354ffbfdb989e96909390965bf1d1055ec311206a4443.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 grooming，模型判 prolonged_stationary（0.651）",
+      "selection_reason": "正文第二节：抬起的前爪占满画面，模型自己也低置信度",
+      "sha256": "acc14b35e1a2a020eb0354ffbfdb989e96909390965bf1d1055ec311206a4443"
+    },
+    {
+      "id": "vid-grooming-to-activity",
+      "kind": "video",
+      "src": "media/73c0af3181ac5e26dc4a7ddb7703df502de181167757f3a9ca4996a2f057b411.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 grooming，模型判 activity（0.922）",
+      "selection_reason": "正文第二节：背面视角，舔毛发生在画面外",
+      "sha256": "73c0af3181ac5e26dc4a7ddb7703df502de181167757f3a9ca4996a2f057b411"
+    },
+    {
+      "id": "vid-scratching-to-activity",
+      "kind": "video",
+      "src": "media/e3e32b67811d27768860d541b05d6bca8e2b744fe92bfc19e7e5ed37a63c7575.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判 activity（0.990）",
+      "selection_reason": "正文第三节：夜间暗画面，爪部动作不可辨",
+      "sha256": "e3e32b67811d27768860d541b05d6bca8e2b744fe92bfc19e7e5ed37a63c7575"
+    },
+    {
+      "id": "img-scratching-ir",
+      "kind": "image",
+      "src": "assets/0919b9e94b0e38a1380b2466b74d07c24f34f2d55d5c093fbad1fe9d44099c80.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判 activity（0.987）",
+      "selection_reason": "正文第三节：红外近景里头与爪互相遮挡",
+      "sha256": "0919b9e94b0e38a1380b2466b74d07c24f34f2d55d5c093fbad1fe9d44099c80"
+    },
+    {
+      "id": "img-dog-pawing",
+      "kind": "image",
+      "src": "assets/d35bbbc7fa315b565d5730a65fcb0b6edbd004ed2aecc5926a4fc5652906dca1.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 activity，模型判 scratching（0.950）",
+      "selection_reason": "正文第三节：与下一条同为「站起扒门」，标注却不同，指向口径边界",
+      "sha256": "d35bbbc7fa315b565d5730a65fcb0b6edbd004ed2aecc5926a4fc5652906dca1"
+    },
+    {
+      "id": "vid-scratching-correct",
+      "kind": "video",
+      "src": "media/474c77806ca3e2106b879163980b8d5b07b2dcad1045fb41669234ea49e30f33.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判对（0.968）",
+      "selection_reason": "正文第三节：同一来源同一视觉模式被判对，与误报成对阅读",
+      "sha256": "474c77806ca3e2106b879163980b8d5b07b2dcad1045fb41669234ea49e30f33"
+    },
+    {
+      "id": "img-dog-standing",
+      "kind": "image",
+      "src": "assets/9bc5cd202a03ba9ab72839d2218a04e6362dfa1c74a50607c5fa24276264df23.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 activity，模型判 scratching（0.938）",
+      "selection_reason": "正文第三节：画面里没有抓挠动作的纯误报，说明该来源还叠加了过度触发",
+      "sha256": "9bc5cd202a03ba9ab72839d2218a04e6362dfa1c74a50607c5fa24276264df23"
+    },
+    {
+      "id": "vid-activity-to-eating",
+      "kind": "video",
+      "src": "media/ce7659501f16604ff6d6804afc43aa697d9a446af7aca456685fdfb2756f836c.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 activity，模型判 eating（0.992）",
+      "selection_reason": "正文第四节：低头体态这条细线，eating↔drinking 互串的来源",
+      "sha256": "ce7659501f16604ff6d6804afc43aa697d9a446af7aca456685fdfb2756f836c"
+    },
+    {
+      "id": "vid-toileting-to-activity",
+      "kind": "video",
+      "src": "media/61fac75a618245249bbe632cd336a39f68ae44f8d6f71e47fcd046156a6a7e52.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 toileting，模型判 activity（0.991）",
+      "selection_reason": "正文第五节：猫砂盆在画面外，只剩蹲姿与身体挪动",
+      "sha256": "61fac75a618245249bbe632cd336a39f68ae44f8d6f71e47fcd046156a6a7e52"
+    },
+    {
+      "id": "img-toileting-correct",
+      "kind": "image",
+      "src": "assets/8a79daa0bdf8b8220dfff4a0bdedcf364d31e09c49134112323f9c4ffafa71d2.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 toileting，模型判对（0.956）",
+      "selection_reason": "正文第五节：猫砂盆与完整序列都在画面内，与漏报成对",
+      "sha256": "8a79daa0bdf8b8220dfff4a0bdedcf364d31e09c49134112323f9c4ffafa71d2"
+    },
+    {
+      "id": "vid-drinking-to-eating",
+      "kind": "video",
+      "src": "media/9bf077df4c02be6cd75d49c5411ec646dec056b15974ca4a06e8bde9ba5ce0cf.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 drinking，模型判 eating（0.990）",
+      "selection_reason": "正文第六节：夜间红外、水碗只露一角",
+      "sha256": "9bf077df4c02be6cd75d49c5411ec646dec056b15974ca4a06e8bde9ba5ce0cf"
+    },
+    {
+      "id": "img-drinking-correct",
+      "kind": "image",
+      "src": "assets/10108d9c9c67b54eb7d0c709c92ec57e6fdd7da8d3d8bb697d3406cb803259c0.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 drinking，模型判对（0.990）",
+      "selection_reason": "正文第六节：判对的片段同样看不到碗内，说明模型靠体态而非容器",
+      "sha256": "10108d9c9c67b54eb7d0c709c92ec57e6fdd7da8d3d8bb697d3406cb803259c0"
+    }
+  ],
+  "diagnostics": []
+}
