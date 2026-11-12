@@ -3,7 +3,7 @@
 每个实验主题使用独立目录，每篇报告位于该主题下的子目录：
 
 ```text
-management/experiments/<topic>/<YYYYMMDD>-<runid>/
+management/experiments/<topic>/<YYYYMMDD>-<主题短名>/
   report.md       # 报告正文（frontmatter + 固定章节）
   metrics.json    # 机器可读指标（series 折线 + tables 指标表）
   manifest.json   # 证据清单（evidence + metrics + cases + diagnostics）
@@ -13,6 +13,18 @@ management/experiments/<topic>/<YYYYMMDD>-<runid>/
 
 `topic` 和报告目录名（slug）共同标识报告。不同主题可以使用相同的报告目录名。
 
+## 一主题一篇
+
+同一主题只保留一篇现行报告：`<YYYYMMDD>` 取该主题最后一轮实验的日期，`<主题短名>` 说明对象与问题，不表示单次 run。该主题再做新一轮实验时更新同一篇，不新增第二篇；多篇既有报告合并时，被合并的目录删除，其案例、指标与结论并入新报告，仓库里不留指向已删目录的链接。
+
+合并后的报告必须做到：
+
+- **正文按子问题组织**，不按版本顺序堆叠过程记录；版本信息只进附录「运行谱系」。
+- **附录有运行谱系表**：逐行列出该主题每一轮的日期、run id、做了什么、执行状态、产物路径。
+- **数字可溯源**：正文每个数值都要能在报告引用的产物或来源文档里找到原值；合并只搬运与对齐，不重算、不补造。
+- **跨轮不可比就写明**：样本量、配方或教师模型不同的两轮，不放进同一张对比表当结论。
+- **frontmatter 的 `run_id`** 取该主题最新一轮；`status` 取各轮合并后的执行状态（全部完成才 `complete`，任一未完成取最差者并在 summary 指明）；`verdict` 取最新一轮的结论方向。
+
 ## report.md
 
 frontmatter 必填：`title`、`date`、`run_id`、`status`、`verdict`、`summary`、`source`；可选：`change`（关联的 openspec change）。
@@ -20,7 +32,8 @@ frontmatter 必填：`title`、`date`、`run_id`、`status`、`verdict`、`summa
 - `status` 取 `complete` / `partial` / `failed`（**执行状态**：这次 run 跑完了没有）
 - `verdict` 取 `improved` / `no-gain` / `worse` / `inconclusive`（**结论方向**：干预有没有效）
 - 两者独立：失败的 run 也可以有完整的报告（如实记录为什么失败）。
-- `source` 指向该报告依据的 run 产物路径（仓库相对路径，如 `evaluation/results/xxx.json`）。
+- `source` 指向该报告依据的主产物路径（仓库相对路径，如 `results/pet_pipeline/...`）；多轮产物在附录「运行谱系」列全。
+- `title` 写「对象 + 对照或范围」，不超过 24 个汉字，不把成绩、结论、样本量写进标题（那些属于 `summary`）。规则见 documentation skill §4.3。
 
 正文包含固定章节。默认采用**读者导向文章模板**（缺章节 → 报告标记 incomplete；不完整处保留草稿提示，不从目录名猜造）：
 
@@ -67,7 +80,7 @@ frontmatter 必填：`title`、`date`、`run_id`、`status`、`verdict`、`summa
 
 - `evidence`（六项，缺任一 → incomplete）：实验类型 / baseline 数值来源 / 可辨识性 / 样本量 / 失败边界 / 结论上界
 - `metrics`：每条含 `name`、`unit`、`baseline`、`result`、`delta`、`sample_size`、`source`、`limitation`（不可比较时写明原因）
-- `cases`：每条含 `id`、`kind`（`image` / `video`）、`src`（图片 `assets/<sha256>.<ext>`；视频 `media/<sha256>.<mp4|webm|mov>`）、`source_run`、`input`、`selection_reason`、`sha256`。**案例必须由作者显式选择**，生成器不自动把扫描到的文件当作代表性案例。视频保存于持久媒体目录（不入 Git）：服务器环境变量 `PET_EXPERIMENT_MEDIA_ROOT` 指定已有目录，生成器读取同一变量；未配置时视频落报告目录内 `media/`（同样不入 Git），服务器只放行该报告清单登记过的文件
+- `cases`：每条含 `id`、`kind`（`image` / `video`）、`src`（图片 `assets/<sha256>.<ext>`；视频 `media/<sha256>.<mp4|webm|mov>`）、`source_run`、`input`、`selection_reason`、`sha256`。**案例必须由作者显式选择**，生成器不自动把扫描到的文件当作代表性案例。正文里嵌入的 `assets/` 与 `media/` 文件**必须在 cases 中登记**，否则 media 路由不放行、页面 404（`check_experiment_reports.py` 会报错）；登记了但正文没嵌入是允许的——案例区自己会渲染。视频保存于持久媒体目录（不入 Git）：服务器环境变量 `PET_EXPERIMENT_MEDIA_ROOT` 指定已有目录，生成器读取同一变量；未配置时视频落报告目录内 `media/`（同样不入 Git），服务器只放行该报告清单登记过的文件
 - `diagnostics`（生成器写入）：缺失项清单，报告 incomplete 的原因
 
 ## incomplete 语义
@@ -75,6 +88,8 @@ frontmatter 必填：`title`、`date`、`run_id`、`status`、`verdict`、`summa
 报告完整度不由作者自评，由生成脚本与后端按同一规则推导：frontmatter 必填齐全、八章俱全、evidence 六项齐全、每条 metric 八字段齐全、每个 case 的图片存在且 sha256 匹配。任一不满足 → incomplete；页面明确显示缺失原因，不假装可审阅。
 
 ## 生成报告
+
+生成后用 `python3 scripts/checks/check_experiment_reports.py` 校验：它按后端同一规则逐篇检查 frontmatter、章节、evidence 六项、metric 八字段、案例文件与哈希，并核对正文媒体引用是否已登记，任何 incomplete 非零退出。
 
 用 `.agents/skills/experiment/scripts/build_report.py`（纯标准库），作者清单驱动：
 

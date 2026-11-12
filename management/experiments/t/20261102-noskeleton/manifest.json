@@ -1,0 +1,34 @@
+{
+  "evidence": {
+    "实验类型": "v",
+    "baseline 数值来源": "v",
+    "可辨识性": "v",
+    "样本量": "v",
+    "失败边界": "v",
+    "结论上界": "v"
+  },
+  "metrics": [
+    {
+      "name": "m1",
+      "unit": "v",
+      "baseline": "v",
+      "result": "v",
+      "delta": "v",
+      "sample_size": "v",
+      "source": "v",
+      "limitation": "v"
+    }
+  ],
+  "cases": [
+    {
+      "id": "c1",
+      "kind": "image",
+      "src": "assets/92be39b291bfa2cb988662e07a74ac1edbb0a893d2c9bd1205ff8dfb505125bd.png",
+      "source_run": "r1",
+      "input": "in",
+      "selection_reason": "why",
+      "sha256": "92be39b291bfa2cb988662e07a74ac1edbb0a893d2c9bd1205ff8dfb505125bd"
+    }
+  ],
+  "diagnostics": []
+}
