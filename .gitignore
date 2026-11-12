@@ -91,3 +91,6 @@ management/experiments/*/media/
 
 # 实验报告 API 对拍测试的临时夹具（tests/test_experiments_api.py 运行期创建，勿入库）
 /management/experiments/t/
+
+# pi 会话状态（Goal List Loop Audit 运行时写入，勿入库）
+.pi-glla/
