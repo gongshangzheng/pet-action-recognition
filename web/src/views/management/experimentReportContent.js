@@ -100,18 +100,3 @@ export function splitReportAppendix(markdown) {
     hasAppendix: true,
   }
 }
-
-// 简单判断正文里是否以 ![]() 引用过该 src（完整 markdown 解析依赖重，此处够用）。
-// aliases（buildReportFileAliases 的结果）让「正文写可读名、清单记 sha256 名」也能算已引用。
-export function narrativeEmbedsAsset(narrative, src, aliases) {
-  const target = String(src || '').trim()
-  if (!target) return false
-  const candidates = new Set([target])
-  for (const [ref, value] of Object.entries(aliases || {})) {
-    if (value === target) candidates.add(ref)
-  }
-  const text = String(narrative || '')
-  const escape = (p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return [...candidates].some((candidate) =>
-    new RegExp(`!\\[[^\\]]*\\]\\(\\s*${escape(candidate)}\\s*\\)`).test(text))
-}

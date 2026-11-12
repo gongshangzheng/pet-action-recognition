@@ -95,7 +95,7 @@
 
           <!-- 结构化技术指标（manifest 指标含局限 / 趋势 / 表格）：默认折叠，不铺满正文 -->
           <details v-if="hasStructuredMetrics" class="foldable">
-            <summary>指标与趋势（机器可读）<span class="fold-hint">evidence · metrics.json · cases</span></summary>
+            <summary>指标与趋势（机器可读）<span class="fold-hint">evidence · metrics.json</span></summary>
 
             <section v-if="metricTables.length" class="metrics-section">
               <div v-for="t in metricTables" :key="t.title" class="metric-table">
