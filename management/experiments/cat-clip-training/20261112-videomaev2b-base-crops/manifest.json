@@ -1,0 +1,74 @@
+{
+  "evidence": {
+    "实验类型": "动作分类训练与冻结测试（感知侧留出集条件准确率）",
+    "baseline 数值来源": "`cat-clip-training/20261107-clipv9-b`（Tiny 教师框渲染片段）：test top1 85.75% / macro-F1 56.23% / balanced 54.62%",
+    "可辨识性": "教师指纹、跟踪参数、片段清单版本、渲染参数、训练配置与随机种子均固定；学生权重与标注索引落盘可复核。但划分沿用旧 day-map 且片段数变化，教师更换与数据规模变化未能完全解耦",
+    "样本量": "训练 4,157 / 验证 1,712 / 测试 1,090 条片段；渲染 6,954 个 mp4",
+    "失败边界": "非严格 A/B（片段数与划分与历史不同）；gnawing 仅 4 条、fall 与 seizure 无样本；595 条片段无轨迹点未进入渲染；渲染有少量 decode_stop 失败",
+    "结论上界": "只能主张「在该划分与裁剪口径下留出集 top-1 为 87.43%」，不能主张全量端到端准确率、不能主张漏检目标达成、也不能把提升全部归因于教师更换"
+  },
+  "metrics": [
+    {
+      "name": "冻结测试 top-1",
+      "unit": "%",
+      "baseline": "85.75",
+      "result": "87.43",
+      "delta": "+1.68 pp",
+      "sample_size": "1,090 条片段",
+      "source": "results/cat_clip_v9/videomaev2_b_base/test_metrics.json",
+      "limitation": "划分沿用旧 day-map，片段数 7,350→6,959、测试 1,130→1,090，非严格同口径对照"
+    },
+    {
+      "name": "冻结测试 macro-F1",
+      "unit": "%",
+      "baseline": "56.23",
+      "result": "58.18",
+      "delta": "+1.95 pp",
+      "sample_size": "1,090 条片段",
+      "source": "results/cat_clip_v9/videomaev2_b_base/test_metrics.json",
+      "limitation": "含 gnawing 4 条、fall/seizure 0 条等极小类，macro 平均受这些小类拉扯"
+    },
+    {
+      "name": "冻结测试 balanced accuracy",
+      "unit": "%",
+      "baseline": "54.62",
+      "result": "57.08",
+      "delta": "+2.46 pp",
+      "sample_size": "1,090 条片段",
+      "source": "results/cat_clip_v9/videomaev2_b_base/test_metrics.json",
+      "limitation": "同上；空类不计入分母的处理需与历史脚本口径一致才能严格比较"
+    },
+    {
+      "name": "scratching 召回",
+      "unit": "%",
+      "baseline": "56.4",
+      "result": "61.54",
+      "delta": "+5.1 pp",
+      "sample_size": "39 条",
+      "source": "results/cat_clip_v9/videomaev2_b_base/test_metrics.json",
+      "limitation": "样本量小，且是决定漏检目标的关键类，单独引用前需分层复核"
+    },
+    {
+      "name": "训练墙钟",
+      "unit": "秒",
+      "baseline": "3,322",
+      "result": "3,112",
+      "delta": "-210 s",
+      "sample_size": "20 轮",
+      "source": "results/cat_clip_v9/videomaev2_b_base/train.log",
+      "limitation": "训练集从 7,350 降到 4,157 训练条，耗时差异主要来自数据量而非效率提升"
+    }
+  ],
+  "cases": [
+    {
+      "id": "per-class-f1",
+      "kind": "image",
+      "src": "assets/323d4e2a5880edef5030bde29f4116de08a11c68fcb9e6272eef8d8669016a2f.png",
+      "source_run": "action-train-20261112a",
+      "input": "冻结测试集 1,090 条片段的逐类 F1（横轴为类别，括号内为该类样本数）",
+      "selection_reason": "把 top1 一个数字拆成逐类表现，直接暴露 scratching 64.0% 与 gnawing 0/4 这两个拖累点，避免只看总体涨幅",
+      "sha256": "323d4e2a5880edef5030bde29f4116de08a11c68fcb9e6272eef8d8669016a2f"
+    }
+  ],
+  "diagnostics": []
+}

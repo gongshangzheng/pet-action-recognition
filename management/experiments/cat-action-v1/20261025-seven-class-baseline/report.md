@@ -42,7 +42,11 @@ source: "docs/cat_action_training_v1.md"
 
 **两个基线：TSM 胜出，差距在 macro-F1 与 balanced。** 测试集上 TSM 79.19% / macro-F1 61.75% / balanced 65.58%，TSN 72.85% / 57.51% / 58.09%。验证集的排序一致（84.11% vs 81.62%），且 TSM 的 toileting recall 100%（support 7）。按事先规则选 TSM，这个选择没有用到测试集。
 
-**逐类看，问题集中在两类。** TSM 的 grooming 测试 recall 只有 5.56%（18 个样本里 17 个判错，precision 25.00%），abnormal 38.89%（18 个样本），drinking 61.54%。toileting 是 100%，但 support 只有 7，不能当稳定结论。换句话讲，top-1 79% 的观感由 activity（256 个测试样本，recall 86.72%）撑起来，macro-F1 61.75% 才是七类均衡视角的真实水平。
+**逐类看，问题集中在两类。** TSM 的 grooming 测试 recall 只有 5.56%（18 个样本里 17 个判错，precision 25.00%），abnormal 38.89%（18 个样本），drinking 61.54%。toileting 是 100%，但 support 只有 7，不能当稳定结论。换句话讲，top-1 79% 的观感由 activity（256 个测试样本，recall 86.72%）撑起来，macro-F1 61.75% 才是七类均衡视角的真实水平。逐类召回与六模型对照如下（图由附录表中的数字生成）：
+
+![七类逐类召回（测试集 442 条）：TSM-R50 与 VideoMAEv2-B；grooming 与 abnormal 是共同短板](assets/8039b14691fc9a6850c8cf1c93a0d6ab7802af0f4a81a543bc14959178df5740.svg)
+
+![六模型测试集 top-1 与 macro-F1：前者最高是 VideoMAEv2-B，后者最高是 X3D-S](assets/b5a1b88ce8155cfe13c24fa8c5a5a8fb5d83b63fe033108703a9fa49059dc43f.svg)
 
 **区间级漏检代理：TSM 20.81%，类别均衡口径 35.44%。** 前者是自然分布下 442 条里判错的比例（92/442），后者在类别均衡诊断集（79 条）上算，两个口径差 15 个百分点，说明自然分布被 activity 主导。这个数不是事件级漏检率——连续视频里动作是否被抓到、起止是否对齐，本轮没有测。
 
