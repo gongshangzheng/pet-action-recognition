@@ -1,0 +1,149 @@
+{
+  "evidence": {
+    "实验类型": "正确性（跟踪关联与轨迹质量）＋ 感知质量（框细化探针）",
+    "baseline 数值来源": "原管线的「最高分框 + 线性插值」没有轨迹可评；对照基线是同一实现内关断 OC 机制的 SORT（inertia=0、use_byte=False）",
+    "可辨识性": "指标在跑之前写死（碎片 ≤2、交换 ≤2/视频、人工个体数一致）；四臂每臂只改一个变量；OC-SORT 与关断版逐帧比较给出 0 帧差异，证明「换算法」在当前锚点密度下没有可辨识空间；交换信号另用 species_flagged 校正误读",
+    "样本量": "评估集 10 段稳定多宠物区间（种子 20261107）；人工核对 3 段叠加视频；轨迹级误检标记检验用人眼确认的 8 条轨迹；框细化探针 5 个手挑用例 × 2 个模型；stride=2 批次重跑 267 秒",
+    "失败边界": "无逐帧身份 GT，交换只能用代理信号；碎片聚类是启发式；评估集仅 10 段；use_byte 在置信度下限 0.30 的缓存上不触发；稳定过滤使一致性最小值降到 0.2571；框细化只有 5 个用例；首版探针曾把真猫误当误检用例，已更正重跑",
+    "结论上界": "能说明「关联层可修的部分已修掉、碎片与误检来自检测侧、加密锚点与更强关联都没有收益」以及「当前数据不接入训练裁剪」；不能说明多宠物轨迹可用于训练，也不能把聚类估计的个体数当真实动物数"
+  },
+  "metrics": [
+    {
+      "name": "碎片/个体最大值（四臂 → 稳定过滤）",
+      "unit": "段",
+      "baseline": "A=4",
+      "result": "稳定过滤=2",
+      "delta": "-2",
+      "sample_size": "10 段",
+      "source": "results/tracking_eval_20261107/metrics_stable_v1.json",
+      "limitation": "阈值 ≤2 达标；代价是一致性最小值降到 0.2571"
+    },
+    {
+      "name": "锚点一致性中位",
+      "unit": "比率",
+      "baseline": "A=0.8182",
+      "result": "C/D=1.0000",
+      "delta": "+0.1818",
+      "sample_size": "10 段",
+      "source": "同上",
+      "limitation": "人工个体数只在 3 段上核对"
+    },
+    {
+      "name": "交换代理信号",
+      "unit": "次",
+      "baseline": "A=0",
+      "result": "C/D=0（B=16 为垃圾轨迹暴露）",
+      "delta": "0",
+      "sample_size": "10 段",
+      "source": "同上",
+      "limitation": "代理信号是交换的必要非充分条件，真值靠人工"
+    },
+    {
+      "name": "OC-SORT vs 关断版 SORT 帧级差异",
+      "unit": "帧",
+      "baseline": "—",
+      "result": "0",
+      "delta": "0",
+      "sample_size": "10 段",
+      "source": "results/tracking_eval_20261107/metrics_ocsort_v1.json",
+      "limitation": "只说明这批 3 Hz 锚点上无匹配歧义，不外推到更密锚点"
+    },
+    {
+      "name": "stride=2 加密成本",
+      "unit": "秒",
+      "baseline": "stride=5 批次",
+      "result": "267",
+      "delta": "约 2.5 倍",
+      "sample_size": "10 段",
+      "source": "同上",
+      "limitation": "碎片 3→4，加密无收益"
+    },
+    {
+      "name": "框细化：精修框 vs 原框 IoU",
+      "unit": "IoU",
+      "baseline": "1.0（原框）",
+      "result": "0.88–0.97",
+      "delta": "—",
+      "sample_size": "5 个用例",
+      "source": "results/tracking_eval_20261107/quality/box_refinement",
+      "limitation": "真猫 262×224 → 258×222，收益 1–3%；尾巴撑满外接框"
+    },
+    {
+      "name": "印刷误检的 SAM 掩码分数",
+      "unit": "分数",
+      "baseline": "真猫 0.964",
+      "result": "0.977",
+      "delta": "+0.013",
+      "sample_size": "2 个用例",
+      "source": "同上",
+      "limitation": "SAM 无类别语义，分数高于真猫即无法用于过滤误检"
+    },
+    {
+      "name": "MobileSAM 夜间松框 IoU",
+      "unit": "IoU",
+      "baseline": "SAM2 0.877",
+      "result": "0.095（fill 0.005）",
+      "delta": "-0.782",
+      "sample_size": "1 个用例",
+      "source": "同上",
+      "limitation": "单用例失败，已足以否决 MobileSAM 用于精修"
+    }
+  ],
+  "cases": [
+    {
+      "id": "核对-charw1g-双目标",
+      "kind": "video",
+      "src": "media/703186869af05364cb0b23456e3f9986d1d962d497c23a67afb1b9ece4ec4fd4.mp4",
+      "source_run": "tracking-eval-20261107a",
+      "input": "id0(cat,79 锚点,0–390) / id1(dog,79 锚点,0–390) 等叠加轨迹",
+      "selection_reason": "人工核对样本：最差段的「三条狗」实为狗粮袋面印刷金毛，真猫整段未被检出——误检与漏检叠加的直接证据",
+      "sha256": "703186869af05364cb0b23456e3f9986d1d962d497c23a67afb1b9ece4ec4fd4"
+    },
+    {
+      "id": "核对-夜间双猫",
+      "kind": "video",
+      "src": "media/2fc826fc5e487d1497a2af4b9ae3d445cb4c2aaa9bbaaee0196d011ce34e9cb2.mp4",
+      "source_run": "tracking-eval-20261107a",
+      "input": "id0(cat,16 锚点,0–75) / id1(cat,48 锚点,0–235)，红外夜视",
+      "selection_reason": "中位段样本：猫进狭窄通道时被判成 dog，硬分实例下硬断裂；改单流后假狗轨迹消失",
+      "sha256": "2fc826fc5e487d1497a2af4b9ae3d445cb4c2aaa9bbaaee0196d011ce34e9cb2"
+    },
+    {
+      "id": "对比-印刷金毛误检",
+      "kind": "image",
+      "src": "assets/158945e7e509faf0d050753d9c353c5aa49de0ba9a03aeba1f87616eac925077.png",
+      "source_run": "tracking-eval-20261107a",
+      "input": "狗粮袋面印刷的金毛，DINO 框 180×212",
+      "selection_reason": "失败边界：SAM 掩码分数 0.977 高于真猫的 0.964，框几乎不动——分割模型不能替代类别判定",
+      "sha256": "158945e7e509faf0d050753d9c353c5aa49de0ba9a03aeba1f87616eac925077"
+    },
+    {
+      "id": "对比-真猫",
+      "kind": "image",
+      "src": "assets/d1ff250278353364264fba56c4d95d57d555f96b9316bec525b4e707e332c266.png",
+      "source_run": "tracking-eval-20261107a",
+      "input": "趴在狗粮袋上的真猫，DINO 框 262×224",
+      "selection_reason": "框 refinement 收益小的直接原因：掩码紧贴身体但尾巴撑满外接框，框几乎不变",
+      "sha256": "d1ff250278353364264fba56c4d95d57d555f96b9316bec525b4e707e332c266"
+    },
+    {
+      "id": "对比-夜间松框-SAM2",
+      "kind": "image",
+      "src": "assets/6415c4003cbcb5b2937bee3957b0c1b195a0688397a7cd16416fc328cca72e55.png",
+      "source_run": "tracking-eval-20261107a",
+      "input": "夜间重复松框约 472×218，SAM2 掩码外接框 464×196",
+      "selection_reason": "唯一明显收紧的形态，说明精修只在「框明显松」时有空间",
+      "sha256": "6415c4003cbcb5b2937bee3957b0c1b195a0688397a7cd16416fc328cca72e55"
+    },
+    {
+      "id": "对比-夜间松框-MobileSAM",
+      "kind": "image",
+      "src": "assets/2839f654f955da6239fb3fbe3a5e778320bc3b2bc50ab9ede778905e6278c755.png",
+      "source_run": "tracking-eval-20261107a",
+      "input": "同一松框，MobileSAM 掩码几乎为空（fill 0.005、分数 0.461）",
+      "selection_reason": "失败案例：MobileSAM 在夜间松框上崩溃，据此否决其用于精修",
+      "sha256": "2839f654f955da6239fb3fbe3a5e778320bc3b2bc50ab9ede778905e6278c755"
+    }
+  ],
+  "diagnostics": []
+}
