@@ -77,3 +77,9 @@
 
 - main 的工作区里出现了并发进行中的新报告 `cat-clip-training/20261112-videomaev2b-base-crops/`（未提交，90 分钟内写入）。它与本 change 的「一主题一篇」直接冲突：合并后 `cat-clip-training` 会同时存在两篇。
 - 因此暂不合并。待用户裁定：① 把那篇当作该主题的新一轮，并入 `cat-clip-training/20261112-ten-class-clips`；或② 让它作为独立主题另起（需说明它与「十类片段分类」的区别）。
+
+### 2026-11-12：归档
+
+- 用户确认收尾。8 篇主题报告已合并进 main（`cbaf3308`），worktree 与分支已删，main 工作区 6 处残留已清。
+- delta spec `experiment-report-catalog` 已同步到主 spec（`openspec/specs/experiment-report-catalog/spec.md`），四条要求：一主题一篇、合并报告交代各轮谱系、历史记录吸收后保留可达路径、完整度可判定。
+- **两项未完成，按用户裁定移交**：`10.5` 前端逐篇目视（数据层已由校验脚本覆盖，剩排版与播放）；`10.8` 与 `work/pet-pipeline` 对齐（该分支仍带 6 个旧报告目录与自己的 base-crops 报告，合回 main 前须按一主题一篇并入）。

@@ -59,6 +59,7 @@
 - [x] 10.2 同步 experiment skill §5.4 与 `references/report-template.md` 的落点与命名说明。
 - [x] 10.3 全仓 `rg` 检查指向已删目录/旧 slug 的引用，逐个改指或确认可忽略（archive 与历史 change 的过程记录不改）。
 - [x] 10.4 跑 `check_experiment_reports.py` 与 `pytest tests/test_experiments_api.py`，两者全绿。
-- [ ] 10.5 在前端 `/management/experiments` 逐篇打开 8 篇，确认章节、附录折叠、案例图与视频正常。（本机未起服务，待用户复核）
+- [ ] 10.5 【移交】在前端 `/management/experiments` 逐篇打开 8 篇，确认章节、附录折叠、案例图与视频正常。本机未起服务，交用户复核；数据层已由 `check_experiment_reports.py` 全绿覆盖，剩余风险是排版与播放。
 - [x] 10.6 在 evidence 写「数字核对清单」：每篇正文的关键数字 → 出处。
-- [ ] 10.7 与 `work/pet-pipeline` 及 main 并发改动对齐后合并回主干，删除本分支。
+- [x] 10.7 与 main 的并发改动对齐后合并回主干（`cbaf3308`），删除 `work/experiments-reports` 分支与 worktree，并清掉 main 工作区 6 处残留（`t/`、`20261112-yolo11s-base-s5/`、旧的 `teacher-detection/20261111-gdino-base-vs-tiny/`、`video-data-issues/` 根级散件与 3 个只剩 `assets/` 的空目录）。证据：`git log --oneline -1 main`、`git worktree list`。
+- [ ] 10.8 【移交】与 `work/pet-pipeline` 对齐（前置：主线推进前完成）：该分支仍有 6 个被合并掉的旧报告目录（cliperr-a、clipv9-b、yolo11s-base-s5、teacher-detection 旧名、tracking v1/v2 等）与它自己的 `cat-clip-training/20261112-videomaev2b-base-crops`。该分支合回 main 时这些路径会再次产生 modify/delete 冲突，需要按「一主题一篇」把 base-crops 并入 `20261112-ten-class-clips`，其余保留删除。
