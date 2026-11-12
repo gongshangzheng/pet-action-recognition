@@ -1,5 +1,5 @@
 ---
-title: "教师检测器选型：从 COCO 零样本体检到 GroundingDINO-Base 全量接管"
+title: "教师检测器选型：零样本体检与 Base/Tiny 对比"
 date: "2026-11-11"
 run_id: "teacher-eval-20261111a"
 status: "complete"

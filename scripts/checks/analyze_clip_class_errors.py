@@ -29,6 +29,7 @@ confusion_matrix / predictions）以及同一批渲染片段所在目录。输�
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import math
 import statistics
@@ -81,6 +82,8 @@ def parse_args() -> argparse.Namespace:
     p_class.add_argument("--label", required=True)
     p_class.add_argument("--correct", type=int, default=6)
     p_class.add_argument("--wrong", type=int, default=6)
+    p_class.add_argument("--false-positive", type=int, default=0,
+                         help="再取 N 条「别的类被判成这一类」的片段（误报方向）")
     p_class.add_argument("--out", type=Path, required=True)
 
     p_sheet = sub.add_parser("sheet", help="contact sheet: one representative frame per case, with its numbers")
@@ -518,7 +521,8 @@ def summarize_interval_spread(stats: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def class_cases(data: dict[str, Any], visual: list[dict[str, Any]], label: str,
-                want_correct: int, want_wrong: int) -> list[dict[str, Any]]:
+                want_correct: int, want_wrong: int,
+                want_false_positive: int = 0) -> list[dict[str, Any]]:
     """按类别取若干判对/判错的片段，附带判断依据所需的描述量。
 
     判错侧取置信度最高的几条（模型最"确信地错"的那些）；判对侧按亮度分位铺开，
@@ -556,6 +560,10 @@ def class_cases(data: dict[str, Any], visual: list[dict[str, Any]], label: str,
     rows = [r for r in rows if r]
     wrong = sorted([r for r in rows if not r["correct"]], key=lambda r: -r["confidence"])
     correct = sorted([r for r in rows if r["correct"]], key=lambda r: -(r["lumaMean"] or 0))
+    # 误报方向：真实标签不是该类、模型却判成该类
+    false_positives = [build(p) for p in data["predictions"]
+                       if p["predicted"] == index and p["label"] != index]
+    false_positives = sorted([r for r in false_positives if r], key=lambda r: -r["confidence"])
 
     def take_by_source(items: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:
         """按来源轮转取样：同一来源只出一条，先把来源铺开，再放宽。
@@ -606,10 +614,15 @@ def class_cases(data: dict[str, Any], visual: list[dict[str, Any]], label: str,
         return picked[:count]
 
     chosen = take_wrong(wrong, want_wrong) + take_by_source(correct, want_correct)
+    if want_false_positive:
+        chosen += take_by_source(false_positives, want_false_positive)
     for position, item in enumerate(chosen, start=1):
         verdict = "correct" if item["correct"] else "wrong"
+        if not item["correct"] and item["predicted"] == label:
+            verdict = "false-positive"
+        item["verdict"] = verdict
         item["id"] = f"{label}-{verdict}-{position:02d}"
-        item["pair"] = f"{label}->{item['predicted']}"
+        item["pair"] = f"{item['true']}->{item['predicted']}"
     return chosen
 
 
@@ -771,7 +784,8 @@ def contact_sheet(cases: list[dict[str, Any]], clips_dir: Path, out: Path,
         tile.paste(Image.fromarray(rgb), (0, 0))
         draw = ImageDraw.Draw(tile)
         number = case["id"].rsplit("-", 1)[-1]
-        verdict = "判对" if case["correct"] else "判错"
+        verdict = case.get("verdict") or ("correct" if case["correct"] else "wrong")
+        verdict = {"correct": "判对", "wrong": "漏判", "false-positive": "误报"}.get(verdict, verdict)
         draw.text((6, TILE_SIZE + 3),
                   f"#{number} {verdict} → {case['predicted']}  {case['confidence']:.2f}",
                   font=font, fill=(255, 255, 255))
@@ -889,11 +903,12 @@ def main() -> None:
     elif args.command == "class-cases":
         data = load_metrics(args.metrics)
         visual = load_json(args.analysis / "clip_visual_stats.json", "逐片段描述量")
-        chosen = class_cases(data, visual, args.label, args.correct, args.wrong)
+        chosen = class_cases(data, visual, args.label, args.correct, args.wrong, args.false_positive)
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(chosen, ensure_ascii=False, indent=2))
-        print(f"写入 {args.out}：{len(chosen)} 条（判错 {sum(1 for c in chosen if not c['correct'])}，"
-              f"判对 {sum(1 for c in chosen if c['correct'])}）")
+        counts = collections.Counter(c["verdict"] for c in chosen)
+        print(f"写入 {args.out}：{len(chosen)} 条（" +
+              "，".join(f"{k} {v}" for k, v in counts.items()) + "）")
     elif args.command == "profile":
         profile = motion_profile(args.video, args.bucket)
         args.out.parent.mkdir(parents=True, exist_ok=True)

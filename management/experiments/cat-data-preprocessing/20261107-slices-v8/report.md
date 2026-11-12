@@ -1,5 +1,5 @@
 ---
-title: "猫行为数据集：从 79 段 4 秒切段到 85% 区间可用、7,554 个片段"
+title: "片段数据集定版：可用率与规模"
 date: "2026-11-07"
 run_id: "slices-v8"
 status: "complete"

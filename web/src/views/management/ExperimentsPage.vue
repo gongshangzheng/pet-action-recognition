@@ -189,9 +189,11 @@
         </div>
         <nav>
           <a
-            v-for="item in tocItems" :key="item.text"
-            class="doc-toc-link" :class="{ active: activeSection === item.text }"
+            v-for="(item, index) in tocItems" :key="`${index}-${item.text}`"
+            class="doc-toc-link"
+            :class="{ active: activeSection === item.text, 'is-sub': item.level >= 3 }"
             :href="`#${item.anchor}`"
+            :title="item.text"
             @click.prevent="scrollToSection(item)"
           >{{ item.text }}</a>
         </nav>
@@ -339,35 +341,77 @@ function cycleCase(step) {
   toggleIndex.value = (toggleIndex.value + step + total) % total
 }
 
+// 目录收二级与三级标题：报告正文把「结果与分析」拆成多个三级小节，只收二级会跳不动。
 const tocItems = computed(() => {
   const markdown = reportParts.value?.narrative || ''
-  return markdown
-    .split('\n')
-    .filter(line => /^##\s+/.test(line))
-    .map(line => {
-      const text = line.replace(/^##\s+/, '').trim()
-      return { text, anchor: text.replace(/\s+/g, '-') }
-    })
+  const items = []
+  let fence = null
+  for (const line of markdown.split('\n')) {
+    const fenceMatch = /^\s*(`{3,}|~{3,})/.exec(line)
+    if (fenceMatch) {
+      if (!fence) fence = fenceMatch[1][0]
+      else if (fenceMatch[1][0] === fence) fence = null
+      continue
+    }
+    if (fence) continue
+    const match = /^(#{2,3})\s+(.+?)\s*$/.exec(line)
+    if (!match) continue
+    const text = match[2]
+    items.push({ text, level: match[1].length, anchor: text.replace(/\s+/g, '-') })
+  }
+  return items
 })
 
 function scrollToSection(item) {
-  const nodes = document.querySelectorAll('.doc-content h2')
+  const selector = (item.level || 2) >= 3 ? '.doc-content h3' : '.doc-content h2'
+  const nodes = document.querySelectorAll(selector)
   const target = [...nodes].find(node => node.textContent.trim() === item.text)
   if (target) {
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // 用瞬时定位而不是平滑滚动：长报告里平滑动画还没走完，懒加载的图片/视频又会改变
+    // 正文高度，两者叠加会把落点甩开几百像素；瞬时定位后再校正几次才稳。
+    target.scrollIntoView({ behavior: 'auto', block: 'start' })
     activeSection.value = item.text
     history.replaceState(null, '', `#${item.anchor}`)
+    settleScroll(target)
   }
+}
+
+// 目标落点应停在吸顶头部下方；只有明显跑偏才再校一次，且用户一动就停手
+function settleScroll(target) {
+  let tries = 0
+  let cancelled = false
+  const stop = () => {
+    cancelled = true
+    window.clearTimeout(timer)
+    window.removeEventListener('wheel', stop)
+    window.removeEventListener('touchstart', stop)
+    window.removeEventListener('keydown', stop)
+  }
+  const step = () => {
+    if (cancelled || !target.isConnected) return stop()
+    const offset = target.getBoundingClientRect().top
+    if (Math.abs(offset) > 120) target.scrollIntoView({ behavior: 'auto', block: 'start' })
+    tries += 1
+    if (tries >= 12) return stop()
+    timer = window.setTimeout(step, 150)
+  }
+  let timer = window.setTimeout(step, 150)
+  window.addEventListener('wheel', stop, { passive: true, once: true })
+  window.addEventListener('touchstart', stop, { passive: true, once: true })
+  window.addEventListener('keydown', stop, { once: true })
 }
 
 let sectionObserver = null
 function observeSections() {
   if (sectionObserver) sectionObserver.disconnect()
-  const nodes = document.querySelectorAll('.doc-content h2')
+  const nodes = document.querySelectorAll('.doc-content h2, .doc-content h3')
   if (!nodes.length || typeof IntersectionObserver === 'undefined') return
   sectionObserver = new IntersectionObserver((entries) => {
     const visible = entries.filter(entry => entry.isIntersecting)
-    if (visible.length) activeSection.value = visible[0].target.textContent.trim()
+    if (!visible.length) return
+    // 二三级同时可见时取最靠上的一节，滚动时高亮才跟得上
+    visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+    activeSection.value = visible[0].target.textContent.trim()
   }, { rootMargin: '-20% 0px -70% 0px' })
   nodes.forEach(node => sectionObserver.observe(node))
 }
@@ -551,7 +595,7 @@ watch(() => route.query, (q) => {
 
 .doc-empty { display: flex; align-items: center; justify-content: center; min-height: 300px; }
 
-.doc-toc { display: none; width: 180px; flex-shrink: 0;
+.doc-toc { display: none; width: 200px; flex-shrink: 0;
   @media (min-width: 1280px) { display: block; }
 }
 .doc-toc-inner { position: sticky; top: 16px; max-height: calc(100vh - 5rem); overflow-y: auto; }
@@ -562,11 +606,25 @@ watch(() => route.query, (q) => {
 .doc-toc-link {
   display: block; padding: 3px 10px;
   border-left: 2px solid var(--color-border);
+  // 中文小节标题普遍偏长，允许折两行后再截断
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   font-size: 12px; line-height: 1.4; color: var(--color-text-dim);
   cursor: pointer; text-decoration: none;
   transition: color 0.15s, border-color 0.15s;
 
   &:hover, &.active { color: var(--color-text); border-left-color: var(--color-primary); }
+
+  // 三级标题缩进一档，并在目录里保持同一竖直基准线
+  &.is-sub {
+    padding-left: 22px;
+    font-size: 11.5px;
+    border-left-color: transparent;
+
+    &:hover, &.active { border-left-color: var(--color-primary); }
+  }
 }
 
 .visually-hidden {

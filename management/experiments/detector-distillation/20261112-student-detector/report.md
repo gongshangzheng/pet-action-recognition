@@ -1,5 +1,5 @@
 ---
-title: "学生检测器蒸馏：Tiny 教师与 Base 教师两轮训练的一致率与速度"
+title: "学生检测器蒸馏：两位教师下的一致率与速度"
 date: "2026-11-12"
 run_id: "student-train-20261112a"
 status: "complete"

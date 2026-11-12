@@ -1,5 +1,5 @@
 ---
-title: "七类区间基线：训练链路验证、TSM/TSN 对比与六模型参考批次"
+title: "七类区间基线：两模型对比与参考批次"
 date: "2026-10-25"
 run_id: "cat-action-v1"
 status: "complete"

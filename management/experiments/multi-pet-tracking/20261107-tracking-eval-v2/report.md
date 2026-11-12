@@ -1,5 +1,5 @@
 ---
-title: "多宠物跟踪四臂对照：单流关联、IoS 去重与框细化探针"
+title: "多宠跟踪：四臂关联对照"
 date: "2026-11-07"
 run_id: "tracking-eval-20261107a"
 status: "complete"

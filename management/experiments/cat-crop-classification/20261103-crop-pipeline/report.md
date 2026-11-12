@@ -1,5 +1,5 @@
 ---
-title: "裁剪输入链路：跟拍批处理、20 段审计与只训 B 臂的定案"
+title: "裁剪输入链路：跟拍批处理与小批审计"
 date: "2026-11-06"
 run_id: "gdino-crop-20261103a"
 status: "partial"

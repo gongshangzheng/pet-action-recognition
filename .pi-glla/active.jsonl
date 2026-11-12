@@ -1,0 +1,2 @@
+{"type":"session_rebound","value":{"reason":"resume"},"at":"2026-11-12T04:42:43.088Z"}
+{"type":"state","value":{"goal":null,"list":[],"loop":null,"mainModelRecovery":null,"lastModelRef":"magpie/auto/deepseek-v4.1-flash","lastCompactionAt":null,"postCompactRecovery":null,"supervisorPausedAt":null,"loadHoldAt":null,"lastOutcome":null},"at":"2026-11-12T04:42:43.243Z"}
