@@ -3,8 +3,8 @@
     "实验类型": "感知质量（逐类错误分析与归因，不训练）",
     "baseline 数值来源": "clipv9-b 测试产物 results/cat_clip_v9/videomaev2_b/test_metrics.json：top-1 85.75%、macro-F1 56.23%、balanced 54.62%（1,130 条片段）",
     "可辨识性": "描述量（运动量、局部运动、亮度、饱和度）从画面独立计算，不参与训练；留一来源敏感性给出该类指标对单一来源的依赖幅度（去掉 charw1g：top-1 85.75→86.70、scratching recall 56.4→46.4）",
-    "样本量": "测试 1,130 条片段；scratching 39、toileting 18、gnawing 4、fall/seizure 0；人眼复核 15 条（9 视频 + 6 关键帧图）",
-    "失败边界": "gnawing/fall/seizure 不可评估；charw1g 的 activity/scratching 标注口径未裁定；species 字段不可靠；片段级口径不换算区间级；未做阈值与修复实验",
+    "样本量": "测试 1,130 条片段（来自 484 个标注区间，片段非独立样本）；scratching 39 片段/17 区间、toileting 18/7、gnawing 4/1、fall/seizure 0；人眼复核 15 条片段 + 1 个完整标注区间",
+    "失败边界": "gnawing/fall/seizure 不可评估；charw1g 的 activity/scratching 标注口径未裁定；species 字段不可靠；片段级口径不换算区间级；区间错配只核实 1 例、未量化规模；未做阈值与修复实验",
     "结论上界": "只说明错误在哪几条边界上集中、各自与什么量共变、以及哪些成因属于输入表示/标注口径而非模型容量；不证明任何修复方案有效"
   },
   "metrics": [
@@ -280,6 +280,33 @@
       "input": "真实 drinking，模型判对（0.990）",
       "selection_reason": "正文第六节：判对的片段同样看不到碗内，说明模型靠体态而非容器",
       "sha256": "10108d9c9c67b54eb7d0c709c92ec57e6fdd7da8d3d8bb697d3406cb803259c0"
+    },
+    {
+      "id": "vid-interval-crop",
+      "kind": "video",
+      "src": "media/46568dac65beb19021ea33fb9e476f81f3e81c3b17b2b54d535a58c273b2c4fa.mp4",
+      "source_run": "clipv9-b",
+      "input": "标注区间帧 1–235（15.67 秒）整段，按训练同款逐帧框裁剪",
+      "selection_reason": "正文第一节：证明标注 activity 成立——区间前段猫在走动，模型看的窗口取到了静止段",
+      "sha256": "46568dac65beb19021ea33fb9e476f81f3e81c3b17b2b54d535a58c273b2c4fa"
+    },
+    {
+      "id": "vid-interval-full",
+      "kind": "video",
+      "src": "media/9a8a0572f8bfafdaa0053917fce7aa8cf1479691dd322d276c8286c4153062fe.mp4",
+      "source_run": "clipv9-b",
+      "input": "同一区间整段的原画（640 宽）",
+      "selection_reason": "正文第一节：保留场景上下文，让人能独立判断猫在做什么，而不被裁剪框限制",
+      "sha256": "9a8a0572f8bfafdaa0053917fce7aa8cf1479691dd322d276c8286c4153062fe"
+    },
+    {
+      "id": "img-interval-strip",
+      "kind": "image",
+      "src": "assets/b398c1a5caf95721bef7ea527afd6bbe0b179a78d32266653fcd127b70a73140.jpg",
+      "source_run": "clipv9-b",
+      "input": "区间内均匀 12 帧（0.0–15.6 秒）的裁剪拼图",
+      "selection_reason": "正文第一节：静态对照用，一眼看到「前 4 秒在走、中间 8 秒站定」的分布",
+      "sha256": "b398c1a5caf95721bef7ea527afd6bbe0b179a78d32266653fcd127b70a73140"
     }
   ],
   "diagnostics": []
