@@ -1,0 +1,113 @@
+{
+  "evidence": {
+    "实验类型": "正确性（链路验证）+ 感知质量（区间级分类）三轮：链路验证 / 两个基线 / 四个参考骨干",
+    "baseline 数值来源": "链路验证不设基线（无解释力）；两个基线互为对照，TSN 为起点；参考骨干的对照为 TSM-R50 基线（test top-1 79.19%）与彼此；前期世代 79 段五类结果只作历史对照",
+    "可辨识性": "链路验证用完整性校验（checkpoint 非空、索引哈希一致、拍摄日不交叉、概率有限、混淆矩阵计数正确）而非分数；模型选择用事先固定的验证集规则，测试集在排名冻结后才跑；区间级漏检另给类别均衡口径以暴露自然分布的稀释",
+    "样本量": "链路验证 24 条；基线 train 1,664 / val 604 / test 442（平衡诊断集 79）；参考骨干同数据同划分；每模型单 seed、20 epoch",
+    "失败边界": "区间级而非事件级；grooming recall 5.56%–38.89%、abnormal ≤44.44%；toileting val/test support 4/7；六模型与基线精度/增强/采样/优化器不一致，差距不能全归给结构；无猫身份，跨日泄漏未排除；前期 79 段 speed run top-1 92.1% 受切段重叠影响，不可与本文并列",
+    "结论上界": "能说明七类区间基线的水平（TSM 79.19%、协议选出的 VideoMAEv2-B 81.90%）与类别短板；不能说明事件级准确率或漏检率达标，也不能证明更换骨干带来结构性的收益"
+  },
+  "metrics": [
+    {
+      "name": "链路验证测试集 top-1",
+      "unit": "%",
+      "baseline": "—",
+      "result": "33.33",
+      "delta": "—",
+      "sample_size": "6 条（每类 1 条）",
+      "source": "results/training/cat_interval_smoke/",
+      "limitation": "只证明链路可跑，无任何模型解释力"
+    },
+    {
+      "name": "TSM-R50 测试集 top-1",
+      "unit": "%",
+      "baseline": "TSN 72.85",
+      "result": "79.19",
+      "delta": "+6.34",
+      "sample_size": "442 条",
+      "source": "results/training/cat_action_v1/tsm_r50/test_metrics.json",
+      "limitation": "区间级；自然分布被 activity（256 条）主导"
+    },
+    {
+      "name": "TSM-R50 测试集 macro-F1",
+      "unit": "%",
+      "baseline": "TSN 57.51",
+      "result": "61.75",
+      "delta": "+4.24",
+      "sample_size": "442 条 / 7 类",
+      "source": "同上",
+      "limitation": "小类 support 18/7/18，方差大"
+    },
+    {
+      "name": "区间级漏检代理（自然分布）",
+      "unit": "%",
+      "baseline": "—",
+      "result": "20.81（92/442）",
+      "delta": "—",
+      "sample_size": "442 条",
+      "source": "同上",
+      "limitation": "区间级，不是事件级漏检率"
+    },
+    {
+      "name": "区间级漏检代理（类别均衡）",
+      "unit": "%",
+      "baseline": "20.81（自然分布）",
+      "result": "35.44（28/79）",
+      "delta": "+14.63",
+      "sample_size": "79 条",
+      "source": "同上",
+      "limitation": "平衡诊断集每类最多 12 条，toileting 按实际 support"
+    },
+    {
+      "name": "六模型验证集排名首位 macro-F1",
+      "unit": "%",
+      "baseline": "TSM 63.25（基线）",
+      "result": "70.97（VideoMAEv2-B）",
+      "delta": "+7.72",
+      "sample_size": "604 条 / 6 模型",
+      "source": "results/training/cat_action_v1/model_zoo_ranking.json",
+      "limitation": "验证集小类 support 18/4/19，小差距不可靠"
+    },
+    {
+      "name": "六模型测试集 top-1 最高",
+      "unit": "%",
+      "baseline": "79.19（TSM 基线）",
+      "result": "81.90（VideoMAEv2-B）",
+      "delta": "+2.71",
+      "sample_size": "442 条 / 6 模型",
+      "source": "results/training/cat_action_v1/model_zoo_summary.json",
+      "limitation": "非严格受控对比；X3D-S 在 macro-F1 与 balanced 上更好"
+    },
+    {
+      "name": "X3D-S 测试集 balanced accuracy",
+      "unit": "%",
+      "baseline": "63.31（VideoMAEv2-B）",
+      "result": "68.19",
+      "delta": "+4.88",
+      "sample_size": "442 条",
+      "source": "同上",
+      "limitation": "与 top-1 结论方向相反，说明单一指标不足以选型"
+    }
+  ],
+  "cases": [
+    {
+      "id": "six-models-test-top1-macro-f1",
+      "kind": "image",
+      "src": "assets/b5a1b88ce8155cfe13c24fa8c5a5a8fb5d83b63fe033108703a9fa49059dc43f.svg",
+      "source_run": "cat-action-model-zoo-v1",
+      "input": "六个模型测试集 top-1 与 macro-F1 对照（数据取自附录表）",
+      "selection_reason": "选型结论的核心证据：top-1 最高的是 VideoMAEv2-B，macro-F1 最高的是 X3D-S，两者方向相反；图为表中数字生成，非原始截图",
+      "sha256": "b5a1b88ce8155cfe13c24fa8c5a5a8fb5d83b63fe033108703a9fa49059dc43f"
+    },
+    {
+      "id": "per-class-recall-tsm-vs-videomaev2b",
+      "kind": "image",
+      "src": "assets/8039b14691fc9a6850c8cf1c93a0d6ab7802af0f4a81a543bc14959178df5740.svg",
+      "source_run": "cat-action-v1",
+      "input": "七类测试集逐类召回：TSM-R50 与 VideoMAEv2-B",
+      "selection_reason": "失败边界：两类短板的形态在逐类召回上一目了然（grooming、abnormal），toileting 的 support 只有 7；图为表中数字生成",
+      "sha256": "8039b14691fc9a6850c8cf1c93a0d6ab7802af0f4a81a543bc14959178df5740"
+    }
+  ],
+  "diagnostics": []
+}

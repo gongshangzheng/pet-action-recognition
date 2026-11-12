@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="316" viewBox="0 0 860 316" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif">
+<rect width="860" height="316" fill="#ffffff"/>
+<text x="190" y="30" font-size="17" fill="#111">七类区间基线（2026-10）：六个模型测试集 top-1 与 macro-F1</text>
+<rect x="190" y="42" width="12" height="12" fill="#2f6fb5"/>
+<text x="208" y="53" font-size="13" fill="#333">top-1</text>
+<rect x="297" y="42" width="12" height="12" fill="#d98a2b"/>
+<text x="315" y="53" font-size="13" fill="#333">macro-F1</text>
+<text x="178" y="84" font-size="13" fill="#333" text-anchor="end">VideoMAEv2-B</text>
+<rect x="190" y="68" width="491.4" height="11" fill="#2f6fb5"/>
+<text x="687.4" y="78" font-size="11" fill="#555">81.9</text>
+<rect x="190" y="82" width="406.0" height="11" fill="#d98a2b"/>
+<text x="602.0" y="92" font-size="11" fill="#555">67.7</text>
+<text x="178" y="118" font-size="13" fill="#333" text-anchor="end">X3D-S</text>
+<rect x="190" y="102" width="480.5" height="11" fill="#2f6fb5"/>
+<text x="676.5" y="112" font-size="11" fill="#555">80.1</text>
+<rect x="190" y="116" width="414.1" height="11" fill="#d98a2b"/>
+<text x="610.1" y="126" font-size="11" fill="#555">69.0</text>
+<text x="178" y="152" font-size="13" fill="#333" text-anchor="end">SlowFast-R50</text>
+<rect x="190" y="136" width="464.3" height="11" fill="#2f6fb5"/>
+<text x="660.3" y="146" font-size="11" fill="#555">77.4</text>
+<rect x="190" y="150" width="378.6" height="11" fill="#d98a2b"/>
+<text x="574.6" y="160" font-size="11" fill="#555">63.1</text>
+<text x="178" y="186" font-size="13" fill="#333" text-anchor="end">TSM-R50</text>
+<rect x="190" y="170" width="475.1" height="11" fill="#2f6fb5"/>
+<text x="671.1" y="180" font-size="11" fill="#555">79.2</text>
+<rect x="190" y="184" width="370.5" height="11" fill="#d98a2b"/>
+<text x="566.5" y="194" font-size="11" fill="#555">61.8</text>
+<text x="178" y="220" font-size="13" fill="#333" text-anchor="end">UniFormerV2-B</text>
+<rect x="190" y="204" width="467.0" height="11" fill="#2f6fb5"/>
+<text x="663.0" y="214" font-size="11" fill="#555">77.8</text>
+<rect x="190" y="218" width="340.2" height="11" fill="#d98a2b"/>
+<text x="536.2" y="228" font-size="11" fill="#555">56.7</text>
+<text x="178" y="254" font-size="13" fill="#333" text-anchor="end">TSN-R50</text>
+<rect x="190" y="238" width="437.1" height="11" fill="#2f6fb5"/>
+<text x="633.1" y="248" font-size="11" fill="#555">72.8</text>
+<rect x="190" y="252" width="345.1" height="11" fill="#d98a2b"/>
+<text x="541.1" y="262" font-size="11" fill="#555">57.5</text>
+<line x1="790" y1="60" x2="790" y2="284" stroke="#d0d0d0"/>
+<text x="790" y="302" font-size="11" fill="#777" text-anchor="end">单位：%</text>
+</svg>
