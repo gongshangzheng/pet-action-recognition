@@ -282,6 +282,168 @@
       "input": "训练标签 activity（另一条录制 138–197）：末段同样出现狗直立扒玻璃门",
       "selection_reason": "同构型被包在 activity 区间里——「构型=类别」错配的直接证据",
       "sha256": "a8dcbf8f73dddf601bb87445cfa6645400abcf4162b0b2599386951aa4263de9"
+    },
+    {
+      "id": "fig-motion-surface",
+      "kind": "image",
+      "src": "assets/0446e8402514bfec1bbdda7d5d78199e44f142f344859a822eec2417eac10b73.png",
+      "source_run": "clipv9-b",
+      "input": "逐片段运动量与真实/预测类别",
+      "selection_reason": "正文第一节核心证据：模型的分流依据是运动量",
+      "sha256": "0446e8402514bfec1bbdda7d5d78199e44f142f344859a822eec2417eac10b73"
+    },
+    {
+      "id": "fig-error-by-motion",
+      "kind": "image",
+      "src": "assets/28a773c9874e112bba9052d34f16af7ebb382eb139132adb1b94c5311418b1ad.png",
+      "source_run": "clipv9-b",
+      "input": "类内运动量三分位错误率",
+      "selection_reason": "正文第一节：证明 scratching 与其余类方向相反",
+      "sha256": "28a773c9874e112bba9052d34f16af7ebb382eb139132adb1b94c5311418b1ad"
+    },
+    {
+      "id": "vid-prolonged-to-activity",
+      "kind": "video",
+      "src": "media/c51ea84020c6e51fb23dc793d2dc80d9c4b8f9d9fadd5163fadff5296fcf3e7b.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 prolonged_stationary，模型判 activity（0.992）",
+      "selection_reason": "正文第一节：反方向的粒度错配，猫在片段里起身走动",
+      "sha256": "c51ea84020c6e51fb23dc793d2dc80d9c4b8f9d9fadd5163fadff5296fcf3e7b"
+    },
+    {
+      "id": "img-grooming-correct",
+      "kind": "image",
+      "src": "assets/88a6809b169273e87c046981ff987f2d3e106c643e34d46330d3673f2d4f39be.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 grooming，模型判对（0.980）",
+      "selection_reason": "正文第二节：签名明确时的舔毛画面，作为精确率高的参照",
+      "sha256": "88a6809b169273e87c046981ff987f2d3e106c643e34d46330d3673f2d4f39be"
+    },
+    {
+      "id": "vid-grooming-to-activity",
+      "kind": "video",
+      "src": "media/73c0af3181ac5e26dc4a7ddb7703df502de181167757f3a9ca4996a2f057b411.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 grooming，模型判 activity（0.922）",
+      "selection_reason": "正文第二节：背面视角，舔毛发生在画面外",
+      "sha256": "73c0af3181ac5e26dc4a7ddb7703df502de181167757f3a9ca4996a2f057b411"
+    },
+    {
+      "id": "vid-scratching-correct",
+      "kind": "video",
+      "src": "media/474c77806ca3e2106b879163980b8d5b07b2dcad1045fb41669234ea49e30f33.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 scratching，模型判对（0.968）",
+      "selection_reason": "正文第三节：同一来源同一视觉模式被判对，与误报成对阅读",
+      "sha256": "474c77806ca3e2106b879163980b8d5b07b2dcad1045fb41669234ea49e30f33"
+    },
+    {
+      "id": "vid-activity-to-eating",
+      "kind": "video",
+      "src": "media/ce7659501f16604ff6d6804afc43aa697d9a446af7aca456685fdfb2756f836c.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 activity，模型判 eating（0.992）",
+      "selection_reason": "正文第四节：低头体态这条细线，eating↔drinking 互串的来源",
+      "sha256": "ce7659501f16604ff6d6804afc43aa697d9a446af7aca456685fdfb2756f836c"
+    },
+    {
+      "id": "vid-toileting-to-activity",
+      "kind": "video",
+      "src": "media/61fac75a618245249bbe632cd336a39f68ae44f8d6f71e47fcd046156a6a7e52.mp4",
+      "source_run": "clipv9-b",
+      "input": "真实 toileting，模型判 activity（0.991）",
+      "selection_reason": "正文第五节：猫砂盆在画面外，只剩蹲姿与身体挪动",
+      "sha256": "61fac75a618245249bbe632cd336a39f68ae44f8d6f71e47fcd046156a6a7e52"
+    },
+    {
+      "id": "img-toileting-correct",
+      "kind": "image",
+      "src": "assets/8a79daa0bdf8b8220dfff4a0bdedcf364d31e09c49134112323f9c4ffafa71d2.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 toileting，模型判对（0.956）",
+      "selection_reason": "正文第五节：猫砂盆与完整序列都在画面内，与漏报成对",
+      "sha256": "8a79daa0bdf8b8220dfff4a0bdedcf364d31e09c49134112323f9c4ffafa71d2"
+    },
+    {
+      "id": "img-drinking-correct",
+      "kind": "image",
+      "src": "assets/10108d9c9c67b54eb7d0c709c92ec57e6fdd7da8d3d8bb697d3406cb803259c0.jpg",
+      "source_run": "clipv9-b",
+      "input": "真实 drinking，模型判对（0.990）",
+      "selection_reason": "正文第六节：判对的片段同样看不到碗内，说明模型靠体态而非容器",
+      "sha256": "10108d9c9c67b54eb7d0c709c92ec57e6fdd7da8d3d8bb697d3406cb803259c0"
+    },
+    {
+      "id": "vid-interval-full",
+      "kind": "video",
+      "src": "media/9a8a0572f8bfafdaa0053917fce7aa8cf1479691dd322d276c8286c4153062fe.mp4",
+      "source_run": "clipv9-b",
+      "input": "同一区间整段的原画（640 宽）",
+      "selection_reason": "正文第一节：保留场景上下文，让人能独立判断猫在做什么，而不被裁剪框限制",
+      "sha256": "9a8a0572f8bfafdaa0053917fce7aa8cf1479691dd322d276c8286c4153062fe"
+    },
+    {
+      "id": "vid-scratching-02",
+      "kind": "video",
+      "src": "media/d6a5b17e159cc6997836a136c9c7e1840e55bc579df2cd832e48c14ff34ee303.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #02：笼内低头啃/挠自身（判错）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "d6a5b17e159cc6997836a136c9c7e1840e55bc579df2cd832e48c14ff34ee303"
+    },
+    {
+      "id": "vid-scratching-03",
+      "kind": "video",
+      "src": "media/09dc07b89ab096f132dcc86bb509129d5f44e79f67fac9e23a9b0bad0e2625b3.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #03：红外夜视下自挠（判错）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "09dc07b89ab096f132dcc86bb509129d5f44e79f67fac9e23a9b0bad0e2625b3"
+    },
+    {
+      "id": "vid-scratching-08",
+      "kind": "video",
+      "src": "media/03818c7432fc09d2e44ee29c7a622db559db2e25afadec93dfbf3b843cddfc40.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #08：狗站起扒玻璃门（判对）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "03818c7432fc09d2e44ee29c7a622db559db2e25afadec93dfbf3b843cddfc40"
+    },
+    {
+      "id": "vid-scratching-12",
+      "kind": "video",
+      "src": "media/c42173c8d769196291c1e9e389e09681c118b917de89ae940a5ea7ce0e0117ab.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #12：黑猫攀爬猫爬架（判对）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "c42173c8d769196291c1e9e389e09681c118b917de89ae940a5ea7ce0e0117ab"
+    },
+    {
+      "id": "vid-scratching-13",
+      "kind": "video",
+      "src": "media/6639a2b7af8c8896fdd32c47c166b424ed10fc52f2fff1acbfbef28b93770db2.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #13：直立扒镜子/玻璃（判对）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "6639a2b7af8c8896fdd32c47c166b424ed10fc52f2fff1acbfbef28b93770db2"
+    },
+    {
+      "id": "vid-scratching-fp-15",
+      "kind": "video",
+      "src": "media/10d033bff4d4e0a716358a7dbe7f46fd97ac958ea2c8cd59488d6afa0c6ce00d.mp4",
+      "source_run": "clipv9-b",
+      "input": "误报：真实 activity，模型判 scratching（0.88），狗直立扒玻璃门",
+      "selection_reason": "正文第三节：误报组与判对组是同一构型，差别只在源标注",
+      "sha256": "10d033bff4d4e0a716358a7dbe7f46fd97ac958ea2c8cd59488d6afa0c6ce00d"
+    },
+    {
+      "id": "vid-scratching-fp-16",
+      "kind": "video",
+      "src": "media/629e7f2960c7ebd7da84678d2fe09fe8c7d8515347d3f7cb30fa004cb9873449.mp4",
+      "source_run": "clipv9-b",
+      "input": "误报：真实 activity，模型判 scratching（0.94），狗只是站着吐舌",
+      "selection_reason": "正文第三节：该来源还存在无抓挠动作也被判成 scratching 的过度触发",
+      "sha256": "629e7f2960c7ebd7da84678d2fe09fe8c7d8515347d3f7cb30fa004cb9873449"
     }
   ],
   "diagnostics": []
