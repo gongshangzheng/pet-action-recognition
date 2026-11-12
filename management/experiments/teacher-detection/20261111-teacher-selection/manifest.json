@@ -1,0 +1,139 @@
+{
+  "evidence": {
+    "实验类型": "感知质量与覆盖率（三轮：零样本体检 / 教师全量 / 教师对比）",
+    "baseline 数值来源": "COCO 零样本 yolo11n/s 在 79 段上的检出统计（2026-09-10）；GroundingDINO-Tiny 2,573 段检测缓存",
+    "可辨识性": "同帧输入、同 prompt 与同阈值比较；零样本结论另用标注段交叉验证消除空画面稀释（全量 32.1% vs 召回代理 48.5%）",
+    "样本量": "零样本 79 段（单日单机位）；Tiny 2,573 段；Base 2,723 段 / 211,413 锚点；同帧对比 6 帧（非召回率估计）",
+    "失败边界": "缺人工框 GT，无法给召回率绝对值；同帧对比 6 帧不足以支撑统计结论；多目标帧 Base 多出的 1 个候选框未核实是否真目标；下游分类准确率不在本轮范围",
+    "结论上界": "能说明「现成 COCO 权重不可用」与「Base 在覆盖与目视稳定性上优于 Tiny，故定为正式教师」；不能说明教师召回率的绝对值，也不能说明它对分类精度的贡献"
+  },
+  "metrics": [
+    {
+      "name": "cat 全量检出帧率（零样本 yolo11n）",
+      "unit": "%",
+      "baseline": "—",
+      "result": "32.1",
+      "delta": "—",
+      "sample_size": "79 段",
+      "source": "openspec/changes/archive/2026-09-10-yolo11-detection-prep/report-snapshot.md",
+      "limitation": "分母含空画面稀释；单日单机位素材"
+    },
+    {
+      "name": "cat 全量检出帧率（零样本 yolo11s）",
+      "unit": "%",
+      "baseline": "32.1（n）",
+      "result": "32.3",
+      "delta": "+0.2",
+      "sample_size": "79 段",
+      "source": "同上",
+      "limitation": "两档差距小于 1 个百分点，说明瓶颈在域不在容量"
+    },
+    {
+      "name": "cat 夜视漏检率（口径 B，n/s）",
+      "unit": "%",
+      "baseline": "—",
+      "result": "89.5 / 88.9",
+      "delta": "—",
+      "sample_size": "79 段中 46 段含夜视帧",
+      "source": "同上",
+      "limitation": "口径 B 按亮度/饱和度判定，与口径 A 按小时判定并存"
+    },
+    {
+      "name": "cat 标注段内召回代理（n/s）",
+      "unit": "%",
+      "baseline": "—",
+      "result": "48.5 / 48.7",
+      "delta": "—",
+      "sample_size": "79 段标注区间",
+      "source": "同上",
+      "limitation": "代理指标，依赖标注时间轴与帧号的对应未核验"
+    },
+    {
+      "name": "全量视频缓存覆盖数",
+      "unit": "个",
+      "baseline": "2,573（Tiny）",
+      "result": "2,723（Base）",
+      "delta": "+150",
+      "sample_size": "2,737",
+      "source": "results/pet_pipeline/detection-versions-20261111a/detection_manifest.json",
+      "limitation": "14 个源文件损坏、1 个截断无法解码"
+    },
+    {
+      "name": "有效采样锚点数",
+      "unit": "个",
+      "baseline": "约 165,000（Tiny 按 stride 5 推算）",
+      "result": "211,413",
+      "delta": "+46,413",
+      "sample_size": "2,723 段",
+      "source": "同上",
+      "limitation": "采样步长固定 stride=5，锚点密度不代表精度"
+    },
+    {
+      "name": "单宠/主目标边界置信度",
+      "unit": "conf",
+      "baseline": "0.45（Tiny）",
+      "result": "0.68（Base）",
+      "delta": "+0.23",
+      "sample_size": "6 抽样帧",
+      "source": "results/pet_pipeline/teacher-comparison-20261111a/comparison_report.md",
+      "limitation": "小样本目视抽样，不是分布统计"
+    }
+  ],
+  "cases": [
+    {
+      "id": "cmp-0-chi2m65",
+      "kind": "image",
+      "src": "assets/847dc0add786ad3583d9a02843417edd203a897e1eb604d0316273932ec7f4e3.jpg",
+      "source_run": "teacher-eval-20261111a",
+      "input": "夜间暗光猫咪场景（左 Tiny 两个漂移框 0.493/0.419，右 Base 单框 0.678）",
+      "selection_reason": "暗光失效案例：Tiny 的框漂移与重复，Base 收敛为单一框",
+      "sha256": "847dc0add786ad3583d9a02843417edd203a897e1eb604d0316273932ec7f4e3"
+    },
+    {
+      "id": "cmp-20000298365636-chyr316",
+      "kind": "image",
+      "src": "assets/3def642d676bfd2a174e7dff077eca8b700aa50c180f89cc5cdf45395cec63df.jpg",
+      "source_run": "teacher-eval-20261111a",
+      "input": "室内远距离小目标猫咪（左 Tiny 0 框，右 Base 0.378）",
+      "selection_reason": "失败边界案例：小目标漏检，标注配比要覆盖这类帧",
+      "sha256": "3def642d676bfd2a174e7dff077eca8b700aa50c180f89cc5cdf45395cec63df"
+    },
+    {
+      "id": "cmp-20000583315927-chmtg0l",
+      "kind": "image",
+      "src": "assets/486e2d9171537b42a50846adaa3fb0f87d3e5718043ec7c858f76b71c0007b72.jpg",
+      "source_run": "teacher-eval-20261111a",
+      "input": "开阔高亮近景猫咪（左 Tiny 0.879，右 Base 0.816）",
+      "selection_reason": "一致性核对：常规场景两档都对，用来避免只展示差异",
+      "sha256": "486e2d9171537b42a50846adaa3fb0f87d3e5718043ec7c858f76b71c0007b72"
+    },
+    {
+      "id": "cmp-20000646547283-chyr316",
+      "kind": "image",
+      "src": "assets/a939d6ac592a5f524de671cb23b9b2ea03edc63063c63d6774074ff368e4267b.jpg",
+      "source_run": "teacher-eval-20261111a",
+      "input": "多目标及环境遮挡（左 Tiny 2 框，右 Base 3 框）",
+      "selection_reason": "未被解释的差异：Base 多出的候选框未经人工核对，不能记为收益",
+      "sha256": "a939d6ac592a5f524de671cb23b9b2ea03edc63063c63d6774074ff368e4267b"
+    },
+    {
+      "id": "cmp-20000838103643-charw1g-f0",
+      "kind": "image",
+      "src": "assets/ac6b3ababbd9bf444f7fedabf6271ead8ea31e66ba236de3cab2ddf00dbc34d1.jpg",
+      "source_run": "teacher-eval-20261111a",
+      "input": "双猫同框（左 Tiny 0.588/0.402，右 Base 0.592/0.559）",
+      "selection_reason": "多宠物同框的候选质量对照，关系到后续多宠物裁剪切分",
+      "sha256": "ac6b3ababbd9bf444f7fedabf6271ead8ea31e66ba236de3cab2ddf00dbc34d1"
+    },
+    {
+      "id": "cmp-20000838103643-charw1g-f5",
+      "kind": "image",
+      "src": "assets/0a9bee070251af5f1c2c8234566e079b043c2bc99f03219eada80ac57821e6d2.jpg",
+      "source_run": "teacher-eval-20261111a",
+      "input": "暗光猫爬架多层次目标（左 Tiny 漏检部分目标，右 Base 3 框）",
+      "selection_reason": "复杂几何结构下的暗区召回对照",
+      "sha256": "0a9bee070251af5f1c2c8234566e079b043c2bc99f03219eada80ac57821e6d2"
+    }
+  ],
+  "diagnostics": []
+}
