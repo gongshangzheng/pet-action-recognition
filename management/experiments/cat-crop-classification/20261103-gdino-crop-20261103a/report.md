@@ -1,5 +1,5 @@
 ---
-title: "GroundingDINO 猫动作视频裁剪：20 段小批链路与目标有效性评估"
+title: "GroundingDINO 裁剪链路：小批有效性评估"
 date: "2026-11-03"
 run_id: "gdino-crop-20261103a"
 status: "partial"
@@ -30,7 +30,7 @@ source: "results/cat_crop_classification/gdino-crop-20261103a/quality/sample20/c
 
 ## 结果与分析
 
-### 2026-11-04：复用 follow_cam 后重新审阅
+### 复用 follow_cam 后复审
 
 本批 `sample20-followcam-v1` 已复用旧 follow_cam 的线性插值、5 帧滑动平均和运动偏移阻尼。首尾使用端点填充；有效帧与无效帧共享相机轨迹；超大窗口以补边保留目标与比例。输入沿用 v3 的猫狗检测缓存（步长 5、最大有效缺口 10），没有重跑探测器或放宽训练资格。
 

@@ -1,5 +1,5 @@
 ---
-title: "按轨迹裁剪的片段训练：条件 top-1 85.75%，端到端估计 72.9%"
+title: "裁剪片段训练：与整帧输入对照"
 date: "2026-11-07"
 run_id: "clipv9-b"
 status: "partial"

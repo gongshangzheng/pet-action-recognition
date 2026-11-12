@@ -1,5 +1,5 @@
 ---
-title: "多宠物 SORT 跟踪：OC-SORT 接入与 10 段评估（对照原版 SORT）"
+title: "多宠跟踪：OC-SORT 接入对照"
 date: "2026-11-07"
 run_id: "tracking-eval-20261107a"
 status: "partial"

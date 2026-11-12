@@ -1,5 +1,5 @@
 ---
-title: "GroundingDINO 蒸馏 YOLO11s：速度收益与一致率初评"
+title: "GroundingDINO 蒸馏 YOLO11s：速度与一致率"
 date: "2026-11-07"
 run_id: "yolo11s_1280_ep20"
 status: "partial"
