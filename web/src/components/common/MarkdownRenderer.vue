@@ -54,6 +54,9 @@ function handleClick(e) {
   if (href.endsWith('.md')) e.preventDefault()
 }
 
+// 报告正文里的媒体引用：`.mp4/.webm/.mov` 渲染成 <video>，其余按图片处理。
+const VIDEO_SRC_RE = /\.(mp4|webm|mov)(?:[?#]|$)/i
+
 const md = new MarkdownIt({
   html: false,
   linkify: true,
