@@ -8,16 +8,17 @@ import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import checkbox from 'markdown-it-task-checkbox'
 import { slugify } from '../../utils/markdown'
+import { resolveReportMediaRef } from '../../views/management/experimentReportContent'
 import * as katexPluginModule from '@vscode/markdown-it-katex'
 import 'katex/dist/katex.min.css'
 import { useThemeStore } from '../../stores/theme'
 
 const props = defineProps({
   content: { type: String, default: '' },
-  // 实验报告正文里的 assets/、media/ 是相对报告目录的写法；由页面传入 API 基址后在此改写，
-  // 这样作者写 `![](assets/x.png)` 就能同时被「正文内嵌去重」和浏览器取物理路径命中。
-  assetBase: { type: String, default: '' },
-  mediaBase: { type: String, default: '' },
+  // 实验报告正文媒体上下文（可选）：{ assetUrl(file), mediaUrl(file), fileAliases }
+  // 有值时正文里的 `![说明](assets/<文件名>)` / `![说明](media/<文件名>)` 映射到该报告的只读 API 路由；
+  // 不传（Wiki 文档等）时行为不变，相对路径一律原样输出。
+  reportMedia: { type: Object, default: null },
 })
 
 const containerRef = ref(null)
@@ -53,9 +54,6 @@ function handleClick(e) {
   }
   if (href.endsWith('.md')) e.preventDefault()
 }
-
-// 报告正文里的媒体引用：`.mp4/.webm/.mov` 渲染成 <video>，其余按图片处理。
-const VIDEO_SRC_RE = /\.(mp4|webm|mov)(?:[?#]|$)/i
 
 const md = new MarkdownIt({
   html: false,
@@ -145,16 +143,22 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
   return defaultFence(tokens, idx, options, env, self)
 }
 
-md.renderer.rules.image = function (tokens, idx) {
+// 图片规则：普通图片仍是 <img>；指向报告 media/ 白名单扩展名的引用改为受控 <video>。
+// 视频同样走下面的 figure/figcaption 规则（段落里只有这一张“图”时自动包 <figure>）。
+// html 仍是 false：除这条规则自行拼出的 <img>/<video> 外不接受任何内联 HTML。
+md.renderer.rules.image = function (tokens, idx, options, env) {
   const token = tokens[idx]
-  const src = md.utils.escapeHtml(token.attrGet('src') || '')
+  const rawSrc = token.attrGet('src') || ''
   const alt = md.utils.escapeHtml(token.content || '')
   const title = token.attrGet('title')
   const titleAttr = title ? ` title="${md.utils.escapeHtml(title)}"` : ''
-  // markdown 语法本身没有视频；报告的案例视频用 `![](media/x.mp4)` 写，这里渲染成可内嵌播放的 <video>。
-  if (VIDEO_SRC_RE.test(src)) {
-    return `<video src="${src}" controls playsinline preload="metadata" class="md-inline-video" aria-label="${alt}"${titleAttr}></video>`
+  const ref = resolveReportMediaRef(rawSrc, env?.reportMedia)
+  if (ref?.kind === 'video') {
+    const src = md.utils.escapeHtml(ref.url)
+    const label = alt ? ` aria-label="${alt}"` : ''
+    return `<video src="${src}" controls preload="metadata" playsinline class="report-video"${label}${titleAttr}></video>`
   }
+  const src = md.utils.escapeHtml(ref ? ref.url : rawSrc)
   return `<img src="${src}" alt="${alt}" loading="lazy"${titleAttr}>`
 }
 
@@ -193,34 +197,9 @@ function documentAssetUrl(path) {
   return base + suffix.split('/').map(encodeURIComponent).join('/')
 }
 
-// 单个文件名才改写：带 `..`、多级目录或空名一律保持原样（与后端白名单同向，不做穷举校验）。
-function safeFilename(raw) {
-  if (!raw || raw.includes('/') || raw.includes('\\') || raw === '.' || raw === '..') return ''
-  return encodeURIComponent(raw.split('?')[0].split('#')[0])
-}
-
-function reportMediaUrl(kind, raw, assetBase, mediaBase) {
-  const filename = safeFilename(raw)
-  if (!filename) return ''
-  if (kind === 'media') return mediaBase ? `${mediaBase}/${filename}` : ''
-  return assetBase ? `${assetBase}/${filename}` : ''
-}
-
-function rewriteReportMedia(source, assetBase, mediaBase) {
-  if (!assetBase && !mediaBase) return source
-  return source.replace(
-    /(!?\[[^\]]*\]\()((?:\.\/)?(assets|media)\/([^)\s]+))(\))/g,
-    (match, start, path, kind, raw, end) => {
-      const resolved = reportMediaUrl(kind, raw, assetBase, mediaBase)
-      return resolved ? `${start}${resolved}${end}` : match
-    },
-  )
-}
-
 const rendered = computed(() => {
   if (!props.content) return '<p class="text-light">暂无内容</p>'
   let src = props.content
-  src = rewriteReportMedia(src, props.assetBase, props.mediaBase)
   src = src.replace(/(!?\[[^\]]*\]\()((?:\.\/)?_assets\/[^)\s]+)(\))/g, (_, start, path, end) =>
     `${start}${documentAssetUrl(path)}${end}`)
   // Task links: [[proj#t2-3]] or [[proj#t2-3|display]] → project tree with task selected
@@ -231,7 +210,8 @@ const rendered = computed(() => {
   // Doc links: [[slug]] or [[slug|display]] → doc detail page
   src = src.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_, slug, text) => `[${text.trim()}](/management/docs/${slug.trim()})`)
   src = src.replace(/\[\[([^\]]+)\]\]/g, (_, slug) => `[${slug.trim()}](/management/docs/${slug.trim()})`)
-  return md.render(src)
+  // env 逐次传入：md 实例是模块级共享的，报告上下文（topic/slug）只能按渲染次数传
+  return md.render(src, { reportMedia: props.reportMedia })
 })
 
 async function renderMermaid() {
@@ -310,15 +290,6 @@ watch(
     list-style: none;
     margin-left: -20px;
   }
-
-  :deep(.md-inline-video) {
-    display: block;
-    width: 100%;
-    max-width: 560px;
-    margin: 12px 0;
-    border-radius: 10px;
-    background: #000;
-  }
   :deep(.task-list-item input[type='checkbox']) {
     margin-right: 8px;
     transform: translateY(1px);
@@ -326,6 +297,17 @@ watch(
     width: 14px;
     height: 14px;
     cursor: default;
+  }
+
+  // 正文内嵌视频：与 figure img 同一组约束（不限死宽度，等比缩进阅读栏）
+  :deep(video.report-video) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: #000;
   }
 
   :deep(pre.mermaid) {

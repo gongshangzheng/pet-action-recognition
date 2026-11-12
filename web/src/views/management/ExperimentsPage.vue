@@ -85,20 +85,12 @@
           </header>
 
           <div class="detail-article">
-          <!-- 正文：面向读者的文章；附录默认折叠。正文里的图/视频按报告目录取物理路径。 -->
-          <MarkdownRenderer
-            :content="reportParts.narrative"
-            :asset-base="narrativeAssetBase"
-            :media-base="narrativeMediaBase"
-          />
+          <!-- 正文：面向读者的文章；附录默认折叠（两处都接报告媒体上下文，assets/ 与 media/ 引用在正文任意位置生效） -->
+          <MarkdownRenderer :content="reportParts.narrative" :report-media="reportMedia" />
 
           <details v-if="reportParts.hasAppendix" class="foldable">
             <summary>附录：配置与完整数据<span class="fold-hint">精确配置 · 完整指标 · 来源与核查</span></summary>
-            <MarkdownRenderer
-              :content="reportParts.appendix"
-              :asset-base="narrativeAssetBase"
-              :media-base="narrativeMediaBase"
-            />
+            <MarkdownRenderer :content="reportParts.appendix" :report-media="reportMedia" />
           </details>
 
           <!-- 结构化技术指标（manifest 指标含局限 / 趋势 / 表格）：默认折叠，不铺满正文 -->
@@ -217,16 +209,9 @@ import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
-import {
-  getExperiments,
-  getExperimentDetail,
-  getExperimentAssetBase,
-  getExperimentAssetUrl,
-  getExperimentMediaBase,
-  getExperimentMediaUrl,
-} from '../../api/experiments'
+import { getExperiments, getExperimentDetail, getExperimentAssetUrl, getExperimentMediaUrl } from '../../api/experiments'
 import { vClickable } from '../../directives/clickable'
-import { splitReportAppendix, narrativeEmbedsAsset } from './experimentReportContent'
+import { splitReportAppendix, narrativeEmbedsAsset, buildReportFileAliases } from './experimentReportContent'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
@@ -257,11 +242,6 @@ function openByKey(key) {
 
 const topic = computed(() => route.query.topic || '')
 const slug = computed(() => route.query.slug || '')
-// 正文里的 assets/、media/ 相对路径 → API 绝对路径（只在 topic+slug 已定时改写）。
-const narrativeAssetBase = computed(() =>
-  topic.value && slug.value ? getExperimentAssetBase(topic.value, slug.value) : '')
-const narrativeMediaBase = computed(() =>
-  topic.value && slug.value ? getExperimentMediaBase(topic.value, slug.value) : '')
 
 const topicOptions = computed(() =>
   [...new Set(reports.value.map(r => r.topic))].map(t => ({ label: t, value: t })))
@@ -332,6 +312,20 @@ const evidenceEntries = computed(() => Object.entries(detail.value?.manifest?.ev
 const cases = computed(() => (detail.value?.manifest?.cases || []).filter(c => (c.kind === 'image' || c.kind === 'video') && c.src))
 const reportParts = computed(() => splitReportAppendix(detail.value?.content || ''))
 
+// 正文媒体上下文：把 `assets/<文件名>` / `media/<文件名>` 映射到当前报告的只读路由。
+// fileAliases 把清单登记的可读名（`<case-id>.<ext>`）指向 sha256 文件名（视频侧后端只放行后者）。
+const reportFileAliases = computed(() => buildReportFileAliases(detail.value?.manifest?.cases || []))
+const reportMedia = computed(() => {
+  const t = topic.value
+  const s = slug.value
+  if (!t || !s) return null
+  return {
+    assetUrl: (file) => getExperimentAssetUrl(t, s, file),
+    mediaUrl: (file) => getExperimentMediaUrl(t, s, file),
+    fileAliases: reportFileAliases.value,
+  }
+})
+
 const casePickerOptions = computed(() => additionalCases.value.map((c, i) => ({ label: c.id, value: i })))
 const activeCase = computed(() => additionalCases.value[toggleIndex.value] || { id: "", input: "", selection_reason: "" })
 
@@ -362,24 +356,11 @@ const tocItems = computed(() => {
   return items
 })
 
-function scrollToSection(item) {
-  const selector = (item.level || 2) >= 3 ? '.doc-content h3' : '.doc-content h2'
-  const nodes = document.querySelectorAll(selector)
-  const target = [...nodes].find(node => node.textContent.trim() === item.text)
-  if (target) {
-    // 用瞬时定位而不是平滑滚动：长报告里平滑动画还没走完，懒加载的图片/视频又会改变
-    // 正文高度，两者叠加会把落点甩开几百像素；瞬时定位后再校正几次才稳。
-    target.scrollIntoView({ behavior: 'auto', block: 'start' })
-    activeSection.value = item.text
-    history.replaceState(null, '', `#${item.anchor}`)
-    settleScroll(target)
-  }
-}
-
-// 目标落点应停在吸顶头部下方；只有明显跑偏才再校一次，且用户一动就停手
+// 目标落点应停在吸顶头部下方；只有明显跑偏才再校一次，用户一动就停手
 function settleScroll(target) {
   let tries = 0
   let cancelled = false
+  let timer = 0
   const stop = () => {
     cancelled = true
     window.clearTimeout(timer)
@@ -389,16 +370,30 @@ function settleScroll(target) {
   }
   const step = () => {
     if (cancelled || !target.isConnected) return stop()
-    const offset = target.getBoundingClientRect().top
-    if (Math.abs(offset) > 120) target.scrollIntoView({ behavior: 'auto', block: 'start' })
+    if (Math.abs(target.getBoundingClientRect().top) > 120) {
+      target.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }
     tries += 1
     if (tries >= 12) return stop()
     timer = window.setTimeout(step, 150)
   }
-  let timer = window.setTimeout(step, 150)
+  timer = window.setTimeout(step, 150)
   window.addEventListener('wheel', stop, { passive: true, once: true })
   window.addEventListener('touchstart', stop, { passive: true, once: true })
   window.addEventListener('keydown', stop, { once: true })
+}
+
+function scrollToSection(item) {
+  const selector = (item.level || 2) >= 3 ? '.doc-content h3' : '.doc-content h2'
+  const target = [...document.querySelectorAll(selector)]
+    .find(node => node.textContent.trim() === item.text)
+  if (!target) return
+  // 长报告里平滑滚动未完成 + 懒加载媒体改变正文高度，会把落点甩开几百像素：
+  // 先瞬时定位，再校正几次。
+  target.scrollIntoView({ behavior: 'auto', block: 'start' })
+  activeSection.value = item.text
+  history.replaceState(null, '', `#${item.anchor}`)
+  settleScroll(target)
 }
 
 let sectionObserver = null
@@ -417,7 +412,8 @@ function observeSections() {
 }
 const hasStructuredMetrics = computed(() => !!(manifestMetrics.value.length || hasSeries.value || metricTables.value.length || evidenceEntries.value.length))
 // 正文已引用的案例图不重复铺满，只补未引用的
-const additionalCases = computed(() => cases.value.filter(c => !narrativeEmbedsAsset(reportParts.value.narrative, c.src)))
+const additionalCases = computed(() => cases.value.filter(c =>
+  !narrativeEmbedsAsset(reportParts.value.narrative, c.src, reportFileAliases.value)))
 const compareMode = ref('side')
 const toggleIndex = ref(0)
 
@@ -604,20 +600,16 @@ watch(() => route.query, (q) => {
   letter-spacing: 0.05em; color: var(--color-text-dim);
 }
 .doc-toc-link {
-  display: block; padding: 3px 10px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  padding: 3px 10px;
   border-left: 2px solid var(--color-border);
-  // 中文小节标题普遍偏长，允许折两行后再截断
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   font-size: 12px; line-height: 1.4; color: var(--color-text-dim);
-  cursor: pointer; text-decoration: none;
+  cursor: pointer; text-decoration: none; overflow: hidden;
   transition: color 0.15s, border-color 0.15s;
 
   &:hover, &.active { color: var(--color-text); border-left-color: var(--color-primary); }
 
-  // 三级标题缩进一档，并在目录里保持同一竖直基准线
+  // 三级标题缩进一档，字号更小，避免与二级混读
   &.is-sub {
     padding-left: 22px;
     font-size: 11.5px;
