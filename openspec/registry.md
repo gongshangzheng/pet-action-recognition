@@ -20,6 +20,7 @@
 | 9 | `third-party-notes` | 第三方项目借鉴 | vendored / 参考项目的可借鉴点与否决理由 | — |
 | 10 | `repo-inventory` | 仓库资产盘点 | 仓库目录、脚本、产物与技能清单 | — |
 | 11 | `handover-guide` | 交接与协作指南 | 上手路径、协作约定、二期计划来源 | — |
+| 12 | `gantt-implementation-plan-202611` | 交付冲刺计划 | 2026-11-11 至 11-23 的逐日排期、三条并行线分工、检查节点与降级预案（不管模型设计、不管端侧实现细节） | `docs-gantt-plan` |
 | — | `papers/docs/*` | 论文模块文档 | 论文模块专属文档（模型族综述、产品调研、survey 笔记），不在 wiki 编号体系内 | `docs-<slug>` |
 | — | `notes/*` | 论文精读笔记 | 单篇论文的深度精读笔记（由 `article-note` skill 产出），不在 wiki 编号体系内 | `docs-notes-<slug>` |
 
