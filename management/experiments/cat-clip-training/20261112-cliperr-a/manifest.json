@@ -3,7 +3,7 @@
     "实验类型": "感知质量（逐类错误分析与归因，不训练）",
     "baseline 数值来源": "clipv9-b 测试产物 results/cat_clip_v9/videomaev2_b/test_metrics.json：top-1 85.75%、macro-F1 56.23%、balanced 54.62%（1,130 条片段）",
     "可辨识性": "描述量（运动量、局部运动、亮度、饱和度）从画面独立计算，不参与训练；留一来源敏感性给出该类指标对单一来源的依赖幅度（去掉 charw1g：top-1 85.75→86.70、scratching recall 56.4→46.4）",
-    "样本量": "测试 1,130 条片段（来自 484 个标注区间，片段非独立样本）；scratching 39 片段/17 区间、toileting 18/7、gnawing 4/1、fall/seizure 0；人眼复核 15 条片段 + 1 个完整标注区间",
+    "样本量": "测试 1,130 条片段（来自 484 个标注区间，片段非独立样本）；scratching 39 片段/17 区间、toileting 18/7、gnawing 4/1、fall/seizure 0；人眼复核 15 条片段 + 14 条 scratching 对照 + 1 个完整标注区间",
     "失败边界": "gnawing/fall/seizure 不可评估；charw1g 的 activity/scratching 标注口径未裁定；species 字段不可靠；片段级口径不换算区间级；区间错配只核实 1 例、未量化规模；未做阈值与修复实验",
     "结论上界": "只说明错误在哪几条边界上集中、各自与什么量共变、以及哪些成因属于输入表示/标注口径而非模型容量；不证明任何修复方案有效"
   },
@@ -192,24 +192,6 @@
       "sha256": "73c0af3181ac5e26dc4a7ddb7703df502de181167757f3a9ca4996a2f057b411"
     },
     {
-      "id": "vid-scratching-to-activity",
-      "kind": "video",
-      "src": "media/e3e32b67811d27768860d541b05d6bca8e2b744fe92bfc19e7e5ed37a63c7575.mp4",
-      "source_run": "clipv9-b",
-      "input": "真实 scratching，模型判 activity（0.990）",
-      "selection_reason": "正文第三节：夜间暗画面，爪部动作不可辨",
-      "sha256": "e3e32b67811d27768860d541b05d6bca8e2b744fe92bfc19e7e5ed37a63c7575"
-    },
-    {
-      "id": "img-scratching-ir",
-      "kind": "image",
-      "src": "assets/0919b9e94b0e38a1380b2466b74d07c24f34f2d55d5c093fbad1fe9d44099c80.jpg",
-      "source_run": "clipv9-b",
-      "input": "真实 scratching，模型判 activity（0.987）",
-      "selection_reason": "正文第三节：红外近景里头与爪互相遮挡",
-      "sha256": "0919b9e94b0e38a1380b2466b74d07c24f34f2d55d5c093fbad1fe9d44099c80"
-    },
-    {
       "id": "img-dog-pawing",
       "kind": "image",
       "src": "assets/d35bbbc7fa315b565d5730a65fcb0b6edbd004ed2aecc5926a4fc5652906dca1.jpg",
@@ -307,6 +289,87 @@
       "input": "区间内均匀 12 帧（0.0–15.6 秒）的裁剪拼图",
       "selection_reason": "正文第一节：静态对照用，一眼看到「前 4 秒在走、中间 8 秒站定」的分布",
       "sha256": "b398c1a5caf95721bef7ea527afd6bbe0b179a78d32266653fcd127b70a73140"
+    },
+    {
+      "id": "img-scratching-sheet",
+      "kind": "image",
+      "src": "assets/18bbe256c17ddc65295edb03d13831fc7a91d52791f7f19906fe256436c9fe8d.jpg",
+      "source_run": "clipv9-b",
+      "input": "14 条 scratching 测试片段（判错 7 / 判对 7），每段第 30 帧",
+      "selection_reason": "正文第三节：判对侧按来源轮转取样、判错侧取置信度最高的几条，用来对比两种动作构型",
+      "sha256": "18bbe256c17ddc65295edb03d13831fc7a91d52791f7f19906fe256436c9fe8d"
+    },
+    {
+      "id": "vid-scratching-01",
+      "kind": "video",
+      "src": "media/e3e32b67811d27768860d541b05d6bca8e2b744fe92bfc19e7e5ed37a63c7575.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #01：暗光下伏地、头扭向自身（判错）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "e3e32b67811d27768860d541b05d6bca8e2b744fe92bfc19e7e5ed37a63c7575"
+    },
+    {
+      "id": "vid-scratching-02",
+      "kind": "video",
+      "src": "media/d6a5b17e159cc6997836a136c9c7e1840e55bc579df2cd832e48c14ff34ee303.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #02：笼内低头啃/挠自身（判错）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "d6a5b17e159cc6997836a136c9c7e1840e55bc579df2cd832e48c14ff34ee303"
+    },
+    {
+      "id": "vid-scratching-03",
+      "kind": "video",
+      "src": "media/09dc07b89ab096f132dcc86bb509129d5f44e79f67fac9e23a9b0bad0e2625b3.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #03：红外夜视下自挠（判错）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "09dc07b89ab096f132dcc86bb509129d5f44e79f67fac9e23a9b0bad0e2625b3"
+    },
+    {
+      "id": "vid-scratching-06",
+      "kind": "video",
+      "src": "media/0e2e182fe61979df78c17bab5d927d664b0aae423ede69d4fcb6e1870e555b01.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #06：对窗直立扒抓但仍判错（边界不稳）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "0e2e182fe61979df78c17bab5d927d664b0aae423ede69d4fcb6e1870e555b01"
+    },
+    {
+      "id": "vid-scratching-08",
+      "kind": "video",
+      "src": "media/03818c7432fc09d2e44ee29c7a622db559db2e25afadec93dfbf3b843cddfc40.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #08：狗站起扒玻璃门（判对）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "03818c7432fc09d2e44ee29c7a622db559db2e25afadec93dfbf3b843cddfc40"
+    },
+    {
+      "id": "vid-scratching-12",
+      "kind": "video",
+      "src": "media/c42173c8d769196291c1e9e389e09681c118b917de89ae940a5ea7ce0e0117ab.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #12：黑猫攀爬猫爬架（判对）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "c42173c8d769196291c1e9e389e09681c118b917de89ae940a5ea7ce0e0117ab"
+    },
+    {
+      "id": "vid-scratching-13",
+      "kind": "video",
+      "src": "media/6639a2b7af8c8896fdd32c47c166b424ed10fc52f2fff1acbfbef28b93770db2.mp4",
+      "source_run": "clipv9-b",
+      "input": "scratching 案例 #13：直立扒镜子/玻璃（判对）",
+      "selection_reason": "正文第三节：判对/判错各取代表，说明模型学到的是「直立扒竖直面」而非「猫自挠」",
+      "sha256": "6639a2b7af8c8896fdd32c47c166b424ed10fc52f2fff1acbfbef28b93770db2"
+    },
+    {
+      "id": "fig-interval-drift",
+      "kind": "image",
+      "src": "assets/fb90153122168c06db07bcf9aa23d644f3d63a7fe1f2b3f55dd8001a6db0954c.png",
+      "source_run": "clipv9-b",
+      "input": "区间 event_20260802_053844 的逐帧运动量曲线（含三个片段窗口落点）与 313 个多窗口区间的极差分布",
+      "selection_reason": "正文第一节：把「标注单位盖住多段行为」量化——单个区间换过两次档，且 6.7% 的多窗口区间同时出现活动/静止两档",
+      "sha256": "fb90153122168c06db07bcf9aa23d644f3d63a7fe1f2b3f55dd8001a6db0954c"
     }
   ],
   "diagnostics": []
