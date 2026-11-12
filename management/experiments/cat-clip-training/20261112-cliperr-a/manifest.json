@@ -16,7 +16,7 @@
       "delta": "0",
       "sample_size": "1,130",
       "source": "test_metrics.json",
-      "limitation": "片段级条件准确率，不含可用率，不等于端到端"
+      "limitation": "达标口径就是这一项（条件 top-1 ≥75% 已达成）；不含可用率，不等于端到端 72.9%"
     },
     {
       "name": "macro recall（7 个 support≥10 的类）",
@@ -113,11 +113,11 @@
     {
       "id": "fig-class-overview",
       "kind": "image",
-      "src": "assets/577b4584ba43fae4b4f7a4f147ae9f63a790c51cf862e840a8ffd8f7f53d3c75.png",
+      "src": "assets/d43684d5dca9fe32c75e225e86f046c3dbda59d698099611f08c33519201f945.png",
       "source_run": "clipv9-b",
-      "input": "1,130 条测试预测的逐类 support 与 recall",
-      "selection_reason": "正文第一节：先给分布与逐类成绩的全貌，含 95% Wilson 区间",
-      "sha256": "577b4584ba43fae4b4f7a4f147ae9f63a790c51cf862e840a8ffd8f7f53d3c75"
+      "input": "1,130 条测试预测的整体口径（条件 top-1 / 端到端 / macro / balanced / 单类基线）与逐类准确率、precision",
+      "selection_reason": "正文第一节：同时给出目标口径（条件 top-1 85.75% vs 75%）和逐类准确率/漏检率，避免把逐类召回误读成验收线",
+      "sha256": "d43684d5dca9fe32c75e225e86f046c3dbda59d698099611f08c33519201f945"
     },
     {
       "id": "fig-confusion",
