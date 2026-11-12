@@ -57,3 +57,18 @@
 - **WHEN** 合并完成并运行校验脚本
 - **THEN** 全部报告无 incomplete 原因，脚本零退出
 - **AND** 失败时逐条打印缺失项，供作者补齐
+
+### Requirement: 媒体只在正文展示
+
+报告的图片与视频 SHALL 以 Markdown 内嵌形式出现在正文对应位置，MUST NOT 在页面末尾另设汇总区块。manifest 的 `cases` 是媒体登记与完整度判据，不是展示入口。
+
+#### Scenario: 案例已登记但未嵌入
+
+- **WHEN** 一份报告的 `cases` 里有条目没有出现在正文
+- **THEN** 校验脚本把该报告判为 incomplete 并逐条列出未嵌入的案例
+- **AND** 不由页面补渲染来掩盖缺失
+
+#### Scenario: 正文引用了未登记的媒体
+
+- **WHEN** 正文嵌入的 `assets/` 或 `media/` 文件没有在 `cases` 登记
+- **THEN** 校验脚本报错，且 media 路由拒绝服务该文件
