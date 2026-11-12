@@ -14,6 +14,10 @@ import { useThemeStore } from '../../stores/theme'
 
 const props = defineProps({
   content: { type: String, default: '' },
+  // 实验报告正文里的 assets/、media/ 是相对报告目录的写法；由页面传入 API 基址后在此改写，
+  // 这样作者写 `![](assets/x.png)` 就能同时被「正文内嵌去重」和浏览器取物理路径命中。
+  assetBase: { type: String, default: '' },
+  mediaBase: { type: String, default: '' },
 })
 
 const containerRef = ref(null)
@@ -144,6 +148,10 @@ md.renderer.rules.image = function (tokens, idx) {
   const alt = md.utils.escapeHtml(token.content || '')
   const title = token.attrGet('title')
   const titleAttr = title ? ` title="${md.utils.escapeHtml(title)}"` : ''
+  // markdown 语法本身没有视频；报告的案例视频用 `![](media/x.mp4)` 写，这里渲染成可内嵌播放的 <video>。
+  if (VIDEO_SRC_RE.test(src)) {
+    return `<video src="${src}" controls playsinline preload="metadata" class="md-inline-video" aria-label="${alt}"${titleAttr}></video>`
+  }
   return `<img src="${src}" alt="${alt}" loading="lazy"${titleAttr}>`
 }
 
@@ -182,9 +190,34 @@ function documentAssetUrl(path) {
   return base + suffix.split('/').map(encodeURIComponent).join('/')
 }
 
+// 单个文件名才改写：带 `..`、多级目录或空名一律保持原样（与后端白名单同向，不做穷举校验）。
+function safeFilename(raw) {
+  if (!raw || raw.includes('/') || raw.includes('\\') || raw === '.' || raw === '..') return ''
+  return encodeURIComponent(raw.split('?')[0].split('#')[0])
+}
+
+function reportMediaUrl(kind, raw, assetBase, mediaBase) {
+  const filename = safeFilename(raw)
+  if (!filename) return ''
+  if (kind === 'media') return mediaBase ? `${mediaBase}/${filename}` : ''
+  return assetBase ? `${assetBase}/${filename}` : ''
+}
+
+function rewriteReportMedia(source, assetBase, mediaBase) {
+  if (!assetBase && !mediaBase) return source
+  return source.replace(
+    /(!?\[[^\]]*\]\()((?:\.\/)?(assets|media)\/([^)\s]+))(\))/g,
+    (match, start, path, kind, raw, end) => {
+      const resolved = reportMediaUrl(kind, raw, assetBase, mediaBase)
+      return resolved ? `${start}${resolved}${end}` : match
+    },
+  )
+}
+
 const rendered = computed(() => {
   if (!props.content) return '<p class="text-light">暂无内容</p>'
   let src = props.content
+  src = rewriteReportMedia(src, props.assetBase, props.mediaBase)
   src = src.replace(/(!?\[[^\]]*\]\()((?:\.\/)?_assets\/[^)\s]+)(\))/g, (_, start, path, end) =>
     `${start}${documentAssetUrl(path)}${end}`)
   // Task links: [[proj#t2-3]] or [[proj#t2-3|display]] → project tree with task selected
@@ -273,6 +306,15 @@ watch(
   :deep(.task-list-item) {
     list-style: none;
     margin-left: -20px;
+  }
+
+  :deep(.md-inline-video) {
+    display: block;
+    width: 100%;
+    max-width: 560px;
+    margin: 12px 0;
+    border-radius: 10px;
+    background: #000;
   }
   :deep(.task-list-item input[type='checkbox']) {
     margin-right: 8px;

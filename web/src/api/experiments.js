@@ -5,8 +5,12 @@ export const getExperiments = () => request.get('/management/experiments')
 export const getExperimentDetail = (topic, slug) =>
   request.get(`/management/experiments/${topic}/${slug}`)
 // 案例图按报告粒度服务（防穿越 + 白名单在后端）
-export const getExperimentAssetUrl = (topic, slug, filename) =>
-  `/api/management/experiments/${topic}/${slug}/assets/${encodeURIComponent(filename)}`
+export const getExperimentAssetBase = (topic, slug) =>
+  `/api/management/experiments/${topic}/${slug}/assets`
 // 案例视频走持久媒体目录（media/，只放行清单登记过的文件）
+export const getExperimentMediaBase = (topic, slug) =>
+  `/api/management/experiments/${topic}/${slug}/media`
+export const getExperimentAssetUrl = (topic, slug, filename) =>
+  `${getExperimentAssetBase(topic, slug)}/${encodeURIComponent(filename)}`
 export const getExperimentMediaUrl = (topic, slug, filename) =>
-  `/api/management/experiments/${topic}/${slug}/media/${encodeURIComponent(filename)}`
+  `${getExperimentMediaBase(topic, slug)}/${encodeURIComponent(filename)}`

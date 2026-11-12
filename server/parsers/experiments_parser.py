@@ -306,10 +306,10 @@ def resolve_experiment_media(experiments_dir, topic, slug, filename, media_root)
     与 CyberVerse 上游同规则（experiments.go experimentCaseValid + ExperimentMediaPath）：
     - 文件名必须是 <sha256>.<ext> 形态且在 MEDIA_EXTS 白名单内
     - manifest 里必须存在 src == media/<filename> 且 sha256 与文件名一致的 case
-    - media_root 为空（未配置）时一律拒绝
+    - 根目录：优先 PET_EXPERIMENT_MEDIA_ROOT（持久目录，媒体跨机器共享）；
+      未配置时回落到报告自己的 media/（生成器在未配置持久目录时也写这里，不入 Git），
+      回落分支同样受上面的清单登记与摘要校验约束
     """
-    if not media_root:
-        return None
     if not (valid_segment(topic) and valid_segment(slug) and valid_segment(filename)):
         return None
     stem, ext = os.path.splitext(filename)
@@ -325,6 +325,8 @@ def resolve_experiment_media(experiments_dir, topic, slug, filename, media_root)
     )
     if not registered:
         return None
+    if not media_root:
+        media_root = os.path.join(experiments_dir, topic, slug, "media")
     path = os.path.join(media_root, filename)
     real = os.path.realpath(path)
     base = os.path.realpath(media_root)

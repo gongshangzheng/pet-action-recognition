@@ -85,12 +85,20 @@
           </header>
 
           <div class="detail-article">
-          <!-- 正文：面向读者的文章；附录默认折叠 -->
-          <MarkdownRenderer :content="reportParts.narrative" />
+          <!-- 正文：面向读者的文章；附录默认折叠。正文里的图/视频按报告目录取物理路径。 -->
+          <MarkdownRenderer
+            :content="reportParts.narrative"
+            :asset-base="narrativeAssetBase"
+            :media-base="narrativeMediaBase"
+          />
 
           <details v-if="reportParts.hasAppendix" class="foldable">
             <summary>附录：配置与完整数据<span class="fold-hint">精确配置 · 完整指标 · 来源与核查</span></summary>
-            <MarkdownRenderer :content="reportParts.appendix" />
+            <MarkdownRenderer
+              :content="reportParts.appendix"
+              :asset-base="narrativeAssetBase"
+              :media-base="narrativeMediaBase"
+            />
           </details>
 
           <!-- 结构化技术指标（manifest 指标含局限 / 趋势 / 表格）：默认折叠，不铺满正文 -->
@@ -207,7 +215,14 @@ import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import MarkdownRenderer from '../../components/common/MarkdownRenderer.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
-import { getExperiments, getExperimentDetail, getExperimentAssetUrl, getExperimentMediaUrl } from '../../api/experiments'
+import {
+  getExperiments,
+  getExperimentDetail,
+  getExperimentAssetBase,
+  getExperimentAssetUrl,
+  getExperimentMediaBase,
+  getExperimentMediaUrl,
+} from '../../api/experiments'
 import { vClickable } from '../../directives/clickable'
 import { splitReportAppendix, narrativeEmbedsAsset } from './experimentReportContent'
 
@@ -240,6 +255,11 @@ function openByKey(key) {
 
 const topic = computed(() => route.query.topic || '')
 const slug = computed(() => route.query.slug || '')
+// 正文里的 assets/、media/ 相对路径 → API 绝对路径（只在 topic+slug 已定时改写）。
+const narrativeAssetBase = computed(() =>
+  topic.value && slug.value ? getExperimentAssetBase(topic.value, slug.value) : '')
+const narrativeMediaBase = computed(() =>
+  topic.value && slug.value ? getExperimentMediaBase(topic.value, slug.value) : '')
 
 const topicOptions = computed(() =>
   [...new Set(reports.value.map(r => r.topic))].map(t => ({ label: t, value: t })))
