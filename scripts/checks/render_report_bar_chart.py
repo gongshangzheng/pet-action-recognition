@@ -1,4 +1,12 @@
-"""一次性探针：把报告表格里的数字画成横向分组条形 SVG（环境无 matplotlib）。"""
+"""把报告表格里的数字渲染成横向分组条形 SVG（本地环境没有 matplotlib 时用）。
+
+用法：
+  python3 scripts/checks/render_report_bar_chart.py <输出目录>
+
+输出文件名 = 内容 sha256 + `.svg`，可直接作为实验报告的案例图放进 `assets/`
+（报告目录约定见 `management/experiments/README.md`）。图里的数字由调用方给出，
+本脚本不做统计：它只负责把已经核对过的表格值画出来，避免在仓库里引入绘图依赖。
+"""
 import hashlib
 import os
 import sys
