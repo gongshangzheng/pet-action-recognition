@@ -1,6 +1,6 @@
 """采样循环 → 逐采样指标 → 窗口汇总 / 时长 / 连续段。
 
-端侧只采集指标，不做亮点筛选（由云端判断）。
+亮点参考候选在 candidates.py（端侧只给参考，最终由云端判断，design D9）。
 """
 from __future__ import annotations
 
@@ -24,6 +24,16 @@ class HighlightConfig:
     gap_fill_sec: float = 0.6
     min_segment_sec: float = 0.4
     region_expand: float = 0.1
+    # 亮点参考候选（design D9，参考值，未经真实数据校准）
+    highlight_area_ratio: float = 0.05
+    highlight_activity: float = 0.03
+    highlight_gap_sec: float = 1.0
+    highlight_min_sec: float = 2.0
+    highlight_pad_sec: float = 1.0
+    highlight_max_sec: float = 10.0
+    highlight_top_k: int = 3
+    highlight_area_full: float = 0.15
+    highlight_activity_full: float = 0.08
 
     def to_dict(self) -> dict:
         d = asdict(self)

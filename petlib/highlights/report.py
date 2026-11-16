@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from petlib.highlights.actions import mark_review, merge_segments
+from petlib.highlights.candidates import find_candidates, highlight_rule
 from petlib.highlights.aggregate import (HighlightConfig, analysis_size, analyze_samples, build_windows,
                                          iter_video_samples, probe_video, sample_step, summarize)
 from petlib.highlights.sources import FaceSource, PetSource
@@ -96,6 +97,7 @@ def extract_highlights(video: str, pet_source: PetSource, face_source: FaceSourc
 
     summary, segments = summarize(samples, dt, duration, cfg)
     windows = build_windows(samples, duration, cfg, behavior_segments)
+    candidates = find_candidates(windows, duration, cfg)
 
     pet_info = {"source": pet_source.name}
     if hasattr(pet_source, "weights"):
@@ -107,7 +109,7 @@ def extract_highlights(video: str, pet_source: PetSource, face_source: FaceSourc
         "analysis_fps": round(meta["fps"] / step, 4), "sample_step": step,
         "analysis_size": list(size), "area_source": pet_source.area_source,
         "pet": pet_info, "face": face_info, "behavior": behavior_source,
-        "review_score": review_score, "config": cfg.to_dict(),
+        "review_score": review_score, "config": cfg.to_dict(), "highlight_rule": highlight_rule(cfg),
         "thresholds_calibrated": False, "code": code_version(),
     }
     source = {"video": str(video), "file_name": Path(video).name, "fps": meta["fps"],
@@ -129,6 +131,7 @@ def extract_highlights(video: str, pet_source: PetSource, face_source: FaceSourc
         "windows": windows,
         "behavior": {"source": behavior_source.get("source"), "segments": behavior_segments,
                      "needs_cloud_review": any(s["needs_cloud_review"] for s in behavior_segments)},
+        "highlight_candidates": candidates,  # 端侧参考，最终由云端判断
         "cloud_judgement": None,
     }
     if include_samples:

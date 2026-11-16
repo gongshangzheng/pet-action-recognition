@@ -1,6 +1,6 @@
 # 亮点抓取特征与云端上报载荷（`pet.highlight.v1`）
 
-更新日期：2026-11-02。对应 OpenSpec change：`extract-highlight-features`。
+更新日期：2026-11-16。对应 OpenSpec change：`extract-highlight-features`。
 对应需求：`项目要求.txt` 中期验收第 2 条“亮点抓取（提取出画面亮度，对比度，
 宠物活动幅度，宠物身体画面中面积占比和时长，面部暴露面积占比和时长，及行为识别
 信息上报到云端进行判断）”。
@@ -8,6 +8,7 @@
 **状态**：代码与合成数据单元测试完成（15 项通过，Python 3.8 / 3.11）；已在本机对单猫真实
 视频跑通 YOLO11n-seg + Haar + v1 七类 X3D-S 行为滑窗（见“本机示例”）；所有阈值都是
 初值、未校准。云端接收与判断不在本次范围，载荷只写本地文件 / outbox。
+2026-11-16 起按公司要求增加**亮点参考候选**（宠物占比大 + 动作明显，见下文），单元测试 25 项通过。
 
 ## 用法
 
@@ -48,7 +49,10 @@ python scripts/render_highlight_demo.py --payload results/highlights/x.json --ou
 3. 逐采样点布尔状态（在场 / 大面积 / 露脸）合并为连续段并累计时长。
 4. 按 `--window-sec`（默认 1 s）汇总窗口，挂上重叠最多的行为段。
 
-**端侧只采集并上报指标，不挑选、不裁剪亮点片段**——哪些片段算亮点由云端判断。
+5. 在 1 秒窗口上按“宠物占比大 + 动作明显”标出亮点参考候选（见“亮点参考候选”）。
+
+**端侧只给参考时间段，不裁剪、不删除视频**——最终哪些片段算亮点由云端判断
+（2026-11-02 原定端侧完全不筛选，2026-11-16 按公司要求改为给参考）。
 
 ## 指标定义
 
@@ -114,6 +118,10 @@ python scripts/render_highlight_demo.py --payload results/highlights/x.json --ou
                "segments": [{"t_start","t_end","label","score","top_k","n_windows",
                              "needs_cloud_review","review_reasons"}],
                "needs_cloud_review": true},
+  "highlight_candidates": [{"rank","t_start","t_end","duration_sec","core_start","core_end",
+               "highlight_sec","score","body_area_ratio_mean","body_area_ratio_max",
+               "activity_mean","face_exposed_sec","brightness_mean",
+               "action": {"label","score","needs_cloud_review"} | null}],  // 端侧参考，可为空列表
   "cloud_judgement": null,               // 留给云端
   "samples": [...]                       // 仅 --include-samples
 }
@@ -167,6 +175,54 @@ vendored 源码）。`yolo11n-seg.pt`（SHA-256 `55ed65c5…`）与 X3D-S
   复核的设计。
 - `scripts/render_highlight_demo.py` 叠加图第 4 行显示当前行为标签，`[cloud review]` 表示需云端复核。
 
+## 亮点参考候选（2026-11-16，规则 `area_motion_v0`）
+
+公司要求“暂时把宠物占比大的、动作明显的当作亮点”。端侧在 1 秒窗口上判断，结果写入
+`highlight_candidates`，规则和阈值记在 `analysis.highlight_rule`；`schema` 仍是
+`pet.highlight.v1`（只新增可选字段），`cloud_judgement` 不受影响。代码：`petlib/highlights/candidates.py`。
+
+| 步骤 | 参数（CLI） | 默认 |
+|---|---|---:|
+| 亮点秒：窗口身体占比均值 ≥ | `--highlight-area-ratio` | 0.05 |
+| 且窗口活动均值 ≥（= medium 档） | `--highlight-activity` | 0.03 |
+| 间隔不超过此值的亮点秒合并 | `--highlight-gap-sec` | 1 s |
+| 核心段短于此值丢弃 | `--highlight-min-sec` | 2 s |
+| 前后外扩（裁到视频范围） | `--highlight-pad-sec` | 1 s |
+| 外扩后最长；超长只留得分最高的连续一段 | `--highlight-max-sec` | 10 s |
+| 每段视频最多候选数 | `--highlight-top-k` | 3 |
+| 得分满分点（占比 / 活动） | `--highlight-area-full` / `--highlight-activity-full` | 0.15 / 0.08 |
+
+- 得分 = 0.5·min(1, 占比均值/0.15) + 0.5·min(1, 活动均值/0.08)，只用于排序，按核心段内亮点秒计算。
+- 露脸秒数、亮度、行为标签只作参考字段，不参与端侧判定。相邻候选的外扩部分可能重叠。
+- **阈值都是参考值，未经真实数据校准。** 真正裁剪片段并上传要等公司给出上报接口。
+
+离线重算（不读视频、不跑模型）：
+
+```bash
+python scripts/recompute_highlight_candidates.py results/highlights/demo/*.json
+python scripts/recompute_highlight_candidates.py x.json --highlight-area-ratio 0.03 --out-dir results/highlights/recompute
+```
+
+### 本机已有载荷的重算结果（2026-11-16，默认阈值）
+
+本机 11 个已有载荷（去重后 9 段单猫视频，家用广角摄像头）：
+
+| 视频 | 时长 | 身体占比 p50 / 最大 | ≥0.05 秒数 | 同时达标秒数 | 候选 |
+|---|---:|---:|---:|---:|---:|
+| chmtg0l 0703_125003（走动） | 40.3 s | 0.036 / 0.050 | 3 | 1 | 0 |
+| chmtg0l 0730_095845 | 34.0 s | 0.044 / 0.069 | 13 | 5 | 2（21–25 s、25–29 s） |
+| eating 093016 | 122.3 s | 0.044 / 0.058 | 36 | 11 | 2（61–66 s、88–94 s） |
+| chxnpw3 0620_092615（进食） | 15.1 s | 0.018 / 0.020 | 0 | 0 | 0 |
+| chxnpw3 0503_161345 | 15.1 s | 0.016 / 0.021 | 0 | 0 | 0 |
+| chxnpw3 0504_131926 | 14.9 s | 0.015 / 0.025 | 0 | 0 | 0 |
+| chxnpw3 0625_104318 | 21.3 s | 0.045 / 0.054 | 4 | 1 | 0 |
+| chmtg0l 0527_134745 | 18.5 s | 0.016 / 0.022 | 0 | 0 | 0 |
+| chmtg0l 0713_162328 | 46.1 s | 0.016 / 0.050 | 0 | 0 | 0 |
+
+结论：这批广角画面里猫的身体占比最大只有 0.069，默认 0.05 只在 2 段视频里出候选（共 4 个）；
+动作阈值 0.03 不是瓶颈（多数视频有 5–13 s 达标）。阈值是否下调要看设备实际视场：RV1126B 样机
+的镜头和安装距离未知，拿到真机画面后再按分布确定，调整需用户确认。
+
 ## 本地 outbox
 
 `--outbox <dir>` 时以 `<event_id>.json` 原子写入（先写临时文件再重命名），同名已存在
@@ -176,7 +232,8 @@ vendored 源码）。`yolo11n-seg.pt`（SHA-256 `55ed65c5…`）与 X3D-S
 
 - **真实视频验证很有限**：只在本机用 4 段单猫视频跑过（见“本机示例”），其中 3 段属于
   v1 训练集；需要用更多未参与训练的视频抽查，未在服务器上执行。
-- 阈值（活动等级、大面积）均为初值，需按真实分布回调。
+- 阈值（活动等级、大面积、亮点参考候选）均为初值，需按真实分布回调；亮点占比阈值在本机
+  广角视频上偏严（见“亮点参考候选”），待真机画面确定。
 - Haar 正脸级联对侧脸、低光/红外、远距离小脸召回偏低；接口可换成关键点（AP-10K 眼鼻）
   或专用猫脸检测器。
 - 活动幅度基于帧差，云台转动时用区域外变化补偿，但强烈的局部光照变化（开灯照到猫）

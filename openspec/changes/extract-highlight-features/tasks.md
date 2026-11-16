@@ -34,17 +34,19 @@
 
 - [x] 4.1 `docs/highlight_features.md`：字段定义、单位、默认阈值、用法、限制、待办。
 
-## 6. 端侧亮点参考候选（2026-11-16 修订，design D9；已写入计划，待用户“开始实施”）
+## 6. 端侧亮点参考候选（2026-11-16 修订，design D9；用户同日批准并要求实施）
 
-- [ ] 6.1 `petlib/highlights/candidates.py`：亮点秒判定、合并/丢弃/外扩/截断、得分、top-k；
+- [x] 6.1 `petlib/highlights/candidates.py`：亮点秒判定、合并/丢弃/外扩/截断、得分、top-k；
   阈值进 `HighlightConfig` 并在 CLI 暴露（`--highlight-*`）。
-- [ ] 6.2 载荷新增可选字段 `highlight_candidates` 与 `analysis.highlight_rule`，`schema` 不变；
+- [x] 6.2 载荷新增可选字段 `highlight_candidates` 与 `analysis.highlight_rule`，`schema` 不变；
   `cloud_judgement` 仍为 `null`。
-- [ ] 6.3 合成数据单元测试：又大又动出候选、大但不动/小但动/无猫为空、合并与短段丢弃、
-  外扩裁边、超长截断、top-k 排序、同输入结果一致。
-- [ ] 6.4 离线重算入口：从已有载荷 JSON 重算候选（不跑模型、不用服务器），对本机 4 段单猫
+- [x] 6.3 合成数据单元测试：又大又动出候选、大但不动/小但动/无猫为空、合并与短段丢弃、
+  外扩裁边、超长截断、top-k 排序、同输入结果一致。（2026-11-16：新增 10 项，全套 25 项通过。）
+- [x] 6.4 离线重算入口：从已有载荷 JSON 重算候选（不跑模型、不用服务器），对本机 4 段单猫
   示例载荷出结果；候选过少或过多时记录分布，阈值调整另经用户确认。
-- [ ] 6.5 更新 `docs/highlight_features.md`：规则、默认阈值（参考值、未校准）、字段说明、
+  （2026-11-16：`scripts/recompute_highlight_candidates.py`；本机 9 段单猫视频只有 2 段出候选、共 4 个，
+  身体占比最大 0.069，占比阈值偏严、动作阈值不是瓶颈；默认值暂不改，待真机画面确定。）
+- [x] 6.5 更新 `docs/highlight_features.md`：规则、默认阈值（参考值、未校准）、字段说明、
   “端侧只给参考、裁剪与上传待公司接口”。
 
 ## 范围限制

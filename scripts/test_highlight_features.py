@@ -18,6 +18,7 @@ from petlib.highlights import metrics as M  # noqa: E402
 from petlib.highlights.actions import (label_at, load_timeline, mark_review, merge_segments,  # noqa: E402
                                        sliding_windows)
 from petlib.highlights.aggregate import HighlightConfig, flags_to_segments  # noqa: E402
+from petlib.highlights.candidates import RULE_NAME, find_candidates, highlight_rule  # noqa: E402
 from petlib.highlights.report import SCHEMA, extract_highlights, write_outbox  # noqa: E402
 from petlib.highlights.sources import (FaceObservation, FaceSource, HaarCatFaceSource,  # noqa: E402
                                        NoFaceSource, NoPetSource, PetObservation, PetSource,
@@ -229,7 +230,10 @@ class EndToEndTests(unittest.TestCase):
         # 行为：abnormal 段需云端复核
         self.assertTrue(p["behavior"]["needs_cloud_review"])
         self.assertEqual(p["behavior"]["source"], "timeline_json")
-        self.assertNotIn("highlight_candidates", p)  # 亮点筛选归云端，端侧不做
+        # 亮点参考候选（design D9）：字段总在，规则与阈值记录在 analysis 里，不影响 cloud_judgement
+        self.assertIsInstance(p["highlight_candidates"], list)
+        self.assertEqual(p["analysis"]["highlight_rule"]["name"], RULE_NAME)
+        self.assertFalse(p["analysis"]["highlight_rule"]["calibrated"])
         self.assertEqual(len(p["samples"]), 20)
         json.dumps(p)  # 可序列化
 
@@ -267,6 +271,112 @@ class EndToEndTests(unittest.TestCase):
             p = json.loads(out.read_text(encoding="utf-8"))
             self.assertEqual(p["device"]["camera_id"], "cam-9")
             self.assertTrue((box / f"{p['event_id']}.json").is_file())
+
+
+def win(t: float, area=None, act=None, face=0.0, bright=0.5, action=None) -> dict:
+    """合成 1 秒窗口（字段与 build_windows 一致的子集）。area=None 表示无猫。"""
+    return {"t_start": float(t), "t_end": float(t + 1), "body_area_ratio_mean": area,
+            "body_area_ratio_max": area or 0.0, "activity_mean": act, "face_exposed_ratio": face,
+            "brightness": bright, "action": {"label": action, "score": 0.8} if action else None}
+
+
+def timeline(n: int, hot: dict) -> list[dict]:
+    """n 秒；hot = {秒: (area, act)}，其余秒为“有猫但小且静止”。"""
+    return [win(t, *hot.get(t, (0.01, 0.005))) for t in range(n)]
+
+
+class CandidateTests(unittest.TestCase):
+    cfg = HighlightConfig()
+
+    def test_large_and_active(self):
+        ws = timeline(10, {t: (0.10, 0.05) for t in range(3, 7)})
+        c = find_candidates(ws, 10.0, self.cfg)
+        self.assertEqual(len(c), 1)
+        c = c[0]
+        self.assertEqual((c["t_start"], c["t_end"], c["core_start"], c["core_end"]), (2.0, 8.0, 3.0, 7.0))
+        self.assertEqual((c["highlight_sec"], c["rank"]), (4.0, 1))
+        self.assertAlmostEqual(c["score"], 0.5 * 0.10 / 0.15 + 0.5 * 0.05 / 0.08, places=4)
+        self.assertAlmostEqual(c["body_area_ratio_mean"], 0.10)
+        self.assertAlmostEqual(c["activity_mean"], 0.05)
+
+    def test_large_static_small_active_and_no_pet_are_empty(self):
+        self.assertEqual(find_candidates(timeline(10, {t: (0.20, 0.01) for t in range(10)}), 10, self.cfg), [])
+        self.assertEqual(find_candidates(timeline(10, {t: (0.02, 0.20) for t in range(10)}), 10, self.cfg), [])
+        self.assertEqual(find_candidates([win(t) for t in range(10)], 10, self.cfg), [])
+        self.assertEqual(find_candidates([], 0, self.cfg), [])
+
+    def test_threshold_is_inclusive(self):
+        ws = timeline(6, {t: (0.05, 0.03) for t in range(1, 4)})
+        self.assertEqual(len(find_candidates(ws, 6, self.cfg)), 1)
+
+    def test_gap_merge_and_short_drop(self):
+        one_gap = timeline(12, {t: (0.1, 0.05) for t in (2, 3, 5, 6)})
+        c = find_candidates(one_gap, 12, self.cfg)
+        self.assertEqual([(x["core_start"], x["core_end"], x["highlight_sec"]) for x in c], [(2.0, 7.0, 4.0)])
+        two_gap = timeline(12, {t: (0.1, 0.05) for t in (2, 3, 6, 7)})
+        self.assertEqual(len(find_candidates(two_gap, 12, self.cfg)), 2)
+        single = timeline(12, {5: (0.3, 0.2)})
+        self.assertEqual(find_candidates(single, 12, self.cfg), [])
+
+    def test_padding_clipped_to_video(self):
+        ws = timeline(10, {0: (0.1, 0.05), 1: (0.1, 0.05), 8: (0.1, 0.05), 9: (0.1, 0.05)})
+        c = sorted(find_candidates(ws, 10.0, self.cfg), key=lambda x: x["t_start"])
+        self.assertEqual([(x["t_start"], x["t_end"]) for x in c], [(0.0, 3.0), (7.0, 10.0)])
+
+    def test_long_run_keeps_best_span_within_max(self):
+        hot = {t: (0.1, 0.035) for t in range(20)}
+        hot.update({t: (0.1, 0.07) for t in range(12, 20)})
+        c = find_candidates(timeline(20, hot), 20.0, self.cfg)
+        self.assertEqual(len(c), 1)
+        self.assertLessEqual(c[0]["duration_sec"], self.cfg.highlight_max_sec + 1e-9)
+        self.assertEqual((c[0]["core_start"], c[0]["core_end"]), (12.0, 20.0))
+        self.assertEqual((c[0]["t_start"], c[0]["t_end"]), (11.0, 20.0))
+
+    def test_top_k_by_score(self):
+        hot = {}
+        for start, act in ((0, 0.04), (5, 0.08), (10, 0.05), (15, 0.06)):
+            hot.update({start: (0.1, act), start + 1: (0.1, act)})
+        c = find_candidates(timeline(20, hot), 20.0, self.cfg)
+        self.assertEqual([x["core_start"] for x in c], [5.0, 15.0, 10.0])
+        self.assertEqual([x["rank"] for x in c], [1, 2, 3])
+        cfg1 = HighlightConfig(highlight_top_k=1)
+        self.assertEqual(len(find_candidates(timeline(20, hot), 20.0, cfg1)), 1)
+
+    def test_reference_fields_and_determinism(self):
+        ws = timeline(8, {t: (0.1, 0.05) for t in range(2, 5)})
+        ws[2]["face_exposed_ratio"] = 0.5
+        ws[3]["face_exposed_ratio"] = 1.0
+        for t, label in ((2, "play"), (3, "play"), (4, "walk")):
+            ws[t]["action"] = {"label": label, "score": 0.8, "needs_cloud_review": False}
+        snapshot = json.dumps(ws, sort_keys=True)
+        a, b = find_candidates(ws, 8.0, self.cfg), find_candidates(ws, 8.0, self.cfg)
+        self.assertEqual(a, b)
+        self.assertEqual(json.dumps(ws, sort_keys=True), snapshot)  # 不改输入
+        self.assertAlmostEqual(a[0]["face_exposed_sec"], 1.5)
+        self.assertEqual(a[0]["action"]["label"], "play")
+        self.assertAlmostEqual(a[0]["brightness_mean"], 0.5)
+
+    def test_rule_record(self):
+        r = highlight_rule(HighlightConfig(highlight_area_ratio=0.04))
+        self.assertEqual((r["name"], r["area_ratio"], r["activity"], r["calibrated"]), (RULE_NAME, 0.04, 0.03, False))
+
+    def test_offline_recompute_cli(self):
+        import recompute_highlight_candidates as rc
+
+        payload = {"schema": SCHEMA, "event_id": "hl-x", "source": {"duration_sec": 10.0},
+                   "summary": {"duration_sec": 10.0}, "analysis": {"config": HighlightConfig().to_dict()},
+                   "windows": timeline(10, {t: (0.1, 0.05) for t in range(3, 7)}), "cloud_judgement": None}
+        with tempfile.TemporaryDirectory() as d:
+            src = Path(d) / "p.json"
+            src.write_text(json.dumps(payload), encoding="utf-8")
+            self.assertEqual(rc.main([str(src), "--out-dir", str(Path(d) / "out")]), 0)
+            out = json.loads((Path(d) / "out" / "p.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(out["highlight_candidates"]), 1)
+            self.assertTrue(out["analysis"]["highlight_rule"]["offline_recompute"])
+            self.assertIsNone(out["cloud_judgement"])
+            self.assertEqual(rc.main([str(src), "--highlight-area-ratio", "0.2"]), 0)  # 只打印
+            with self.assertRaises(SystemExit):
+                rc.main([str(src), "--out-dir", d])  # 不覆盖输入
 
 
 if __name__ == "__main__":

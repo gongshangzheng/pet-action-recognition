@@ -1,7 +1,8 @@
 """亮点抓取特征提取：单视频 → `pet.highlight.v1` 载荷 JSON（可选写入本地 outbox）。
 
 提取画面亮度、对比度、宠物活动幅度、宠物身体面积占比与时长、面部暴露面积占比与时长，
-并附行为识别时间轴，供上报云端判断。本脚本不做网络上传。
+并附行为识别时间轴，供上报云端判断；另按“宠物占比大 + 动作明显”标出亮点参考候选
+（端侧只给参考，最终由云端判断）。本脚本不做网络上传。
 
 示例（需 CUDA GPU，v1 七类 X3D-S + YOLO11n-seg + Haar 猫脸）：
   python scripts/extract_highlight_features.py --video datasets/cat_raw/videos/x.mp4 \
@@ -28,6 +29,28 @@ from petlib.highlights.actions import load_timeline  # noqa: E402
 from petlib.highlights.aggregate import HighlightConfig  # noqa: E402
 from petlib.highlights.report import extract_highlights, write_outbox  # noqa: E402
 from petlib.highlights.sources import build_face_source, build_pet_source  # noqa: E402
+
+
+def add_highlight_args(ap: argparse.ArgumentParser, d: HighlightConfig) -> None:
+    """亮点参考候选阈值（design D9；参考值，未经真实数据校准）。"""
+    g = ap.add_argument_group("亮点参考候选（宠物占比大 + 动作明显）")
+    g.add_argument("--highlight-area-ratio", type=float, default=d.highlight_area_ratio,
+                   help="窗口身体占比均值下限")
+    g.add_argument("--highlight-activity", type=float, default=d.highlight_activity, help="窗口活动均值下限")
+    g.add_argument("--highlight-gap-sec", type=float, default=d.highlight_gap_sec, help="合并间隔上限")
+    g.add_argument("--highlight-min-sec", type=float, default=d.highlight_min_sec, help="核心段最短时长")
+    g.add_argument("--highlight-pad-sec", type=float, default=d.highlight_pad_sec, help="前后外扩")
+    g.add_argument("--highlight-max-sec", type=float, default=d.highlight_max_sec, help="候选最长时长（含外扩）")
+    g.add_argument("--highlight-top-k", type=int, default=d.highlight_top_k, help="每段视频最多候选数")
+    g.add_argument("--highlight-area-full", type=float, default=d.highlight_area_full, help="占比满分点")
+    g.add_argument("--highlight-activity-full", type=float, default=d.highlight_activity_full,
+                   help="活动满分点")
+
+
+def highlight_kwargs(args: argparse.Namespace) -> dict:
+    keys = ["area_ratio", "activity", "gap_sec", "min_sec", "pad_sec", "max_sec", "top_k",
+            "area_full", "activity_full"]
+    return {f"highlight_{k}": getattr(args, f"highlight_{k}") for k in keys}
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -68,6 +91,8 @@ def parse_args(argv=None) -> argparse.Namespace:
                    metavar=("STATIC", "LOW", "MEDIUM"))
     g.add_argument("--gap-fill-sec", type=float, default=d.gap_fill_sec)
     g.add_argument("--min-segment-sec", type=float, default=d.min_segment_sec)
+
+    add_highlight_args(ap, d)
     args = ap.parse_args(argv)
     if args.pet_source == "track_json" and not args.track_json:
         ap.error("--pet-source track_json requires --track-json")
@@ -83,7 +108,7 @@ def main(argv=None) -> int:
     cfg = HighlightConfig(
         analysis_fps=args.analysis_fps, analysis_width=args.analysis_width, window_sec=args.window_sec,
         body_large_ratio=args.body_large_ratio, activity_thresholds=tuple(args.activity_thresholds),
-        gap_fill_sec=args.gap_fill_sec, min_segment_sec=args.min_segment_sec)
+        gap_fill_sec=args.gap_fill_sec, min_segment_sec=args.min_segment_sec, **highlight_kwargs(args))
     pet_source = build_pet_source(args.pet_source, weights=args.yolo_weights, conf=args.yolo_conf,
                                   track_json=args.track_json, device=args.device)
     face_source = build_face_source(args.face, cascade_path=args.face_cascade)
@@ -110,7 +135,8 @@ def main(argv=None) -> int:
     s = payload["summary"]
     print(f"HIGHLIGHT DONE -> {out} | event={payload['event_id']} dur={s['duration_sec']}s "
           f"visible={s['pet_visible_sec']}s face={s['face_exposed_sec']}s "
-          f"behavior_segments={len(payload['behavior']['segments'])}", flush=True)
+          f"behavior_segments={len(payload['behavior']['segments'])} "
+          f"highlight_candidates={len(payload['highlight_candidates'])}", flush=True)
     if args.outbox:
         path, new = write_outbox(payload, args.outbox)
         print(f"OUTBOX {'WRITTEN' if new else 'EXISTS'} -> {path}", flush=True)

@@ -4,6 +4,8 @@
 设计见 openspec/changes/extract-highlight-features/design.md，字段见 docs/highlight_features.md。
 """
 from petlib.highlights.aggregate import HighlightConfig
+from petlib.highlights.candidates import RULE_NAME, find_candidates, highlight_rule
 from petlib.highlights.report import SCHEMA, extract_highlights, write_outbox
 
-__all__ = ["HighlightConfig", "SCHEMA", "extract_highlights", "write_outbox"]
+__all__ = ["HighlightConfig", "RULE_NAME", "SCHEMA", "extract_highlights", "find_candidates",
+           "highlight_rule", "write_outbox"]
