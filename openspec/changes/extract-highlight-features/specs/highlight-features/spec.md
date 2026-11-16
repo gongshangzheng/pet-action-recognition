@@ -47,9 +47,33 @@ The payload SHALL include a behavior timeline of merged segments with label, mea
 
 ### Requirement: cloud report payload and local outbox
 
-The extractor SHALL emit a `pet.highlight.v1` JSON payload with a deterministic `event_id`, device identifiers, source metadata, analysis settings, summary, segments, windows, behavior and a `cloud_judgement` field left `null`. The edge side SHALL NOT select or crop highlight clips; that decision belongs to the cloud. With an outbox directory configured it SHALL write the payload atomically and SHALL NOT overwrite an existing event file. No network upload is performed.
+The extractor SHALL emit a `pet.highlight.v1` JSON payload with a deterministic `event_id`, device identifiers, source metadata, analysis settings, summary, segments, windows, behavior, `highlight_candidates` and a `cloud_judgement` field left `null`. The edge side SHALL NOT crop or delete video; the final highlight decision belongs to the cloud. With an outbox directory configured it SHALL write the payload atomically and SHALL NOT overwrite an existing event file. No network upload is performed.
 
 #### Scenario: repeated run
 
 - **WHEN** the same video is processed twice with the same settings
 - **THEN** both payloads have the same `event_id` and the second outbox write leaves the first file unchanged
+
+### Requirement: reference highlight candidates
+
+The extractor SHALL mark reference highlight candidates from its 1-second windows: a window qualifies when its mean pet body area ratio is at least the configured area threshold (default 0.05) and its mean activity is at least the configured activity threshold (default 0.03). Qualifying windows separated by gaps no longer than the configured gap SHALL be merged, segments shorter than the configured minimum SHALL be dropped, kept segments SHALL be padded and capped to the configured maximum length, and at most the configured number of candidates SHALL be reported in descending score order. Each candidate SHALL carry its time range, score and reference fields, and `analysis.highlight_rule` SHALL record the rule name and thresholds. Candidates are a reference only and SHALL NOT change `cloud_judgement`.
+
+#### Scenario: large and active pet
+
+- **WHEN** the pet covers at least the area threshold and moves at least the activity threshold for longer than the minimum segment length
+- **THEN** one candidate covering that interval (with padding) is reported
+
+#### Scenario: large but static pet
+
+- **WHEN** the pet covers a large area but its activity stays below the activity threshold
+- **THEN** `highlight_candidates` is an empty list
+
+#### Scenario: small but active pet
+
+- **WHEN** the pet moves clearly but covers less than the area threshold
+- **THEN** `highlight_candidates` is an empty list
+
+#### Scenario: no pet
+
+- **WHEN** no pet is detected in the clip
+- **THEN** `highlight_candidates` is an empty list and the other metrics are still reported

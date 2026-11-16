@@ -12,7 +12,7 @@
 - [x] 2.2 `petlib/highlights/sources.py`：PetSource（yolo_seg / track_json / none）、FaceSource（haar / none）。
 - [x] 2.3 `petlib/highlights/actions.py`：时间轴读取、MMAction2 滑窗识别（懒加载）、同标签合并、云端复核标记。
 - [x] 2.4 `petlib/highlights/aggregate.py`：采样循环、窗口汇总、时长与连续段。
-- [x] 2.7 按用户修订删除端侧亮点候选（筛选归云端）。
+- [x] 2.7 按用户修订删除端侧亮点候选（筛选归云端）。（已被 2026-11-16 修订取代，见 6.x。）
 - [x] 2.8 兼容 Python 3.8（端侧常见版本）；YOLO 跨类别 NMS（同一只猫被同时判为 cat/dog）。
 - [x] 2.9 `scripts/render_highlight_demo.py`：载荷叠加回视频 + 拼图，供人工核对。
 - [x] 2.5 `petlib/highlights/report.py`：`pet.highlight.v1` 载荷、确定性 event_id、outbox 原子写入。
@@ -33,6 +33,19 @@
 ## 4. 文档
 
 - [x] 4.1 `docs/highlight_features.md`：字段定义、单位、默认阈值、用法、限制、待办。
+
+## 6. 端侧亮点参考候选（2026-11-16 修订，design D9；已写入计划，待用户“开始实施”）
+
+- [ ] 6.1 `petlib/highlights/candidates.py`：亮点秒判定、合并/丢弃/外扩/截断、得分、top-k；
+  阈值进 `HighlightConfig` 并在 CLI 暴露（`--highlight-*`）。
+- [ ] 6.2 载荷新增可选字段 `highlight_candidates` 与 `analysis.highlight_rule`，`schema` 不变；
+  `cloud_judgement` 仍为 `null`。
+- [ ] 6.3 合成数据单元测试：又大又动出候选、大但不动/小但动/无猫为空、合并与短段丢弃、
+  外扩裁边、超长截断、top-k 排序、同输入结果一致。
+- [ ] 6.4 离线重算入口：从已有载荷 JSON 重算候选（不跑模型、不用服务器），对本机 4 段单猫
+  示例载荷出结果；候选过少或过多时记录分布，阈值调整另经用户确认。
+- [ ] 6.5 更新 `docs/highlight_features.md`：规则、默认阈值（参考值、未校准）、字段说明、
+  “端侧只给参考、裁剪与上传待公司接口”。
 
 ## 范围限制
 
